@@ -1,0 +1,22 @@
+[package]
+name = "ethnoflow-project"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "EthnoFlow project format: .ethnoflow directory, project.json manifest, SQLite metadata, take lifecycle and crash recovery"
+
+[lib]
+name = "project"
+path = "src/lib.rs"
+
+[dependencies]
+ethnoflow-audio-engine = { path = "../audio-engine" }
+rusqlite = { version = "0.40", features = ["bundled", "fallible_uint"] }
+blake3 = "1.8"
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+log = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3"
