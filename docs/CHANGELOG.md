@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased — Phase 2 (in progress)
+
+### Measurements (owner's laptop, release build, YIN hop 10 ms, window 1024)
+| material | pitch time | voiced | f0 p05 / median / p95 | confidence p10 / median | octave-sized jumps |
+|---|---|---|---|---|---|
+| kaval take 18.7 s, 48 kHz stereo, RMS −30 dBFS | 286 ms (65× realtime) | 35 % | 214 / 338 / 566 Hz | 0.86 / 0.97 | 21 / 621 (3.4 %) |
+| `re.mp3` 59.45 s | 1998 ms (30× realtime) | 71 % | 272 / 330 / 377 Hz | 0.93 / 1.00 | 16 / 4151 (0.4 %) |
+
+Synthetic (tests): pure tones < 1 cent at 44.1/48 kHz up to 1760 Hz; harmonic tones
+(5 partials) < 2 % frames off by ≥ 100 cents; vibrato ±50 c at 6 Hz tracked (mean
+< 10 c); 200→800 Hz sweep < 5 % frames off; silence/noise unvoiced.
+
 ## 0.1.0 — Phase 1: core recording & project system (2026-10-16, owner's Windows laptop)
 
 ### Implemented
