@@ -15,7 +15,8 @@ Current phase and definition of done: `docs/ROADMAP.md`.
 
 ```
 apps/desktop/            Tauri 2 + React + TypeScript + Vite (src/ = UI, src-tauri/ = shell)
-crates/audio-engine/     Rust: devices, recorder, player, WAV, peaks, resampler (+ tests)
+crates/audio-engine/     Rust: devices, recorder (streams to disk), player, WAV, peaks, resampler
+crates/project/          Rust: .ethnoflow folder, project.json, SQLite, takes, recovery
 qa/fixtures/             generated synthetic WAVs (gitignored) + README
 docs/                    PRODUCT_VISION, ARCHITECTURE, ROADMAP, DECISIONS (ADRs), RISKS,
                          TEST_PLAN, CHANGELOG, phase0/ screenshots
@@ -23,7 +24,8 @@ scripts/release/         Windows build + smoke scripts
 ```
 
 Crates planned but not yet created (do not stub them with fake code): `crates/music-core`,
-`crates/arranger`, `services/analysis`, `packages/project-schema`, `packages/lesson-content`.
+`crates/arranger`, `services/analysis`, `packages/lesson-content`. (`packages/project-schema`
+became `crates/project`, ADR-0015.)
 
 ## Prerequisites (Windows dev machine)
 

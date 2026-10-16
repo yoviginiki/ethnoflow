@@ -111,3 +111,35 @@ Limit: WAV's u32 sizes cap a take at ~3.1 h (48 kHz stereo); the recorder stops 
 message. RF64/W64 is not needed for the use case. No new dependency.
 Known gap: after stop, the take is loaded into RAM for playback (player needs the whole
 buffer); a streaming player is a Phase 5 concern.
+
+## ADR-0015 Project = `<name>.ethnoflow/` folder; project.json + SQLite (`crates/project`)
+
+Context: master plan §10 layout; Phase 1 needs save/reopen with no data loss, crash
+recovery, checksums and migrations. The roadmap named `packages/project-schema`; the
+format is owned by Rust, so it lives in `crates/project` (TS mirrors the types in
+`api.ts`).
+Decision:
+- `project.json` (atomic write: temp + fsync + rename) holds the portable musical data:
+  name, schema version, tempo map, time signatures (with groupings such as 2+2+3),
+  markers. New projects have an empty tempo map and no meter — nothing is assumed.
+- `project.db` (SQLite, rollback journal, `synchronous=FULL`) holds takes, BLAKE3
+  checksums, trim points and settings; `schema_migrations` from v1. Every change is a
+  committed transaction, so "autosave" is continuous rather than periodic.
+- A take row is inserted in `recording` state *before* the file is created. On open,
+  such rows are repaired (ADR-0014) and marked `recovered`; WAVs in `assets/originals/`
+  without a row are adopted. Every original is verified against its checksum on open.
+- Delete moves the original to `trash/` inside the project; nothing is destroyed.
+- Relink of a missing original accepts only a byte-identical file (same checksum).
+- Imports are copied byte-for-byte into `assets/originals/` (the source format is kept).
+Newer `project.json`/`project.db` versions are refused with a clear error, never
+downgraded. No locking between two app instances yet (single-user desktop).
+
+## ADR-0016 rusqlite 0.40 (MIT, bundled SQLite: public domain) and blake3 1.8
+
+- `rusqlite` with `bundled` compiles SQLite into the binary: no system DLL on Windows,
+  same SQLite on all OSes; builds with MSVC (verified). `fallible_uint` makes u64 values
+  error instead of silently wrapping. Widely used, actively maintained.
+- `blake3` (CC0-1.0 OR Apache-2.0): checksums of originals; fast (~GB/s), pure Rust with
+  SIMD, maintained by the BLAKE3 authors.
+Supply chain: both from crates.io, versions pinned in Cargo.lock; no build-time
+downloads (bundled SQLite source ships inside the crate).
