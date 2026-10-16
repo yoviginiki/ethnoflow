@@ -10,6 +10,7 @@
 //! * the original recording is immutable once captured; edits produce new buffers.
 
 pub mod buffer;
+pub mod decode;
 pub mod devices;
 pub mod error;
 pub mod metronome;
@@ -22,6 +23,7 @@ pub mod take_writer;
 pub mod wav;
 
 pub use buffer::{linear_to_dbfs, AudioBuffer};
+pub use decode::{decode_file, IMPORT_EXTENSIONS};
 pub use devices::{
     choose_config, find_device, host_name, list_devices, DeviceInfo, Direction, StreamRequest,
     STANDARD_RATES,

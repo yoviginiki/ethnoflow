@@ -16,6 +16,7 @@ ringbuf = { workspace = true }
 thiserror = { workspace = true }
 serde = { workspace = true }
 log = { workspace = true }
+symphonia = { version = "0.6", default-features = false, features = ["mp3", "flac", "ogg", "vorbis", "wav", "pcm"] }
 
 [dev-dependencies]
 tempfile = "3"
