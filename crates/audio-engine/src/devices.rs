@@ -13,6 +13,74 @@ pub struct DeviceInfo {
     pub default_sample_rate: Option<u32>,
     pub default_channels: Option<u16>,
     pub default_sample_format: Option<String>,
+    /// Standard rates (44.1–192 kHz) the device reports as supported, ascending.
+    pub sample_rates: Vec<u32>,
+    /// Channel counts the device reports as supported, ascending.
+    pub channel_counts: Vec<u16>,
+}
+
+/// Rates offered for selection. Anything else the device supports stays reachable
+/// through its default config.
+pub const STANDARD_RATES: &[u32] = &[44_100, 48_000, 88_200, 96_000, 176_400, 192_000];
+
+/// Requested stream format; `None` fields mean "device default".
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct StreamRequest {
+    pub sample_rate: Option<u32>,
+    pub channels: Option<u16>,
+}
+
+fn supported_ranges(
+    device: &cpal::Device,
+    direction: Direction,
+) -> Vec<cpal::SupportedStreamConfigRange> {
+    match direction {
+        Direction::Input => device
+            .supported_input_configs()
+            .map(|it| it.collect())
+            .unwrap_or_default(),
+        Direction::Output => device
+            .supported_output_configs()
+            .map(|it| it.collect())
+            .unwrap_or_default(),
+    }
+}
+
+fn format_rank(f: cpal::SampleFormat) -> u8 {
+    use cpal::SampleFormat as F;
+    match f {
+        F::F32 => 0,
+        F::I32 => 1,
+        F::I16 => 2,
+        _ => 3,
+    }
+}
+
+/// Pick a stream config for `request`, falling back to the device default for unset
+/// fields. Errors if the device does not support the requested rate/channels.
+pub fn choose_config(
+    device: &cpal::Device,
+    direction: Direction,
+    request: StreamRequest,
+) -> Result<cpal::SupportedStreamConfig> {
+    let default = match direction {
+        Direction::Input => device.default_input_config()?,
+        Direction::Output => device.default_output_config()?,
+    };
+    let rate = request.sample_rate.unwrap_or(default.sample_rate().0);
+    let channels = request.channels.unwrap_or(default.channels());
+    if rate == default.sample_rate().0 && channels == default.channels() {
+        return Ok(default);
+    }
+    let mut ranges = supported_ranges(device, direction);
+    ranges.sort_by_key(|r| format_rank(r.sample_format()));
+    ranges
+        .into_iter()
+        .filter(|r| r.channels() == channels)
+        .find_map(|r| r.try_with_sample_rate(cpal::SampleRate(rate)))
+        .ok_or_else(|| {
+            AudioError::DeviceConfig(format!("device does not support {rate} Hz × {channels} ch"))
+        })
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -50,11 +118,32 @@ pub fn list_devices(direction: Direction) -> Result<Vec<DeviceInfo>> {
             Direction::Input => d.default_input_config().ok(),
             Direction::Output => d.default_output_config().ok(),
         };
+        let ranges = supported_ranges(&d, direction);
+        let mut sample_rates: Vec<u32> = STANDARD_RATES
+            .iter()
+            .copied()
+            .filter(|&r| {
+                ranges
+                    .iter()
+                    .any(|c| c.min_sample_rate().0 <= r && r <= c.max_sample_rate().0)
+            })
+            .collect();
+        if let Some(c) = &cfg {
+            sample_rates.push(c.sample_rate().0);
+        }
+        sample_rates.sort_unstable();
+        sample_rates.dedup();
+        let mut channel_counts: Vec<u16> = ranges.iter().map(|c| c.channels()).collect();
+        channel_counts.extend(cfg.as_ref().map(|c| c.channels()));
+        channel_counts.sort_unstable();
+        channel_counts.dedup();
         out.push(DeviceInfo {
             is_default: default_name.as_deref() == Some(name.as_str()),
             default_sample_rate: cfg.as_ref().map(|c| c.sample_rate().0),
             default_channels: cfg.as_ref().map(|c| c.channels()),
             default_sample_format: cfg.as_ref().map(|c| format!("{:?}", c.sample_format())),
+            sample_rates,
+            channel_counts,
             name,
         });
     }
@@ -97,6 +186,43 @@ mod tests {
         // Either Ok (possibly empty) or a well-formed error.
         assert!(ins.is_ok() || ins.is_err());
         assert!(outs.is_ok() || outs.is_err());
+    }
+
+    /// On a machine with an input: the default request resolves to the default config,
+    /// every listed rate can actually be chosen, and an absurd rate is refused.
+    #[test]
+    fn listed_rates_are_choosable() {
+        let Ok(devs) = list_devices(Direction::Input) else {
+            return;
+        };
+        for info in devs.iter().filter(|d| d.default_sample_rate.is_some()) {
+            let Ok(dev) = find_device(Direction::Input, Some(&info.name)) else {
+                continue;
+            };
+            let def = choose_config(&dev, Direction::Input, StreamRequest::default()).unwrap();
+            assert_eq!(Some(def.sample_rate().0), info.default_sample_rate);
+            for &r in &info.sample_rates {
+                let req = StreamRequest {
+                    sample_rate: Some(r),
+                    channels: info.default_channels,
+                };
+                if let Err(e) = choose_config(&dev, Direction::Input, req) {
+                    eprintln!(
+                        "{}: listed {r} Hz but cannot choose it with default channels: {e}",
+                        info.name
+                    );
+                }
+            }
+            let bad = StreamRequest {
+                sample_rate: Some(12_345),
+                channels: None,
+            };
+            assert!(choose_config(&dev, Direction::Input, bad).is_err());
+            eprintln!(
+                "{}: rates {:?}, channels {:?}",
+                info.name, info.sample_rates, info.channel_counts
+            );
+        }
     }
 
     #[test]

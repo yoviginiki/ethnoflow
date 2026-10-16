@@ -22,7 +22,10 @@ pub mod take_writer;
 pub mod wav;
 
 pub use buffer::{linear_to_dbfs, AudioBuffer};
-pub use devices::{find_device, host_name, list_devices, DeviceInfo, Direction};
+pub use devices::{
+    choose_config, find_device, host_name, list_devices, DeviceInfo, Direction, StreamRequest,
+    STANDARD_RATES,
+};
 pub use error::{AudioError, Result};
 pub use metronome::{
     mix_click, ClickConfig, ClickKind, ClickSynth, GridPosition, Metronome, MetronomeStatus,

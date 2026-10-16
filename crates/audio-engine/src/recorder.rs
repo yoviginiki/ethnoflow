@@ -17,7 +17,7 @@ use ringbuf::traits::{Consumer, Producer, Split};
 use ringbuf::HeapRb;
 use serde::{Deserialize, Serialize};
 
-use crate::devices::{find_device, Direction};
+use crate::devices::{choose_config, find_device, Direction, StreamRequest};
 use crate::error::{AudioError, Result};
 use crate::peaks::{LivePeaks, WaveformPeaks};
 use crate::stream_thread::{StreamInfo, StreamThread};
@@ -43,7 +43,13 @@ struct Shared {
     capped: AtomicBool,
     /// Set when writing to disk failed; further samples are discarded.
     write_failed: AtomicBool,
+    /// Set when the host reports the device is gone (unplugged, disabled).
+    device_lost: AtomicBool,
+    /// Lowest 100 ms RMS seen so far (f32 bits); `NO_FLOOR` until measured.
+    noise_floor_bits: AtomicU32,
 }
+
+const NO_FLOOR: u32 = u32::MAX;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RecorderStatus {
@@ -62,6 +68,10 @@ pub struct RecorderStatus {
     /// True if writing to disk failed; the caller should stop the recorder. Everything
     /// up to the last checkpoint is on disk.
     pub write_failed: bool,
+    /// True if the device disappeared; the caller should stop. The take is kept.
+    pub device_lost: bool,
+    /// Quietest 100 ms window so far (linear RMS), after the first 300 ms.
+    pub noise_floor: Option<f32>,
 }
 
 /// Result of a finished recording. The audio itself is the file at `path`.
@@ -79,6 +89,8 @@ pub struct RecordedTake {
     pub clipped_samples: u64,
     pub stream_errors: u64,
     pub capped: bool,
+    pub device_lost: bool,
+    pub noise_floor: Option<f32>,
     /// Present if writing failed mid-take; the file holds the audio up to that point.
     pub write_error: Option<String>,
 }
@@ -103,9 +115,18 @@ impl Recorder {
     /// Start capturing from `device_name` (or the default input device) into a new WAV
     /// file at `path`. The file must not exist yet.
     pub fn start(device_name: Option<&str>, path: &Path) -> Result<Self> {
+        Self::start_with(device_name, path, StreamRequest::default())
+    }
+
+    /// Like [`Recorder::start`] with a requested sample rate / channel count.
+    pub fn start_with(
+        device_name: Option<&str>,
+        path: &Path,
+        request: StreamRequest,
+    ) -> Result<Self> {
         let device = find_device(Direction::Input, device_name)?;
         let resolved_name = device.name().unwrap_or_else(|_| "unknown".into());
-        let supported = device.default_input_config()?;
+        let supported = choose_config(&device, Direction::Input, request)?;
         let sample_format = supported.sample_format();
         let config: cpal::StreamConfig = supported.into();
         let info = StreamInfo {
@@ -116,7 +137,9 @@ impl Recorder {
         let writer = TakeWriter::create(path, info.sample_rate, info.channels)?;
         let max_seconds = writer.max_seconds();
         let shared = Arc::new(Shared::default());
+        shared.noise_floor_bits.store(NO_FLOOR, Ordering::Relaxed);
         let peaks = Arc::new(Mutex::new(LivePeaks::new(info.sample_rate, info.channels)));
+        let floor = NoiseFloor::new(info.sample_rate, info.channels);
         let rb = HeapRb::<f32>::new(RING_CAPACITY_SAMPLES);
         let (prod, cons) = rb.split();
 
@@ -124,7 +147,7 @@ impl Recorder {
         let drain_peaks = Arc::clone(&peaks);
         let drain = thread::Builder::new()
             .name("ethnoflow-record-drain".into())
-            .spawn(move || drain_loop(cons, writer, drain_shared, drain_peaks))
+            .spawn(move || drain_loop(cons, writer, drain_shared, drain_peaks, floor))
             .map_err(|e| AudioError::Stream(format!("cannot spawn drain thread: {e}")))?;
 
         let cb_shared = Arc::clone(&shared);
@@ -133,6 +156,9 @@ impl Recorder {
             let err_shared = Arc::clone(&cb_shared);
             let err_fn = move |e: cpal::StreamError| {
                 log::error!("input stream error: {e}");
+                if matches!(e, cpal::StreamError::DeviceNotAvailable) {
+                    err_shared.device_lost.store(true, Ordering::Release);
+                }
                 err_shared.stream_errors.fetch_add(1, Ordering::Relaxed);
             };
             let stream = match sample_format {
@@ -215,6 +241,11 @@ impl Recorder {
             capped: self.shared.capped.load(Ordering::Acquire),
             max_seconds: self.max_seconds,
             write_failed: self.shared.write_failed.load(Ordering::Acquire),
+            device_lost: self.shared.device_lost.load(Ordering::Acquire),
+            noise_floor: match self.shared.noise_floor_bits.load(Ordering::Relaxed) {
+                NO_FLOOR => None,
+                bits => Some(f32::from_bits(bits)),
+            },
         }
     }
 
@@ -251,6 +282,8 @@ impl Recorder {
             clipped_samples: st.clipped_samples,
             stream_errors: st.stream_errors,
             capped: st.capped,
+            device_lost: st.device_lost,
+            noise_floor: st.noise_floor,
             write_error: result.error,
         })
     }
@@ -273,6 +306,7 @@ fn drain_loop<C: Consumer<Item = f32>>(
     writer: TakeWriter,
     shared: Arc<Shared>,
     peaks: Arc<Mutex<LivePeaks>>,
+    mut floor: NoiseFloor,
 ) -> DrainResult {
     let mut writer = Some(writer);
     let mut error: Option<String> = None;
@@ -292,6 +326,11 @@ fn drain_loop<C: Consumer<Item = f32>>(
         };
         match w.write(&tmp[..n]) {
             Ok(accepted) => {
+                if let Some(f) = floor.push(&tmp[..accepted]) {
+                    shared
+                        .noise_floor_bits
+                        .store(f.to_bits(), Ordering::Relaxed);
+                }
                 peaks
                     .lock()
                     .unwrap_or_else(|e| e.into_inner())
@@ -324,6 +363,49 @@ fn drain_loop<C: Consumer<Item = f32>>(
         frames
     };
     DrainResult { frames, error }
+}
+
+/// Noise-floor estimate: the quietest 100 ms RMS window, ignoring the first 300 ms
+/// (device start-up transients). Runs on the drain thread.
+struct NoiseFloor {
+    window: usize,
+    skip: u32,
+    acc: f64,
+    n: usize,
+    min: Option<f32>,
+}
+
+impl NoiseFloor {
+    fn new(sample_rate: u32, channels: u16) -> Self {
+        Self {
+            window: (sample_rate as usize / 10).max(1) * channels.max(1) as usize,
+            skip: 3,
+            acc: 0.0,
+            n: 0,
+            min: None,
+        }
+    }
+
+    /// Returns the new minimum whenever it changes.
+    fn push(&mut self, samples: &[f32]) -> Option<f32> {
+        let mut changed = None;
+        for &s in samples {
+            self.acc += (s as f64) * (s as f64);
+            self.n += 1;
+            if self.n == self.window {
+                let rms = (self.acc / self.n as f64).sqrt() as f32;
+                self.acc = 0.0;
+                self.n = 0;
+                if self.skip > 0 {
+                    self.skip -= 1;
+                } else if self.min.is_none_or(|m| rms < m) {
+                    self.min = Some(rms);
+                    changed = Some(rms);
+                }
+            }
+        }
+        changed
+    }
 }
 
 /// Body of the input callback: convert, meter, push to the ring buffer.
@@ -436,6 +518,19 @@ mod tests {
     }
 
     #[test]
+    fn noise_floor_is_the_quietest_window_after_startup() {
+        let mut f = NoiseFloor::new(1_000, 1); // 100-sample windows
+                                               // 300 ms of loud start-up transient is ignored.
+        assert_eq!(f.push(&[0.9; 300]), None);
+        // Then a loud window, a quiet one (RMS 0.01) and a louder one.
+        assert_eq!(f.push(&[0.5; 100]), Some(0.5));
+        let q = f.push(&[0.01; 100]).unwrap();
+        assert!((q - 0.01).abs() < 1e-6);
+        assert_eq!(f.push(&[0.2; 100]), None);
+        assert!((f.min.unwrap() - 0.01).abs() < 1e-6);
+    }
+
+    #[test]
     fn clipping_and_peak_are_metered() {
         let shared = Shared::default();
         let (mut prod, _cons) = HeapRb::<f32>::new(64).split();
@@ -466,7 +561,8 @@ mod tests {
         let peaks = Arc::new(Mutex::new(LivePeaks::new(src.sample_rate, src.channels)));
         let (mut prod, cons) = HeapRb::<f32>::new(RING_CAPACITY_SAMPLES).split();
         let (s2, p2) = (Arc::clone(&shared), Arc::clone(&peaks));
-        let j = thread::spawn(move || drain_loop(cons, writer, s2, p2));
+        let floor = NoiseFloor::new(src.sample_rate, src.channels);
+        let j = thread::spawn(move || drain_loop(cons, writer, s2, p2, floor));
         for c in src.samples.chunks(push_chunk) {
             let mut off = 0;
             while off < c.len() {
