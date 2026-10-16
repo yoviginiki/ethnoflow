@@ -6,9 +6,9 @@ this file tracks status and the concrete Phase 1 plan.
 
 | phase | name | status |
 |---|---|---|
-| 0 | Discovery & feasibility | **done in sandbox (Linux/Xvfb); Windows verification pending on owner's laptop** |
-| 1 | Core recording & project system | planned (below) — needs approval |
-| 2 | Pitch, notation & practice | not started |
+| 0 | Discovery & feasibility | done; verified on the owner's Windows laptop 2026-10-16 (CHANGELOG) |
+| 1 | Core recording & project system | **implemented 2026-10-16 (0.1.0)**; DoD manual items (≥3-min reopen, real crash, 30-min, clean-machine install) pending owner — see CHANGELOG known issues |
+| 2 | Pitch, notation & practice | **approved by owner 2026-10-16; plan below; in progress** |
 | 3 | Harmony / drone MVP | not started |
 | 4 | Liquid DnB engine | not started |
 | 5 | Mini DAW + export | not started |
@@ -102,9 +102,83 @@ Estimated effort: 2–3 weeks of focused work.
 | NKS, RØDECaster pads мапинг (MIDI вход = ново ADR) | 8 или 9, след лицензна проверка |
 | Ambient инструмент (granular) | след 9 |
 
-### User decisions needed before Phase 1
-1. Approve this plan (or reorder 1.1–1.6).
-2. Confirm `re.mp3` may be used locally for import tests (never uploaded).
-3. Default export format for "Export": 24-bit PCM (current) or 32-bit float?
-4. Project location default: `%USERPROFILE%\Documents\EthnoFlow\` ?
-5. Owner's laptop audio hardware (interface, mic, GPU) for the hardware log.
+### User decisions taken before Phase 1 (2026-10-16)
+1. Plan approved as is.
+2. `re.mp3` may be used locally for import tests (never uploaded, never committed).
+3. Default export format: 32-bit float.
+4. Project location default: `%USERPROFILE%\Documents\EthnoFlow\`.
+5. Hardware: Intel i5-12450H, 16 GB, RTX 4050 Laptop, Realtek HD Audio (SST) + Nahimic;
+   microphone/headphones used for the manual tests still to be reported.
+
+## Phase 2 — Pitch, notation & practice (plan, approved 2026-10-16)
+
+Exit (master plan): the user records a melody, sees plausible notes, edits mistakes,
+exports MIDI. Everything here is a *proposal* to the user (confidence shown, manual
+choice, original audio and raw contour untouched) — master plan §5.2/§5.3,
+`INSTRUMENT_MACHINE_CONCEPT.md` §6.
+
+### 2.1 `crates/music-core` (pure, no audio I/O)
+- Pitch ↔ note: configurable reference (A4 = 440 by default, user-settable), MIDI number,
+  cents offset, octave; transposing-instrument offset kept separate from sounding pitch.
+- Scales/modes: diatonic modes, harmonic/melodic minor, phrygian dominant (hijaz),
+  double harmonic, pentatonics, plus a user-defined scale (arbitrary cents). Scale
+  membership and nearest-degree queries.
+- Tonic/mode hypotheses from a pitch histogram: ranked list with confidence, never a
+  single answer; no default key.
+- Tests: conversions at several references, membership, hypotheses on synthetic pitch
+  sets (clear major, clear hijaz, ambiguous).
+
+### 2.2 Pitch detection in Rust (ADR-0011 path: DSP first)
+- Monophonic f0 estimator (YIN/pYIN-style: difference function, CMNDF, threshold,
+  parabolic interpolation) with a confidence value and RMS; hop ≈ 5–10 ms.
+- Real-time: per-block estimate from the recorder's drain thread (never the audio
+  callback), exposed in `RecorderStatus` for the tuner.
+- Offline: contour over a whole take, saved to `analysis/<take>.contour.json`
+  (time, f0, confidence, rms); raw contour is kept separate from notes.
+- Tests: pure tones (error < 1 cent), sweeps, vibrato, breath noise → low confidence,
+  octave-error rate measured on synthetic material; a benchmark on the owner's kaval
+  take reports numbers (accuracy, cents error, latency), never a made-up percentage.
+- New dependency only if measured necessary (e.g. `rustfft`, MIT) → ADR.
+
+### 2.3 Note extraction (offline, proposal only)
+- Contour → segments: stable-pitch regions, onsets, rests/breaths, confidence gating;
+  ornaments and slides are kept as pitch-bend data inside a note, not deleted.
+- Output `analysis/<take>.notes.json`: notes with start/end, MIDI number, cents
+  deviation, confidence, bend curve. Quantisation to a grid only if the project has a
+  tempo and only as a separate, reversible step.
+- Tests: synthetic melodies with known notes (precision/recall), grace notes, a long
+  tone with vibrato stays one note.
+
+### 2.4 Desktop
+- **Tuner** (live): note, octave, Hz, cents needle, confidence; in-scale indicator when
+  the project has a chosen scale (otherwise neutral, no assumed key).
+- **Pitch contour** overlay on the waveform; **piano-roll note view** with manual editing
+  (move pitch, drag boundaries, split/merge, delete, restore) — edits stored in
+  `analysis/`, audio untouched, undo.
+- **Scale suggestion** panel: ranked hypotheses with percentages; the user picks one or
+  none; the choice is saved in `project.json`.
+- **Practice: "Hit the note"** (first ear lesson): a target note is shown, the tuner
+  detects when the user holds it within ±N cents; no scoring beyond that in Phase 2.
+
+### 2.5 MIDI export
+- Standard MIDI File (format 0/1) from the edited notes, pitch bend for the bend curve
+  (range declared via RPN), note velocities from RMS. Tempo: the project's tempo map if
+  set; otherwise an explicitly labelled technical tempo so that ticks map to seconds
+  (documented in a README next to the file) — no musical tempo is assumed.
+- Own minimal SMF writer (no dependency) with tests that parse the bytes back;
+  the owner re-imports into a DAW and confirms timing.
+
+### 2.6 Definition of done
+- A real kaval melody: contour and notes shown within 2 s of stopping (release build);
+  the user corrects at least one note; MIDI exported and re-imported in a DAW with
+  correct timing; the raw contour and the original WAV are byte-identical before/after.
+- Measured and logged: tuner update latency, octave-error rate on synthetic set,
+  note precision/recall on synthetic melodies, numbers on the kaval take.
+- No key, tempo or meter assumed anywhere; all tests and clippy green.
+
+### User decisions needed during Phase 2
+1. Default tuning reference 440 Hz (changeable per project)?
+2. Which scale families to show first for kaval material (suggest: diatonic modes,
+   hijaz/phrygian dominant, harmonic minor, double harmonic, pentatonic)?
+3. Is a kaval a transposing instrument in your practice (display in concert or written
+   pitch)?

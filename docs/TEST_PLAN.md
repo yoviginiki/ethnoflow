@@ -3,44 +3,66 @@
 Principle (master plan §13/§15): report failures as failures; a test that cannot run is
 "not run: reason", never PASS.
 
-## What exists after Phase 0
+## What exists after Phase 1 (2026-10-16)
 
 | layer | location | count | runs where |
 |---|---|---|---|
-| Rust unit | `crates/audio-engine/src/*` (`#[cfg(test)]`) | 34 | anywhere; 3 of them self-skip without a device |
+| Rust unit | `crates/audio-engine/src/*` | 59 (+1 `--ignored` 30-min simulation) | anywhere; device tests self-skip without a device |
 | Rust integration | `crates/audio-engine/tests/pipeline.rs` | 3 | anywhere; 1 self-skips without a device |
-| TS unit | `apps/desktop/src/*.test.ts` (vitest) | 6 | anywhere |
-| Type check | `tsc --noEmit`, `cargo clippy -D warnings` | – | anywhere |
-| UI smoke | manual/xdotool under Xvfb, screenshots in `docs/phase0/` | 3 flows | Linux sandbox so far |
+| Rust unit | `crates/project/src/*` | 8 | anywhere |
+| Rust integration | `crates/project/tests/lifecycle.rs` | 10 | anywhere |
+| Rust unit | `apps/desktop/src-tauri/src/commands.rs` (Timing) | 4 | anywhere |
+| TS unit | `apps/desktop/src/*.test.ts` (vitest) | 11 | anywhere |
+| Type/lint | `tsc --noEmit`, `cargo clippy --workspace --all-targets -D warnings` | – | anywhere |
+| Local-only | `decode::decodes_owner_reference_mp3_if_present` (`re.mp3`) | 1 | owner's laptop; skips elsewhere |
 
-Covered: buffer maths (peak/RMS/clip/mono/slice), WAV float32/pcm24/pcm16 roundtrips
-with tolerances, corrupt/missing files, waveform peak reduction (bin counts, amplitude,
-exact small cases), linear resampler (length, frequency, channel independence),
-ring-buffer push/pop + overrun accounting, atomic float peak hold, in-memory cap,
-device enumeration never panicking, record→stop shape, play→finish, mono/stereo
-adaptation, full export→import pipeline incl. stereo channel identity, UI formatting.
+Covered: buffer maths; WAV roundtrips and corrupt files; **header repair after crash**;
+**incremental take writer** (checkpoint validity, never overwrite, size cap, 30-min
+stream); live peaks vs offline peaks; ring buffer overrun accounting and metering;
+device enumeration and **rate/channel selection**; noise-floor estimate; click
+sample-accuracy at several tempos and odd meters, seek/loop equivalence, mixing; player
+loop wrap and click mute; symphonia decode (WAV identical to hound, garbage rejected);
+project manifest roundtrip and schema refusal; **SQLite migrations v1→v2**; take rows;
+**reopen bit-exact, crash recovery, orphan adoption, checksum mismatch, relink, trash,
+import bytes, trim validation, derived takes**; Timing validation; UI formatting,
+grouping parser, keyboard-target guard.
 
-Not covered yet (explicitly): real microphone capture on Windows, WASAPI device names
-and switching, real-time playback timing (null device has no clock), native dialogs,
-installer.
+Not covered by automation (explicitly): real crash of the process (only simulated on
+disk), device unplug (flag set from cpal's error callback, not exercised), native
+dialogs, installer, window-close finalisation, UI flows.
 
-## Phase 0 verification matrix on the Windows laptop
+## Phase 1 verification on the Windows laptop
 
-| test | command | expected |
-|---|---|---|
-| engine tests with real devices | `cargo test --workspace -- --nocapture` | 37 pass; "recorded N frames @ 48000 Hz" and "played ..." lines printed, overruns 0 |
-| playback clock | `cargo run -p ethnoflow-audio-engine --example play_timing` | ≈ 3.0 s wall time |
-| dev app | `npm run tauri dev` | devices listed by WASAPI name; meter moves; waveform after stop; playback audible with playhead; export file opens in a DAW |
-| export fidelity | export float32 → import → compare `TakeInfo` peak/RMS/frames | identical |
-| release + installer | `npm run tauri build` | `.exe` under `target/release/bundle/nsis/` installs without admin and repeats the dev-app checks |
+| test | status |
+|---|---|
+| `cargo test --workspace -- --nocapture` with real WASAPI | pass (recorded/played lines printed, overruns 0) |
+| `npm run typecheck`, `npm test` | pass |
+| `npm run tauri build` → NSIS + MSI present | pass |
+| record 18.7 s kaval → header matches file size | pass |
+| import `re.mp3` → 48 kHz stereo 59.45 s | pass |
+| ≥3-min take → close → reopen → checksum identical | **not run: owner at the instrument** |
+| kill process mid-recording → reopen → recovered take | **not run: owner at the instrument** |
+| 30-min record + playback, overruns = 0 | **not run: owner at the instrument** |
+| installer on a clean machine | **not run: no clean machine yet** |
 
-## Phase 1 additions (planned)
+## Phase 1 additions planned vs done
 
-- Streaming writer: synthetic 30-min source, header recovery from truncated file.
-- Project roundtrip, schema migration, checksum mismatch, missing-file relink.
-- Transport/metronome sample-accuracy at 60/120/174 BPM, 4/4, 7/8 (2+2+3), 9/8.
-- Device disconnect simulation (error callback injection) → clean stop, take preserved.
-- symphonia MP3/FLAC decode fixtures; `re.mp3` local only.
-- E2E (WebDriver via `tauri-driver`): first run, record, stop, play, export, reopen.
-- CI: GitHub Actions matrix windows/macos/ubuntu for `cargo test` + `npm test`;
-  Windows job also runs `tauri build` and uploads the installer as an artifact.
+- Streaming writer + header recovery — done.
+- Project roundtrip, migration, checksum mismatch, relink — done.
+- Metronome sample-accuracy at 60/120/174 BPM, 4/4, 7/8 (2+2+3), 9/8 — done
+  (60/97.3/174/233 BPM, 3/4, 7/8, 9/8, 5/8).
+- Device disconnect simulation — **not done** (needs a fake cpal host; flagged path only).
+- symphonia fixtures — done for WAV; MP3/FLAC fixtures **not done** (no licensed fixture
+  files yet; `re.mp3` local only).
+- E2E via `tauri-driver` — **not done**.
+- CI matrix with Windows `tauri build` artifact — **not done** (`.github/workflows/ci.yml`
+  still Phase 0).
+
+## Phase 2 additions (planned)
+
+- music-core: conversions, scale membership, mode hypotheses on synthetic pitch sets.
+- Pitch detector: pure tones (< 1 cent), sweeps, vibrato, noise → low confidence,
+  octave-error rate; benchmark on the kaval take with reported numbers.
+- Note extraction: precision/recall on synthetic melodies; grace notes; vibrato = one note.
+- SMF writer: bytes parsed back; DAW re-import by the owner.
+- Tuner latency measured on the laptop.

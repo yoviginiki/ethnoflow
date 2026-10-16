@@ -1,5 +1,54 @@
 # Changelog
 
+## 0.1.0 — Phase 1: core recording & project system (2026-10-16, owner's Windows laptop)
+
+### Implemented
+- **Streaming recorder** (ADR-0014): takes go straight to a float32 WAV with the header
+  checkpointed every second; `repair_wav_header` recovers a take after a crash; a take
+  is never overwritten; live waveform while recording (10 ms peak bins in RAM only);
+  write failure and device loss surface in the status and stop the take cleanly;
+  noise-floor estimate; requested sample rate validated against the device.
+- **Project system** `crates/project` (ADR-0015/0016): `<name>.ethnoflow/` with
+  `project.json` (atomic save; tempo map and meter start empty) and SQLite `project.db`
+  (migrations v1→v2, BLAKE3 checksums, trim points, settings). Takes are registered
+  before recording and repaired on open; originals are verified on every open; delete
+  moves to `trash/`; relink accepts only identical bytes; imports keep original bytes;
+  derived takes (cut from a selection) link to their parent.
+- **Metronome / transport**: sample-accurate click as a pure function of the frame
+  (no drift, seek/loop safe), odd meters with groupings (7/8 = 2+2+3 …), count-in
+  trimmed off non-destructively, loop range and click mute adjustable while playing.
+- **Import** (ADR-0017): MP3/FLAC/Ogg Vorbis/WAV via symphonia, decode only.
+- **Desktop**: home screen with the seven areas (only "Play & record" active; others
+  disabled with their planned phase); project new/open/recent/close; take list with
+  rename, delete (confirmation), relink, verify; device/sample-rate selects, test tone;
+  tempo & meter panel; drag selection on the waveform → trim to selection / save as new
+  take / loop; export defaults to 32-bit float; keyboard Space/R/Esc/arrows; busy
+  indicator; commands run off the main thread; window close finalizes a running take.
+
+### Tested
+- Rust: 59 unit + 3 integration (audio-engine, incl. 30-min streaming simulation
+  `--ignored`), 8 unit + 10 integration (project: reopen bit-exact, crash recovery,
+  orphan adoption, checksum mismatch, relink, trash, import, trim, derived, v1→v2),
+  4 (desktop Timing). All green on the laptop with real WASAPI devices; clippy clean.
+- TypeScript: tsc clean; 11 vitest.
+- Manual on the laptop: project create → record kaval (18.7 s) → stop → file header
+  consistent with file size → import `re.mp3` (48 kHz stereo, 59.45 s) → playback;
+  release build + NSIS/MSI installers produced; owner installed the NSIS build.
+
+### Known issues
+- Phase 1 definition-of-done items that need the owner at the instrument are **not yet
+  run**: ≥3-min take → close → reopen checksum; kill-mid-recording → reopen recovery
+  (covered by automated tests, not yet by a real crash); 30-min continuous record +
+  playback with overruns = 0; clean-machine installer smoke test.
+- Hardware log for the manual tests (microphone, headphones, latency feel) not yet
+  recorded by the owner.
+- After stop, the take is loaded whole into RAM for playback/peaks (streaming player
+  is Phase 5); trim reloads the file.
+- Debug (`tauri dev`) builds are 10–30× slower in DSP paths than the installer; judge
+  speed on the installed build.
+- No E2E (tauri-driver) tests and no CI matrix update yet (planned in TEST_PLAN).
+- Node.js v24 on the laptop (CLAUDE.md says 22 LTS); no problem observed.
+
 ## 0.0.1 — Phase 0 (2026-10-16, built and tested in a Linux sandbox)
 
 ### Implemented
