@@ -238,6 +238,41 @@ fn derived_take_is_a_new_file_linked_to_its_parent() {
 }
 
 #[test]
+fn analysis_documents_roundtrip_and_leave_audio_alone() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut p = Project::create(dir.path(), "ana").unwrap();
+    let t = p.begin_recording(None).unwrap();
+    write_take(&p.take_path(&t), &tone());
+    let t = p.finish_recording(&t.id, 0, 0).unwrap();
+    assert_eq!(
+        p.load_analysis::<Vec<(f64, f64)>>(&t.id, "contour")
+            .unwrap(),
+        None
+    );
+    let contour = vec![(0.0, 440.0), (0.01, 441.5)];
+    p.save_analysis(&t.id, "contour", &contour).unwrap();
+    p.save_analysis(&t.id, "contour", &contour).unwrap(); // overwrite is fine
+    assert_eq!(
+        p.load_analysis::<Vec<(f64, f64)>>(&t.id, "contour")
+            .unwrap(),
+        Some(contour)
+    );
+    assert!(p
+        .analysis_path(&t.id, "contour")
+        .ends_with(format!("analysis/{}.contour.json", t.id)));
+    assert!(!p
+        .root()
+        .join("analysis")
+        .join(format!("{}.contour.json.tmp", t.id))
+        .exists());
+    assert_eq!(
+        p.verify_takes().unwrap()[0].health,
+        TakeHealth::Ok,
+        "audio untouched"
+    );
+}
+
+#[test]
 fn names_are_made_safe_and_duplicates_refused() {
     assert_eq!(sanitize_name(" a/b:c? ").unwrap(), "a_b_c_");
     assert_eq!(sanitize_name("con").unwrap(), "con_");

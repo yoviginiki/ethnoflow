@@ -410,6 +410,50 @@ impl Project {
         Ok(take)
     }
 
+    /// Path of an analysis file for a take, e.g. kind `"contour"` →
+    /// `analysis/<take-id>.contour.json`. Analysis never touches the audio.
+    pub fn analysis_path(&self, take_id: &str, kind: &str) -> PathBuf {
+        self.root
+            .join("analysis")
+            .join(format!("{take_id}.{kind}.json"))
+    }
+
+    /// Atomically write an analysis document (temp file + rename).
+    pub fn save_analysis<T: serde::Serialize>(
+        &self,
+        take_id: &str,
+        kind: &str,
+        value: &T,
+    ) -> Result<()> {
+        let path = self.analysis_path(take_id, kind);
+        if let Some(dir) = path.parent() {
+            std::fs::create_dir_all(dir)?;
+        }
+        let tmp = path.with_extension("json.tmp");
+        {
+            let mut f = std::fs::File::create(&tmp)?;
+            use std::io::Write;
+            f.write_all(serde_json::to_string(value)?.as_bytes())?;
+            f.sync_all()?;
+        }
+        std::fs::rename(&tmp, &path)?;
+        Ok(())
+    }
+
+    /// Read an analysis document; `None` if it does not exist.
+    pub fn load_analysis<T: serde::de::DeserializeOwned>(
+        &self,
+        take_id: &str,
+        kind: &str,
+    ) -> Result<Option<T>> {
+        let path = self.analysis_path(take_id, kind);
+        if !path.exists() {
+            return Ok(None);
+        }
+        let text = std::fs::read_to_string(&path)?;
+        Ok(Some(serde_json::from_str(&text)?))
+    }
+
     pub fn setting(&self, key: &str) -> Result<Option<String>> {
         db::get_setting(&self.conn, key)
     }
