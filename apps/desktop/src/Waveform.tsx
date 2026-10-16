@@ -5,6 +5,10 @@ interface Props {
   peaks: WaveformPeaks | null;
   /** Playhead position in seconds, or null when not playing. */
   playhead: number | null;
+  /** Edit cursor in seconds (idle only), or null. */
+  cursor: number | null;
+  /** Accessible name, e.g. the take's name. */
+  label: string;
   /** Live recording: seconds captured so far (draws a growing time bar). */
   recordingSeconds: number | null;
   onSeek?: (seconds: number) => void;
@@ -15,7 +19,7 @@ interface Props {
  * Canvas waveform drawn from reduced min/max peaks. Re-draws on resize and when
  * props change; the playhead is drawn in the same pass to keep it cheap.
  */
-export function Waveform({ peaks, playhead, recordingSeconds, onSeek, emptyText }: Props) {
+export function Waveform({ peaks, playhead, cursor, label, recordingSeconds, onSeek, emptyText }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
 
@@ -118,6 +122,18 @@ export function Waveform({ peaks, playhead, recordingSeconds, onSeek, emptyText 
         }
       }
 
+      if (cursor !== null && dur > 0) {
+        const x = Math.min(w, (cursor / dur) * w);
+        ctx.strokeStyle = colHead;
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath();
+        ctx.moveTo(x + 0.5, 0);
+        ctx.lineTo(x + 0.5, h);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
       if (playhead !== null && dur > 0) {
         const x = Math.min(w, (playhead / dur) * w);
         ctx.strokeStyle = colHead;
@@ -133,7 +149,23 @@ export function Waveform({ peaks, playhead, recordingSeconds, onSeek, emptyText 
     const ro = new ResizeObserver(draw);
     ro.observe(wrap);
     return () => ro.disconnect();
-  }, [peaks, playhead, recordingSeconds, emptyText]);
+  }, [peaks, playhead, cursor, recordingSeconds, emptyText]);
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLCanvasElement>) => {
+    if (!peaks || !onSeek || peaks.duration_seconds <= 0) return;
+    const step = e.shiftKey ? 5 : 1;
+    const at = cursor ?? playhead ?? 0;
+    if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      onSeek(Math.max(0, at - step));
+    } else if (e.key === "ArrowRight") {
+      e.preventDefault();
+      onSeek(Math.min(peaks.duration_seconds, at + step));
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      onSeek(0);
+    }
+  };
 
   const handleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!peaks || !onSeek || peaks.duration_seconds <= 0) return;
@@ -148,8 +180,9 @@ export function Waveform({ peaks, playhead, recordingSeconds, onSeek, emptyText 
         ref={canvasRef}
         className="waveform"
         onClick={handleClick}
+        onKeyDown={onKeyDown}
         role="img"
-        aria-label="waveform"
+        aria-label={label}
         tabIndex={0}
       />
     </div>

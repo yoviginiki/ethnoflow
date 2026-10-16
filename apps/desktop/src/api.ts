@@ -1,4 +1,4 @@
-// Typed wrappers around the Tauri commands in src-tauri/src/commands.rs.
+// Typed wrappers around the Tauri commands in src-tauri/src/{commands,project_cmds}.rs.
 // Keep the shapes in sync with the Rust structs (serde snake_case).
 
 import { invoke } from "@tauri-apps/api/core";
@@ -9,6 +9,8 @@ export interface DeviceInfo {
   default_sample_rate: number | null;
   default_channels: number | null;
   default_sample_format: string | null;
+  sample_rates: number[];
+  channel_counts: number[];
 }
 
 export interface AudioHostInfo {
@@ -16,13 +18,20 @@ export interface AudioHostInfo {
   os: string;
 }
 
-export interface RecordingStarted {
-  device: string;
-  sample_rate: number;
-  channels: number;
+export interface GridPosition {
+  bar: number;
+  beat: number;
+  beat_fraction: number;
 }
 
-export interface RecorderStatus {
+export interface MetronomeStatus {
+  frame: number;
+  sample_rate: number;
+  position: GridPosition | null;
+  stream_errors: number;
+}
+
+export interface RecordingStatus {
   sample_rate: number;
   channels: number;
   frames_captured: number;
@@ -34,13 +43,90 @@ export interface RecorderStatus {
   capped: boolean;
   max_seconds: number;
   write_failed: boolean;
+  device_lost: boolean;
+  noise_floor: number | null;
+  metronome: MetronomeStatus | null;
+  count_in_seconds: number;
 }
 
-export type TakeSource = "none" | "microphone" | "imported_file";
+export interface RecordingStarted {
+  take_id: string;
+  device: string;
+  sample_rate: number;
+  channels: number;
+  count_in_seconds: number;
+}
 
-export interface TakeInfo {
-  source: TakeSource;
+export type TakeSource = "microphone" | "imported_file";
+export type TakeState = "recording" | "complete" | "recovered";
+export type TakeHealth = "ok" | "missing" | "checksum_mismatch" | "unverified";
+
+export interface TakeView {
+  id: string;
+  number: number;
   label: string | null;
+  source: TakeSource;
+  state: TakeState;
+  created_at_ms: number;
+  sample_rate: number | null;
+  channels: number | null;
+  duration_seconds: number | null;
+  trim_in_seconds: number;
+  trim_out_seconds: number | null;
+  original_name: string | null;
+  device: string | null;
+  overrun_samples: number;
+  clipped_samples: number;
+  health: TakeHealth | null;
+}
+
+export interface RecordingStopped {
+  take: TakeView;
+  frames_lost: number;
+  write_error: string | null;
+  device_lost: boolean;
+}
+
+export interface Timing {
+  bpm: number | null;
+  numerator: number | null;
+  unit: number | null;
+  grouping: number[];
+}
+
+export interface ProjectView {
+  name: string;
+  root: string;
+  timing: Timing;
+  takes: TakeView[];
+  loaded_take: string | null;
+}
+
+export interface TakeCheck {
+  id: string;
+  health: TakeHealth;
+}
+
+export interface OpenReport {
+  recovered: string[];
+  unrecoverable: string[];
+  dropped_empty: number;
+  checks: TakeCheck[];
+}
+
+export interface ProjectOpened {
+  project: ProjectView;
+  report: OpenReport;
+}
+
+export interface RecentProject {
+  path: string;
+  name: string;
+  exists: boolean;
+}
+
+export interface LoadedTakeInfo {
+  id: string;
   sample_rate: number;
   channels: number;
   frames: number;
@@ -48,6 +134,7 @@ export interface TakeInfo {
   peak_dbfs: number;
   rms_dbfs: number;
   clipped_samples: number;
+  offset_seconds: number;
 }
 
 export interface WaveformPeaks {
@@ -68,6 +155,7 @@ export interface PlayerStatus {
   sample_rate: number;
   channels: number;
   stream_errors: number;
+  looping: boolean;
 }
 
 export type WavFormat = "float32" | "pcm24" | "pcm16";
@@ -76,6 +164,21 @@ export interface ExportResult {
   path: string;
   bytes: number;
   format: WavFormat;
+}
+
+export interface RecordRequest {
+  input: string | null;
+  output: string | null;
+  sample_rate: number | null;
+  click: boolean;
+  count_in_bars: number;
+}
+
+export interface PlayRequest {
+  device: string | null;
+  start_seconds: number;
+  loop_seconds: [number, number] | null;
+  click: boolean;
 }
 
 export interface CmdError {
@@ -93,28 +196,46 @@ export function describeError(e: unknown): string {
   return String(e);
 }
 
+export const IMPORT_EXTENSIONS = ["wav", "mp3", "flac", "ogg"];
+
 export const api = {
   audioHost: () => invoke<AudioHostInfo>("audio_host"),
   listInputDevices: () => invoke<DeviceInfo[]>("list_input_devices"),
   listOutputDevices: () => invoke<DeviceInfo[]>("list_output_devices"),
+  playTestTone: (device: string | null) => invoke<void>("play_test_tone", { device }),
 
-  startRecording: (device: string | null) =>
-    invoke<RecordingStarted>("start_recording", { device }),
-  recordingStatus: () => invoke<RecorderStatus | null>("recording_status"),
-  stopRecording: () => invoke<TakeInfo>("stop_recording"),
-  recordingWaveform: (bins: number) =>
-    invoke<WaveformPeaks | null>("recording_waveform", { bins }),
+  defaultProjectsDir: () => invoke<string>("default_projects_dir"),
+  recentProjects: () => invoke<RecentProject[]>("recent_projects"),
+  createProject: (name: string, parent: string | null) =>
+    invoke<ProjectView>("create_project", { name, parent }),
+  openProject: (path: string) => invoke<ProjectOpened>("open_project", { path }),
+  closeProject: () => invoke<void>("close_project"),
+  projectState: () => invoke<ProjectView | null>("project_state"),
+  setTiming: (timing: Timing) => invoke<ProjectView>("set_timing", { timing }),
 
-  takeInfo: () => invoke<TakeInfo | null>("take_info"),
+  loadTake: (id: string) => invoke<LoadedTakeInfo>("load_take", { id }),
   getWaveform: (bins: number) => invoke<WaveformPeaks | null>("get_waveform", { bins }),
-  clearTake: () => invoke<void>("clear_take"),
-
-  startPlayback: (device: string | null, startSeconds: number) =>
-    invoke<PlayerStatus>("start_playback", { device, startSeconds }),
-  playbackStatus: () => invoke<PlayerStatus | null>("playback_status"),
-  stopPlayback: () => invoke<void>("stop_playback"),
-
+  renameTake: (id: string, label: string | null) =>
+    invoke<ProjectView>("rename_take", { id, label }),
+  deleteTake: (id: string) => invoke<ProjectView>("delete_take", { id }),
+  setTrim: (id: string, inSeconds: number, outSeconds: number | null) =>
+    invoke<ProjectView>("set_trim", { id, inSeconds, outSeconds }),
+  relinkTake: (id: string, path: string) => invoke<ProjectView>("relink_take", { id, path }),
+  verifyTakes: () => invoke<ProjectView>("verify_takes"),
+  importAudio: (path: string) => invoke<ProjectView>("import_audio", { path }),
   exportWav: (path: string, format: WavFormat) =>
     invoke<ExportResult>("export_wav", { path, format }),
-  importWav: (path: string) => invoke<TakeInfo>("import_wav", { path }),
+
+  startRecording: (req: RecordRequest) => invoke<RecordingStarted>("start_recording", { req }),
+  recordingStatus: () => invoke<RecordingStatus | null>("recording_status"),
+  recordingWaveform: (bins: number) =>
+    invoke<WaveformPeaks | null>("recording_waveform", { bins }),
+  stopRecording: () => invoke<RecordingStopped>("stop_recording"),
+
+  startPlayback: (req: PlayRequest) => invoke<PlayerStatus>("start_playback", { req }),
+  playbackStatus: () => invoke<PlayerStatus | null>("playback_status"),
+  setPlaybackLoop: (loopSeconds: [number, number] | null) =>
+    invoke<void>("set_playback_loop", { loopSeconds }),
+  setPlaybackClick: (on: boolean) => invoke<void>("set_playback_click", { on }),
+  stopPlayback: () => invoke<void>("stop_playback"),
 };

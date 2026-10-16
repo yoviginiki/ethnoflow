@@ -1,7 +1,10 @@
 mod commands;
+mod project_cmds;
+mod settings;
 mod state;
 
 use state::AppState;
+use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -17,19 +20,40 @@ pub fn run() {
             commands::audio_host,
             commands::list_input_devices,
             commands::list_output_devices,
+            commands::play_test_tone,
             commands::start_recording,
             commands::recording_status,
-            commands::stop_recording,
             commands::recording_waveform,
-            commands::take_info,
-            commands::get_waveform,
-            commands::clear_take,
+            commands::stop_recording,
             commands::start_playback,
             commands::playback_status,
+            commands::set_playback_loop,
+            commands::set_playback_click,
             commands::stop_playback,
-            commands::export_wav,
-            commands::import_wav,
+            project_cmds::default_projects_dir,
+            project_cmds::recent_projects,
+            project_cmds::create_project,
+            project_cmds::open_project,
+            project_cmds::close_project,
+            project_cmds::project_state,
+            project_cmds::set_timing,
+            project_cmds::load_take,
+            project_cmds::get_waveform,
+            project_cmds::rename_take,
+            project_cmds::delete_take,
+            project_cmds::set_trim,
+            project_cmds::relink_take,
+            project_cmds::verify_takes,
+            project_cmds::import_audio,
+            project_cmds::export_wav,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running EthnoFlow Studio");
+        .build(tauri::generate_context!())
+        .expect("error while building EthnoFlow Studio")
+        .run(|app, event| {
+            // Window closed while recording: finalize the take so it is `complete`.
+            if let tauri::RunEvent::Exit = event {
+                let state = app.state::<AppState>();
+                project_cmds::close_inner(&mut state.lock());
+            }
+        });
 }

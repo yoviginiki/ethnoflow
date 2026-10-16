@@ -1,5 +1,49 @@
 import { describe, expect, it } from "vitest";
-import { formatBytes, formatDb, formatTime, linearToDb, meterFraction } from "./format";
+import {
+  formatBytes,
+  formatDb,
+  formatGrouping,
+  formatTime,
+  isTypingTarget,
+  linearToDb,
+  meterFraction,
+  parseGrouping,
+  takeName,
+} from "./format";
+
+describe("grouping", () => {
+  it("parses additive groupings", () => {
+    expect(parseGrouping("2+2+3")).toEqual([2, 2, 3]);
+    expect(parseGrouping(" 3 + 2 ")).toEqual([3, 2]);
+    expect(parseGrouping("")).toEqual([]);
+  });
+  it("rejects malformed input", () => {
+    expect(parseGrouping("2++3")).toBeNull();
+    expect(parseGrouping("0+7")).toBeNull();
+    expect(parseGrouping("2,2,3")).toBeNull();
+    expect(parseGrouping("a")).toBeNull();
+  });
+  it("round-trips", () => {
+    expect(formatGrouping(parseGrouping("2+2+2+3")!)).toBe("2+2+2+3");
+  });
+});
+
+describe("takeName", () => {
+  it("prefers the label, falls back to the number", () => {
+    expect(takeName({ label: "Хоро", number: 3 }, "Запис")).toBe("Хоро");
+    expect(takeName({ label: null, number: 3 }, "Запис")).toBe("Запис 3");
+    expect(takeName({ label: "  ", number: 4 }, "Take")).toBe("Take 4");
+  });
+});
+
+describe("isTypingTarget", () => {
+  it("detects form fields only", () => {
+    expect(isTypingTarget({ tagName: "INPUT" } as unknown as EventTarget)).toBe(true);
+    expect(isTypingTarget({ tagName: "SELECT" } as unknown as EventTarget)).toBe(true);
+    expect(isTypingTarget({ tagName: "DIV", isContentEditable: false } as unknown as EventTarget)).toBe(false);
+    expect(isTypingTarget(null)).toBe(false);
+  });
+});
 
 describe("formatTime", () => {
   it("formats minutes, seconds and tenths", () => {

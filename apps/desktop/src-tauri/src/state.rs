@@ -1,29 +1,52 @@
 //! Application state shared across Tauri commands.
 //!
-//! One "take" (the current recording or imported file) lives in memory as an immutable
-//! `Arc<AudioBuffer>`. Phase 1 replaces this with the project system (SQLite + on-disk
-//! originals); the command surface is designed so the UI will not need to change.
+//! Audio lives on disk in the open project; in memory there is at most one loaded take
+//! (the selected one, trimmed) as an immutable `Arc<AudioBuffer>` for playback and
+//! peaks. Raw frames never leave the Rust side.
 
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use audio_engine::{AudioBuffer, Player, Recorder};
-use serde::{Deserialize, Serialize};
+use audio_engine::{AudioBuffer, Metronome, Player, Recorder};
+use project::{Project, TakeHealth};
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum TakeSource {
-    None,
-    Microphone,
-    ImportedFile,
+pub struct ActiveRecording {
+    pub recorder: Recorder,
+    pub take_id: String,
+    /// Length of the count-in, in seconds; becomes the take's trim-in on stop.
+    pub count_in_seconds: f64,
+}
+
+pub struct LoadedTake {
+    pub id: String,
+    /// The playable region (trim applied) — a copy; the original file is untouched.
+    pub buffer: Arc<AudioBuffer>,
 }
 
 #[derive(Default)]
 pub struct Inner {
-    pub recorder: Option<Recorder>,
+    pub project: Option<Project>,
+    /// Result of the last checksum verification, by take id.
+    pub health: HashMap<String, TakeHealth>,
+    pub recording: Option<ActiveRecording>,
+    pub metronome: Option<Metronome>,
     pub player: Option<Player>,
-    pub take: Option<Arc<AudioBuffer>>,
-    pub take_source: Option<TakeSource>,
-    pub take_label: Option<String>,
+    pub tone: Option<Player>,
+    pub loaded: Option<LoadedTake>,
+}
+
+impl Inner {
+    pub fn stop_playback(&mut self) {
+        if let Some(p) = self.player.take() {
+            p.stop();
+        }
+    }
+
+    pub fn stop_metronome(&mut self) {
+        if let Some(m) = self.metronome.take() {
+            m.stop();
+        }
+    }
 }
 
 #[derive(Default)]
