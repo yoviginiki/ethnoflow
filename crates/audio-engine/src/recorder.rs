@@ -24,6 +24,9 @@ use crate::stream_thread::{StreamInfo, StreamThread};
 const RING_CAPACITY_SAMPLES: usize = 96_000 * 2 * 2;
 const CHUNK: usize = 1024;
 const CLIP_THRESHOLD: f32 = 0.999;
+/// Phase 0 keeps the take in RAM. This cap (30 min) bounds memory until Phase 1 streams
+/// to disk: 30 min × 48 kHz × stereo × 4 bytes ≈ 690 MB worst case.
+pub const DEFAULT_MAX_SECONDS: f64 = 30.0 * 60.0;
 
 #[derive(Debug, Default)]
 struct Shared {
@@ -35,6 +38,8 @@ struct Shared {
     clipped_samples: AtomicU64,
     stream_errors: AtomicU64,
     drain_stop: AtomicBool,
+    /// Set when the in-memory limit was reached; further samples are discarded.
+    capped: AtomicBool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -48,6 +53,9 @@ pub struct RecorderStatus {
     pub overrun_samples: u64,
     pub clipped_samples: u64,
     pub stream_errors: u64,
+    /// True once the in-memory limit was hit; the caller should stop the recorder.
+    pub capped: bool,
+    pub max_seconds: f64,
 }
 
 pub struct Recorder {
@@ -56,11 +64,23 @@ pub struct Recorder {
     shared: Arc<Shared>,
     info: StreamInfo,
     device_name: String,
+    max_seconds: f64,
 }
 
 impl Recorder {
-    /// Start capturing from `device_name` (or the default input device).
+    /// Start capturing from `device_name` (or the default input device) with the
+    /// default in-memory limit ([`DEFAULT_MAX_SECONDS`]).
     pub fn start(device_name: Option<&str>) -> Result<Self> {
+        Self::start_with_limit(device_name, DEFAULT_MAX_SECONDS)
+    }
+
+    /// Start capturing with an explicit in-memory limit in seconds.
+    pub fn start_with_limit(device_name: Option<&str>, max_seconds: f64) -> Result<Self> {
+        if !(max_seconds > 0.0) {
+            return Err(AudioError::InvalidArgument(
+                "max_seconds must be > 0".into(),
+            ));
+        }
         let device = find_device(Direction::Input, device_name)?;
         let resolved_name = device.name().unwrap_or_else(|_| "unknown".into());
         let supported = device.default_input_config()?;
@@ -77,6 +97,7 @@ impl Recorder {
 
         // Drain thread: moves samples from the ring buffer into a growable Vec.
         let drain_shared = Arc::clone(&shared);
+        let max_samples = (max_seconds * info.sample_rate as f64) as usize * info.channels as usize;
         let drain = thread::Builder::new()
             .name("ethnoflow-record-drain".into())
             .spawn(move || {
@@ -85,7 +106,12 @@ impl Recorder {
                 loop {
                     let n = cons.pop_slice(&mut tmp);
                     if n > 0 {
-                        out.extend_from_slice(&tmp[..n]);
+                        let room = max_samples.saturating_sub(out.len());
+                        let take = n.min(room);
+                        out.extend_from_slice(&tmp[..take]);
+                        if take < n {
+                            drain_shared.capped.store(true, Ordering::Release);
+                        }
                         continue;
                     }
                     if drain_shared.drain_stop.load(Ordering::Acquire) {
@@ -112,21 +138,34 @@ impl Recorder {
                 err_shared.stream_errors.fetch_add(1, Ordering::Relaxed);
             };
             let stream = match sample_format {
-                SampleFormat::F32 => build_input::<f32, _>(&device, &config, prod, cb_shared, channels, err_fn)?,
-                SampleFormat::I16 => build_input::<i16, _>(&device, &config, prod, cb_shared, channels, err_fn)?,
-                SampleFormat::U16 => build_input::<u16, _>(&device, &config, prod, cb_shared, channels, err_fn)?,
-                SampleFormat::I32 => build_input::<i32, _>(&device, &config, prod, cb_shared, channels, err_fn)?,
-                SampleFormat::I8 => build_input::<i8, _>(&device, &config, prod, cb_shared, channels, err_fn)?,
-                SampleFormat::U8 => build_input::<u8, _>(&device, &config, prod, cb_shared, channels, err_fn)?,
-                SampleFormat::F64 => build_input::<f64, _>(&device, &config, prod, cb_shared, channels, err_fn)?,
+                SampleFormat::F32 => {
+                    build_input::<f32, _>(&device, &config, prod, cb_shared, channels, err_fn)?
+                }
+                SampleFormat::I16 => {
+                    build_input::<i16, _>(&device, &config, prod, cb_shared, channels, err_fn)?
+                }
+                SampleFormat::U16 => {
+                    build_input::<u16, _>(&device, &config, prod, cb_shared, channels, err_fn)?
+                }
+                SampleFormat::I32 => {
+                    build_input::<i32, _>(&device, &config, prod, cb_shared, channels, err_fn)?
+                }
+                SampleFormat::I8 => {
+                    build_input::<i8, _>(&device, &config, prod, cb_shared, channels, err_fn)?
+                }
+                SampleFormat::U8 => {
+                    build_input::<u8, _>(&device, &config, prod, cb_shared, channels, err_fn)?
+                }
+                SampleFormat::F64 => {
+                    build_input::<f64, _>(&device, &config, prod, cb_shared, channels, err_fn)?
+                }
                 other => return Err(AudioError::UnsupportedFormat(format!("{other:?}"))),
             };
             Ok((stream, info))
         })
-        .map_err(|e| {
+        .inspect_err(|_e| {
             // Make sure the drain thread does not linger if stream start failed.
             shared.drain_stop.store(true, Ordering::Release);
-            e
         })?;
 
         Ok(Self {
@@ -135,6 +174,7 @@ impl Recorder {
             shared,
             info,
             device_name: resolved_name,
+            max_seconds,
         })
     }
 
@@ -162,6 +202,8 @@ impl Recorder {
             overrun_samples: self.shared.overrun_samples.load(Ordering::Relaxed),
             clipped_samples: self.shared.clipped_samples.load(Ordering::Relaxed),
             stream_errors: self.shared.stream_errors.load(Ordering::Relaxed),
+            capped: self.shared.capped.load(Ordering::Acquire),
+            max_seconds: self.max_seconds,
         }
     }
 
@@ -180,7 +222,11 @@ impl Recorder {
         let whole = samples.len() / ch * ch;
         let mut samples = samples;
         samples.truncate(whole);
-        Ok(AudioBuffer::new(self.info.sample_rate, self.info.channels, samples))
+        Ok(AudioBuffer::new(
+            self.info.sample_rate,
+            self.info.channels,
+            samples,
+        ))
     }
 }
 
@@ -267,6 +313,27 @@ mod tests {
         a.fetch_max(0.5_f32.to_bits(), Ordering::AcqRel);
         assert_eq!(f32::from_bits(a.swap(0, Ordering::AcqRel)), 0.75);
         assert_eq!(f32::from_bits(a.load(Ordering::Relaxed)), 0.0);
+    }
+
+    /// With a tiny limit the drain thread must stop growing the buffer and flag `capped`.
+    #[test]
+    fn in_memory_limit_is_enforced() {
+        match Recorder::start_with_limit(None, 0.05) {
+            Ok(rec) => {
+                std::thread::sleep(Duration::from_millis(300));
+                let st = rec.status();
+                let sr = st.sample_rate as usize;
+                let ch = st.channels as usize;
+                let buf = rec.stop().expect("stop");
+                let max = (0.05 * sr as f64) as usize * ch;
+                assert!(buf.samples.len() <= max, "{} > {}", buf.samples.len(), max);
+                if st.frames_captured as usize * ch > max {
+                    assert!(st.capped, "cap reached but not flagged");
+                }
+            }
+            Err(e) => eprintln!("no input device in this environment: {e}"),
+        }
+        assert!(Recorder::start_with_limit(None, 0.0).is_err());
     }
 
     /// Starting on a machine with no input device must fail cleanly, not hang or panic.

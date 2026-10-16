@@ -101,7 +101,10 @@ mod tests {
 
     #[test]
     fn unknown_device_name_is_an_error() {
-        let r = find_device(Direction::Input, Some("definitely-not-a-real-device-ethnoflow"));
+        let r = find_device(
+            Direction::Input,
+            Some("definitely-not-a-real-device-ethnoflow"),
+        );
         assert!(r.is_err());
     }
 }

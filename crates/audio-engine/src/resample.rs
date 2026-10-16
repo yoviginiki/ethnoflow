@@ -58,7 +58,11 @@ mod tests {
         // Count zero crossings before and after; they should match the tone frequency.
         let b = AudioBuffer::sine(44_100, 100.0, 1.0, 0.9);
         let r = resample_linear(&b, 48_000);
-        let zc = |s: &[f32]| s.windows(2).filter(|w| (w[0] < 0.0) != (w[1] < 0.0)).count();
+        let zc = |s: &[f32]| {
+            s.windows(2)
+                .filter(|w| (w[0] < 0.0) != (w[1] < 0.0))
+                .count()
+        };
         let a = zc(&b.samples);
         let c = zc(&r.samples);
         assert!((a as i64 - c as i64).abs() <= 2, "{a} vs {c}");

@@ -82,7 +82,11 @@ impl AudioBuffer {
         let start = start_frame.min(self.frames()) * ch;
         let end = end_frame.min(self.frames()) * ch;
         let end = end.max(start);
-        AudioBuffer::new(self.sample_rate, self.channels, self.samples[start..end].to_vec())
+        AudioBuffer::new(
+            self.sample_rate,
+            self.channels,
+            self.samples[start..end].to_vec(),
+        )
     }
 
     /// Generate a mono sine tone. `amplitude` in [0, 1].

@@ -11,19 +11,15 @@ use crate::error::{AudioError, Result};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum WavFormat {
     /// IEEE float, 32 bit. Lossless for the internal f32 representation.
+    #[default]
     Float32,
     /// Integer PCM, 24 bit. The common DAW interchange format.
     Pcm24,
     /// Integer PCM, 16 bit.
     Pcm16,
-}
-
-impl Default for WavFormat {
-    fn default() -> Self {
-        WavFormat::Float32
-    }
 }
 
 fn spec_for(buffer: &AudioBuffer, format: WavFormat) -> WavSpec {
@@ -43,7 +39,9 @@ fn spec_for(buffer: &AudioBuffer, format: WavFormat) -> WavSpec {
 /// Write `buffer` to `path`. Existing files are overwritten.
 pub fn write_wav<P: AsRef<Path>>(path: P, buffer: &AudioBuffer, format: WavFormat) -> Result<()> {
     if buffer.sample_rate == 0 {
-        return Err(AudioError::InvalidArgument("sample_rate must be > 0".into()));
+        return Err(AudioError::InvalidArgument(
+            "sample_rate must be > 0".into(),
+        ));
     }
     let spec = spec_for(buffer, format);
     let mut writer = WavWriter::create(path, spec)?;

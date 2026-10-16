@@ -1,0 +1,13 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Phase 0: audio commands, native file dialogs, logging",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "dialog:allow-save",
+    "dialog:allow-open",
+    "dialog:allow-message",
+    "log:default"
+  ]
+}

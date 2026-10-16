@@ -62,7 +62,11 @@ pub fn adapt_for_device(buffer: &AudioBuffer, channels: u16, sample_rate: u32) -
 
 impl Player {
     /// Start playing `buffer` on `device_name` (or the default output) from `start_frame`.
-    pub fn start(buffer: &AudioBuffer, device_name: Option<&str>, start_frame: usize) -> Result<Self> {
+    pub fn start(
+        buffer: &AudioBuffer,
+        device_name: Option<&str>,
+        start_frame: usize,
+    ) -> Result<Self> {
         if buffer.is_empty() {
             return Err(AudioError::InvalidArgument("buffer is empty".into()));
         }
@@ -76,8 +80,8 @@ impl Player {
         };
 
         // Convert the requested start frame from the buffer's rate to the device rate.
-        let start_frame_device =
-            (start_frame as f64 * info.sample_rate as f64 / buffer.sample_rate.max(1) as f64) as usize;
+        let start_frame_device = (start_frame as f64 * info.sample_rate as f64
+            / buffer.sample_rate.max(1) as f64) as usize;
         let adapted = Arc::new(adapt_for_device(buffer, info.channels, info.sample_rate));
         let total_frames = adapted.frames();
         let shared = Arc::new(Shared::default());
@@ -93,13 +97,27 @@ impl Player {
                 err_shared.stream_errors.fetch_add(1, Ordering::Relaxed);
             };
             let stream = match sample_format {
-                SampleFormat::F32 => build_output::<f32, _>(&device, &config, adapted, cb_shared, err_fn)?,
-                SampleFormat::I16 => build_output::<i16, _>(&device, &config, adapted, cb_shared, err_fn)?,
-                SampleFormat::U16 => build_output::<u16, _>(&device, &config, adapted, cb_shared, err_fn)?,
-                SampleFormat::I32 => build_output::<i32, _>(&device, &config, adapted, cb_shared, err_fn)?,
-                SampleFormat::I8 => build_output::<i8, _>(&device, &config, adapted, cb_shared, err_fn)?,
-                SampleFormat::U8 => build_output::<u8, _>(&device, &config, adapted, cb_shared, err_fn)?,
-                SampleFormat::F64 => build_output::<f64, _>(&device, &config, adapted, cb_shared, err_fn)?,
+                SampleFormat::F32 => {
+                    build_output::<f32, _>(&device, &config, adapted, cb_shared, err_fn)?
+                }
+                SampleFormat::I16 => {
+                    build_output::<i16, _>(&device, &config, adapted, cb_shared, err_fn)?
+                }
+                SampleFormat::U16 => {
+                    build_output::<u16, _>(&device, &config, adapted, cb_shared, err_fn)?
+                }
+                SampleFormat::I32 => {
+                    build_output::<i32, _>(&device, &config, adapted, cb_shared, err_fn)?
+                }
+                SampleFormat::I8 => {
+                    build_output::<i8, _>(&device, &config, adapted, cb_shared, err_fn)?
+                }
+                SampleFormat::U8 => {
+                    build_output::<u8, _>(&device, &config, adapted, cb_shared, err_fn)?
+                }
+                SampleFormat::F64 => {
+                    build_output::<f64, _>(&device, &config, adapted, cb_shared, err_fn)?
+                }
                 other => return Err(AudioError::UnsupportedFormat(format!("{other:?}"))),
             };
             Ok((stream, info))
@@ -114,7 +132,11 @@ impl Player {
     }
 
     pub fn status(&self) -> PlayerStatus {
-        let pos = self.shared.position.load(Ordering::Relaxed).min(self.total_frames);
+        let pos = self
+            .shared
+            .position
+            .load(Ordering::Relaxed)
+            .min(self.total_frames);
         let sr = self.info.sample_rate.max(1) as f64;
         PlayerStatus {
             position_frames: pos,
