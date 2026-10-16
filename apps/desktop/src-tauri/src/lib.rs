@@ -1,3 +1,4 @@
+mod analysis_cmds;
 mod commands;
 mod project_cmds;
 mod settings;
@@ -46,6 +47,16 @@ pub fn run() {
             project_cmds::verify_takes,
             project_cmds::import_audio,
             project_cmds::save_selection_as_take,
+            analysis_cmds::analyze_take,
+            analysis_cmds::get_analysis,
+            analysis_cmds::update_notes,
+            analysis_cmds::reset_notes,
+            analysis_cmds::set_scale,
+            analysis_cmds::set_reference,
+            analysis_cmds::export_midi,
+            analysis_cmds::start_monitor,
+            analysis_cmds::stop_monitor,
+            analysis_cmds::monitor_status,
             project_cmds::export_wav,
         ])
         .build(tauri::generate_context!())

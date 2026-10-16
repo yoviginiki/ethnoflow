@@ -240,6 +240,8 @@ pub async fn start_recording(
     };
     s.stop_playback();
     s.stop_metronome();
+    // The recorder carries its own tuner; the standalone monitor would only add load.
+    s.stop_monitor();
     let project = s
         .project
         .as_mut()

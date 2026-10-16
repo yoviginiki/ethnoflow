@@ -7,7 +7,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use audio_engine::{AudioBuffer, Metronome, Player, Recorder};
+use audio_engine::{AudioBuffer, InputMonitor, Metronome, Player, Recorder};
 use project::{Project, TakeHealth};
 
 pub struct ActiveRecording {
@@ -21,6 +21,8 @@ pub struct LoadedTake {
     pub id: String,
     /// The playable region (trim applied) — a copy; the original file is untouched.
     pub buffer: Arc<AudioBuffer>,
+    /// Seconds cut from the start of the original by the trim.
+    pub offset_seconds: f64,
 }
 
 #[derive(Default)]
@@ -29,6 +31,8 @@ pub struct Inner {
     /// Result of the last checksum verification, by take id.
     pub health: HashMap<String, TakeHealth>,
     pub recording: Option<ActiveRecording>,
+    /// Tuner/meter on the input while not recording.
+    pub monitor: Option<InputMonitor>,
     pub metronome: Option<Metronome>,
     pub player: Option<Player>,
     pub tone: Option<Player>,
@@ -44,6 +48,12 @@ impl Inner {
 
     pub fn stop_metronome(&mut self) {
         if let Some(m) = self.metronome.take() {
+            m.stop();
+        }
+    }
+
+    pub fn stop_monitor(&mut self) {
+        if let Some(m) = self.monitor.take() {
             m.stop();
         }
     }

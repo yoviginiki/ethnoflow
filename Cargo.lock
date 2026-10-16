@@ -889,6 +889,7 @@ name = "ethnoflow-desktop"
 version = "0.0.1"
 dependencies = [
  "ethnoflow-audio-engine",
+ "ethnoflow-music-core",
  "ethnoflow-project",
  "log",
  "serde",

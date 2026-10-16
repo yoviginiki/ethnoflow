@@ -71,6 +71,10 @@ pub struct ProjectView {
     pub timing: Timing,
     pub takes: Vec<TakeView>,
     pub loaded_take: Option<String>,
+    /// Scale the user chose, if any (never inferred silently).
+    pub scale: Option<music_core::Scale>,
+    /// Tuning reference in effect (project value or the 440 Hz default).
+    pub a4_hz: f64,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -121,7 +125,17 @@ fn view(s: &Inner) -> CmdResult<ProjectView> {
         timing: Timing::from_manifest(p.manifest()),
         takes,
         loaded_take: s.loaded.as_ref().map(|l| l.id.clone()),
+        scale: p.manifest().scale.clone(),
+        a4_hz: p
+            .manifest()
+            .a4_hz
+            .unwrap_or(crate::analysis_cmds::DEFAULT_A4_HZ),
     })
+}
+
+/// The project as the UI sees it (for other command modules).
+pub fn project_view(s: &Inner) -> CmdResult<ProjectView> {
+    view(s)
 }
 
 /// Read a take's original into memory with its trim applied.
@@ -171,6 +185,7 @@ pub fn load_take_into(s: &mut Inner, id: &str) -> CmdResult<LoadedTakeInfo> {
     s.stop_playback();
     s.loaded = Some(LoadedTake {
         id: take.id,
+        offset_seconds: info.offset_seconds,
         buffer: Arc::new(buf),
     });
     Ok(info)
@@ -186,6 +201,7 @@ pub fn close_inner(s: &mut Inner) {
     }
     s.stop_playback();
     s.stop_metronome();
+    s.stop_monitor();
     s.loaded = None;
     s.health.clear();
     s.project = None;
@@ -477,6 +493,7 @@ pub async fn import_audio(state: State<'_, AppState>, path: String) -> CmdResult
     s.stop_playback();
     s.loaded = Some(LoadedTake {
         id: take.id.clone(),
+        offset_seconds: 0.0,
         buffer: Arc::new(buf),
     });
     view(&s)
