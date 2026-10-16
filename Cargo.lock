@@ -912,6 +912,7 @@ version = "0.0.1"
 dependencies = [
  "blake3",
  "ethnoflow-audio-engine",
+ "ethnoflow-music-core",
  "log",
  "rusqlite",
  "serde",

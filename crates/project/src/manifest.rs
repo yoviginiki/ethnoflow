@@ -50,6 +50,12 @@ pub struct Manifest {
     pub time_signatures: Vec<TimeSignaturePoint>,
     #[serde(default)]
     pub markers: Vec<Marker>,
+    /// Scale the user chose (never inferred silently); `None` = not chosen.
+    #[serde(default)]
+    pub scale: Option<music_core::Scale>,
+    /// Tuning reference for this project; `None` = the app default (440 Hz).
+    #[serde(default)]
+    pub a4_hz: Option<f64>,
 }
 
 impl Manifest {
@@ -63,6 +69,8 @@ impl Manifest {
             tempo_map: Vec::new(),
             time_signatures: Vec::new(),
             markers: Vec::new(),
+            scale: None,
+            a4_hz: None,
         }
     }
 
@@ -131,9 +139,28 @@ mod tests {
     }
 
     #[test]
-    fn new_manifest_assumes_no_tempo_or_meter() {
+    fn new_manifest_assumes_no_tempo_meter_scale_or_reference() {
         let m = Manifest::new("x", 0);
         assert!(m.tempo_map.is_empty() && m.time_signatures.is_empty());
+        assert!(m.scale.is_none() && m.a4_hz.is_none());
+    }
+
+    #[test]
+    fn scale_and_reference_roundtrip_and_old_files_still_load() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut m = Manifest::new("s", 0);
+        m.scale = Some(music_core::Scale::custom(9, vec![350.0, 700.0, 1050.0]));
+        m.a4_hz = Some(442.0);
+        m.save(dir.path()).unwrap();
+        assert_eq!(Manifest::load(dir.path()).unwrap(), m);
+        // A Phase 1 file without the new fields.
+        std::fs::write(
+            dir.path().join(MANIFEST_FILE),
+            r#"{"format":"ethnoflow-project","schema_version":1,"name":"old","created_at_ms":0,"app_version":"0.1.0"}"#,
+        )
+        .unwrap();
+        let old = Manifest::load(dir.path()).unwrap();
+        assert!(old.scale.is_none() && old.a4_hz.is_none());
     }
 
     #[test]

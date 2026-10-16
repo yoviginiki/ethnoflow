@@ -11,6 +11,7 @@ path = "src/lib.rs"
 
 [dependencies]
 ethnoflow-audio-engine = { path = "../audio-engine" }
+ethnoflow-music-core = { path = "../music-core" }
 rusqlite = { version = "0.40", features = ["bundled", "fallible_uint"] }
 blake3 = "1.8"
 serde = { workspace = true }
