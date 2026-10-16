@@ -1,0 +1,21 @@
+[package]
+name = "ethnoflow-audio-engine"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Real-time audio I/O, recording, playback, WAV and waveform peaks for EthnoFlow Studio"
+
+[lib]
+name = "audio_engine"
+path = "src/lib.rs"
+
+[dependencies]
+cpal = { workspace = true }
+hound = { workspace = true }
+ringbuf = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+log = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3"
