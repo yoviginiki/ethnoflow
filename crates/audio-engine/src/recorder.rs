@@ -26,31 +26,31 @@ use crate::take_writer::TakeWriter;
 
 /// Ring buffer capacity in samples (interleaved). 2 s at 96 kHz stereo — generous so a
 /// briefly stalled drain thread (e.g. a slow disk flush) does not cause overruns.
-const RING_CAPACITY_SAMPLES: usize = 96_000 * 2 * 2;
-const CHUNK: usize = 1024;
+pub(crate) const RING_CAPACITY_SAMPLES: usize = 96_000 * 2 * 2;
+pub(crate) const CHUNK: usize = 1024;
 const CLIP_THRESHOLD: f32 = 0.999;
 
 #[derive(Debug, Default)]
-struct Shared {
+pub(crate) struct Shared {
     /// Max |sample| since the last `status`, stored as f32 bits (non-negative floats
     /// order correctly as u32).
-    peak_bits: AtomicU32,
-    frames_captured: AtomicU64,
-    overrun_samples: AtomicU64,
-    clipped_samples: AtomicU64,
-    stream_errors: AtomicU64,
-    drain_stop: AtomicBool,
+    pub(crate) peak_bits: AtomicU32,
+    pub(crate) frames_captured: AtomicU64,
+    pub(crate) overrun_samples: AtomicU64,
+    pub(crate) clipped_samples: AtomicU64,
+    pub(crate) stream_errors: AtomicU64,
+    pub(crate) drain_stop: AtomicBool,
     /// Set when the WAV size limit was reached; further samples are discarded.
     capped: AtomicBool,
     /// Set when writing to disk failed; further samples are discarded.
     write_failed: AtomicBool,
     /// Set when the host reports the device is gone (unplugged, disabled).
-    device_lost: AtomicBool,
+    pub(crate) device_lost: AtomicBool,
     /// Lowest 100 ms RMS seen so far (f32 bits); `NO_FLOOR` until measured.
     noise_floor_bits: AtomicU32,
     /// Latest pitch estimate from the drain thread: f64 bits of Hz, 0 = unvoiced.
-    pitch_hz_bits: AtomicU64,
-    pitch_conf_bits: AtomicU32,
+    pub(crate) pitch_hz_bits: AtomicU64,
+    pub(crate) pitch_conf_bits: AtomicU32,
 }
 
 const NO_FLOOR: u32 = u32::MAX;
@@ -497,7 +497,7 @@ fn capture_block<T, P>(
     }
 }
 
-fn build_input<T, E>(
+pub(crate) fn build_input<T, E>(
     device: &cpal::Device,
     config: &cpal::StreamConfig,
     mut prod: ringbuf::HeapProd<f32>,

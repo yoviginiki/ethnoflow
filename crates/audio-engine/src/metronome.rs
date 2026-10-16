@@ -466,10 +466,17 @@ mod tests {
     fn live_metronome_runs_and_advances() {
         match Metronome::start(None, &cfg(120.0, 4, 4, vec![])) {
             Ok(m) => {
-                std::thread::sleep(std::time::Duration::from_millis(300));
+                // Device start-up can take a while when other streams open at once.
+                let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+                let mut st = m.status();
+                while st.frame == 0 && std::time::Instant::now() < deadline {
+                    std::thread::sleep(std::time::Duration::from_millis(50));
+                    st = m.status();
+                }
+                std::thread::sleep(std::time::Duration::from_millis(200));
                 let st = m.status();
                 m.stop();
-                assert!(st.frame > 0, "metronome did not advance");
+                assert!(st.frame > 0, "metronome did not advance within 2 s");
                 eprintln!(
                     "metronome advanced {} frames @ {} Hz",
                     st.frame, st.sample_rate

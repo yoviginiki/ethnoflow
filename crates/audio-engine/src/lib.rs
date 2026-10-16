@@ -14,6 +14,7 @@ pub mod decode;
 pub mod devices;
 pub mod error;
 pub mod metronome;
+pub mod monitor;
 pub mod peaks;
 pub mod pitch;
 pub mod player;
@@ -33,6 +34,7 @@ pub use error::{AudioError, Result};
 pub use metronome::{
     mix_click, ClickConfig, ClickKind, ClickSynth, GridPosition, Metronome, MetronomeStatus,
 };
+pub use monitor::{InputMonitor, MonitorStatus};
 pub use peaks::{compute_peaks, LivePeaks, WaveformPeaks};
 pub use pitch::{
     contour, estimate as estimate_pitch, ContourPoint, PitchConfig, PitchEstimate, PitchTracker,
