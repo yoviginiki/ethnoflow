@@ -2,6 +2,7 @@
 //!
 //! The buffer is adapted (channel-mapped and resampled) once, before the stream starts,
 //! so the real-time callback is a plain indexed copy with an atomic read position.
+//! Loop range and click are controlled through atomics and can change while playing.
 
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -13,6 +14,7 @@ use serde::{Deserialize, Serialize};
 use crate::buffer::AudioBuffer;
 use crate::devices::{find_device, Direction};
 use crate::error::{AudioError, Result};
+use crate::metronome::{ClickConfig, ClickSynth};
 use crate::resample::resample_linear;
 use crate::stream_thread::{StreamInfo, StreamThread};
 
@@ -22,6 +24,19 @@ struct Shared {
     position: AtomicUsize,
     finished: AtomicBool,
     stream_errors: AtomicU64,
+    /// Loop range in device frames; `loop_end == 0` means no loop.
+    loop_start: AtomicUsize,
+    loop_end: AtomicUsize,
+    click_on: AtomicBool,
+}
+
+/// Optional playback features. Frames are in the *buffer's* sample rate.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct PlayOptions {
+    /// Loop `[start, end)` until stopped.
+    pub loop_frames: Option<(usize, usize)>,
+    /// Click aligned so that buffer frame 0 is beat 1 of bar 1.
+    pub click: Option<ClickConfig>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -34,6 +49,7 @@ pub struct PlayerStatus {
     pub sample_rate: u32,
     pub channels: u16,
     pub stream_errors: u64,
+    pub looping: bool,
 }
 
 pub struct Player {
@@ -41,6 +57,7 @@ pub struct Player {
     shared: Arc<Shared>,
     info: StreamInfo,
     total_frames: usize,
+    source_rate: u32,
 }
 
 /// Match `buffer` to the device's channel count and sample rate.
@@ -67,6 +84,16 @@ impl Player {
         device_name: Option<&str>,
         start_frame: usize,
     ) -> Result<Self> {
+        Self::start_with(buffer, device_name, start_frame, &PlayOptions::default())
+    }
+
+    /// Start with loop and/or click options.
+    pub fn start_with(
+        buffer: &AudioBuffer,
+        device_name: Option<&str>,
+        start_frame: usize,
+        opts: &PlayOptions,
+    ) -> Result<Self> {
         if buffer.is_empty() {
             return Err(AudioError::InvalidArgument("buffer is empty".into()));
         }
@@ -88,6 +115,13 @@ impl Player {
         shared
             .position
             .store(start_frame_device.min(total_frames), Ordering::Relaxed);
+        let click = match &opts.click {
+            Some(cfg) => {
+                shared.click_on.store(true, Ordering::Relaxed);
+                Some(ClickSynth::new(cfg, info.sample_rate, 0)?)
+            }
+            None => None,
+        };
 
         let cb_shared = Arc::clone(&shared);
         let (stream, info) = StreamThread::spawn("ethnoflow-play-stream", move || {
@@ -96,39 +130,57 @@ impl Player {
                 log::error!("output stream error: {e}");
                 err_shared.stream_errors.fetch_add(1, Ordering::Relaxed);
             };
+            macro_rules! build {
+                ($t:ty) => {
+                    build_output::<$t, _>(&device, &config, adapted, click, cb_shared, err_fn)?
+                };
+            }
             let stream = match sample_format {
-                SampleFormat::F32 => {
-                    build_output::<f32, _>(&device, &config, adapted, cb_shared, err_fn)?
-                }
-                SampleFormat::I16 => {
-                    build_output::<i16, _>(&device, &config, adapted, cb_shared, err_fn)?
-                }
-                SampleFormat::U16 => {
-                    build_output::<u16, _>(&device, &config, adapted, cb_shared, err_fn)?
-                }
-                SampleFormat::I32 => {
-                    build_output::<i32, _>(&device, &config, adapted, cb_shared, err_fn)?
-                }
-                SampleFormat::I8 => {
-                    build_output::<i8, _>(&device, &config, adapted, cb_shared, err_fn)?
-                }
-                SampleFormat::U8 => {
-                    build_output::<u8, _>(&device, &config, adapted, cb_shared, err_fn)?
-                }
-                SampleFormat::F64 => {
-                    build_output::<f64, _>(&device, &config, adapted, cb_shared, err_fn)?
-                }
+                SampleFormat::F32 => build!(f32),
+                SampleFormat::I16 => build!(i16),
+                SampleFormat::U16 => build!(u16),
+                SampleFormat::I32 => build!(i32),
+                SampleFormat::I8 => build!(i8),
+                SampleFormat::U8 => build!(u8),
+                SampleFormat::F64 => build!(f64),
                 other => return Err(AudioError::UnsupportedFormat(format!("{other:?}"))),
             };
             Ok((stream, info))
         })?;
 
-        Ok(Self {
+        let player = Self {
             stream,
             shared,
             info,
             total_frames,
-        })
+            source_rate: buffer.sample_rate.max(1),
+        };
+        player.set_loop(opts.loop_frames);
+        Ok(player)
+    }
+
+    fn to_device_frames(&self, f: usize) -> usize {
+        (f as f64 * self.info.sample_rate as f64 / self.source_rate as f64).round() as usize
+    }
+
+    /// Set or clear the loop range (buffer frames) while playing.
+    pub fn set_loop(&self, range: Option<(usize, usize)>) {
+        match range {
+            Some((a, b)) if b > a => {
+                let a = self
+                    .to_device_frames(a)
+                    .min(self.total_frames.saturating_sub(1));
+                let b = self.to_device_frames(b).min(self.total_frames).max(a + 1);
+                self.shared.loop_start.store(a, Ordering::Relaxed);
+                self.shared.loop_end.store(b, Ordering::Relaxed);
+            }
+            _ => self.shared.loop_end.store(0, Ordering::Relaxed),
+        }
+    }
+
+    /// Mute or unmute the click (only has an effect if started with one).
+    pub fn set_click(&self, on: bool) {
+        self.shared.click_on.store(on, Ordering::Relaxed);
     }
 
     pub fn status(&self) -> PlayerStatus {
@@ -147,6 +199,7 @@ impl Player {
             sample_rate: self.info.sample_rate,
             channels: self.info.channels,
             stream_errors: self.shared.stream_errors.load(Ordering::Relaxed),
+            looping: self.shared.loop_end.load(Ordering::Relaxed) > 0,
         }
     }
 
@@ -163,6 +216,7 @@ fn build_output<T, E>(
     device: &cpal::Device,
     config: &cpal::StreamConfig,
     buffer: Arc<AudioBuffer>,
+    click: Option<ClickSynth>,
     shared: Arc<Shared>,
     err_fn: E,
 ) -> Result<cpal::Stream>
@@ -174,30 +228,49 @@ where
     let stream = device.build_output_stream(
         config,
         move |out: &mut [T], _: &cpal::OutputCallbackInfo| {
-            let total = buffer.frames();
-            let mut pos = shared.position.load(Ordering::Relaxed);
-            for frame in out.chunks_mut(channels) {
-                if pos >= total {
-                    for s in frame.iter_mut() {
-                        *s = T::from_sample(0.0_f32);
-                    }
-                    continue;
-                }
-                let src = &buffer.samples[pos * channels..(pos + 1) * channels];
-                for (dst, &s) in frame.iter_mut().zip(src.iter()) {
-                    *dst = T::from_sample(s);
-                }
-                pos += 1;
-            }
-            shared.position.store(pos, Ordering::Relaxed);
-            if pos >= total {
-                shared.finished.store(true, Ordering::Relaxed);
-            }
+            render_block(out, channels, &buffer, click.as_ref(), &shared);
         },
         err_fn,
         None,
     )?;
     Ok(stream)
+}
+
+/// Body of the output callback. No allocation, no locks, no I/O.
+fn render_block<T: SizedSample + FromSample<f32>>(
+    out: &mut [T],
+    channels: usize,
+    buffer: &AudioBuffer,
+    click: Option<&ClickSynth>,
+    shared: &Shared,
+) {
+    let total = buffer.frames();
+    let loop_end = shared.loop_end.load(Ordering::Relaxed).min(total);
+    let loop_start = shared.loop_start.load(Ordering::Relaxed);
+    let looping = loop_end > loop_start;
+    let click = click.filter(|_| shared.click_on.load(Ordering::Relaxed));
+    let mut pos = shared.position.load(Ordering::Relaxed);
+    for frame in out.chunks_mut(channels) {
+        if looping && pos >= loop_end {
+            pos = loop_start;
+        }
+        if pos >= total {
+            for s in frame.iter_mut() {
+                *s = T::from_sample(0.0_f32);
+            }
+            continue;
+        }
+        let c = click.map_or(0.0, |k| k.sample_at(pos as u64));
+        let src = &buffer.samples[pos * channels..(pos + 1) * channels];
+        for (dst, &s) in frame.iter_mut().zip(src.iter()) {
+            *dst = T::from_sample(s + c);
+        }
+        pos += 1;
+    }
+    shared.position.store(pos, Ordering::Relaxed);
+    if pos >= total && !looping {
+        shared.finished.store(true, Ordering::Relaxed);
+    }
 }
 
 #[cfg(test)]
@@ -232,6 +305,47 @@ mod tests {
     fn empty_buffer_is_rejected() {
         let r = Player::start(&AudioBuffer::empty(48_000, 1), None, 0);
         assert!(r.is_err());
+    }
+
+    #[test]
+    fn loop_wraps_sample_exactly_and_never_finishes() {
+        let buf = AudioBuffer::new(1_000, 1, (0..10).map(|i| i as f32).collect());
+        let shared = Shared::default();
+        shared.position.store(6, Ordering::Relaxed);
+        shared.loop_start.store(5, Ordering::Relaxed);
+        shared.loop_end.store(8, Ordering::Relaxed);
+        let mut out = [0.0_f32; 7];
+        render_block(&mut out, 1, &buf, None, &shared);
+        assert_eq!(out, [6.0, 7.0, 5.0, 6.0, 7.0, 5.0, 6.0]);
+        assert!(!shared.finished.load(Ordering::Relaxed));
+        // Clearing the loop lets playback run to the end.
+        shared.loop_end.store(0, Ordering::Relaxed);
+        let mut out = [9.9_f32; 5];
+        render_block(&mut out, 1, &buf, None, &shared);
+        assert_eq!(out, [7.0, 8.0, 9.0, 0.0, 0.0]);
+        assert!(shared.finished.load(Ordering::Relaxed));
+    }
+
+    #[test]
+    fn click_is_mixed_on_the_grid_and_mutable() {
+        let buf = AudioBuffer::silence(48_000, 2, 1.0);
+        let cfg = ClickConfig {
+            bpm: 120.0,
+            numerator: 4,
+            unit: 4,
+            grouping: vec![],
+            level: 0.5,
+        };
+        let synth = ClickSynth::new(&cfg, 48_000, 0).unwrap();
+        let shared = Shared::default();
+        shared.click_on.store(true, Ordering::Relaxed);
+        let mut out = vec![0.0_f32; 48_000 * 2];
+        render_block(&mut out, 2, &buf, Some(&synth), &shared);
+        assert_eq!(out, synth.render(0, 48_000, 2).samples);
+        shared.position.store(0, Ordering::Relaxed);
+        shared.click_on.store(false, Ordering::Relaxed);
+        render_block(&mut out, 2, &buf, Some(&synth), &shared);
+        assert!(out.iter().all(|&s| s == 0.0));
     }
 
     /// Plays 200 ms of a quiet tone if an output device exists; otherwise fails cleanly.

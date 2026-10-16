@@ -12,6 +12,7 @@
 pub mod buffer;
 pub mod devices;
 pub mod error;
+pub mod metronome;
 pub mod peaks;
 pub mod player;
 pub mod recorder;
@@ -23,8 +24,11 @@ pub mod wav;
 pub use buffer::{linear_to_dbfs, AudioBuffer};
 pub use devices::{find_device, host_name, list_devices, DeviceInfo, Direction};
 pub use error::{AudioError, Result};
+pub use metronome::{
+    mix_click, ClickConfig, ClickKind, ClickSynth, GridPosition, Metronome, MetronomeStatus,
+};
 pub use peaks::{compute_peaks, LivePeaks, WaveformPeaks};
-pub use player::{adapt_for_device, Player, PlayerStatus};
+pub use player::{adapt_for_device, PlayOptions, Player, PlayerStatus};
 pub use recorder::{RecordedTake, Recorder, RecorderStatus};
 pub use resample::resample_linear;
 pub use take_writer::TakeWriter;
