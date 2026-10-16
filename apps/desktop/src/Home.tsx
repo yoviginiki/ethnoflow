@@ -1,9 +1,9 @@
-import { messages, type MessageKey } from "./i18n";
+import { messages, type StringMessageKey } from "./i18n";
 import { useStore } from "./store";
 
 interface Area {
-  title: MessageKey;
-  desc: MessageKey;
+  title: StringMessageKey;
+  desc: StringMessageKey;
   /** Phase in which the area becomes available; null = available now. */
   phase: number | null;
 }

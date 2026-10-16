@@ -1,12 +1,17 @@
 import { useCallback, useEffect, useRef } from "react";
 import { open, save } from "@tauri-apps/plugin-dialog";
-import { api, describeError, IMPORT_EXTENSIONS, type WavFormat } from "./api";
+import { api, describeError, IMPORT_EXTENSIONS, type Note, type WavFormat } from "./api";
+import { AnalysisPanel } from "./AnalysisPanel";
 import { formatBytes, formatDb, formatTime, isTypingTarget, linearToDb, meterFraction, takeName } from "./format";
 import { messages } from "./i18n";
+import { PianoRoll } from "./PianoRoll";
 import { TakeList } from "./TakeList";
 import { TimingPanel } from "./TimingPanel";
+import { Tuner } from "./Tuner";
 import { useStore } from "./store";
 import { Waveform } from "./Waveform";
+
+const MONITOR_POLL_MS = 50;
 
 const WAVEFORM_BINS = 1600;
 const STATUS_POLL_MS = 50;
@@ -69,6 +74,7 @@ export function Studio() {
         const info = await api.loadTake(id);
         const peaks = await api.getWaveform(WAVEFORM_BINS);
         useStore.getState().setLoaded(info, peaks);
+        useStore.getState().setAnalysis(await api.getAnalysis());
         return true;
       });
       if (!ok) {
@@ -190,6 +196,117 @@ export function Studio() {
     void onPlay(pos);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [s.prefs.clickPlay]);
+
+  // ---------- tuner: input monitor while idle ----------
+
+  useEffect(() => {
+    const on = s.prefs.tuner && s.mode === "idle";
+    if (!on) {
+      void api.stopMonitor().catch(() => undefined);
+      useStore.getState().setMonitor(null);
+      return;
+    }
+    let cancelled = false;
+    const p = useStore.getState().prefs;
+    void api.startMonitor(p.selectedInput, p.sampleRate).catch(fail);
+    const tick = async () => {
+      if (cancelled) return;
+      try {
+        useStore.getState().setMonitor(await api.monitorStatus());
+      } catch (e) {
+        fail(e);
+        return;
+      }
+      setTimeout(tick, MONITOR_POLL_MS);
+    };
+    void tick();
+    return () => {
+      cancelled = true;
+    };
+  }, [s.prefs.tuner, s.mode, s.prefs.selectedInput, s.prefs.sampleRate, fail]);
+
+  // ---------- note editing (piano roll) ----------
+
+  const commitNotes = useCallback(
+    async (notes: Note[]) => {
+      const st = useStore.getState();
+      if (!st.analysis) return;
+      st.pushUndo(st.analysis.notes);
+      const v = await withPending(messages[st.prefs.lang].saving, () => api.updateNotes(notes));
+      if (v) useStore.getState().patchAnalysis(v);
+    },
+    [withPending],
+  );
+
+  const undoNotes = useCallback(async () => {
+    const st = useStore.getState();
+    const prev = st.popUndo();
+    if (!prev) return;
+    const v = await withPending(messages[st.prefs.lang].saving, () => api.updateNotes(prev));
+    if (v) useStore.getState().patchAnalysis(v);
+  }, [withPending]);
+
+  const onPianoKey = (e: React.KeyboardEvent<HTMLCanvasElement>) => {
+    const st = useStore.getState();
+    const a = st.analysis;
+    if (!a || st.mode !== "idle") return;
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+      e.preventDefault();
+      e.stopPropagation();
+      void undoNotes();
+      return;
+    }
+    const i = st.selectedNote;
+    if (e.key === "Escape") {
+      st.setSelectedNote(null);
+      return;
+    }
+    if (i === null) return;
+    const notes = a.notes.map((n) => ({ ...n, bend: n.bend.map((b) => [b[0], b[1]] as [number, number]) }));
+    const n = notes[i];
+    let next: Note[] | null = null;
+    if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+      const step = (e.shiftKey ? 12 : 1) * (e.key === "ArrowUp" ? 1 : -1);
+      const midi = Math.max(0, Math.min(127, n.midi + step));
+      notes[i] = { ...n, midi, cents: 0 };
+      next = notes;
+    } else if (e.key === "Delete" || e.key === "Backspace") {
+      notes.splice(i, 1);
+      st.setSelectedNote(null);
+      next = notes;
+    } else if (e.key.toLowerCase() === "s") {
+      const at = st.cursor;
+      if (at > n.start + 0.02 && at < n.end - 0.02) {
+        const left = { ...n, end: at, bend: n.bend.filter((b) => b[0] < at - n.start) };
+        const right = {
+          ...n,
+          start: at,
+          bend: n.bend.filter((b) => b[0] >= at - n.start).map((b) => [b[0] - (at - n.start), b[1]] as [number, number]),
+        };
+        notes.splice(i, 1, left, right);
+        next = notes;
+      }
+    } else if (e.key.toLowerCase() === "m") {
+      const j = i + 1;
+      if (j < notes.length) {
+        const m = notes[j];
+        const merged = {
+          ...n,
+          end: Math.max(n.end, m.end),
+          confidence: (n.confidence + m.confidence) / 2,
+          velocity: Math.max(n.velocity, m.velocity),
+          bend: [...n.bend, ...m.bend.map((b) => [b[0] + (m.start - n.start), b[1] + (m.midi - n.midi) * 100] as [number, number])],
+        };
+        notes.splice(i, 2, merged);
+        next = notes;
+      }
+    }
+    if (next) {
+      e.preventDefault();
+      e.stopPropagation();
+      void commitNotes(next);
+    }
+  };
 
   // ---------- status polling ----------
 
@@ -436,12 +553,26 @@ export function Studio() {
             <button className="ghost" onClick={() => void api.playTestTone(s.prefs.selectedOutput).catch(fail)} disabled={busy}>
               {t.testTone}
             </button>
+            <label className="inline">
+              <input type="checkbox" checked={s.prefs.tuner} onChange={(e) => s.setPref("tuner", e.target.checked)} />
+              {t.tuner}
+            </label>
             <button className="ghost" onClick={refreshDevices} disabled={busy}>
               {t.refresh}
             </button>
           </section>
 
           <TimingPanel />
+
+          {(s.prefs.tuner || s.mode === "recording") && (
+            <Tuner
+              active={s.mode === "recording" ? rec !== null : s.monitor !== null}
+              hz={s.mode === "recording" ? (rec?.pitch_hz ?? null) : (s.monitor?.pitch_hz ?? null)}
+              confidence={s.mode === "recording" ? (rec?.pitch_confidence ?? 0) : (s.monitor?.pitch_confidence ?? 0)}
+              a4={project.a4_hz}
+              scale={project.scale}
+            />
+          )}
 
           <section className="meter-row" aria-label={t.level}>
             <span className="muted small">{t.level}</span>
@@ -471,6 +602,30 @@ export function Studio() {
             emptyText={t.noTakes}
             label={loadedTake ? takeName(loadedTake, t.take) : t.noTakes}
           />
+
+          {s.loaded && s.analysis && (
+            <>
+              <PianoRoll
+                notes={s.analysis.notes}
+                contour={s.analysis.contour}
+                duration={s.loaded.duration_seconds}
+                cursor={s.mode === "idle" ? s.cursor : null}
+                playhead={s.mode === "playing" && s.player ? s.player.position_seconds : null}
+                selected={s.selectedNote}
+                scale={project.scale}
+                noteNames={t.noteNames}
+                label={t.pianoRoll}
+                onSelect={(i) => s.setSelectedNote(i)}
+                onSeek={(sec) => {
+                  s.setCursor(sec);
+                  if (s.mode === "playing") void onPlay(sec);
+                }}
+                onKey={onPianoKey}
+              />
+              <div className="muted small">{t.pianoRollHint}</div>
+            </>
+          )}
+          {s.loaded && <AnalysisPanel withPending={withPending} />}
 
           <section className="transport">
             {s.mode === "recording" ? (

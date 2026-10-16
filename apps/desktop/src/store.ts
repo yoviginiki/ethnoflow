@@ -4,8 +4,11 @@
 
 import { create } from "zustand";
 import type {
+  AnalysisView,
   DeviceInfo,
   LoadedTakeInfo,
+  MonitorStatus,
+  Note,
   OpenReport,
   PlayerStatus,
   ProjectView,
@@ -28,6 +31,7 @@ export interface Prefs {
   countIn: number;
   clickPlay: boolean;
   loop: boolean;
+  tuner: boolean;
 }
 
 const PREFS_KEY = "ethnoflow.prefs.v1";
@@ -42,6 +46,7 @@ export const DEFAULT_PREFS: Prefs = {
   countIn: 0,
   clickPlay: false,
   loop: false,
+  tuner: false,
 };
 
 function loadPrefs(): Prefs {
@@ -101,6 +106,24 @@ interface Store {
   pending: string | null;
   setPending: (p: string | null) => void;
 
+  /** Pitch analysis of the loaded take (contour, notes, hypotheses), or null. */
+  analysis: AnalysisView | null;
+  /** New analysis (load/analyse): clears selection and undo. */
+  setAnalysis: (a: AnalysisView | null) => void;
+  /** Same analysis after an edit: keeps selection and undo. */
+  patchAnalysis: (a: AnalysisView) => void;
+  /** Index into analysis.notes, or null. */
+  selectedNote: number | null;
+  setSelectedNote: (i: number | null) => void;
+  /** Undo stack of note lists (most recent last). */
+  notesUndo: Note[][];
+  pushUndo: (notes: Note[]) => void;
+  popUndo: () => Note[] | undefined;
+
+  /** Live tuner reading while idle (input monitor), or null. */
+  monitor: MonitorStatus | null;
+  setMonitor: (m: MonitorStatus | null) => void;
+
   /** Peak hold for the input meter, decays in the UI tick. */
   meterDb: number;
   setMeterDb: (db: number) => void;
@@ -134,7 +157,8 @@ export const useStore = create<Store>((set, get) => ({
 
   loaded: null,
   peaks: null,
-  setLoaded: (loaded, peaks) => set({ loaded, peaks, cursor: 0, selection: null }),
+  setLoaded: (loaded, peaks) =>
+    set({ loaded, peaks, cursor: 0, selection: null, analysis: null, selectedNote: null, notesUndo: [] }),
   setPeaks: (peaks) => set({ peaks }),
 
   mode: "idle",
@@ -151,6 +175,27 @@ export const useStore = create<Store>((set, get) => ({
 
   pending: null,
   setPending: (pending) => set({ pending }),
+
+  analysis: null,
+  setAnalysis: (analysis) => set({ analysis, selectedNote: null, notesUndo: [] }),
+  patchAnalysis: (analysis) =>
+    set((st) => ({
+      analysis,
+      selectedNote: st.selectedNote !== null && st.selectedNote < analysis.notes.length ? st.selectedNote : null,
+    })),
+  selectedNote: null,
+  setSelectedNote: (selectedNote) => set({ selectedNote }),
+  notesUndo: [],
+  pushUndo: (notes) => set({ notesUndo: [...get().notesUndo.slice(-49), notes] }),
+  popUndo: () => {
+    const stack = get().notesUndo;
+    if (stack.length === 0) return undefined;
+    set({ notesUndo: stack.slice(0, -1) });
+    return stack[stack.length - 1];
+  },
+
+  monitor: null,
+  setMonitor: (monitor) => set({ monitor }),
 
   meterDb: -120,
   setMeterDb: (meterDb) => set({ meterDb }),

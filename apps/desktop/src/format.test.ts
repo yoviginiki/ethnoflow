@@ -1,12 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
+  centsFromScale,
   formatBytes,
   formatDb,
   formatGrouping,
   formatTime,
+  hzToMidi,
   isTypingTarget,
   linearToDb,
   meterFraction,
+  midiToHz,
+  noteParts,
   parseGrouping,
   takeName,
 } from "./format";
@@ -25,6 +29,29 @@ describe("grouping", () => {
   });
   it("round-trips", () => {
     expect(formatGrouping(parseGrouping("2+2+2+3")!)).toBe("2+2+2+3");
+  });
+});
+
+describe("pitch helpers", () => {
+  it("converts Hz and MIDI at a reference", () => {
+    expect(hzToMidi(440)).toBeCloseTo(69, 9);
+    expect(hzToMidi(442, 442)).toBeCloseTo(69, 9);
+    expect(midiToHz(60)).toBeCloseTo(261.6256, 3);
+  });
+  it("splits a fractional MIDI number into note parts", () => {
+    expect(noteParts(69)).toEqual({ pc: 9, midi: 69, octave: 4, cents: 0 });
+    expect(noteParts(60.3).cents).toBeCloseTo(30, 9);
+    expect(noteParts(60.5)).toMatchObject({ midi: 61, cents: -50 });
+    expect(noteParts(59.7)).toMatchObject({ pc: 0, midi: 60, octave: 4 });
+  });
+  it("measures distance from a scale degree", () => {
+    const dDorian = { tonic_pc: 2, degrees_cents: [0, 200, 300, 500, 700, 900, 1000] };
+    expect(centsFromScale(dDorian, 62)).toBe(0);
+    expect(centsFromScale(dDorian, 62.1)).toBeCloseTo(10, 9);
+    // C♯ sits a semitone from both C and D: the first degree checked (D, the tonic) wins.
+    expect(Math.abs(centsFromScale(dDorian, 61))).toBe(100);
+    // C♯ + 40 cents is 60 cents below D (the nearest degree), not 40 above C♯.
+    expect(centsFromScale(dDorian, 73.4)).toBeCloseTo(-60, 9);
   });
 });
 

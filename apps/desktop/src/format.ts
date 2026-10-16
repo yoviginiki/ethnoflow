@@ -52,6 +52,50 @@ export function isTypingTarget(el: EventTarget | null): boolean {
   return tag === "input" || tag === "textarea" || tag === "select" || h.isContentEditable === true;
 }
 
+// ---------- pitch helpers (mirror crates/music-core; pure, unit-tested) ----------
+
+export function hzToMidi(hz: number, a4 = 440): number {
+  return 69 + 12 * Math.log2(hz / a4);
+}
+
+export function midiToHz(midi: number, a4 = 440): number {
+  return a4 * Math.pow(2, (midi - 69) / 12);
+}
+
+export interface NoteParts {
+  /** 0 = C … 11 = B */
+  pc: number;
+  midi: number;
+  octave: number;
+  /** −50 ≤ cents < 50 */
+  cents: number;
+}
+
+/** Nearest tempered note to a fractional MIDI number. */
+export function noteParts(midiFrac: number): NoteParts {
+  let midi = Math.round(midiFrac);
+  let cents = (midiFrac - midi) * 100;
+  if (cents >= 50) {
+    midi += 1;
+    cents -= 100;
+  }
+  const pc = ((midi % 12) + 12) % 12;
+  return { pc, midi, octave: Math.floor(midi / 12) - 1, cents };
+}
+
+/** Signed distance (cents) from the nearest degree of `scale`, octave-independent. */
+export function centsFromScale(scale: { tonic_pc: number; degrees_cents: number[] }, midiFrac: number): number {
+  const c = (((midiFrac - scale.tonic_pc) * 100) % 1200 + 1200) % 1200;
+  let best = Infinity;
+  for (const d of scale.degrees_cents) {
+    let off = c - d;
+    if (off > 600) off -= 1200;
+    else if (off < -600) off += 1200;
+    if (Math.abs(off) < Math.abs(best)) best = off;
+  }
+  return best;
+}
+
 export function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`;
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;

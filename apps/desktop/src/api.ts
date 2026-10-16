@@ -45,6 +45,8 @@ export interface RecordingStatus {
   write_failed: boolean;
   device_lost: boolean;
   noise_floor: number | null;
+  pitch_hz: number | null;
+  pitch_confidence: number;
   metronome: MetronomeStatus | null;
   count_in_seconds: number;
 }
@@ -95,12 +97,103 @@ export interface Timing {
   grouping: number[];
 }
 
+export type ScaleKind =
+  | "ionian"
+  | "dorian"
+  | "phrygian"
+  | "lydian"
+  | "mixolydian"
+  | "aeolian"
+  | "locrian"
+  | "harmonic_minor"
+  | "melodic_minor"
+  | "phrygian_dominant"
+  | "double_harmonic"
+  | "major_pentatonic"
+  | "minor_pentatonic";
+
+export const SCALE_KINDS: ScaleKind[] = [
+  "ionian",
+  "dorian",
+  "phrygian",
+  "lydian",
+  "mixolydian",
+  "aeolian",
+  "locrian",
+  "harmonic_minor",
+  "melodic_minor",
+  "phrygian_dominant",
+  "double_harmonic",
+  "major_pentatonic",
+  "minor_pentatonic",
+];
+
+export interface Scale {
+  tonic_pc: number;
+  degrees_cents: number[];
+  kind: ScaleKind | null;
+}
+
 export interface ProjectView {
   name: string;
   root: string;
   timing: Timing;
   takes: TakeView[];
   loaded_take: string | null;
+  scale: Scale | null;
+  a4_hz: number;
+}
+
+export interface Note {
+  start: number;
+  end: number;
+  midi: number;
+  cents: number;
+  confidence: number;
+  velocity: number;
+  bend: [number, number][];
+}
+
+export interface ContourView {
+  t: number;
+  midi: number | null;
+  confidence: number;
+}
+
+export interface Hypothesis {
+  tonic_pc: number;
+  kind: ScaleKind;
+  score: number;
+  probability: number;
+}
+
+export interface AnalysisView {
+  take_id: string;
+  a4_hz: number;
+  contour: ContourView[];
+  notes: Note[];
+  edited: boolean;
+  hypotheses: Hypothesis[];
+}
+
+export interface MonitorStatus {
+  sample_rate: number;
+  channels: number;
+  peak: number;
+  clipped_samples: number;
+  stream_errors: number;
+  device_lost: boolean;
+  pitch_hz: number | null;
+  pitch_confidence: number;
+}
+
+export interface MidiExportResult {
+  path: string;
+  bytes: number;
+  notes: number;
+  tempo_bpm: number;
+  technical_tempo: boolean;
+  readme_path: string | null;
 }
 
 export interface TakeCheck {
@@ -228,6 +321,18 @@ export const api = {
     invoke<ProjectView>("save_selection_as_take", { inSeconds, outSeconds, label }),
   exportWav: (path: string, format: WavFormat) =>
     invoke<ExportResult>("export_wav", { path, format }),
+
+  analyzeTake: () => invoke<AnalysisView>("analyze_take"),
+  getAnalysis: () => invoke<AnalysisView | null>("get_analysis"),
+  updateNotes: (notes: Note[]) => invoke<AnalysisView>("update_notes", { notes }),
+  resetNotes: () => invoke<AnalysisView>("reset_notes"),
+  setScale: (scale: Scale | null) => invoke<ProjectView>("set_scale", { scale }),
+  setReference: (a4Hz: number | null) => invoke<ProjectView>("set_reference", { a4Hz }),
+  exportMidi: (path: string) => invoke<MidiExportResult>("export_midi", { path }),
+  startMonitor: (device: string | null, sampleRate: number | null) =>
+    invoke<void>("start_monitor", { device, sampleRate }),
+  stopMonitor: () => invoke<void>("stop_monitor"),
+  monitorStatus: () => invoke<MonitorStatus | null>("monitor_status"),
 
   startRecording: (req: RecordRequest) => invoke<RecordingStarted>("start_recording", { req }),
   recordingStatus: () => invoke<RecordingStatus | null>("recording_status"),
