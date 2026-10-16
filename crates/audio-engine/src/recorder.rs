@@ -71,6 +71,9 @@ pub struct RecordedTake {
     pub sample_rate: u32,
     pub channels: u16,
     pub frames: u64,
+    /// Frames the device delivered. `frames_captured - frames` is what was lost
+    /// (overruns, size cap or a write failure); 0 in a healthy take.
+    pub frames_captured: u64,
     pub duration_seconds: f64,
     pub overrun_samples: u64,
     pub clipped_samples: u64,
@@ -242,6 +245,7 @@ impl Recorder {
             sample_rate: self.info.sample_rate,
             channels: self.info.channels,
             frames: result.frames,
+            frames_captured: st.frames_captured,
             duration_seconds: result.frames as f64 / self.info.sample_rate as f64,
             overrun_samples: st.overrun_samples,
             clipped_samples: st.clipped_samples,
@@ -526,6 +530,12 @@ mod tests {
                 let live = rec.live_peaks(100);
                 let take = rec.stop().expect("stop");
                 assert!(take.write_error.is_none());
+                if take.overrun_samples == 0 {
+                    assert_eq!(
+                        take.frames, take.frames_captured,
+                        "frames lost on the way to disk"
+                    );
+                }
                 let back = read_wav(&path).unwrap();
                 assert_eq!(back.frames() as u64, take.frames);
                 assert_eq!(back.channels, take.channels);
