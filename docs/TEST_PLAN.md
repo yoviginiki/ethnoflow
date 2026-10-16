@@ -58,11 +58,27 @@ dialogs, installer, window-close finalisation, UI flows.
 - CI matrix with Windows `tauri build` artifact — **not done** (`.github/workflows/ci.yml`
   still Phase 0).
 
-## Phase 2 additions (planned)
+## Phase 2 (2026-10-16)
 
-- music-core: conversions, scale membership, mode hypotheses on synthetic pitch sets.
-- Pitch detector: pure tones (< 1 cent), sweeps, vibrato, noise → low confidence,
-  octave-error rate; benchmark on the kaval take with reported numbers.
-- Note extraction: precision/recall on synthetic melodies; grace notes; vibrato = one note.
-- SMF writer: bytes parsed back; DAW re-import by the owner.
-- Tuner latency measured on the laptop.
+| layer | location | count |
+|---|---|---|
+| Rust unit | `crates/music-core/src/*` (pitch, scale, key, notes, midi) | 24 |
+| Rust unit | `crates/audio-engine/src/pitch.rs`, `monitor.rs`, recorder tuner path | +8 |
+| Rust unit | `apps/desktop/src-tauri/src/analysis_cmds.rs` | 2 |
+| Rust integration | `crates/project/tests/lifecycle.rs` (analysis docs) | +1 |
+| TS unit | `format.test.ts` (pitch helpers) | +3 |
+
+Done: conversions at several references; membership incl. non-tempered custom
+scales; hypotheses (clear major > 50 %, hijaz vs harmonic minor, ambiguous < 10 %);
+pure tones < 1 cent to 1760 Hz at 44.1/48 kHz; harmonic tones < 2 % octave errors;
+vibrato; sweep; silence/noise unvoiced; streaming = offline; note extraction (exact
+melody, vibrato = one note, grace note kept, repeated pitch split by rest and onset,
+slide leads into its target, low confidence → none); SMF bytes parsed back (VLQ, ticks,
+tempo/meter metas, RPN, bend clamp and reset); analysis documents roundtrip; monitor and
+recorder publish the mono-mix pitch.
+
+Measured on the kaval take and `re.mp3`: see CHANGELOG "Measurements".
+
+Not done: tuner update latency on the laptop (needs a loopback or the owner's
+judgement); note precision/recall on *real* kaval material (owner's check in the piano
+roll); DAW re-import of the exported MIDI (owner).

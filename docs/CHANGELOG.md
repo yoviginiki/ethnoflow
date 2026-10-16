@@ -1,6 +1,26 @@
 # Changelog
 
-## Unreleased — Phase 2 (in progress)
+## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
+
+### Implemented
+- **`crates/music-core`** (pure): Hz ↔ MIDI at a configurable A4; scales (7 modes,
+  harmonic/melodic minor, hijaz, double harmonic, pentatonics, user-defined cents);
+  tonic/mode hypotheses as a ranked probability list (never a single answer);
+  **note extraction** from a contour (ornaments, slides and vibrato kept as bend data
+  inside notes); **SMF writer** with pitch bend, RPN range, project or technical tempo.
+- **Pitch detection** (`audio_engine::pitch`, YIN): per-frame estimate with
+  confidence, streaming tracker, offline contour; **live pitch** in `RecorderStatus`;
+  **`InputMonitor`** = tuner/meter on the input without recording.
+- **Project**: `analysis/<take>.{contour,notes,notes.edited}.json` (atomic writes);
+  `project.json` stores the user-chosen scale and A4 (optional; old files load).
+- **Desktop**: tuner (note, cents needle, Hz, confidence, in-scale indicator) with the
+  first practice "Hit the note"; "Analyse" → contour + proposed notes + scale
+  suggestions with percentages (the user chooses, or none); piano roll aligned to the
+  waveform with editing (↑/↓, Delete, S split, M merge, Ctrl+Z undo) saved separately
+  from the automatic notes; A4 per project; MIDI export (project tempo/meter or a
+  labelled technical 60 BPM with a README next to the file).
+- Device tests now wait up to 2 s for WASAPI streams to start (flaky under parallel
+  stream opening).
 
 ### Measurements (owner's laptop, release build, YIN hop 10 ms, window 1024)
 | material | pitch time | voiced | f0 p05 / median / p95 | confidence p10 / median | octave-sized jumps |

@@ -8,7 +8,7 @@ this file tracks status and the concrete Phase 1 plan.
 |---|---|---|
 | 0 | Discovery & feasibility | done; verified on the owner's Windows laptop 2026-10-16 (CHANGELOG) |
 | 1 | Core recording & project system | **implemented 2026-10-16 (0.1.0)**; DoD manual items (≥3-min reopen, real crash, 30-min, clean-machine install) pending owner — see CHANGELOG known issues |
-| 2 | Pitch, notation & practice | **approved by owner 2026-10-16; plan below; in progress** |
+| 2 | Pitch, notation & practice | **approved 2026-10-16; 2.1–2.5 implemented the same day; DoD (2.6) needs the owner's kaval test and a DAW re-import** |
 | 3 | Harmony / drone MVP | not started |
 | 4 | Liquid DnB engine | not started |
 | 5 | Mini DAW + export | not started |
