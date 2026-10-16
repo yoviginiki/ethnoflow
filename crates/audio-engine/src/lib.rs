@@ -15,6 +15,7 @@ pub mod devices;
 pub mod error;
 pub mod metronome;
 pub mod peaks;
+pub mod pitch;
 pub mod player;
 pub mod recorder;
 pub mod resample;
@@ -33,6 +34,9 @@ pub use metronome::{
     mix_click, ClickConfig, ClickKind, ClickSynth, GridPosition, Metronome, MetronomeStatus,
 };
 pub use peaks::{compute_peaks, LivePeaks, WaveformPeaks};
+pub use pitch::{
+    contour, estimate as estimate_pitch, ContourPoint, PitchConfig, PitchEstimate, PitchTracker,
+};
 pub use player::{adapt_for_device, PlayOptions, Player, PlayerStatus};
 pub use recorder::{RecordedTake, Recorder, RecorderStatus};
 pub use resample::resample_linear;
