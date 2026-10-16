@@ -53,7 +53,7 @@ no problem observed).
 | `npm install` / `typecheck` / `npm test` | 0 vulnerabilities; tsc clean; 6/6 vitest pass |
 | `npm run tauri dev` | app launched; owner reports recording works. Device names in the selects, meter behaviour, overrun count, clipping, latency feel, headphone playback, 24-bit export → re-import: **not reported in detail** |
 | `npm run tauri build` | success (release compile 3 m 14 s). Present: `target/release/bundle/nsis/EthnoFlow Studio_0.0.1_x64-setup.exe` (1.76 MiB), `target/release/bundle/msi/EthnoFlow Studio_0.0.1_x64_en-US.msi` (2.45 MiB) |
-| install + repeat manual test from installed app | not run: pending owner |
+| install + repeat manual test from installed app | owner installed the NSIS build and reports it works (no detailed measurements) |
 
 **Issues found:** none in code. Open: manual-test details above not yet recorded; Nahimic
 APO on this Realtek path may add latency (unmeasured).

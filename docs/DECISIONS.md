@@ -97,3 +97,17 @@ measurements before adoption.
 
 Found during Phase 0: a bare cargo release build does not embed the frontend. Scripts and
 CLAUDE.md use the Tauri CLI.
+
+## ADR-0014 Recordings stream to a checkpointed float32 WAV (supersedes ADR-0007)
+
+Context: Phase 1 exit requires no data loss on crash and 30+ minute takes.
+Decision: the drain thread writes a 32-bit float WAV through `hound::WavWriter` and calls
+its `flush()` (header rewrite) every 1 s, so the file is a valid WAV up to the last
+checkpoint at all times. `repair_wav_header` fixes the data/RIFF sizes from the actual
+file length after a crash and cuts a torn trailing frame; sample bytes are never
+rewritten. Files are opened with `create_new` — an existing original is never
+overwritten. Memory holds only 10 ms min/max peak bins (~800 B/s) for the live waveform.
+Limit: WAV's u32 sizes cap a take at ~3.1 h (48 kHz stereo); the recorder stops with a
+message. RF64/W64 is not needed for the use case. No new dependency.
+Known gap: after stop, the take is loaded into RAM for playback (player needs the whole
+buffer); a streaming player is a Phase 5 concern.
