@@ -143,3 +143,14 @@ downgraded. No locking between two app instances yet (single-user desktop).
   SIMD, maintained by the BLAKE3 authors.
 Supply chain: both from crates.io, versions pinned in Cargo.lock; no build-time
 downloads (bundled SQLite source ships inside the crate).
+
+## ADR-0017 symphonia 0.6 for import decoding (MPL-2.0), decode only
+
+Implements ADR-0004's candidate. Features enabled: `mp3`, `flac`, `ogg`, `vorbis`, `wav`,
+`pcm` (no AAC/ALAC/MP4 until needed). Pure Rust, no system codecs, builds on MSVC
+(verified). MPL-2.0 is file-level copyleft: using the unmodified crate as a dependency
+imposes no obligation on our code; if we ever patch symphonia's files, those patched files
+must be published. No encoders — MP3 export stays out of scope (master plan: optional).
+Behaviour: corrupt packets are skipped and logged; a mid-stream format change is refused.
+The owner's `re.mp3` decodes (48 kHz stereo, 59.45 s); it is used only by a local test
+that skips when the file is absent and is never committed or uploaded.
