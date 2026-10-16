@@ -24,8 +24,12 @@ scripts/release/         Windows build + smoke scripts
 ```
 
 Crates planned but not yet created (do not stub them with fake code): `crates/music-core`,
-`crates/arranger`, `services/analysis`, `packages/lesson-content`. (`packages/project-schema`
-became `crates/project`, ADR-0015.)
+`crates/arranger`, `crates/plugin-host` (CLAP, ADR-0018 proposed), `services/analysis`,
+`packages/lesson-content`. (`packages/project-schema` became `crates/project`, ADR-0015.)
+
+Product concept for the instrument layer (Phase 2+): `docs/INSTRUMENT_MACHINE_CONCEPT.md`.
+Where it differs from the master plan, §6 of that file records the resolution; the rule is
+always "the assistant proposes, the user decides".
 
 ## Prerequisites (Windows dev machine)
 

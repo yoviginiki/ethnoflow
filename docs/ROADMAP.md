@@ -84,6 +84,24 @@ Exit (master plan): record and reopen an original kaval take with no data loss.
 
 Estimated effort: 2–3 weeks of focused work.
 
+### Предложени допълнения от `INSTRUMENT_MACHINE_CONCEPT.md` §8 (чакат одобрение)
+
+Не променят Phase 1. При одобрение се вписват в съответната фаза по-долу.
+
+| модул | фаза |
+|---|---|
+| Live input monitor, Audio-to-MIDI с pitch bend, предложени (не автоматични) корекции | 2 |
+| Scale Lock на компютърната клавиатура | 2 |
+| Liquid Pad (емоции, X/Y), Liquid Resonator drone за монохорд | 3 |
+| Groove Engine, Sub-Bass с auto-sidechain, X/Y Wobble & Glide | 4 |
+| CLAP host spike + първи C++ инструмент (ADR-0018, proposed) | 4 (край) |
+| Phrase & Vocal Chopper, formant shifter, Chop Randomizer | 5 (sampler) |
+| Auto Studio Engineer (видима верига), Organic Space | 5 |
+| Академия overlay, X-Ray, Coach, Урок №1 | 6 |
+| Evolve Melody, Mutate Voice, умни зарове с locks | 7 |
+| NKS, RØDECaster pads мапинг (MIDI вход = ново ADR) | 8 или 9, след лицензна проверка |
+| Ambient инструмент (granular) | след 9 |
+
 ### User decisions needed before Phase 1
 1. Approve this plan (or reorder 1.1–1.6).
 2. Confirm `re.mp3` may be used locally for import tests (never uploaded).

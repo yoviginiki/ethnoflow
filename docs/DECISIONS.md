@@ -154,3 +154,22 @@ must be published. No encoders — MP3 export stays out of scope (master plan: o
 Behaviour: corrupt packets are skipped and logged; a mid-stream format change is refused.
 The owner's `re.mp3` decodes (48 kHz stereo, 59.45 s); it is used only by a local test
 that skips when the file is absent and is never committed or uploaded.
+
+## ADR-0018 (proposed) CLAP as the internal instrument ABI; instruments in Rust or C++
+
+Status: **Proposed, not accepted.** No code, crate or dependency until the owner
+approves. Source: `docs/INSTRUMENT_MACHINE_CONCEPT.md` §4.
+
+Context: the owner wants to add instruments written in C++ without replacing the
+Rust/Tauri core, and wants EthnoFlow's own instruments usable inside Ableton/FL later.
+Decision (pending approval): adopt CLAP (MIT, C API, Bitwig/u-he) as the instrument
+boundary. A Rust host crate (`crates/plugin-host`) loads CLAP instruments in-process.
+C++ instruments use the official CLAP C++ helpers or JUCE + `clap-juce-extensions`;
+Rust instruments use `nih-plug`. Our instruments can additionally ship as CLAP/VST3 for
+other DAWs via `clap-wrapper`.
+Consequences: one host, two languages; the RT rules (no allocation/locks in process())
+apply to every instrument; a misbehaving C++ instrument can crash the process, so
+out-of-process hosting is a later option. Spike at end of Phase 4; VST3 hosting of
+third-party plugins stays "Later". Licence review needed before the spike: CLAP (MIT),
+clap-helpers (MIT), nih-plug (ISC), clap-wrapper (MIT), JUCE (GPLv3 or commercial —
+only if a C++ instrument actually uses it).
