@@ -4,9 +4,11 @@
 //! a ranked list with probabilities; non-tempered (custom) scales are first-class.
 
 pub mod key;
+pub mod notes;
 pub mod pitch;
 pub mod scale;
 
 pub use key::{rank_hypotheses, Hypothesis, PitchClassHistogram};
+pub use notes::{extract_notes, Note, NoteParams, PitchSample};
 pub use pitch::{cents_between, pitch_class_name, Pitch, Reference, PITCH_CLASS_NAMES};
 pub use scale::{DegreeMatch, Scale, ScaleKind};
