@@ -900,6 +900,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "ethnoflow-music-core"
+version = "0.0.1"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "ethnoflow-project"
 version = "0.0.1"
 dependencies = [

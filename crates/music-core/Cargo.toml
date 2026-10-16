@@ -1,0 +1,13 @@
+[package]
+name = "ethnoflow-music-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Pure music theory for EthnoFlow Studio: pitch/note conversion, scales and modes, tonic/mode hypotheses. No audio I/O."
+
+[lib]
+name = "music_core"
+path = "src/lib.rs"
+
+[dependencies]
+serde = { workspace = true }
