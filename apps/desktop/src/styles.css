@@ -10,6 +10,7 @@
   --rec: #ff5c5c;
   --accent: #7fd6c2;
   --warn: #ffb454;
+  --selection: rgba(255, 180, 84, 0.22);
   font-family: system-ui, "Segoe UI", sans-serif;
   font-size: 14px;
 }
@@ -130,6 +131,14 @@ button.small { font-size: 12px; padding: 3px 7px; }
 .timing-form, .timing-toggles { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; }
 .meter-inputs { display: flex; gap: 4px; align-items: center; color: var(--text); }
 .status.countin { background: var(--warn); color: #111; }
+.pending { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.pending::before {
+  content: ""; width: 10px; height: 10px; border-radius: 50%;
+  border: 2px solid var(--axis); border-top-color: var(--accent);
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.studio[aria-busy="true"] { cursor: progress; }
 
 .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 10; }
 .modal { background: var(--panel); border: 1px solid var(--axis); border-radius: 10px; padding: 18px; max-width: 420px; width: calc(100% - 32px); }

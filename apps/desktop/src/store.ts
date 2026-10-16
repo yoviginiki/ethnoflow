@@ -93,6 +93,13 @@ interface Store {
   /** Cursor in seconds within the loaded (trimmed) take. */
   cursor: number;
   setCursor: (s: number) => void;
+  /** Selected region [start, end) in seconds of the loaded take, or null. */
+  selection: [number, number] | null;
+  setSelection: (sel: [number, number] | null) => void;
+
+  /** Label of the command in flight (shown as a busy indicator), or null. */
+  pending: string | null;
+  setPending: (p: string | null) => void;
 
   /** Peak hold for the input meter, decays in the UI tick. */
   meterDb: number;
@@ -127,7 +134,7 @@ export const useStore = create<Store>((set, get) => ({
 
   loaded: null,
   peaks: null,
-  setLoaded: (loaded, peaks) => set({ loaded, peaks, cursor: 0 }),
+  setLoaded: (loaded, peaks) => set({ loaded, peaks, cursor: 0, selection: null }),
   setPeaks: (peaks) => set({ peaks }),
 
   mode: "idle",
@@ -139,6 +146,11 @@ export const useStore = create<Store>((set, get) => ({
 
   cursor: 0,
   setCursor: (cursor) => set({ cursor }),
+  selection: null,
+  setSelection: (selection) => set({ selection }),
+
+  pending: null,
+  setPending: (pending) => set({ pending }),
 
   meterDb: -120,
   setMeterDb: (meterDb) => set({ meterDb }),

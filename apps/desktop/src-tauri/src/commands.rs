@@ -165,7 +165,7 @@ pub struct AudioHostInfo {
 // ---------- devices ----------
 
 #[tauri::command]
-pub fn audio_host() -> AudioHostInfo {
+pub async fn audio_host() -> AudioHostInfo {
     AudioHostInfo {
         host: audio_engine::host_name(),
         os: std::env::consts::OS.to_string(),
@@ -173,18 +173,18 @@ pub fn audio_host() -> AudioHostInfo {
 }
 
 #[tauri::command]
-pub fn list_input_devices() -> CmdResult<Vec<DeviceInfo>> {
+pub async fn list_input_devices() -> CmdResult<Vec<DeviceInfo>> {
     Ok(list_devices(Direction::Input)?)
 }
 
 #[tauri::command]
-pub fn list_output_devices() -> CmdResult<Vec<DeviceInfo>> {
+pub async fn list_output_devices() -> CmdResult<Vec<DeviceInfo>> {
     Ok(list_devices(Direction::Output)?)
 }
 
 /// 1 s of 440 Hz at -18 dBFS on the chosen output, to check routing and level.
 #[tauri::command]
-pub fn play_test_tone(state: State<AppState>, device: Option<String>) -> CmdResult<()> {
+pub async fn play_test_tone(state: State<'_, AppState>, device: Option<String>) -> CmdResult<()> {
     let mut s = state.lock();
     if let Some(t) = s.tone.take() {
         t.stop();
@@ -219,7 +219,10 @@ pub struct RecordRequest {
 }
 
 #[tauri::command]
-pub fn start_recording(state: State<AppState>, req: RecordRequest) -> CmdResult<RecordingStarted> {
+pub async fn start_recording(
+    state: State<'_, AppState>,
+    req: RecordRequest,
+) -> CmdResult<RecordingStarted> {
     let mut guard = state.lock();
     let s = &mut *guard;
     if s.recording.is_some() {
@@ -293,7 +296,9 @@ pub struct RecordingStatusView {
 }
 
 #[tauri::command]
-pub fn recording_status(state: State<AppState>) -> CmdResult<Option<RecordingStatusView>> {
+pub async fn recording_status(
+    state: State<'_, AppState>,
+) -> CmdResult<Option<RecordingStatusView>> {
     let s = state.lock();
     Ok(s.recording.as_ref().map(|r| RecordingStatusView {
         recorder: r.recorder.status(),
@@ -304,8 +309,8 @@ pub fn recording_status(state: State<AppState>) -> CmdResult<Option<RecordingSta
 
 /// Waveform of the take being recorded (reduced peaks only).
 #[tauri::command]
-pub fn recording_waveform(
-    state: State<AppState>,
+pub async fn recording_waveform(
+    state: State<'_, AppState>,
     bins: Option<usize>,
 ) -> CmdResult<Option<WaveformPeaks>> {
     let s = state.lock();
@@ -357,7 +362,7 @@ pub fn finish_recording(s: &mut crate::state::Inner) -> CmdResult<RecordingStopp
 }
 
 #[tauri::command]
-pub fn stop_recording(state: State<AppState>) -> CmdResult<RecordingStopped> {
+pub async fn stop_recording(state: State<'_, AppState>) -> CmdResult<RecordingStopped> {
     finish_recording(&mut state.lock())
 }
 
@@ -374,7 +379,10 @@ pub struct PlayRequest {
 }
 
 #[tauri::command]
-pub fn start_playback(state: State<AppState>, req: PlayRequest) -> CmdResult<PlayerStatus> {
+pub async fn start_playback(
+    state: State<'_, AppState>,
+    req: PlayRequest,
+) -> CmdResult<PlayerStatus> {
     let mut s = state.lock();
     if s.recording.is_some() {
         return Err(err("recording", "Stop recording before playback"));
@@ -404,7 +412,7 @@ pub fn start_playback(state: State<AppState>, req: PlayRequest) -> CmdResult<Pla
 }
 
 #[tauri::command]
-pub fn playback_status(state: State<AppState>) -> CmdResult<Option<PlayerStatus>> {
+pub async fn playback_status(state: State<'_, AppState>) -> CmdResult<Option<PlayerStatus>> {
     let mut s = state.lock();
     let st = s.player.as_ref().map(|p| p.status());
     if st.as_ref().is_some_and(|st| st.finished) {
@@ -414,8 +422,8 @@ pub fn playback_status(state: State<AppState>) -> CmdResult<Option<PlayerStatus>
 }
 
 #[tauri::command]
-pub fn set_playback_loop(
-    state: State<AppState>,
+pub async fn set_playback_loop(
+    state: State<'_, AppState>,
     loop_seconds: Option<(f64, f64)>,
 ) -> CmdResult<()> {
     let s = state.lock();
@@ -428,7 +436,7 @@ pub fn set_playback_loop(
 }
 
 #[tauri::command]
-pub fn set_playback_click(state: State<AppState>, on: bool) -> CmdResult<()> {
+pub async fn set_playback_click(state: State<'_, AppState>, on: bool) -> CmdResult<()> {
     if let Some(p) = state.lock().player.as_ref() {
         p.set_click(on);
     }
@@ -436,7 +444,7 @@ pub fn set_playback_click(state: State<AppState>, on: bool) -> CmdResult<()> {
 }
 
 #[tauri::command]
-pub fn stop_playback(state: State<AppState>) -> CmdResult<()> {
+pub async fn stop_playback(state: State<'_, AppState>) -> CmdResult<()> {
     state.lock().stop_playback();
     Ok(())
 }

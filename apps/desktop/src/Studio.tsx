@@ -25,6 +25,23 @@ export function Studio() {
 
   const fail = useCallback((e: unknown) => useStore.getState().setError(describeError(e)), []);
 
+  /** Run a slow command with a visible busy label; errors land in the banner. */
+  const withPending = useCallback(
+    async <T,>(label: string, fn: () => Promise<T>): Promise<T | undefined> => {
+      const st = useStore.getState();
+      st.setPending(label);
+      try {
+        return await fn();
+      } catch (e) {
+        fail(e);
+        return undefined;
+      } finally {
+        useStore.getState().setPending(null);
+      }
+    },
+    [fail],
+  );
+
   const refreshDevices = useCallback(async () => {
     try {
       const [ins, outs, host] = await Promise.all([api.listInputDevices(), api.listOutputDevices(), api.audioHost()]);
@@ -41,19 +58,20 @@ export function Studio() {
 
   const selectTake = useCallback(
     async (id: string) => {
-      try {
-        const st = useStore.getState();
-        st.setError(null);
-        if (st.mode === "playing") {
-          await api.stopPlayback();
-          st.setMode("idle");
-          st.setPlayer(null);
-        }
+      const st = useStore.getState();
+      st.setError(null);
+      if (st.mode === "playing") {
+        await api.stopPlayback().catch(fail);
+        st.setMode("idle");
+        st.setPlayer(null);
+      }
+      const ok = await withPending(messages[st.prefs.lang].loading, async () => {
         const info = await api.loadTake(id);
         const peaks = await api.getWaveform(WAVEFORM_BINS);
         useStore.getState().setLoaded(info, peaks);
-      } catch (e) {
-        fail(e);
+        return true;
+      });
+      if (!ok) {
         try {
           useStore.getState().setProject(await api.projectState());
         } catch {
@@ -61,7 +79,7 @@ export function Studio() {
         }
       }
     },
-    [fail],
+    [fail, withPending],
   );
 
   // ---------- recording ----------
@@ -69,12 +87,14 @@ export function Studio() {
   const onStopRecord = useCallback(async () => {
     const st = useStore.getState();
     const tt = messages[st.prefs.lang];
+    st.setPending(tt.finishing);
     try {
       const r = await api.stopRecording();
       st.setMode("idle");
       st.setRec(null);
       st.setMeterDb(-120);
       st.setProject(await api.projectState());
+      st.setPending(null);
       await selectTake(r.take.id);
       const parts = [
         `${takeName(r.take, tt.take)}`,
@@ -90,6 +110,8 @@ export function Studio() {
     } catch (e) {
       fail(e);
       st.setMode("idle");
+    } finally {
+      useStore.getState().setPending(null);
     }
   }, [fail, selectTake]);
 
@@ -124,11 +146,16 @@ export function Studio() {
       if (!st.loaded) return;
       try {
         st.setError(null);
-        const start = from ?? st.cursor;
+        const dur = st.loaded.duration_seconds;
+        const sel = st.selection;
+        let start = from ?? st.cursor;
+        // With a selection, play it: start inside it unless told otherwise.
+        if (from === undefined && sel && (start < sel[0] || start >= sel[1])) start = sel[0];
+        if (start >= dur - 0.01) start = sel ? sel[0] : 0;
         const ps = await api.startPlayback({
           device: st.prefs.selectedOutput,
-          start_seconds: start >= st.loaded.duration_seconds - 0.01 ? 0 : start,
-          loop_seconds: st.prefs.loop ? [0, st.loaded.duration_seconds] : null,
+          start_seconds: start,
+          loop_seconds: st.prefs.loop ? (sel ?? [0, dur]) : null,
           click: hasClick && st.prefs.clickPlay,
         });
         st.setPlayer(ps);
@@ -154,8 +181,8 @@ export function Studio() {
   // Loop / click toggles while playing.
   useEffect(() => {
     if (modeRef.current !== "playing" || !s.loaded) return;
-    void api.setPlaybackLoop(s.prefs.loop ? [0, s.loaded.duration_seconds] : null).catch(fail);
-  }, [s.prefs.loop, s.loaded, fail]);
+    void api.setPlaybackLoop(s.prefs.loop ? (s.selection ?? [0, s.loaded.duration_seconds]) : null).catch(fail);
+  }, [s.prefs.loop, s.selection, s.loaded, fail]);
   useEffect(() => {
     if (modeRef.current !== "playing") return;
     // The click is built when playback starts: restart from the current position.
@@ -236,61 +263,82 @@ export function Studio() {
     return () => window.removeEventListener("keydown", onKey);
   }, [onPlay, onStopPlay, onRecord, onStopRecord]);
 
-  // ---------- trim / import / export ----------
+  // ---------- selection / trim / import / export ----------
 
-  const trim = async (kind: "start" | "end" | "clear") => {
-    if (!s.loaded || !loadedTake) return;
-    try {
-      s.setError(null);
-      const at = s.loaded.offset_seconds + s.cursor;
-      const curIn = loadedTake.trim_in_seconds;
-      const curOut = loadedTake.trim_out_seconds;
-      const [a, b] = kind === "start" ? [at, curOut] : kind === "end" ? [curIn, at] : [0, null];
-      s.setProject(await api.setTrim(loadedTake.id, a, b));
-      await selectTake(loadedTake.id);
-    } catch (e) {
-      fail(e);
-    }
+  /** Set one edge of the selection at the cursor (keyboard-friendly alternative to dragging). */
+  const selectEdge = (edge: "start" | "end") => {
+    if (!s.loaded) return;
+    const dur = s.loaded.duration_seconds;
+    const at = s.cursor;
+    const cur = s.selection ?? [0, dur];
+    const next: [number, number] = edge === "start" ? [at, Math.max(cur[1], at + 0.01)] : [Math.min(cur[0], at - 0.01), at];
+    next[0] = Math.max(0, next[0]);
+    next[1] = Math.min(dur, next[1]);
+    if (next[1] - next[0] >= 0.01) s.setSelection(next);
+  };
+
+  /** Non-destructive: hide everything outside the selection (stored as trim points). */
+  const cutToSelection = async () => {
+    if (!s.loaded || !loadedTake || !s.selection) return;
+    const off = s.loaded.offset_seconds;
+    const [a, b] = s.selection;
+    const id = loadedTake.id;
+    const atEnd = b >= s.loaded.duration_seconds - 0.005;
+    const pv = await withPending(t.saving, () => api.setTrim(id, off + a, atEnd ? loadedTake.trim_out_seconds : off + b));
+    if (!pv) return;
+    s.setProject(pv);
+    await selectTake(id);
+  };
+
+  const clearTrim = async () => {
+    if (!loadedTake) return;
+    const pv = await withPending(t.saving, () => api.setTrim(loadedTake.id, 0, null));
+    if (!pv) return;
+    s.setProject(pv);
+    await selectTake(loadedTake.id);
+  };
+
+  const saveSelection = async () => {
+    if (!s.selection || !loadedTake) return;
+    const [a, b] = s.selection;
+    const pv = await withPending(t.saving, () => api.saveSelectionAsTake(a, b, null));
+    if (!pv) return;
+    s.setProject(pv);
+    const created = pv.takes[pv.takes.length - 1];
+    s.setMessage(`${t.savedAsNew}: ${takeName(created, t.take)} (${formatTime(b - a)})`);
   };
 
   const onImport = async () => {
-    try {
-      const path = await open({
-        title: t.importAudio,
-        multiple: false,
-        directory: false,
-        filters: [{ name: t.audioFiles, extensions: IMPORT_EXTENSIONS }],
-      });
-      if (!path || Array.isArray(path)) return;
-      s.setError(null);
-      const pv = await api.importAudio(path);
-      s.setProject(pv);
-      if (pv.loaded_take) await selectTake(pv.loaded_take);
-      s.setMessage(`${t.importedOk}: ${path}`);
-    } catch (e) {
-      fail(e);
-    }
+    const path = await open({
+      title: t.importAudio,
+      multiple: false,
+      directory: false,
+      filters: [{ name: t.audioFiles, extensions: IMPORT_EXTENSIONS }],
+    });
+    if (!path || Array.isArray(path)) return;
+    s.setError(null);
+    const pv = await withPending(t.importing, () => api.importAudio(path));
+    if (!pv) return;
+    s.setProject(pv);
+    if (pv.loaded_take) await selectTake(pv.loaded_take);
+    s.setMessage(`${t.importedOk}: ${path}`);
   };
 
   const onExport = async () => {
     if (!loadedTake) return;
-    try {
-      const base = takeName(loadedTake, t.take).replace(/[<>:"/\\|?*]/g, "_");
-      const path = await save({
-        title: t.exportWav,
-        defaultPath: `${project.name} - ${base}.wav`,
-        filters: [{ name: "WAV", extensions: ["wav"] }],
-      });
-      if (!path) return;
-      const r = await api.exportWav(path, s.prefs.exportFormat);
-      s.setMessage(`${t.exported}: ${r.path} (${formatBytes(r.bytes)})`);
-    } catch (e) {
-      fail(e);
-    }
+    const base = takeName(loadedTake, t.take).replace(/[<>:"/\\|?*]/g, "_");
+    const path = await save({
+      title: t.exportWav,
+      defaultPath: `${project.name} - ${base}.wav`,
+      filters: [{ name: "WAV", extensions: ["wav"] }],
+    });
+    if (!path) return;
+    const r = await withPending(t.exporting, () => api.exportWav(path, s.prefs.exportFormat));
+    if (r) s.setMessage(`${t.exported}: ${r.path} (${formatBytes(r.bytes)})`);
   };
 
   const onClose = async () => {
-    await api.closeProject();
+    await withPending(t.saving, () => api.closeProject());
     s.setLoaded(null, null);
     s.setProject(null, null);
     s.setMessage(null);
@@ -298,7 +346,8 @@ export function Studio() {
 
   // ---------- render ----------
 
-  const busy = s.mode !== "idle";
+  const busy = s.mode !== "idle" || s.pending !== null;
+  const hasTrim = loadedTake != null && (loadedTake.trim_in_seconds > 0 || loadedTake.trim_out_seconds != null);
   const chLabel = (n: number) => (n === 1 ? t.mono : n === 2 ? t.stereo : `${n}`);
   const inputDev = s.inputDevices.find((d) => d.name === s.prefs.selectedInput) ?? s.inputDevices.find((d) => d.is_default);
   const rates = inputDev?.sample_rates ?? [];
@@ -309,7 +358,7 @@ export function Studio() {
   const changed = project.takes.filter((tk) => tk.health === "checksum_mismatch").length;
 
   return (
-    <div className="studio">
+    <div className="studio" aria-busy={s.pending !== null}>
       <div className="project-bar">
         <div>
           <strong>{project.name}</strong> <span className="muted small path">{project.root}</span>
@@ -412,11 +461,13 @@ export function Studio() {
             peaks={s.peaks}
             playhead={s.mode === "playing" && s.player ? s.player.position_seconds : null}
             cursor={s.mode === "idle" && s.loaded ? s.cursor : null}
+            selection={s.loaded ? s.selection : null}
             recordingSeconds={s.mode === "recording" && rec ? rec.seconds_captured : null}
             onSeek={(sec) => {
               s.setCursor(sec);
               if (s.mode === "playing") void onPlay(sec);
             }}
+            onSelect={(sel) => s.setSelection(sel)}
             emptyText={t.noTakes}
             label={loadedTake ? takeName(loadedTake, t.take) : t.noTakes}
           />
@@ -453,6 +504,11 @@ export function Studio() {
                     ? `${formatTime(s.cursor)} / ${formatTime(s.loaded.duration_seconds)}`
                     : "0:00.0"}
             </span>
+            {s.pending && (
+              <span className="pending" role="status" aria-live="polite">
+                {s.pending}
+              </span>
+            )}
             <span className={`status ${countingIn ? "countin" : s.mode}`}>
               {countingIn
                 ? `${t.countingIn} ${rec?.metronome?.position ? `${rec.metronome.position.bar}.${rec.metronome.position.beat}` : ""}`
@@ -464,20 +520,36 @@ export function Studio() {
             </span>
           </section>
 
+          <section className="transport selection-row">
+            <span className="muted small">
+              {t.selection}:{" "}
+              <span className="mono-num">
+                {s.selection ? `${formatTime(s.selection[0])} – ${formatTime(s.selection[1])} (${formatTime(s.selection[1] - s.selection[0])})` : "—"}
+              </span>
+            </span>
+            <button className="ghost small" onClick={() => selectEdge("start")} disabled={busy || !s.loaded}>
+              ⇤ {t.selStartHere}
+            </button>
+            <button className="ghost small" onClick={() => selectEdge("end")} disabled={busy || !s.loaded || s.cursor <= 0}>
+              {t.selEndHere} ⇥
+            </button>
+            <button className="ghost small" onClick={() => s.setSelection(null)} disabled={busy || !s.selection}>
+              {t.clearSelection}
+            </button>
+            <button onClick={cutToSelection} disabled={busy || !s.selection}>
+              ✂ {t.cutToSelection}
+            </button>
+            <button onClick={saveSelection} disabled={busy || !s.selection}>
+              {t.saveSelectionAsTake}
+            </button>
+            {hasTrim && (
+              <button className="ghost small" onClick={clearTrim} disabled={busy}>
+                {t.clearTrim}
+              </button>
+            )}
+          </section>
+
           <section className="transport">
-            <button className="ghost" onClick={() => trim("start")} disabled={busy || !loadedTake || s.cursor <= 0}>
-              ⇤ {t.trimStartHere}
-            </button>
-            <button className="ghost" onClick={() => trim("end")} disabled={busy || !loadedTake || s.cursor <= 0}>
-              {t.trimEndHere} ⇥
-            </button>
-            <button
-              className="ghost"
-              onClick={() => trim("clear")}
-              disabled={busy || !loadedTake || (loadedTake.trim_in_seconds === 0 && loadedTake.trim_out_seconds == null)}
-            >
-              {t.clearTrim}
-            </button>
             <span className="spacer" />
             <button className="ghost" onClick={onImport} disabled={busy}>
               {t.importAudio}
@@ -522,7 +594,7 @@ export function Studio() {
                 {t.overruns}: {rec.overrun_samples}
               </span>
             )}
-            <span className="muted small">{s.loaded && s.mode === "idle" ? `${t.cursorHint} ${t.trimHint}` : t.headphonesHint}</span>
+            <span className="muted small">{s.loaded && s.mode === "idle" ? `${t.selectHint} ${t.trimHint}` : t.headphonesHint}</span>
           </section>
           <div className="muted small">
             {t.shortcuts} · {t.audioHost}: {s.host || "…"}

@@ -7,21 +7,28 @@ interface Props {
   playhead: number | null;
   /** Edit cursor in seconds (idle only), or null. */
   cursor: number | null;
+  /** Selected region [start, end) in seconds, or null. */
+  selection: [number, number] | null;
   /** Accessible name, e.g. the take's name. */
   label: string;
-  /** Live recording: seconds captured so far (draws a growing time bar). */
+  /** Live recording: seconds captured so far. */
   recordingSeconds: number | null;
   onSeek?: (seconds: number) => void;
+  onSelect?: (selection: [number, number] | null) => void;
   emptyText: string;
 }
 
+/** Pointer movement below this (px) is a click, above it a drag selection. */
+const DRAG_THRESHOLD_PX = 4;
+
 /**
- * Canvas waveform drawn from reduced min/max peaks. Re-draws on resize and when
- * props change; the playhead is drawn in the same pass to keep it cheap.
+ * Canvas waveform drawn from reduced min/max peaks. Click = cursor, drag = selection,
+ * arrows move the cursor (Shift+arrows extend the selection).
  */
-export function Waveform({ peaks, playhead, cursor, label, recordingSeconds, onSeek, emptyText }: Props) {
+export function Waveform({ peaks, playhead, cursor, selection, label, recordingSeconds, onSeek, onSelect, emptyText }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const drag = useRef<{ startX: number; startSec: number; moved: boolean } | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -47,6 +54,7 @@ export function Waveform({ peaks, playhead, cursor, label, recordingSeconds, onS
       const colHead = style.getPropertyValue("--playhead").trim() || "#ffb454";
       const colRec = style.getPropertyValue("--rec").trim() || "#ff5c5c";
       const colText = style.getPropertyValue("--muted").trim() || "#888";
+      const colSel = style.getPropertyValue("--selection").trim() || "rgba(255, 180, 84, 0.22)";
 
       // centre line
       ctx.strokeStyle = colAxis;
@@ -91,6 +99,24 @@ export function Waveform({ peaks, playhead, cursor, label, recordingSeconds, onS
         return;
       }
 
+      const dur = peaks.duration_seconds;
+      const toX = (sec: number) => (dur > 0 ? Math.min(w, Math.max(0, (sec / dur) * w)) : 0);
+
+      if (selection && dur > 0) {
+        const x0 = toX(selection[0]);
+        const x1 = toX(selection[1]);
+        ctx.fillStyle = colSel;
+        ctx.fillRect(x0, 0, Math.max(1, x1 - x0), h);
+        ctx.strokeStyle = colHead;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x0 + 0.5, 0);
+        ctx.lineTo(x0 + 0.5, h);
+        ctx.moveTo(x1 - 0.5, 0);
+        ctx.lineTo(x1 - 0.5, h);
+        ctx.stroke();
+      }
+
       const n = peaks.min.length;
       const mid = h / 2;
       const amp = (h / 2) * 0.92;
@@ -105,15 +131,14 @@ export function Waveform({ peaks, playhead, cursor, label, recordingSeconds, onS
       }
       ctx.fill();
 
-      // time ticks every second
+      // time ticks
       ctx.strokeStyle = colAxis;
       ctx.fillStyle = colText;
       ctx.font = "10px system-ui, sans-serif";
-      const dur = peaks.duration_seconds;
       if (dur > 0) {
-        const step = dur > 30 ? 5 : 1;
+        const step = dur > 600 ? 60 : dur > 120 ? 10 : dur > 30 ? 5 : 1;
         for (let t = 0; t <= dur; t += step) {
-          const x = (t / dur) * w;
+          const x = toX(t);
           ctx.beginPath();
           ctx.moveTo(x + 0.5, h - 10);
           ctx.lineTo(x + 0.5, h);
@@ -123,7 +148,7 @@ export function Waveform({ peaks, playhead, cursor, label, recordingSeconds, onS
       }
 
       if (cursor !== null && dur > 0) {
-        const x = Math.min(w, (cursor / dur) * w);
+        const x = toX(cursor);
         ctx.strokeStyle = colHead;
         ctx.lineWidth = 1;
         ctx.setLineDash([4, 3]);
@@ -135,7 +160,7 @@ export function Waveform({ peaks, playhead, cursor, label, recordingSeconds, onS
       }
 
       if (playhead !== null && dur > 0) {
-        const x = Math.min(w, (playhead / dur) * w);
+        const x = toX(playhead);
         ctx.strokeStyle = colHead;
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -149,29 +174,73 @@ export function Waveform({ peaks, playhead, cursor, label, recordingSeconds, onS
     const ro = new ResizeObserver(draw);
     ro.observe(wrap);
     return () => ro.disconnect();
-  }, [peaks, playhead, cursor, recordingSeconds, emptyText]);
+  }, [peaks, playhead, cursor, selection, recordingSeconds, emptyText]);
 
-  const onKeyDown = (e: React.KeyboardEvent<HTMLCanvasElement>) => {
-    if (!peaks || !onSeek || peaks.duration_seconds <= 0) return;
-    const step = e.shiftKey ? 5 : 1;
-    const at = cursor ?? playhead ?? 0;
-    if (e.key === "ArrowLeft") {
-      e.preventDefault();
-      onSeek(Math.max(0, at - step));
-    } else if (e.key === "ArrowRight") {
-      e.preventDefault();
-      onSeek(Math.min(peaks.duration_seconds, at + step));
-    } else if (e.key === "Home") {
-      e.preventDefault();
-      onSeek(0);
+  const secondsAt = (clientX: number, el: HTMLCanvasElement) => {
+    if (!peaks || peaks.duration_seconds <= 0) return null;
+    const rect = el.getBoundingClientRect();
+    const frac = (clientX - rect.left) / rect.width;
+    return Math.max(0, Math.min(1, frac)) * peaks.duration_seconds;
+  };
+
+  const onPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (e.button !== 0) return;
+    const sec = secondsAt(e.clientX, e.currentTarget);
+    if (sec === null) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    drag.current = { startX: e.clientX, startSec: sec, moved: false };
+  };
+
+  const onPointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const d = drag.current;
+    if (!d) return;
+    if (!d.moved && Math.abs(e.clientX - d.startX) < DRAG_THRESHOLD_PX) return;
+    d.moved = true;
+    const sec = secondsAt(e.clientX, e.currentTarget);
+    if (sec === null) return;
+    onSelect?.(sec > d.startSec ? [d.startSec, sec] : [sec, d.startSec]);
+  };
+
+  const onPointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const d = drag.current;
+    drag.current = null;
+    if (!d) return;
+    if (!d.moved) {
+      onSeek?.(d.startSec);
+      return;
+    }
+    const sec = secondsAt(e.clientX, e.currentTarget) ?? d.startSec;
+    const sel: [number, number] = sec > d.startSec ? [d.startSec, sec] : [sec, d.startSec];
+    if (sel[1] - sel[0] < 0.01) onSelect?.(null);
+    else {
+      onSelect?.(sel);
+      onSeek?.(sel[0]);
     }
   };
 
-  const handleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!peaks || !onSeek || peaks.duration_seconds <= 0) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const frac = (e.clientX - rect.left) / rect.width;
-    onSeek(Math.max(0, Math.min(1, frac)) * peaks.duration_seconds);
+  const onKeyDown = (e: React.KeyboardEvent<HTMLCanvasElement>) => {
+    if (!peaks || peaks.duration_seconds <= 0) return;
+    const dur = peaks.duration_seconds;
+    const step = e.ctrlKey ? 0.1 : e.altKey ? 5 : 1;
+    const at = cursor ?? playhead ?? 0;
+    let next: number | null = null;
+    if (e.key === "ArrowLeft") next = Math.max(0, at - step);
+    else if (e.key === "ArrowRight") next = Math.min(dur, at + step);
+    else if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = dur;
+    else if (e.key === "Escape" && selection) {
+      e.preventDefault();
+      onSelect?.(null);
+      return;
+    }
+    if (next === null) return;
+    e.preventDefault();
+    if (e.shiftKey && onSelect) {
+      // Extend the selection from its anchor (the end not being moved).
+      const anchor = selection ? (Math.abs(at - selection[0]) < 1e-6 ? selection[1] : selection[0]) : at;
+      onSelect(next > anchor ? [anchor, next] : [next, anchor]);
+    }
+    onSeek?.(next);
   };
 
   return (
@@ -179,7 +248,10 @@ export function Waveform({ peaks, playhead, cursor, label, recordingSeconds, onS
       <canvas
         ref={canvasRef}
         className="waveform"
-        onClick={handleClick}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={() => (drag.current = null)}
         onKeyDown={onKeyDown}
         role="img"
         aria-label={label}

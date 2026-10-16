@@ -45,6 +45,7 @@ pub fn run() {
             project_cmds::relink_take,
             project_cmds::verify_takes,
             project_cmds::import_audio,
+            project_cmds::save_selection_as_take,
             project_cmds::export_wav,
         ])
         .build(tauri::generate_context!())

@@ -12,7 +12,8 @@ export function ProjectPicker() {
   const [name, setName] = useState("");
   const [recent, setRecent] = useState<RecentProject[]>([]);
   const [dir, setDir] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusyText] = useState<string | null>(null);
+  const setBusy = (b: boolean, label?: string) => setBusyText(b ? (label ?? t.loading) : null);
 
   useEffect(() => {
     api.recentProjects().then(setRecent).catch((e) => setError(describeError(e)));
@@ -20,7 +21,7 @@ export function ProjectPicker() {
   }, [setError]);
 
   const openAt = async (path: string) => {
-    setBusy(true);
+    setBusy(true, t.opening);
     try {
       setError(null);
       const r = await api.openProject(path);
@@ -35,7 +36,7 @@ export function ProjectPicker() {
   const onCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    setBusy(true);
+    setBusy(true, t.creating);
     try {
       setError(null);
       setProject(await api.createProject(name.trim(), null), null);
@@ -52,7 +53,12 @@ export function ProjectPicker() {
   };
 
   return (
-    <section className="picker">
+    <section className="picker" aria-busy={busy !== null}>
+      {busy && (
+        <span className="pending" role="status" aria-live="polite">
+          {busy}
+        </span>
+      )}
       <form className="panel" onSubmit={onCreate}>
         <h2>{t.newProject}</h2>
         <label>
@@ -64,7 +70,7 @@ export function ProjectPicker() {
             {t.savedIn}: {dir}
           </div>
         )}
-        <button type="submit" disabled={busy || !name.trim()}>
+        <button type="submit" disabled={busy !== null || !name.trim()}>
           {t.create}
         </button>
       </form>
@@ -75,7 +81,7 @@ export function ProjectPicker() {
         <ul className="recent">
           {recent.map((r) => (
             <li key={r.path}>
-              <button className="ghost" disabled={busy || !r.exists} onClick={() => openAt(r.path)} title={r.path}>
+              <button className="ghost" disabled={busy !== null || !r.exists} onClick={() => openAt(r.path)} title={r.path}>
                 {r.name}
                 {!r.exists && <span className="badge warn"> {t.projectMissing}</span>}
               </button>
@@ -83,7 +89,7 @@ export function ProjectPicker() {
             </li>
           ))}
         </ul>
-        <button onClick={onBrowse} disabled={busy}>
+        <button onClick={onBrowse} disabled={busy !== null}>
           {t.openProject}
         </button>
       </div>

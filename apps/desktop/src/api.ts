@@ -57,7 +57,7 @@ export interface RecordingStarted {
   count_in_seconds: number;
 }
 
-export type TakeSource = "microphone" | "imported_file";
+export type TakeSource = "microphone" | "imported_file" | "derived";
 export type TakeState = "recording" | "complete" | "recovered";
 export type TakeHealth = "ok" | "missing" | "checksum_mismatch" | "unverified";
 
@@ -78,6 +78,7 @@ export interface TakeView {
   overrun_samples: number;
   clipped_samples: number;
   health: TakeHealth | null;
+  derived_from: string | null;
 }
 
 export interface RecordingStopped {
@@ -223,6 +224,8 @@ export const api = {
   relinkTake: (id: string, path: string) => invoke<ProjectView>("relink_take", { id, path }),
   verifyTakes: () => invoke<ProjectView>("verify_takes"),
   importAudio: (path: string) => invoke<ProjectView>("import_audio", { path }),
+  saveSelectionAsTake: (inSeconds: number, outSeconds: number, label: string | null) =>
+    invoke<ProjectView>("save_selection_as_take", { inSeconds, outSeconds, label }),
   exportWav: (path: string, format: WavFormat) =>
     invoke<ExportResult>("export_wav", { path, format }),
 

@@ -38,6 +38,7 @@ pub struct TakeView {
     pub clipped_samples: u64,
     /// Result of the last checksum check (None = not checked yet).
     pub health: Option<TakeHealth>,
+    pub derived_from: Option<String>,
 }
 
 pub fn take_view(s: &Inner, t: &Take) -> TakeView {
@@ -59,6 +60,7 @@ pub fn take_view(s: &Inner, t: &Take) -> TakeView {
         overrun_samples: t.overrun_samples,
         clipped_samples: t.clipped_samples,
         health: s.health.get(&t.id).copied(),
+        derived_from: t.derived_from.clone(),
     }
 }
 
@@ -210,7 +212,7 @@ fn install(
 // ---------- project commands ----------
 
 #[tauri::command]
-pub fn default_projects_dir(app: AppHandle) -> CmdResult<String> {
+pub async fn default_projects_dir(app: AppHandle) -> CmdResult<String> {
     let docs = app
         .path()
         .document_dir()
@@ -219,7 +221,7 @@ pub fn default_projects_dir(app: AppHandle) -> CmdResult<String> {
 }
 
 #[tauri::command]
-pub fn recent_projects(app: AppHandle) -> Vec<RecentProject> {
+pub async fn recent_projects(app: AppHandle) -> Vec<RecentProject> {
     settings::load(&app)
         .recent_projects
         .into_iter()
@@ -242,24 +244,24 @@ pub fn recent_projects(app: AppHandle) -> Vec<RecentProject> {
 }
 
 #[tauri::command]
-pub fn create_project(
+pub async fn create_project(
     app: AppHandle,
-    state: State<AppState>,
+    state: State<'_, AppState>,
     name: String,
     parent: Option<String>,
 ) -> CmdResult<ProjectView> {
     let parent = match parent {
         Some(p) => PathBuf::from(p),
-        None => PathBuf::from(default_projects_dir(app.clone())?),
+        None => PathBuf::from(default_projects_dir(app.clone()).await?),
     };
     let project = Project::create(&parent, &name)?;
     install(&app, &mut state.lock(), project, None)
 }
 
 #[tauri::command]
-pub fn open_project(
+pub async fn open_project(
     app: AppHandle,
-    state: State<AppState>,
+    state: State<'_, AppState>,
     path: String,
 ) -> CmdResult<ProjectOpened> {
     let mut path = PathBuf::from(path);
@@ -277,12 +279,44 @@ pub fn open_project(
 }
 
 #[tauri::command]
-pub fn close_project(state: State<AppState>) {
+pub async fn close_project(state: State<'_, AppState>) -> CmdResult<()> {
     close_inner(&mut state.lock());
+    Ok(())
+}
+
+/// Write `[in, out)` seconds of the loaded (trimmed) take as a new take in the project.
+#[tauri::command]
+pub async fn save_selection_as_take(
+    state: State<'_, AppState>,
+    in_seconds: f64,
+    out_seconds: f64,
+    label: Option<String>,
+) -> CmdResult<ProjectView> {
+    let mut s = state.lock();
+    if s.recording.is_some() {
+        return Err(err("recording", "Stop recording first"));
+    }
+    let (parent, buf) = s
+        .loaded
+        .as_ref()
+        .map(|l| (l.id.clone(), Arc::clone(&l.buffer)))
+        .ok_or_else(|| err("no_take", "Nothing is loaded"))?;
+    let sr = buf.sample_rate as f64;
+    let a = (in_seconds.max(0.0) * sr).round() as usize;
+    let b = (out_seconds.max(0.0) * sr).round() as usize;
+    if b <= a || a >= buf.frames() {
+        return Err(err("invalid_argument", "Empty selection"));
+    }
+    let piece = buf.slice_frames(a, b.min(buf.frames()));
+    let take = project_mut(&mut s)?.create_derived_take(&parent, label.as_deref(), |path| {
+        write_wav(path, &piece, WavFormat::Float32)
+    })?;
+    s.health.insert(take.id.clone(), TakeHealth::Ok);
+    view(&s)
 }
 
 #[tauri::command]
-pub fn project_state(state: State<AppState>) -> CmdResult<Option<ProjectView>> {
+pub async fn project_state(state: State<'_, AppState>) -> CmdResult<Option<ProjectView>> {
     let s = state.lock();
     if s.project.is_none() {
         return Ok(None);
@@ -291,7 +325,7 @@ pub fn project_state(state: State<AppState>) -> CmdResult<Option<ProjectView>> {
 }
 
 #[tauri::command]
-pub fn set_timing(state: State<AppState>, timing: Timing) -> CmdResult<ProjectView> {
+pub async fn set_timing(state: State<'_, AppState>, timing: Timing) -> CmdResult<ProjectView> {
     timing.validate()?;
     let mut s = state.lock();
     if s.recording.is_some() {
@@ -326,7 +360,7 @@ pub fn set_timing(state: State<AppState>, timing: Timing) -> CmdResult<ProjectVi
 // ---------- take commands ----------
 
 #[tauri::command]
-pub fn load_take(state: State<AppState>, id: String) -> CmdResult<LoadedTakeInfo> {
+pub async fn load_take(state: State<'_, AppState>, id: String) -> CmdResult<LoadedTakeInfo> {
     let mut s = state.lock();
     if s.recording.is_some() {
         return Err(err("recording", "Stop recording first"));
@@ -335,8 +369,8 @@ pub fn load_take(state: State<AppState>, id: String) -> CmdResult<LoadedTakeInfo
 }
 
 #[tauri::command]
-pub fn get_waveform(
-    state: State<AppState>,
+pub async fn get_waveform(
+    state: State<'_, AppState>,
     bins: Option<usize>,
 ) -> CmdResult<Option<WaveformPeaks>> {
     let s = state.lock();
@@ -345,8 +379,8 @@ pub fn get_waveform(
 }
 
 #[tauri::command]
-pub fn rename_take(
-    state: State<AppState>,
+pub async fn rename_take(
+    state: State<'_, AppState>,
     id: String,
     label: Option<String>,
 ) -> CmdResult<ProjectView> {
@@ -356,7 +390,7 @@ pub fn rename_take(
 }
 
 #[tauri::command]
-pub fn delete_take(state: State<AppState>, id: String) -> CmdResult<ProjectView> {
+pub async fn delete_take(state: State<'_, AppState>, id: String) -> CmdResult<ProjectView> {
     let mut s = state.lock();
     if s.loaded.as_ref().is_some_and(|l| l.id == id) {
         s.stop_playback();
@@ -369,8 +403,8 @@ pub fn delete_take(state: State<AppState>, id: String) -> CmdResult<ProjectView>
 
 /// Set the trim in seconds of the *original* take. `out_seconds = None` = to the end.
 #[tauri::command]
-pub fn set_trim(
-    state: State<AppState>,
+pub async fn set_trim(
+    state: State<'_, AppState>,
     id: String,
     in_seconds: f64,
     out_seconds: Option<f64>,
@@ -390,7 +424,11 @@ pub fn set_trim(
 }
 
 #[tauri::command]
-pub fn relink_take(state: State<AppState>, id: String, path: String) -> CmdResult<ProjectView> {
+pub async fn relink_take(
+    state: State<'_, AppState>,
+    id: String,
+    path: String,
+) -> CmdResult<ProjectView> {
     let mut s = state.lock();
     project_mut(&mut s)?.relink_take(&id, Path::new(&path))?;
     s.health.insert(id, TakeHealth::Ok);
@@ -398,7 +436,7 @@ pub fn relink_take(state: State<AppState>, id: String, path: String) -> CmdResul
 }
 
 #[tauri::command]
-pub fn verify_takes(state: State<AppState>) -> CmdResult<ProjectView> {
+pub async fn verify_takes(state: State<'_, AppState>) -> CmdResult<ProjectView> {
     let mut s = state.lock();
     let checks = project_ref(&s)?.verify_takes()?;
     for c in checks {
@@ -408,7 +446,7 @@ pub fn verify_takes(state: State<AppState>) -> CmdResult<ProjectView> {
 }
 
 #[tauri::command]
-pub fn import_audio(state: State<AppState>, path: String) -> CmdResult<ProjectView> {
+pub async fn import_audio(state: State<'_, AppState>, path: String) -> CmdResult<ProjectView> {
     let src = PathBuf::from(&path);
     let ext_ok = src
         .extension()
@@ -453,8 +491,8 @@ pub struct ExportResult {
 
 /// Export the loaded take (trim applied) to a new WAV outside the project.
 #[tauri::command]
-pub fn export_wav(
-    state: State<AppState>,
+pub async fn export_wav(
+    state: State<'_, AppState>,
     path: String,
     format: Option<WavFormat>,
 ) -> CmdResult<ExportResult> {

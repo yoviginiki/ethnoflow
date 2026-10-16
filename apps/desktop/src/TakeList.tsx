@@ -18,18 +18,28 @@ export function TakeList({ onSelect }: Props) {
   const setProject = useStore((s) => s.setProject);
   const setLoaded = useStore((s) => s.setLoaded);
   const setError = useStore((s) => s.setError);
+  const pending = useStore((s) => s.pending);
+  const setPending = useStore((s) => s.setPending);
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [toDelete, setToDelete] = useState<TakeView | null>(null);
-  const busy = mode !== "idle";
+  const busy = mode !== "idle" || pending !== null;
 
-  const run = async (f: () => Promise<void>) => {
+  const run = async (f: () => Promise<void>, label?: string) => {
     try {
       setError(null);
+      if (label) setPending(label);
       await f();
     } catch (e) {
       setError(describeError(e));
+    } finally {
+      if (label) setPending(null);
     }
+  };
+
+  const parentName = (id: string) => {
+    const p = project.takes.find((x) => x.id === id);
+    return p ? takeName(p, t.take) : id;
   };
 
   const saveName = (id: string) =>
@@ -54,13 +64,13 @@ export function TakeList({ onSelect }: Props) {
       setToDelete(null);
       setProject(await api.deleteTake(id));
       if (loaded?.id === id) setLoaded(null, null);
-    });
+    }, t.saving);
 
   return (
     <aside className="takes" aria-label={t.takes}>
       <div className="takes-head">
         <h2>{t.takes}</h2>
-        <button className="ghost small" onClick={() => run(async () => setProject(await api.verifyTakes()))} disabled={busy}>
+        <button className="ghost small" onClick={() => run(async () => setProject(await api.verifyTakes()), t.verifying)} disabled={busy}>
           {t.verify}
         </button>
       </div>
@@ -104,7 +114,11 @@ export function TakeList({ onSelect }: Props) {
                     <span className="take-name">{name}</span>
                     <span className="muted small mono-num">
                       {tk.duration_seconds != null ? formatTime(tk.duration_seconds) : "—"} ·{" "}
-                      {tk.source === "imported_file" ? `${t.imported}${tk.original_name ? `: ${tk.original_name}` : ""}` : t.microphone}
+                      {tk.source === "imported_file"
+                        ? `${t.imported}${tk.original_name ? `: ${tk.original_name}` : ""}`
+                        : tk.source === "derived"
+                          ? `${t.derivedFrom} ${tk.derived_from ? parentName(tk.derived_from) : "?"}`
+                          : t.microphone}
                     </span>
                   </button>
                 )}
