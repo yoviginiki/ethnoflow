@@ -24,12 +24,19 @@ fn main() {
     let pts = contour(&buf, &cfg, 0.01);
     let t_pitch = t1.elapsed();
 
-    let voiced: Vec<_> = pts.iter().filter_map(|p| p.hz.map(|hz| (hz, p.confidence))).collect();
+    let voiced: Vec<_> = pts
+        .iter()
+        .filter_map(|p| p.hz.map(|hz| (hz, p.confidence)))
+        .collect();
     let mut hzs: Vec<f64> = voiced.iter().map(|v| v.0).collect();
     hzs.sort_by(|a, b| a.partial_cmp(b).unwrap());
     let mut confs: Vec<f64> = voiced.iter().map(|v| v.1).collect();
     confs.sort_by(|a, b| a.partial_cmp(b).unwrap());
-    let pct = |v: &[f64], q: f64| v.get(((v.len() as f64 - 1.0) * q) as usize).copied().unwrap_or(0.0);
+    let pct = |v: &[f64], q: f64| {
+        v.get(((v.len() as f64 - 1.0) * q) as usize)
+            .copied()
+            .unwrap_or(0.0)
+    };
     let dur = buf.duration_seconds();
 
     println!("file: {path}");
@@ -41,7 +48,8 @@ fn main() {
         linear_to_dbfs(buf.peak()),
         linear_to_dbfs(buf.rms())
     );
-    println!("decode: {:.0} ms; pitch (hop 10 ms, {} frames): {:.0} ms = {:.1}x realtime",
+    println!(
+        "decode: {:.0} ms; pitch (hop 10 ms, {} frames): {:.0} ms = {:.1}x realtime",
         t_decode.as_secs_f64() * 1000.0,
         pts.len(),
         t_pitch.as_secs_f64() * 1000.0,

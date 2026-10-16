@@ -20,6 +20,7 @@ use serde::{Deserialize, Serialize};
 use crate::devices::{choose_config, find_device, Direction, StreamRequest};
 use crate::error::{AudioError, Result};
 use crate::peaks::{LivePeaks, WaveformPeaks};
+use crate::pitch::{ContourPoint, PitchConfig, PitchTracker};
 use crate::stream_thread::{StreamInfo, StreamThread};
 use crate::take_writer::TakeWriter;
 
@@ -47,9 +48,14 @@ struct Shared {
     device_lost: AtomicBool,
     /// Lowest 100 ms RMS seen so far (f32 bits); `NO_FLOOR` until measured.
     noise_floor_bits: AtomicU32,
+    /// Latest pitch estimate from the drain thread: f64 bits of Hz, 0 = unvoiced.
+    pitch_hz_bits: AtomicU64,
+    pitch_conf_bits: AtomicU32,
 }
 
 const NO_FLOOR: u32 = u32::MAX;
+/// Tuner update rate while recording.
+const PITCH_HOP_SECONDS: f64 = 0.02;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RecorderStatus {
@@ -72,6 +78,9 @@ pub struct RecorderStatus {
     pub device_lost: bool,
     /// Quietest 100 ms window so far (linear RMS), after the first 300 ms.
     pub noise_floor: Option<f32>,
+    /// Latest fundamental (Hz) of the mono mix, `None` when unvoiced; ~20 ms behind.
+    pub pitch_hz: Option<f64>,
+    pub pitch_confidence: f64,
 }
 
 /// Result of a finished recording. The audio itself is the file at `path`.
@@ -140,6 +149,13 @@ impl Recorder {
         shared.noise_floor_bits.store(NO_FLOOR, Ordering::Relaxed);
         let peaks = Arc::new(Mutex::new(LivePeaks::new(info.sample_rate, info.channels)));
         let floor = NoiseFloor::new(info.sample_rate, info.channels);
+        let tracker = PitchTracker::new(
+            PitchConfig {
+                min_hz: 70.0,
+                ..PitchConfig::new(info.sample_rate)
+            },
+            (PITCH_HOP_SECONDS * info.sample_rate as f64) as usize,
+        );
         let rb = HeapRb::<f32>::new(RING_CAPACITY_SAMPLES);
         let (prod, cons) = rb.split();
 
@@ -147,7 +163,7 @@ impl Recorder {
         let drain_peaks = Arc::clone(&peaks);
         let drain = thread::Builder::new()
             .name("ethnoflow-record-drain".into())
-            .spawn(move || drain_loop(cons, writer, drain_shared, drain_peaks, floor))
+            .spawn(move || drain_loop(cons, writer, drain_shared, drain_peaks, floor, tracker))
             .map_err(|e| AudioError::Stream(format!("cannot spawn drain thread: {e}")))?;
 
         let cb_shared = Arc::clone(&shared);
@@ -246,6 +262,12 @@ impl Recorder {
                 NO_FLOOR => None,
                 bits => Some(f32::from_bits(bits)),
             },
+            pitch_hz: match self.shared.pitch_hz_bits.load(Ordering::Relaxed) {
+                0 => None,
+                bits => Some(f64::from_bits(bits)),
+            },
+            pitch_confidence: f32::from_bits(self.shared.pitch_conf_bits.load(Ordering::Relaxed))
+                as f64,
         }
     }
 
@@ -307,10 +329,14 @@ fn drain_loop<C: Consumer<Item = f32>>(
     shared: Arc<Shared>,
     peaks: Arc<Mutex<LivePeaks>>,
     mut floor: NoiseFloor,
+    mut tracker: PitchTracker,
 ) -> DrainResult {
     let mut writer = Some(writer);
     let mut error: Option<String> = None;
     let mut tmp = vec![0.0_f32; CHUNK * 8];
+    let channels = writer.as_ref().map(|w| w.channels()).unwrap_or(1).max(1) as usize;
+    let mut mono = Vec::with_capacity(CHUNK * 8 / channels + 1);
+    let mut estimates: Vec<ContourPoint> = Vec::new();
     loop {
         let n = cons.pop_slice(&mut tmp);
         if n == 0 {
@@ -330,6 +356,23 @@ fn drain_loop<C: Consumer<Item = f32>>(
                     shared
                         .noise_floor_bits
                         .store(f.to_bits(), Ordering::Relaxed);
+                }
+                // Tuner: mono mix → pitch tracker; publish the newest estimate.
+                mono.clear();
+                mono.extend(
+                    tmp[..accepted]
+                        .chunks_exact(channels)
+                        .map(|f| f.iter().sum::<f32>() / channels as f32),
+                );
+                estimates.clear();
+                tracker.push(&mono, &mut estimates);
+                if let Some(e) = estimates.last() {
+                    shared
+                        .pitch_hz_bits
+                        .store(e.hz.map_or(0, f64::to_bits), Ordering::Relaxed);
+                    shared
+                        .pitch_conf_bits
+                        .store((e.confidence as f32).to_bits(), Ordering::Relaxed);
                 }
                 peaks
                     .lock()
@@ -562,7 +605,11 @@ mod tests {
         let (mut prod, cons) = HeapRb::<f32>::new(RING_CAPACITY_SAMPLES).split();
         let (s2, p2) = (Arc::clone(&shared), Arc::clone(&peaks));
         let floor = NoiseFloor::new(src.sample_rate, src.channels);
-        let j = thread::spawn(move || drain_loop(cons, writer, s2, p2, floor));
+        let tracker = PitchTracker::new(
+            PitchConfig::new(src.sample_rate),
+            src.sample_rate as usize / 50,
+        );
+        let j = thread::spawn(move || drain_loop(cons, writer, s2, p2, floor, tracker));
         for c in src.samples.chunks(push_chunk) {
             let mut off = 0;
             while off < c.len() {
@@ -592,6 +639,35 @@ mod tests {
         assert_eq!(r.frames, src.frames() as u64);
         assert_eq!(live_frames, src.frames());
         assert_eq!(read_wav(&path).unwrap(), src);
+    }
+
+    /// The drain thread's tuner path: a stereo tone whose channels cancel in the mono
+    /// mix must read as unvoiced, a normal tone as its frequency.
+    #[test]
+    fn drain_publishes_pitch_of_the_mono_mix() {
+        let dir = tempfile::tempdir().unwrap();
+        let tone = AudioBuffer::sine(48_000, 330.0, 1.0, 0.5);
+        let src = AudioBuffer::new(
+            48_000,
+            2,
+            tone.samples.iter().flat_map(|&s| [s, s]).collect(),
+        );
+        let path = dir.path().join("p.wav");
+        let writer = TakeWriter::create(&path, 48_000, 2).unwrap();
+        let shared = Arc::new(Shared::default());
+        let peaks = Arc::new(Mutex::new(LivePeaks::new(48_000, 2)));
+        let (mut prod, cons) = HeapRb::<f32>::new(RING_CAPACITY_SAMPLES).split();
+        let floor = NoiseFloor::new(48_000, 2);
+        let tracker = PitchTracker::new(PitchConfig::new(48_000), 960);
+        let (s2, p2) = (Arc::clone(&shared), Arc::clone(&peaks));
+        let j = thread::spawn(move || drain_loop(cons, writer, s2, p2, floor, tracker));
+        prod.push_slice(&src.samples);
+        thread::sleep(Duration::from_millis(300));
+        let hz = f64::from_bits(shared.pitch_hz_bits.load(Ordering::Relaxed));
+        shared.drain_stop.store(true, Ordering::Release);
+        j.join().unwrap();
+        assert!((hz - 330.0).abs() < 1.0, "tuner read {hz} Hz");
+        assert!(f32::from_bits(shared.pitch_conf_bits.load(Ordering::Relaxed)) > 0.9);
     }
 
     /// Long-take simulation: 30 minutes of audio through the real drain path.
