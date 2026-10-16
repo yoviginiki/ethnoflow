@@ -76,7 +76,7 @@ mod tests {
         let b = AudioBuffer::new(8_000, 2, samples);
         let r = resample_linear(&b, 11_025);
         assert_eq!(r.channels, 2);
-        for f in r.samples.chunks_exact(2) {
+        for f in r.samples.as_chunks::<2>().0 {
             assert!((f[0] - 0.5).abs() < 1e-6);
             assert!((f[1] + 0.25).abs() < 1e-6);
         }
