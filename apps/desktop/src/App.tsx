@@ -8,6 +8,8 @@ import { formatBytes, formatDb, formatTime, linearToDb, meterFraction } from "./
 
 const WAVEFORM_BINS = 1600;
 const STATUS_POLL_MS = 50;
+/** Live waveform refresh while recording, in status ticks (4 × 50 ms = 5 Hz). */
+const LIVE_WAVE_EVERY = 4;
 
 export default function App() {
   const s = useStore();
@@ -49,6 +51,7 @@ export default function App() {
   useEffect(() => {
     if (s.mode === "idle") return;
     let cancelled = false;
+    let tickCount = 0;
     const tick = async () => {
       if (cancelled) return;
       try {
@@ -59,10 +62,17 @@ export default function App() {
             const db = linearToDb(st.peak);
             // peak hold with decay
             s.setMeterDb(Math.max(db, useStore.getState().meterDb - 3));
-            if (st.capped) {
-              // In-memory limit reached (Phase 0 keeps the take in RAM): stop automatically.
+            if (++tickCount % LIVE_WAVE_EVERY === 0) {
+              s.setTake(null, await api.recordingWaveform(WAVEFORM_BINS));
+            }
+            if (st.capped || st.write_failed) {
+              // File limit reached or disk write failed: stop; what is on disk is kept.
               await onStopRecord();
-              s.setError(`${t.limitReached} (${Math.round(st.max_seconds / 60)} min)`);
+              s.setError(
+                st.write_failed
+                  ? t.writeFailed
+                  : `${t.limitReached} (${Math.round(st.max_seconds / 60)} min)`,
+              );
               return;
             }
           }

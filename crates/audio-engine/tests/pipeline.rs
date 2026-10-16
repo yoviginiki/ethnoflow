@@ -78,7 +78,9 @@ fn stereo_take_keeps_channel_identity_through_export() {
 /// Real device path (skipped with a message when no input device exists).
 #[test]
 fn device_record_export_import() {
-    let rec = match Recorder::start(None) {
+    let dir = tempfile::tempdir().unwrap();
+    let original = dir.path().join("original.wav");
+    let rec = match Recorder::start(None, &original) {
         Ok(r) => r,
         Err(e) => {
             eprintln!("skipping device test: {e}");
@@ -86,9 +88,10 @@ fn device_record_export_import() {
         }
     };
     std::thread::sleep(Duration::from_millis(200));
-    let take = rec.stop().unwrap();
+    let recorded = rec.stop().unwrap();
+    let take = read_wav(&recorded.path).unwrap();
     assert!(!take.is_empty(), "device delivered no samples");
-    let dir = tempfile::tempdir().unwrap();
+    assert_eq!(take.frames() as u64, recorded.frames);
     let path = dir.path().join("device.wav");
     write_wav(&path, &take, WavFormat::Float32).unwrap();
     let back = read_wav(&path).unwrap();

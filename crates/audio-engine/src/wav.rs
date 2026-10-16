@@ -123,6 +123,79 @@ pub fn wav_info<P: AsRef<Path>>(path: P) -> Result<WavInfo> {
     })
 }
 
+/// Repair the header of a WAV whose writer did not finish (crash, power loss, kill).
+///
+/// The `data` chunk size is set to the bytes actually present on disk, rounded down
+/// to whole frames (a torn trailing frame is cut off), and the RIFF size is updated.
+/// Returns `Some(frames)` if the file was changed, `None` if it was already
+/// consistent. Only the header and a torn trailing frame are touched; sample bytes
+/// are never rewritten. Assumes `data` is the last chunk, as written by
+/// [`crate::take_writer::TakeWriter`].
+pub fn repair_wav_header<P: AsRef<Path>>(path: P) -> Result<Option<u64>> {
+    use std::io::{Read, Seek, SeekFrom, Write};
+
+    let bad = |m: &str| AudioError::Wav(format!("cannot repair: {m}"));
+    let mut f = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(path.as_ref())?;
+    let file_len = f.metadata()?.len();
+    let mut riff = [0u8; 12];
+    f.read_exact(&mut riff)
+        .map_err(|_| bad("file shorter than a RIFF header"))?;
+    if &riff[0..4] != b"RIFF" || &riff[8..12] != b"WAVE" {
+        return Err(bad("not a RIFF/WAVE file"));
+    }
+
+    let mut pos = 12u64;
+    let mut block_align: Option<u64> = None;
+    loop {
+        if pos + 8 > file_len {
+            return Err(bad("no data chunk"));
+        }
+        let mut hdr = [0u8; 8];
+        f.seek(SeekFrom::Start(pos))?;
+        f.read_exact(&mut hdr)?;
+        let size = u32::from_le_bytes([hdr[4], hdr[5], hdr[6], hdr[7]]) as u64;
+        match &hdr[0..4] {
+            b"fmt " => {
+                let mut fmt = [0u8; 16];
+                f.read_exact(&mut fmt)
+                    .map_err(|_| bad("truncated fmt chunk"))?;
+                block_align = Some(u16::from_le_bytes([fmt[12], fmt[13]]) as u64);
+            }
+            b"data" => {
+                let align = block_align
+                    .filter(|&a| a > 0)
+                    .ok_or_else(|| bad("data before fmt"))?;
+                let data_start = pos + 8;
+                let on_disk = file_len - data_start;
+                let whole = on_disk - on_disk % align;
+                let riff_size = data_start + whole - 8;
+                if whole > u32::MAX as u64 || riff_size > u32::MAX as u64 {
+                    return Err(bad("data exceeds the 4 GiB WAV limit"));
+                }
+                let declared_riff = u32::from_le_bytes([riff[4], riff[5], riff[6], riff[7]]) as u64;
+                if size == whole && declared_riff == riff_size && on_disk == whole {
+                    return Ok(None);
+                }
+                f.seek(SeekFrom::Start(pos + 4))?;
+                f.write_all(&(whole as u32).to_le_bytes())?;
+                f.seek(SeekFrom::Start(4))?;
+                f.write_all(&(riff_size as u32).to_le_bytes())?;
+                if on_disk != whole {
+                    f.set_len(data_start + whole)?;
+                }
+                f.sync_all()?;
+                return Ok(Some(whole / align));
+            }
+            _ => {}
+        }
+        // Chunks are padded to even sizes.
+        pos += 8 + size + (size & 1);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -205,6 +278,16 @@ mod tests {
         assert!(read_wav(&p).is_err());
         assert!(wav_info(&p).is_err());
         assert!(read_wav(dir.path().join("missing.wav")).is_err());
+    }
+
+    #[test]
+    fn repair_rejects_non_wav_and_headerless_files() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("x.wav");
+        std::fs::write(&p, b"not a wav").unwrap();
+        assert!(repair_wav_header(&p).is_err());
+        std::fs::write(&p, b"RIFF\0\0\0\0WAVE").unwrap();
+        assert!(repair_wav_header(&p).is_err(), "no fmt/data chunk");
     }
 
     #[test]

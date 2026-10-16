@@ -20,6 +20,7 @@ pub fn run() {
             commands::start_recording,
             commands::recording_status,
             commands::stop_recording,
+            commands::recording_waveform,
             commands::take_info,
             commands::get_waveform,
             commands::clear_take,

@@ -9,7 +9,7 @@ use audio_engine::{
     Direction, Player, PlayerStatus, Recorder, RecorderStatus, WavFormat, WaveformPeaks,
 };
 use serde::{Deserialize, Serialize};
-use tauri::State;
+use tauri::{AppHandle, Manager, State};
 
 use crate::state::{AppState, TakeSource};
 
@@ -114,8 +114,20 @@ pub struct RecordingStarted {
     pub channels: u16,
 }
 
+/// Where new takes are written until the project system (Phase 1.2) owns them.
+fn recordings_dir(app: &AppHandle) -> CmdResult<PathBuf> {
+    let docs = app
+        .path()
+        .document_dir()
+        .map_err(|e| err("no_documents_dir", e.to_string()))?;
+    let dir = docs.join("EthnoFlow").join("recordings");
+    std::fs::create_dir_all(&dir).map_err(|e| err("io", e.to_string()))?;
+    Ok(dir)
+}
+
 #[tauri::command]
 pub fn start_recording(
+    app: AppHandle,
     state: State<AppState>,
     device: Option<String>,
 ) -> CmdResult<RecordingStarted> {
@@ -126,7 +138,12 @@ pub fn start_recording(
     if let Some(p) = s.player.take() {
         p.stop();
     }
-    let rec = Recorder::start(device.as_deref())?;
+    let ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0);
+    let path = recordings_dir(&app)?.join(format!("take-{ms}.wav"));
+    let rec = Recorder::start(device.as_deref(), &path)?;
     let started = RecordingStarted {
         device: rec.device_name().to_string(),
         sample_rate: rec.sample_rate(),
@@ -149,12 +166,31 @@ pub fn stop_recording(state: State<AppState>) -> CmdResult<TakeInfo> {
         .recorder
         .take()
         .ok_or_else(|| err("not_recording", "No recording in progress"))?;
-    let buf = rec.stop()?;
-    let info = take_info_for(&buf, TakeSource::Microphone, None);
+    let recorded = rec.stop()?;
+    if let Some(e) = &recorded.write_error {
+        log::error!("take {} incomplete: {e}", recorded.path.display());
+    }
+    let buf = read_wav(&recorded.path)?;
+    let label = recorded
+        .path
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned());
+    let info = take_info_for(&buf, TakeSource::Microphone, label.clone());
     s.take = Some(Arc::new(buf));
     s.take_source = Some(TakeSource::Microphone);
-    s.take_label = None;
+    s.take_label = label;
     Ok(info)
+}
+
+/// Waveform of the take being recorded (reduced peaks only).
+#[tauri::command]
+pub fn recording_waveform(
+    state: State<AppState>,
+    bins: Option<usize>,
+) -> CmdResult<Option<WaveformPeaks>> {
+    let s = state.lock();
+    let bins = bins.unwrap_or(1200).clamp(16, 20_000);
+    Ok(s.recorder.as_ref().map(|r| r.live_peaks(bins)))
 }
 
 // ---------- take / waveform ----------

@@ -33,6 +33,7 @@ export interface RecorderStatus {
   stream_errors: number;
   capped: boolean;
   max_seconds: number;
+  write_failed: boolean;
 }
 
 export type TakeSource = "none" | "microphone" | "imported_file";
@@ -101,6 +102,8 @@ export const api = {
     invoke<RecordingStarted>("start_recording", { device }),
   recordingStatus: () => invoke<RecorderStatus | null>("recording_status"),
   stopRecording: () => invoke<TakeInfo>("stop_recording"),
+  recordingWaveform: (bins: number) =>
+    invoke<WaveformPeaks | null>("recording_waveform", { bins }),
 
   takeInfo: () => invoke<TakeInfo | null>("take_info"),
   getWaveform: (bins: number) => invoke<WaveformPeaks | null>("get_waveform", { bins }),

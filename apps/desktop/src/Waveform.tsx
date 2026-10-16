@@ -53,12 +53,25 @@ export function Waveform({ peaks, playhead, recordingSeconds, onSeek, emptyText 
       ctx.stroke();
 
       if (recordingSeconds !== null) {
-        // Live recording: show elapsed time as a growing bar; peaks arrive after stop.
-        ctx.fillStyle = colRec;
-        ctx.globalAlpha = 0.25;
-        const frac = Math.min(1, recordingSeconds / 60); // one minute across the width
-        ctx.fillRect(0, h * 0.4, w * frac, h * 0.2);
-        ctx.globalAlpha = 1;
+        // Live recording: the waveform grows from the left. The view spans at least one
+        // minute and widens as the take gets longer.
+        const span = Math.max(60, recordingSeconds);
+        if (peaks && peaks.min.length > 0) {
+          const used = Math.min(1, peaks.duration_seconds / span) * w;
+          const n = peaks.min.length;
+          const mid = h / 2;
+          const amp = (h / 2) * 0.92;
+          ctx.fillStyle = colRec;
+          ctx.beginPath();
+          for (let i = 0; i < n; i++) {
+            const x0 = (i / n) * used;
+            const x1 = ((i + 1) / n) * used;
+            const top = mid - peaks.max[i] * amp;
+            const bot = mid - peaks.min[i] * amp;
+            ctx.rect(x0, top, Math.max(1, x1 - x0), Math.max(1, bot - top));
+          }
+          ctx.fill();
+        }
         ctx.fillStyle = colText;
         ctx.font = "12px system-ui, sans-serif";
         ctx.fillText("● REC", 8, 16);

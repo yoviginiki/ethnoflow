@@ -40,7 +40,8 @@ const bg = {
   headphonesHint: "Използвай слушалки при възпроизвеждане, за да избегнеш feedback.",
   bytes: "байта",
   language: "Език",
-  limitReached: "Достигнат е лимитът на записа в паметта, записът беше спрян автоматично",
+  limitReached: "Достигнат е максималният размер на WAV файла, записът беше спрян автоматично",
+  writeFailed: "Записът на диска се провали (пълен диск?). Записаното до момента е запазено.",
 };
 
 const en: typeof bg = {
@@ -80,7 +81,8 @@ const en: typeof bg = {
   headphonesHint: "Use headphones during playback to avoid feedback.",
   bytes: "bytes",
   language: "Language",
-  limitReached: "In-memory recording limit reached, recording was stopped automatically",
+  limitReached: "Maximum WAV file size reached, recording was stopped automatically",
+  writeFailed: "Writing to disk failed (disk full?). Everything recorded so far is kept.",
 };
 
 export const messages: Record<Lang, typeof bg> = { bg, en };
