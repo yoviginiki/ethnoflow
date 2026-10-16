@@ -1,4 +1,4 @@
-﻿# CLAUDE.md вЂ” EthnoFlow Studio
+# CLAUDE.md — EthnoFlow Studio
 
 Working rules for Claude Code in this repository. The product specification is
 `ETHNOFLOW_CLAUDE_CODE_MASTER_PLAN.md` (keep a copy at `docs/MASTER_PLAN.md`); this file
@@ -24,11 +24,12 @@ docs/                    PRODUCT_VISION, ARCHITECTURE, ROADMAP, DECISIONS (ADRs)
 scripts/release/         Windows build + smoke scripts
 ```
 
-Crates planned but not yet created (do not stub them with fake code): `crates/arranger`, `crates/plugin-host` (CLAP, ADR-0018 proposed), `services/analysis`,
+Crates planned but not yet created (do not stub them with fake code): `crates/arranger`,
+`crates/plugin-host` (CLAP, ADR-0018 proposed), `services/analysis`,
 `packages/lesson-content`. (`packages/project-schema` became `crates/project`, ADR-0015.)
 
 Product concept for the instrument layer (Phase 2+): `docs/INSTRUMENT_MACHINE_CONCEPT.md`.
-Where it differs from the master plan, В§6 of that file records the resolution; the rule is
+Where it differs from the master plan, §6 of that file records the resolution; the rule is
 always "the assistant proposes, the user decides".
 
 ## Prerequisites (Windows dev machine)
@@ -49,7 +50,7 @@ cargo test --workspace
 cargo clippy --workspace --all-targets -- -D warnings
 cargo fmt --all
 
-# Diagnostics on a real machine (expect в‰€3.0 s wall time for 3 s of audio)
+# Diagnostics on a real machine (expect ≈3.0 s wall time for 3 s of audio)
 cargo run -p ethnoflow-audio-engine --example play_timing
 cargo run -p ethnoflow-audio-engine --example gen_fixtures      # writes qa/fixtures/*.wav
 
@@ -68,7 +69,7 @@ Installer output after `npm run tauri build` (only if the command succeeded):
 Never claim an installer exists unless that path is present.
 
 **Build gotcha:** build the shell with `npm run tauri build` or `npm run tauri dev`, never
-`cargo build --release` alone вЂ” the latter does not embed the frontend and the window shows
+`cargo build --release` alone — the latter does not embed the frontend and the window shows
 "Could not connect to localhost".
 
 ## Hard rules for changes
@@ -95,14 +96,14 @@ Never claim an installer exists unless that path is present.
 12. The phase gate is real: finish the phase's definition of done, write the
     `Implemented / Tested / Known Issues / Next / User Decisions` report, then stop.
 
-## Phase 0 в†’ Phase 1 hand-off (first thing to do on the Windows laptop)
+## Phase 0 → Phase 1 hand-off (first thing to do on the Windows laptop)
 
-1. `cargo test --workspace` вЂ” all green; device tests should now actually record/play.
-2. `cargo run -p ethnoflow-audio-engine --example play_timing` вЂ” expect в‰€3.0 s.
-3. `cd apps/desktop && npm install && npm run tauri dev` вЂ” record a kaval/flute take with a
+1. `cargo test --workspace` — all green; device tests should now actually record/play.
+2. `cargo run -p ethnoflow-audio-engine --example play_timing` — expect ≈3.0 s.
+3. `cd apps/desktop && npm install && npm run tauri dev` — record a kaval/flute take with a
    real microphone, check the meter, stop, see the waveform, play it back with headphones,
    export 24-bit WAV, re-import it. Note the actual latency feel, any overruns, device names.
-4. `npm run tauri build` вЂ” confirm the NSIS installer path above exists; install on the
+4. `npm run tauri build` — confirm the NSIS installer path above exists; install on the
    same machine and repeat step 3 from the installed app.
 5. Record findings in `docs/CHANGELOG.md` under "Phase 0 Windows verification", then wait
    for approval of Phase 1 (`docs/ROADMAP.md`).
