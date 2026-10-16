@@ -194,6 +194,50 @@ fn rename_and_trim_are_validated() {
 }
 
 #[test]
+fn derived_take_is_a_new_file_linked_to_its_parent() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut p = Project::create(dir.path(), "cut").unwrap();
+    let t = p.begin_recording(None).unwrap();
+    let src = tone();
+    write_take(&p.take_path(&t), &src);
+    let parent = p.finish_recording(&t.id, 0, 0).unwrap();
+    let piece = src.slice_frames(48_000, 96_000);
+    let d = p
+        .create_derived_take(&parent.id, Some(" Фраза 1 "), |path| {
+            audio_engine::write_wav(path, &piece, audio_engine::WavFormat::Float32)
+        })
+        .unwrap();
+    assert_eq!(d.source, project::TakeSource::Derived);
+    assert_eq!(d.derived_from.as_deref(), Some(parent.id.as_str()));
+    assert_eq!(d.label.as_deref(), Some("Фраза 1"));
+    assert_eq!(d.frames, Some(48_000));
+    assert!(d.file.starts_with("assets/derived/"));
+    assert_eq!(read_wav(p.take_path(&d)).unwrap(), piece);
+    // Parent untouched, both verify, and the derived take survives reopen.
+    assert_eq!(read_wav(p.take_path(&parent)).unwrap(), src);
+    let root = p.root().to_path_buf();
+    drop(p);
+    let (p, report) = Project::open(&root).unwrap();
+    assert!(report.checks.iter().all(|c| c.health == TakeHealth::Ok));
+    assert_eq!(p.take(&d.id).unwrap(), d);
+    // A failing writer leaves nothing behind.
+    let before = p.takes().unwrap().len();
+    let mut p = p;
+    let r = p.create_derived_take(&parent.id, None, |path| {
+        std::fs::write(path, b"partial").unwrap();
+        Err(audio_engine::AudioError::Wav("boom".into()))
+    });
+    assert!(r.is_err());
+    assert_eq!(p.takes().unwrap().len(), before);
+    assert_eq!(
+        std::fs::read_dir(root.join("assets/derived"))
+            .unwrap()
+            .count(),
+        1
+    );
+}
+
+#[test]
 fn names_are_made_safe_and_duplicates_refused() {
     assert_eq!(sanitize_name(" a/b:c? ").unwrap(), "a_b_c_");
     assert_eq!(sanitize_name("con").unwrap(), "con_");

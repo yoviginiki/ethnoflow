@@ -34,6 +34,8 @@ const MIGRATIONS: &[&str] = &[
         trim_out_frames INTEGER
     );
     CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);",
+    // v2: takes cut out of another take keep a link to their parent
+    "ALTER TABLE takes ADD COLUMN derived_from TEXT;",
 ];
 
 pub fn schema_version() -> u32 {
@@ -87,6 +89,8 @@ pub fn migrate(conn: &Connection) -> Result<u32> {
 pub enum TakeSource {
     Microphone,
     ImportedFile,
+    /// Cut out of another take (`derived_from`); stored under `assets/derived/`.
+    Derived,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -104,6 +108,7 @@ fn source_str(s: TakeSource) -> &'static str {
     match s {
         TakeSource::Microphone => "microphone",
         TakeSource::ImportedFile => "imported_file",
+        TakeSource::Derived => "derived",
     }
 }
 
@@ -136,11 +141,13 @@ pub struct Take {
     pub clipped_samples: u64,
     pub trim_in_frames: u64,
     pub trim_out_frames: Option<u64>,
+    /// Parent take id for `TakeSource::Derived`.
+    pub derived_from: Option<String>,
 }
 
 const TAKE_COLS: &str = "id, number, file, label, source, state, created_at_ms, sample_rate, \
     channels, frames, blake3, original_name, device, overrun_samples, clipped_samples, \
-    trim_in_frames, trim_out_frames";
+    trim_in_frames, trim_out_frames, derived_from";
 
 fn row_to_take(r: &Row) -> rusqlite::Result<Take> {
     let source: String = r.get(4)?;
@@ -150,10 +157,10 @@ fn row_to_take(r: &Row) -> rusqlite::Result<Take> {
         number: r.get(1)?,
         file: r.get(2)?,
         label: r.get(3)?,
-        source: if source == "imported_file" {
-            TakeSource::ImportedFile
-        } else {
-            TakeSource::Microphone
+        source: match source.as_str() {
+            "imported_file" => TakeSource::ImportedFile,
+            "derived" => TakeSource::Derived,
+            _ => TakeSource::Microphone,
         },
         state: match state.as_str() {
             "complete" => TakeState::Complete,
@@ -171,6 +178,7 @@ fn row_to_take(r: &Row) -> rusqlite::Result<Take> {
         clipped_samples: r.get(14)?,
         trim_in_frames: r.get(15)?,
         trim_out_frames: r.get(16)?,
+        derived_from: r.get(17)?,
     })
 }
 
@@ -181,6 +189,7 @@ pub struct NewTake<'a> {
     pub state: TakeState,
     pub original_name: Option<&'a str>,
     pub device: Option<&'a str>,
+    pub derived_from: Option<&'a str>,
 }
 
 pub fn insert_take(conn: &Connection, t: &NewTake) -> Result<Take> {
@@ -189,8 +198,9 @@ pub fn insert_take(conn: &Connection, t: &NewTake) -> Result<Take> {
         r.get(0)
     })?;
     tx.execute(
-        "INSERT INTO takes (id, number, file, source, state, created_at_ms, original_name, device)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+        "INSERT INTO takes (id, number, file, source, state, created_at_ms, original_name, device,
+            derived_from)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
         params![
             t.id,
             number,
@@ -199,7 +209,8 @@ pub fn insert_take(conn: &Connection, t: &NewTake) -> Result<Take> {
             state_str(t.state),
             crate::now_ms(),
             t.original_name,
-            t.device
+            t.device,
+            t.derived_from
         ],
     )?;
     tx.commit()?;
@@ -321,6 +332,36 @@ mod tests {
         assert_eq!(migrate(&conn).unwrap(), schema_version());
     }
 
+    /// A database left by the v1 app (only the first migration applied) must upgrade in
+    /// place: existing rows survive and the new column reads as NULL.
+    #[test]
+    fn v1_database_upgrades_to_current() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, applied_at_ms INTEGER NOT NULL);",
+        )
+        .unwrap();
+        conn.execute_batch(MIGRATIONS[0]).unwrap();
+        conn.execute("INSERT INTO schema_migrations VALUES (1, 0)", [])
+            .unwrap();
+        conn.execute(
+            "INSERT INTO takes (id, number, file, source, state, created_at_ms)
+             VALUES ('old', 1, 'assets/originals/old.wav', 'microphone', 'complete', 0)",
+            [],
+        )
+        .unwrap();
+        assert_eq!(migrate(&conn).unwrap(), 1);
+        let t = get_take(&conn, "old").unwrap();
+        assert_eq!(t.derived_from, None);
+        assert_eq!(t.source, TakeSource::Microphone);
+        let v: u32 = conn
+            .query_row("SELECT MAX(version) FROM schema_migrations", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert_eq!(v, schema_version());
+    }
+
     #[test]
     fn newer_database_is_refused() {
         let conn = Connection::open_in_memory().unwrap();
@@ -349,6 +390,7 @@ mod tests {
                 state: TakeState::Recording,
                 original_name: None,
                 device: Some("Mic"),
+                derived_from: None,
             },
         )
         .unwrap();
@@ -365,6 +407,7 @@ mod tests {
                 state: TakeState::Complete,
                 original_name: Some("re.mp3"),
                 device: None,
+                derived_from: None,
             },
         )
         .unwrap();

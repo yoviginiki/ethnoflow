@@ -14,7 +14,8 @@ pub use db::{Take, TakeSource, TakeState};
 pub use error::{ProjectError, Result};
 pub use manifest::{Manifest, Marker, TempoPoint, TimeSignaturePoint};
 pub use project::{
-    checksum_file, sanitize_name, OpenReport, Project, TakeCheck, TakeHealth, PROJECT_EXT,
+    checksum_file, sanitize_name, OpenReport, Project, TakeCheck, TakeHealth, DERIVED_DIR,
+    ORIGINALS_DIR, PROJECT_EXT,
 };
 
 pub(crate) fn now_ms() -> i64 {

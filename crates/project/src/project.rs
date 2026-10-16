@@ -17,10 +17,11 @@ use crate::manifest::{Manifest, MANIFEST_FILE};
 
 pub const PROJECT_EXT: &str = "ethnoflow";
 pub const ORIGINALS_DIR: &str = "assets/originals";
+pub const DERIVED_DIR: &str = "assets/derived";
 pub const TRASH_DIR: &str = "trash";
 const LAYOUT: &[&str] = &[
     ORIGINALS_DIR,
-    "assets/derived",
+    DERIVED_DIR,
     "tracks",
     "samples",
     "analysis",
@@ -197,6 +198,7 @@ impl Project {
                 state: TakeState::Recording,
                 original_name: None,
                 device,
+                derived_from: None,
             },
         )
     }
@@ -272,6 +274,7 @@ impl Project {
                 state: TakeState::Recording, // until facts are stored below
                 original_name: original_name.as_deref(),
                 device: None,
+                derived_from: None,
             },
         )?;
         let facts = AudioFacts {
@@ -281,6 +284,51 @@ impl Project {
             blake3,
         };
         db::set_take_audio(&self.conn, &id, TakeState::Complete, &facts, 0, 0)
+    }
+
+    /// Add a take cut out of `parent`. `write` receives the destination path (under
+    /// `assets/derived/`, must not exist yet) and writes a WAV there; the parent is
+    /// never touched. On write failure the half-written file is removed.
+    pub fn create_derived_take(
+        &mut self,
+        parent: &str,
+        label: Option<&str>,
+        write: impl FnOnce(&Path) -> audio_engine::Result<()>,
+    ) -> Result<Take> {
+        let parent_take = self.take(parent)?;
+        if parent_take.state == TakeState::Recording {
+            return Err(ProjectError::InvalidState(format!(
+                "{parent} is still recording"
+            )));
+        }
+        let id = new_take_id();
+        let file = format!("{DERIVED_DIR}/{id}.wav");
+        let dest = self.root.join(&file);
+        if dest.exists() {
+            return Err(ProjectError::AlreadyExists(dest));
+        }
+        if let Err(e) = write(&dest) {
+            let _ = std::fs::remove_file(&dest);
+            return Err(e.into());
+        }
+        let facts = self.audio_facts(&dest)?;
+        db::insert_take(
+            &self.conn,
+            &NewTake {
+                id: &id,
+                file: &file,
+                source: TakeSource::Derived,
+                state: TakeState::Recording,
+                original_name: None,
+                device: None,
+                derived_from: Some(parent),
+            },
+        )?;
+        let take = db::set_take_audio(&self.conn, &id, TakeState::Complete, &facts, 0, 0)?;
+        match label.map(str::trim).filter(|l| !l.is_empty()) {
+            Some(l) => db::set_label(&self.conn, &id, Some(l)),
+            None => Ok(take),
+        }
     }
 
     pub fn rename_take(&mut self, id: &str, label: Option<&str>) -> Result<Take> {
@@ -440,6 +488,7 @@ impl Project {
                     state: TakeState::Recording,
                     original_name: None,
                     device: None,
+                    derived_from: None,
                 },
             )?;
             let facts = self.audio_facts(&path)?;
