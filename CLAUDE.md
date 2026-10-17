@@ -89,6 +89,18 @@ first (scale, tempo, takes), never assume a key or tempo, keep levels safe, save
 you set as presets **with notes that explain why**, start sound only when asked, and
 answer in Bulgarian with what to turn to change the character.
 
+## Fidelity contract (mandatory, 2026-10-17)
+
+`docs/CONTRACT_FIDELITY.md` is the owner's engineering contract and binds every slice: no
+cosmetic controls (each control has range, unit, default, real audio/state effect, persistence
+and a test), no silent simplification (say NOT IMPLEMENTED and propose stages), vertical
+slices only (UI → state → engine → save/reload → export → tests), the status vocabulary
+NOT STARTED / DESIGNED / IMPLEMENTING / FUNCTIONAL / TESTED / VISUALLY VERIFIED / DONE /
+BLOCKED, and the §12 reporting template at milestones. Its first enforcement target
+(Rhythm Laboratory + Instrument Forge = Sound Designer / new instruments / mixer) starts
+with Gate A artifacts under `docs/audits`, `docs/traceability`, `docs/design`,
+`docs/engineering`, `docs/testing` and waits for the owner's approval before code.
+
 ## Hard rules for changes
 
 1. Audio callbacks (`build_input_stream` / `build_output_stream` closures) never allocate,
