@@ -1,5 +1,6 @@
 mod analysis_cmds;
 mod commands;
+mod midi_cmds;
 mod project_cmds;
 mod settings;
 mod state;
@@ -57,6 +58,11 @@ pub fn run() {
             analysis_cmds::start_monitor,
             analysis_cmds::stop_monitor,
             analysis_cmds::monitor_status,
+            midi_cmds::midi_take,
+            midi_cmds::set_midi_render,
+            midi_cmds::play_notes,
+            midi_cmds::notes_playback_status,
+            midi_cmds::stop_notes,
             project_cmds::export_wav,
         ])
         .build(tauri::generate_context!())

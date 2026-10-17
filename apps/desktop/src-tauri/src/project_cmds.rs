@@ -153,6 +153,31 @@ pub fn load_take_into(s: &mut Inner, id: &str) -> CmdResult<LoadedTakeInfo> {
             format!("Original file is missing: {}", path.display()),
         ));
     }
+    if path
+        .extension()
+        .is_some_and(|e| e.eq_ignore_ascii_case("mid"))
+    {
+        let a4 = p
+            .manifest()
+            .a4_hz
+            .unwrap_or(crate::analysis_cmds::DEFAULT_A4_HZ);
+        let loaded = crate::midi_cmds::load_midi_take(&take.id, &path, a4)?;
+        let buf = &loaded.buffer;
+        let info = LoadedTakeInfo {
+            id: take.id.clone(),
+            sample_rate: buf.sample_rate,
+            channels: buf.channels,
+            frames: buf.frames(),
+            duration_seconds: buf.duration_seconds(),
+            peak_dbfs: linear_to_dbfs(buf.peak()),
+            rms_dbfs: linear_to_dbfs(buf.rms()),
+            clipped_samples: 0,
+            offset_seconds: 0.0,
+        };
+        s.stop_playback();
+        s.loaded = Some(loaded);
+        return Ok(info);
+    }
     let is_wav = path
         .extension()
         .is_some_and(|e| e.eq_ignore_ascii_case("wav"));
@@ -187,6 +212,7 @@ pub fn load_take_into(s: &mut Inner, id: &str) -> CmdResult<LoadedTakeInfo> {
         id: take.id,
         offset_seconds: info.offset_seconds,
         buffer: Arc::new(buf),
+        midi: None,
     });
     Ok(info)
 }
@@ -464,14 +490,21 @@ pub async fn verify_takes(state: State<'_, AppState>) -> CmdResult<ProjectView> 
 #[tauri::command]
 pub async fn import_audio(state: State<'_, AppState>, path: String) -> CmdResult<ProjectView> {
     let src = PathBuf::from(&path);
-    let ext_ok = src
+    let ext = src
         .extension()
         .map(|e| e.to_string_lossy().to_ascii_lowercase())
-        .is_some_and(|e| IMPORT_EXTENSIONS.contains(&e.as_str()));
-    if !ext_ok {
+        .unwrap_or_default();
+    if ext == "mid" {
+        let mut s = state.lock();
+        if s.recording.is_some() {
+            return Err(err("recording", "Stop recording first"));
+        }
+        return crate::midi_cmds::import_midi(&mut s, &src);
+    }
+    if !IMPORT_EXTENSIONS.contains(&ext.as_str()) {
         return Err(err(
             "unsupported_format",
-            format!("Supported: {}", IMPORT_EXTENSIONS.join(", ")),
+            format!("Supported: {}, mid", IMPORT_EXTENSIONS.join(", ")),
         ));
     }
     // Decode before copying: a file we cannot read never enters the project.
@@ -495,6 +528,7 @@ pub async fn import_audio(state: State<'_, AppState>, path: String) -> CmdResult
         id: take.id.clone(),
         offset_seconds: 0.0,
         buffer: Arc::new(buf),
+        midi: None,
     });
     view(&s)
 }

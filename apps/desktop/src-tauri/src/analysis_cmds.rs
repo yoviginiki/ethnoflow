@@ -124,13 +124,41 @@ fn notes_from_contour(doc: &ContourDoc, a4: f64) -> NotesDoc {
     }
 }
 
+/// The notes the user is working with: edited document, else automatic, else the
+/// MIDI clip's own notes. Empty when nothing has been analysed.
+pub fn current_notes(s: &Inner) -> CmdResult<Vec<Note>> {
+    Ok(view_from_docs(s)?.map(|v| v.notes).unwrap_or_default())
+}
+
 /// Assemble the view from stored documents, if they match the loaded trim.
-fn view_from_docs(s: &Inner) -> CmdResult<Option<AnalysisView>> {
+/// MIDI takes need no analysis: their notes come straight from the file.
+pub fn view_from_docs(s: &Inner) -> CmdResult<Option<AnalysisView>> {
     let (id, offset) = loaded_id(s)?;
     let p = s
         .project
         .as_ref()
         .ok_or_else(|| err("no_project", "No project is open"))?;
+    if let Some(m) = s.loaded.as_ref().and_then(|l| l.midi.as_ref()) {
+        let a4 = a4_of(s);
+        let auto = crate::midi_cmds::clip_notes(&m.clip, &m.render);
+        let edited = p.load_analysis::<NotesDoc>(&id, "notes.edited")?;
+        let (notes, is_edited) = match edited {
+            Some(e) => (e.notes, true),
+            None => (auto, false),
+        };
+        let h =
+            PitchClassHistogram::from_midi(notes.iter().map(|n| (n.midi as f64, n.end - n.start)));
+        let mut hypotheses = rank_hypotheses(&h, &ScaleKind::ALL);
+        hypotheses.truncate(MAX_HYPOTHESES);
+        return Ok(Some(AnalysisView {
+            take_id: id,
+            a4_hz: a4,
+            contour: Vec::new(),
+            notes,
+            edited: is_edited,
+            hypotheses,
+        }));
+    }
     let Some(c) = p.load_analysis::<ContourDoc>(&id, "contour")? else {
         return Ok(None);
     };
@@ -164,6 +192,9 @@ pub async fn analyze_take(state: State<'_, AppState>) -> CmdResult<AnalysisView>
     let mut s = state.lock();
     if s.recording.is_some() {
         return Err(err("recording", "Stop recording first"));
+    }
+    if s.loaded.as_ref().is_some_and(|l| l.midi.is_some()) {
+        return view_from_docs(&s)?.ok_or_else(|| err("analysis", "no notes"));
     }
     let (id, offset, buf) = s
         .loaded

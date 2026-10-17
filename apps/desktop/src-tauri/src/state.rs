@@ -23,6 +23,32 @@ pub struct LoadedTake {
     pub buffer: Arc<AudioBuffer>,
     /// Seconds cut from the start of the original by the trim.
     pub offset_seconds: f64,
+    /// For MIDI takes: the parsed file and how it was rendered.
+    pub midi: Option<LoadedMidi>,
+}
+
+pub struct LoadedMidi {
+    pub clip: music_core::MidiClip,
+    pub render: MidiRender,
+}
+
+/// How a MIDI take is rendered for playback (changes re-render, never edit the file).
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct MidiRender {
+    /// 0.25..=2.0; 1.0 = the file's own tempo.
+    pub tempo_factor: f64,
+    pub muted_tracks: Vec<u16>,
+    pub voice: audio_engine::Voice,
+}
+
+impl Default for MidiRender {
+    fn default() -> Self {
+        Self {
+            tempo_factor: 1.0,
+            muted_tracks: Vec::new(),
+            voice: audio_engine::Voice::Flute,
+        }
+    }
 }
 
 #[derive(Default)]
@@ -36,6 +62,8 @@ pub struct Inner {
     pub metronome: Option<Metronome>,
     pub player: Option<Player>,
     pub tone: Option<Player>,
+    /// "Play the notes": the synth rendering of the current notes, playing.
+    pub notes_player: Option<Player>,
     pub loaded: Option<LoadedTake>,
 }
 
@@ -44,12 +72,20 @@ impl Inner {
         if let Some(p) = self.player.take() {
             p.stop();
         }
+        if let Some(p) = self.notes_player.take() {
+            p.stop();
+        }
     }
 
     pub fn stop_metronome(&mut self) {
         if let Some(m) = self.metronome.take() {
             m.stop();
         }
+    }
+
+    /// True while recording or playing (operations that replace the loaded buffer wait).
+    pub fn mode_busy(&self) -> bool {
+        self.recording.is_some() || self.player.is_some() || self.notes_player.is_some()
     }
 
     pub fn stop_monitor(&mut self) {

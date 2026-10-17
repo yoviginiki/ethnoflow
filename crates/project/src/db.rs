@@ -91,6 +91,8 @@ pub enum TakeSource {
     ImportedFile,
     /// Cut out of another take (`derived_from`); stored under `assets/derived/`.
     Derived,
+    /// An imported Standard MIDI File (rendered by the synth for playback).
+    MidiFile,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -109,6 +111,7 @@ fn source_str(s: TakeSource) -> &'static str {
         TakeSource::Microphone => "microphone",
         TakeSource::ImportedFile => "imported_file",
         TakeSource::Derived => "derived",
+        TakeSource::MidiFile => "midi_file",
     }
 }
 
@@ -160,6 +163,7 @@ fn row_to_take(r: &Row) -> rusqlite::Result<Take> {
         source: match source.as_str() {
             "imported_file" => TakeSource::ImportedFile,
             "derived" => TakeSource::Derived,
+            "midi_file" => TakeSource::MidiFile,
             _ => TakeSource::Microphone,
         },
         state: match state.as_str() {

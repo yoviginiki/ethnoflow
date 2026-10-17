@@ -247,6 +247,19 @@ impl Project {
         channels: u16,
         frames: u64,
     ) -> Result<Take> {
+        self.import_file(src, TakeSource::ImportedFile, sample_rate, channels, frames)
+    }
+
+    /// Like [`Project::import_original`] with an explicit source kind, e.g.
+    /// `TakeSource::MidiFile` (facts then describe the rendered audio).
+    pub fn import_file(
+        &mut self,
+        src: &Path,
+        source: TakeSource,
+        sample_rate: u32,
+        channels: u16,
+        frames: u64,
+    ) -> Result<Take> {
         let id = new_take_id();
         let ext = src
             .extension()
@@ -270,7 +283,7 @@ impl Project {
             &NewTake {
                 id: &id,
                 file: &file,
-                source: TakeSource::ImportedFile,
+                source,
                 state: TakeState::Recording, // until facts are stored below
                 original_name: original_name.as_deref(),
                 device: None,
