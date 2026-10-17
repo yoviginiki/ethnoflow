@@ -228,6 +228,12 @@ const bg = {
   holdReset: "Нулирай",
   redo: "Повтори",
   addNoteHint: "Alt+клик на празно място добавя нота; влачене мести нота, влачене на десния ѝ край сменя дължината.",
+  // computer keyboard piano (F2.7.3)
+  keyboardPiano: "Клавиатура като пиано",
+  keyboardHint: "Долният ред (Z X C V B N M) е една октава, горният (Q W E R T Y U) — следващата; черните са S D G H J и 2 3 5 6 7. ← → местят октавата. Докато е включено, R и S не са бързи клавиши.",
+  scaleLock: "Само нотите от скалата",
+  octave: "октава",
+
   // trainer (F2.8)
   trainer: "Трениране",
   modeListen: "Слушай",
@@ -522,6 +528,11 @@ const en: typeof bg = {
   holdReset: "Reset",
   redo: "Redo",
   addNoteHint: "Alt+click on empty space adds a note; drag moves a note, dragging its right edge changes the length.",
+  keyboardPiano: "Keyboard as piano",
+  keyboardHint: "Bottom row (Z X C V B N M) is one octave, top row (Q W E R T Y U) the next; black keys are S D G H J and 2 3 5 6 7. ← → shift the octave. While on, R and S are not shortcuts.",
+  scaleLock: "Scale notes only",
+  octave: "octave",
+
   trainer: "Trainer",
   modeListen: "Listen",
   modeWait: "Wait for me",

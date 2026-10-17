@@ -152,6 +152,11 @@ button.small { font-size: 12px; padding: 3px 7px; }
 .needle-centre { position: absolute; left: 50%; top: -2px; width: 2px; height: 12px; background: var(--muted); }
 .needle { position: absolute; top: -3px; width: 4px; height: 14px; margin-left: -2px; background: var(--playhead); border-radius: 2px; transition: left 60ms linear; }
 .practice { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.kb-keys { display: flex; gap: 2px; height: 36px; align-items: flex-start; }
+.kb-key { flex: 1; height: 36px; background: #f3f1ec; border: 1px solid var(--axis); border-radius: 0 0 3px 3px; }
+.kb-key.black { background: var(--panel); height: 24px; }
+.kb-key.dim { opacity: 0.35; }
+.kb-key.down { background: var(--accent); }
 .trainer-report ul { margin: 4px 0; padding-left: 18px; max-height: 180px; overflow-y: auto; }
 .trainer-report li.ok { color: var(--accent); }
 .trainer-report li.bad { color: var(--rec); }

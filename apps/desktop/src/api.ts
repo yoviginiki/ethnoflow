@@ -475,6 +475,11 @@ export const api = {
   stopNotes: () => invoke<void>("stop_notes"),
   sendNotesToPlayer: (label: string | null) =>
     invoke<{ project: ProjectView; take_id: string }>("send_notes_to_player", { label }),
+  startLiveSynth: (device: string | null, voice: Voice | null) =>
+    invoke<{ sample_rate: number; active_voices: number; stream_errors: number }>("start_live_synth", { device, voice }),
+  stopLiveSynth: () => invoke<void>("stop_live_synth"),
+  synthNote: (midi: number, on: boolean, velocity: number | null) => invoke<void>("synth_note", { midi, on, velocity }),
+  synthAllOff: () => invoke<void>("synth_all_off"),
   evaluatePerformance: (expected: Note[], played: Note[], level: Level, latencyMs: number) =>
     invoke<TrainerReport>("evaluate_performance", { expected, played, level, latencyMs }),
   listProfiles: () => invoke<ProfileSummary[]>("list_profiles"),

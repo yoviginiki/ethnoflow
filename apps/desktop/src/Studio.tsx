@@ -4,6 +4,7 @@ import { api, describeError, IMPORT_EXTENSIONS, type Note, type WavFormat } from
 import { AnalysisPanel } from "./AnalysisPanel";
 import { FallingNotes } from "./FallingNotes";
 import { InstrumentPanel } from "./InstrumentPanel";
+import { KeyboardPiano } from "./KeyboardPiano";
 import { MidiPanel } from "./MidiPanel";
 import { formatBytes, formatDb, formatTime, isTypingTarget, linearToDb, meterFraction, snapToBars, takeName } from "./format";
 import { messages } from "./i18n";
@@ -686,6 +687,7 @@ export function Studio() {
             />
           )}
           <InstrumentPanel />
+          <KeyboardPiano scale={project.scale} />
 
           <section className="meter-row" aria-label={t.level}>
             <span className="muted small">{t.level}</span>
