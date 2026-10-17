@@ -44,6 +44,11 @@
   tolerances, latency); "Trainer" panel driven by the microphone pitch — Listen, Wait
   (the lit note advances when held, wrong notes flash red, no timing), Rhythm (play
   along with the synth, per-note report at the end).
+- **F2.7 rest** (0.2.5): MIDI take transposition (±24, re-render only); loop selection
+  snaps to bars when the file has tempo and meter; **live synth** (`live_synth.rs`:
+  8 voices, attack/release, oldest-voice stealing, commands through a lock-free ring,
+  nothing allocated in the callback) played from the computer keyboard (two rows =
+  two octaves, ← → octave, Scale Lock to the chosen scale).
 
 ### Measurements (owner's laptop, release build, YIN hop 10 ms, window 1024)
 | material | pitch time | voiced | f0 p05 / median / p95 | confidence p10 / median | octave-sized jumps |
