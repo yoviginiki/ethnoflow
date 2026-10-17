@@ -3,7 +3,7 @@ import type { Ambient, Note, Scale } from "./api";
 import { melodyRegister, proposeStarters, STARTER_IDS, type StarterContext } from "./starters";
 
 const baseRack = { schema_version: 1, layers: [], macros: {}, preset: null, tags: [], automation: [], program: { scenes: [], loop_region: null } } as unknown as Ambient;
-const names = { noise: "Шум", wind: "Вятър", texture: "Текстура", bells: "Камбани", pluck: "Струни", loop: "Запис", cloud: "Облак" } as const;
+const names = { noise: "Шум", wind: "Вятър", texture: "Текстура", bells: "Камбани", pluck: "Струни", loop: "Запис", cloud: "Облак", resonator: "Резонатор" } as const;
 const note = (midi: number): Note => ({ start: 0, end: 0.5, midi, cents: 0, confidence: 0.9, velocity: 0.8, bend: [] });
 
 describe("starters", () => {

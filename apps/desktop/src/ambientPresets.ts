@@ -37,6 +37,8 @@ export function defaultSource(kind: LayerKind, takeId = ""): LayerSource {
       return { kind, density: 15, damping: 0.3, brightness: 0.5, velocity_spread: 0.5, tonal: true, register: [48, 72] };
     case "loop":
       return { kind, take_id: takeId, start: 0, end: 0, crossfade: 0.1, rate: 1, reverse: false };
+    case "resonator":
+      return { kind, density: 20, decay_s: 3, structure: 0.5, brightness: 0.5, strike: 0.5, tonal: true, register: [55, 79] };
     case "cloud":
       return { kind, take_id: takeId, grain_ms: 120, density: 20, position: 0.3, spray: 0.1, scan: 0, pitch: 0, jitter: 10, reverse_p: 0.2, octave_p: 0.1 };
   }
@@ -50,6 +52,7 @@ export const KIND_LABEL: Record<LayerKind, StringMessageKey> = {
   pluck: "kindPluck",
   loop: "kindLoop",
   cloud: "kindCloud",
+  resonator: "kindResonator",
 };
 
 export function makeLayer(name: string, source: LayerSource, patch: Partial<AmbientLayer> = {}): AmbientLayer {

@@ -24,11 +24,15 @@ function sourceParams(src: LayerSource): string[] {
       return ["rate", "crossfade"];
     case "cloud":
       return ["grain_ms", "density", "position", "spray", "scan", "pitch", "jitter", "reverse_p", "octave_p"];
+    case "resonator":
+      return ["density", "decay_s", "structure", "brightness", "strike"];
   }
 }
 const PARAM_LABEL: Record<string, StringMessageKey> = {
   gain_db: "levelLabel",
   grain_ms: "grainLabel",
+  structure: "structureLabel",
+  strike: "strikeLabel",
   position: "positionLabel",
   spray: "sprayLabel",
   scan: "scanLabel",

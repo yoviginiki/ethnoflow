@@ -202,6 +202,12 @@
   import in Atmosphere**: "Import samples…" (multi-file) or drag-and-drop from
   Explorer / a sample manager such as Soundly — each file becomes a take in the
   project (named after the file) and a looped layer.
+- **Resonator (F1B.4, 2026-10-18, night)**: modal resonator layer (6 voices × 4 two-pole
+  partials, harmonic ↔ bell ratios, noise-burst exciter with hardness, brightness tilt and
+  damping, fundamental decay), tuned to the pitch set like the bells, automatable
+  (density, decay, structure, brightness, strike); tests: in tune, structure/brightness/
+  decay measurable, silence kept, seed + block-size independence. In Atmosphere,
+  Soundscapes (how-to) and the automation editor.
 - **Song map (P2 Phase C / P3 Phase 1 slice, 2026-10-18, night)**: the song's form in
   ticks (`crates/project/src/songmap.rs`: tempo map, meter map, sections with role /
   energy / density / tension / roles / lock, validation, split/merge, migration from the

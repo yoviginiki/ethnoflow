@@ -56,6 +56,7 @@ The pad and the textures always sit **below** the melody (about two octaves unde
 The same layers as Atmosphere, one at a time, with big knobs:
 
 - Pick a **Module** (layer) at the top or add a new one by kind. Under the title is "How to use it" for that module.
+- **Resonator** (modal synthesis): a struck body in the mode, from string/tube (Structure 0) to bowl/bell (1); Strike, Brightness, Decay, Density. Good for sparse bell hits over the pad or a wooden pulse under the melody.
 - **Cloud** (granular): pick a take (kaval, voice, rain) and it becomes an endless pad of small grains. Position = where in the take, Scan 0 = freezes the moment, Grain and Density go from whisper to choir, Pitch transposes (−12 = an octave down), Reverse and Octave up are per-grain probabilities. The strongest ambient module for your own recordings.
 - Knobs: level with a meter, pan, the module's parameters, HP/LP. Drag up/down; Shift = fine; double-click = default; the wheel works too.
 - **Shuffle** gives new values to this module only (the level stays); 🔒 protects it from "Surprise me".
@@ -110,6 +111,32 @@ The same layers as Atmosphere, one at a time, with big knobs:
 - What it allows: from the terminal Claude Code reads the key, tempo, takes and all settings and can change them, add modules, save and load presets and sessions, start and stop layers.
 - Typical flow: record a melody → in the terminal write "make me starting presets for ambient for this take and explain" → you get settings, presets with notes and an explanation of what to turn.
 - Local files only; nothing leaves the machine. Switch it off with the same switch.
+
+## Genre recipes (step by step)
+
+Three ways to reach something that sounds like a piece with today's knobs. Each starts
+from "Start from a melody", because that is where key and tempo come from your take.
+
+### Ambient (quiet, breathing bed for the kaval)
+1. Record 20–30 s of kaval → **Start from a melody → Analyse** → accept the key → **Try "Quiet ambient"**.
+2. **Soundscapes**: add a **Cloud** of the same take (Grain 150–300 ms, Density 15–25, Scan 0 = frozen, Pitch −12, Octave up 20 %). Level −20 dB. This is "the pad made of you".
+3. Macros: Space 0.5–0.7, Size 0.8, **Shimmer 25–40 %** at the octave, Motion 0.4. If it turns to mush, lower Brightness to 0.4 and cut the Cloud on top (LP 6 kHz).
+4. **Background mixer** 🎚: Drone −6 dB trim, Pad 0, Atmosphere 0; Fade in 4 s / out 6 s on all, so switching breathes.
+5. Save a **Session** named after the piece with a note on what you liked.
+
+### Liquid DnB (rolling, bright)
+1. **Start from a melody → Try "Liquid DnB"** (160–180 BPM; if the analysis found 85–90, the variant doubles it and says so).
+2. **Rhythm section**: Drums 🎛 "Liquid kit", Complexity 0.4–0.5, Humanize 0.3, Fill every 8. Bass 🎛 "Reese" (or "Pluck" for softer), Sidechain 0.6–0.7, Wobble 1/8 depth 0.4.
+3. **Instruments**: open the bass with ✎, Attack 2 ms, Decay 250 ms, Sustain 40 %, Filter envelope 0.5; **Microvariation 25 %** so it is not a machine. "Save as" → "my liquid bass" → Use in Bass.
+4. Pad: scale_triad, emotion "light", level −16; atmosphere: light Texture −22 and high Wind −28. Shimmer 15 %.
+5. Song map: Intro 16 · Build 16 · Drop 32 · Break 16 · Drop 32 · Outro 16 bars (a guide, not a law). For now section changes are by hand: at the Break stop the drums from the mixer with Fade out 2 s, at the Drop bring them in with Fade in 0.5 s. The Composer will do this itself.
+
+### Ambient drum & bass (the new style: rhythm under the melody)
+1. **Start from a melody → Try "Ambient DnB"**.
+2. Drums 🎛 "Soft wooden kit" or "Dark halftime kit", style **Halftime**, Complexity 0.3, level −12 to −14. Bass 🎛 "Deep sine" (Attack 60 ms, no drive). Sidechain 0.6.
+3. Atmosphere: Bells (Density 3, Decay 15 s) −22, Texture −20, Wind −26, **Cloud** of the kaval −22 with Scan 0.2; macros Space 0.7, Size 0.9, Width 0.8, Shimmer 30 % at the fifth.
+4. Mixer: Rhythm trim −3 dB and LP 9 kHz, Atmosphere trim 0, Pad trim 0; Rhythm fade out 4 s so it leaves like a wave.
+5. While playing: let the drums enter after 16 bars and leave before the end. The song map tells you how many bars until the next section.
 
 ## Glossary
 

@@ -141,13 +141,13 @@ one limiter — together with an explicit background play/stop in every screen
 |---|---|---|
 | 1 | Cloud (granular pad from a take) | done 2026-10-17 (F1B.2) |
 | 2 | Shimmer (transposed reverb) | done 2026-10-18 (macro on the master space) |
-| 3 | Resonator (bells, bowls, strings from the mode) | after Shimmer |
+| 3 | Resonator (bells, bowls, strings from the mode) | done 2026-10-18 (layer kind "Резонатор") |
 | 4 | Sound Designer for the rhythm section | **P1 R2 done as the Instrument Designer (bass/drums/synth presets)** |
 | 5 | New rhythm instruments (pad synth, keys, percussion: tapan, darbuka, daire; lead) | P1 R3 (InstrumentRack) |
 | 6 | Sample folder browser (Soundly Audio etc.), search, audition, "+ to Atmosphere" | pending (after Shimmer) |
 | 7 | Choir drone (vowel), Bloom (generative melody) | pending |
 | 8 | Tape loop with live mic, Spaces (convolution) | need live input / FFT (FFT approved via ADR for P2) |
-| 9 | Genre recipes in the guide (ambient, liquid DnB, ambient DnB step by step) | pending, grows with each module |
+| 9 | Genre recipes in the guide (ambient, liquid DnB, ambient DnB step by step) | first version 2026-10-18 (guide § "Рецепти по жанр"); grows with each module |
 | 10 | Track mixer (level, pan, solo, sends) | partial: background buses done; track strips pending (F5.2) |
 | 11 | Phrase & Vocal Chopper | pending (F5.3) |
 | 12 | DAW export (stems, MIDI, tempo map in one package) | P2 F / F5.4 |

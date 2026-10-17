@@ -43,9 +43,9 @@ pub use graph::sources::{
     DroneParams, DroneSource, DrumEvent, DrumKind, DrumParams, DrumPatternData, DrumSource,
     Emotion, GrainParams, GrainSource, LoopParams, LoopSource, NoiseParams, NoiseSource,
     NotePatternData, PadMacro, PadParams, PadSource, PatternNote, PatternParams, PatternSwap,
-    PatternSynthSource, PitchSet, PluckParams, PluckSource, TextureParams, TextureSource,
-    TrackParams, Transport, WindParams, WindSource, DRUM_KINDS, MAX_CLIP_TRACKS, MAX_PITCHES,
-    PAD_VOICES,
+    PatternSynthSource, PitchSet, PluckParams, PluckSource, ResonatorParams, ResonatorSource,
+    TextureParams, TextureSource, TrackParams, Transport, WindParams, WindSource, DRUM_KINDS,
+    MAX_CLIP_TRACKS, MAX_PITCHES, PAD_VOICES,
 };
 pub use graph::{
     Graph, GraphMeters, GraphParams, LayerParams, MasterParams, SineSource, Source, MAX_LAYERS,

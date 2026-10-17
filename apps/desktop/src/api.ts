@@ -518,6 +518,7 @@ export type LayerSource =
   | { kind: "bells"; density: number; decay_s: number; brightness: number; velocity_spread: number; tonal: boolean; register: [number, number] }
   | { kind: "pluck"; density: number; damping: number; brightness: number; velocity_spread: number; tonal: boolean; register: [number, number] }
   | { kind: "loop"; take_id: string; start: number; end: number; crossfade: number; rate: number; reverse: boolean }
+  | { kind: "resonator"; density: number; decay_s: number; structure: number; brightness: number; strike: number; tonal: boolean; register: [number, number] }
   | { kind: "cloud"; take_id: string; grain_ms: number; density: number; position: number; spray: number; scan: number; pitch: number; jitter: number; reverse_p: number; octave_p: number };
 export type LayerKind = LayerSource["kind"];
 

@@ -78,7 +78,7 @@ pub fn param_range(param: &str) -> Option<(f64, f64)> {
         "lowpass_hz" => (40.0, 20_000.0),
         "highpass_hz" => (10.0, 8_000.0),
         "color" | "gust" | "speed" | "resonance" | "brightness" | "motion" | "damping"
-        | "velocity_spread" => (0.0, 1.0),
+        | "velocity_spread" | "structure" | "strike" => (0.0, 1.0),
         "center_hz" => (80.0, 6_000.0),
         "density" => (0.0, 120.0),
         "decay_s" => (0.2, 30.0),
@@ -104,6 +104,9 @@ pub fn source_params(src: &LayerSource) -> &'static [&'static str] {
         LayerSource::Bells { .. } => &["density", "decay_s", "brightness", "velocity_spread"],
         LayerSource::Pluck { .. } => &["density", "damping", "brightness", "velocity_spread"],
         LayerSource::Loop { .. } => &["rate", "crossfade"],
+        LayerSource::Resonator { .. } => {
+            &["density", "decay_s", "structure", "brightness", "strike"]
+        }
         LayerSource::Cloud { .. } => &[
             "grain_ms",
             "density",
@@ -170,6 +173,11 @@ fn source_param(s: &LayerSource, param: &str) -> Option<f64> {
         ) => *velocity_spread,
         (LayerSource::Loop { rate, .. }, "rate") => *rate,
         (LayerSource::Loop { crossfade, .. }, "crossfade") => *crossfade,
+        (LayerSource::Resonator { density, .. }, "density") => *density,
+        (LayerSource::Resonator { decay_s, .. }, "decay_s") => *decay_s,
+        (LayerSource::Resonator { structure, .. }, "structure") => *structure,
+        (LayerSource::Resonator { brightness, .. }, "brightness") => *brightness,
+        (LayerSource::Resonator { strike, .. }, "strike") => *strike,
         (LayerSource::Cloud { grain_ms, .. }, "grain_ms") => *grain_ms,
         (LayerSource::Cloud { density, .. }, "density") => *density,
         (LayerSource::Cloud { position, .. }, "position") => *position,
@@ -229,6 +237,11 @@ fn set_source_param(s: &mut LayerSource, param: &str, v: f64) -> bool {
         ) => *velocity_spread = v,
         (LayerSource::Loop { rate, .. }, "rate") => *rate = v,
         (LayerSource::Loop { crossfade, .. }, "crossfade") => *crossfade = v,
+        (LayerSource::Resonator { density, .. }, "density") => *density = v,
+        (LayerSource::Resonator { decay_s, .. }, "decay_s") => *decay_s = v,
+        (LayerSource::Resonator { structure, .. }, "structure") => *structure = v,
+        (LayerSource::Resonator { brightness, .. }, "brightness") => *brightness = v,
+        (LayerSource::Resonator { strike, .. }, "strike") => *strike = v,
         (LayerSource::Cloud { grain_ms, .. }, "grain_ms") => *grain_ms = v,
         (LayerSource::Cloud { density, .. }, "density") => *density = v,
         (LayerSource::Cloud { position, .. }, "position") => *position = v,

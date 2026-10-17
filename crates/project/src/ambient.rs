@@ -60,6 +60,19 @@ pub enum LayerSource {
         rate: f64,
         reverse: bool,
     },
+    /// Modal resonator (F1B.4): struck bodies tuned to the pitch set, harmonic ↔ bell.
+    Resonator {
+        /// Strikes per minute.
+        density: f64,
+        decay_s: f64,
+        /// 0 harmonic (string / tube) … 1 inharmonic (bar / bowl / bell).
+        structure: f64,
+        brightness: f64,
+        /// 0 soft mallet … 1 hard stick.
+        strike: f64,
+        tonal: bool,
+        register: (u8, u8),
+    },
     /// Granular cloud of a take (F1B.2): grains around a read position, transposed.
     Cloud {
         take_id: String,
@@ -101,6 +114,7 @@ impl LayerSource {
             LayerSource::Pluck { .. } => "pluck",
             LayerSource::Loop { .. } => "loop",
             LayerSource::Cloud { .. } => "cloud",
+            LayerSource::Resonator { .. } => "resonator",
         }
     }
 
@@ -111,6 +125,7 @@ impl LayerSource {
             LayerSource::Texture { tonal: true, .. }
                 | LayerSource::Bells { tonal: true, .. }
                 | LayerSource::Pluck { tonal: true, .. }
+                | LayerSource::Resonator { tonal: true, .. }
         )
     }
 
@@ -221,6 +236,23 @@ impl LayerSource {
                 unit(*damping, "damping")?;
                 unit(*brightness, "brightness")?;
                 unit(*velocity_spread, "velocity_spread")?;
+                register(*r)
+            }
+            LayerSource::Resonator {
+                density,
+                decay_s,
+                structure,
+                brightness,
+                strike,
+                register: r,
+                ..
+            } => {
+                if !(0.0..=120.0).contains(density) || !(0.2..=30.0).contains(decay_s) {
+                    return Err(ProjectError::InvalidState("resonator density/decay".into()));
+                }
+                unit(*structure, "structure")?;
+                unit(*brightness, "brightness")?;
+                unit(*strike, "strike")?;
                 register(*r)
             }
             LayerSource::Cloud {

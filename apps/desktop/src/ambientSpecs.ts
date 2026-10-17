@@ -46,6 +46,13 @@ export const SOURCE_SLIDERS: Record<LayerKind, SliderSpec[]> = {
     { key: "crossfade", label: "crossfadeLabel", min: 0, max: 5, step: 0.01, fmt: (v) => `${v.toFixed(2)} s` },
     { key: "rate", label: "rateLabel", min: 0.25, max: 4, step: 0.01, fmt: (v) => `×${v.toFixed(2)}` },
   ],
+  resonator: [
+    { key: "density", label: "densityLabel", min: 0, max: 120, step: 0.5, fmt: (v) => v.toFixed(1) },
+    { key: "decay_s", label: "decayLabel", min: 0.2, max: 30, step: 0.1, fmt: (v) => `${v.toFixed(1)} s` },
+    { key: "structure", label: "structureLabel", min: 0, max: 1, step: 0.01, fmt: pct },
+    { key: "brightness", label: "brightnessLabel", min: 0, max: 1, step: 0.01, fmt: pct },
+    { key: "strike", label: "strikeLabel", min: 0, max: 1, step: 0.01, fmt: pct },
+  ],
   cloud: [
     { key: "grain_ms", label: "grainLabel", min: 10, max: 500, step: 1, fmt: (v) => `${Math.round(v)} ms` },
     { key: "density", label: "densityLabel", min: 0.5, max: 80, step: 0.5, fmt: (v) => `${v.toFixed(1)}/s` },

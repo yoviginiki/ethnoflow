@@ -12,6 +12,7 @@ pub mod noise;
 pub mod pad;
 pub mod patsynth;
 pub mod pluck;
+pub mod resonator;
 pub mod reverb;
 pub mod rhythm;
 pub mod shimmer;
@@ -31,6 +32,7 @@ pub use noise::{NoiseParams, NoiseSource};
 pub use pad::{Emotion, PadMacro, PadParams, PadSource, PAD_VOICES};
 pub use patsynth::{NotePatternData, PatternNote, PatternParams, PatternSynthSource};
 pub use pluck::{PluckParams, PluckSource, PLUCK_VOICES};
+pub use resonator::{ResonatorParams, ResonatorSource, RESONATOR_VOICES};
 pub use reverb::Reverb;
 pub use rhythm::{
     pattern_channel, BeatClock, DrumEvent, DrumKind, DrumParams, DrumPatternData, DrumSource,
