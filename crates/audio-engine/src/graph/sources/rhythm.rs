@@ -7,7 +7,69 @@
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 
+use ringbuf::traits::{Consumer, Producer, Split};
+use ringbuf::{HeapCons, HeapProd, HeapRb};
+
 use super::gen::{soft, Rng, Svf};
+
+/// Shell side of a pattern hand-off: push a new pattern, the source picks it up on
+/// its next block and keeps playing (voices ring on, the cursor re-finds the beat).
+/// Replaced patterns come back through a second ring so the callback never frees.
+pub struct PatternSwap<T> {
+    tx: HeapProd<Arc<T>>,
+    trash: HeapCons<Arc<T>>,
+}
+
+/// Source side of the hand-off (lives in the callback; no allocation, no locks).
+pub struct PatternInbox<T> {
+    rx: HeapCons<Arc<T>>,
+    trash: HeapProd<Arc<T>>,
+}
+
+pub fn pattern_channel<T>() -> (PatternSwap<T>, PatternInbox<T>) {
+    let (tx, rx) = HeapRb::<Arc<T>>::new(8).split();
+    let (trash_tx, trash_rx) = HeapRb::<Arc<T>>::new(16).split();
+    (
+        PatternSwap {
+            tx,
+            trash: trash_rx,
+        },
+        PatternInbox {
+            rx,
+            trash: trash_tx,
+        },
+    )
+}
+
+impl<T> PatternSwap<T> {
+    /// Queue a pattern; `false` when the ring is full (try again later).
+    pub fn send(&mut self, pattern: Arc<T>) -> bool {
+        self.collect();
+        self.tx.try_push(pattern).is_ok()
+    }
+    /// Drop patterns the source handed back (any non-audio thread).
+    pub fn collect(&mut self) {
+        while let Some(old) = self.trash.try_pop() {
+            drop(old);
+        }
+    }
+}
+
+impl<T> PatternInbox<T> {
+    /// Replace `current` with the newest queued pattern; true when it changed.
+    #[inline]
+    pub fn take(&mut self, current: &mut Arc<T>) -> bool {
+        let mut changed = false;
+        while let Some(p) = self.rx.try_pop() {
+            let old = std::mem::replace(current, p);
+            if self.trash.try_push(old).is_err() {
+                // Trash full: leak rather than free on the audio thread.
+            }
+            changed = true;
+        }
+        changed
+    }
+}
 use crate::graph::params::{ramp_samples, undenormal, Ramp, SmoothedParam};
 use crate::graph::Source;
 
@@ -248,9 +310,16 @@ pub struct DrumSource {
     shaker_bp: Svf,
     levels: [Ramp; DRUM_KINDS],
     frame: u64,
+    inbox: Option<PatternInbox<DrumPatternData>>,
 }
 
 impl DrumSource {
+    /// Accept pattern updates while playing (see `pattern_channel`).
+    pub fn with_inbox(mut self, inbox: PatternInbox<DrumPatternData>) -> Self {
+        self.inbox = Some(inbox);
+        self
+    }
+
     pub fn new(
         params: Arc<DrumParams>,
         clock: Arc<BeatClock>,
@@ -268,6 +337,7 @@ impl DrumSource {
             hp: Svf::default(),
             shaker_bp: Svf::default(),
             frame: 0,
+            inbox: None,
         }
     }
 
@@ -318,8 +388,13 @@ impl Source for DrumSource {
         let beat0 = self.clock.beat_at(frame, sample_rate);
         let bpf = self.clock.beats_per_frame(sample_rate);
         let generation = self.clock.generation.load(Ordering::Relaxed);
+        let swapped = self
+            .inbox
+            .as_mut()
+            .map(|i| i.take(&mut self.pattern))
+            .unwrap_or(false);
         if let Some(b) = beat0 {
-            if self.cursor.needs_seek(generation) {
+            if swapped || self.cursor.needs_seek(generation) {
                 self.cursor
                     .seek(&self.pattern.beats, self.pattern.length_beats, b);
                 self.cursor.mark(generation);

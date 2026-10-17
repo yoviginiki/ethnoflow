@@ -6,7 +6,7 @@ use std::sync::atomic::{AtomicU32, AtomicU8, Ordering};
 use std::sync::Arc;
 
 use super::gen::{soft, Svf};
-use super::rhythm::{BeatClock, Cursor, DrumParams};
+use super::rhythm::{BeatClock, Cursor, DrumParams, PatternInbox};
 use crate::graph::params::{ramp_samples, undenormal, Ramp, SmoothedParam};
 use crate::graph::Source;
 
@@ -121,9 +121,15 @@ pub struct BassSource {
     warmth: Ramp,
     duck: f32,
     frame: u64,
+    inbox: Option<PatternInbox<BassPatternData>>,
 }
 
 impl BassSource {
+    pub fn with_inbox(mut self, inbox: PatternInbox<BassPatternData>) -> Self {
+        self.inbox = Some(inbox);
+        self
+    }
+
     pub fn new(
         params: Arc<BassParams>,
         clock: Arc<BeatClock>,
@@ -155,6 +161,7 @@ impl BassSource {
             filter: Svf::default(),
             duck: 1.0,
             frame: 0,
+            inbox: None,
         }
     }
 
@@ -190,12 +197,21 @@ impl Source for BassSource {
         let beat0 = self.clock.beat_at(frame, sample_rate);
         let bpf = self.clock.beats_per_frame(sample_rate);
         let generation = self.clock.generation.load(Ordering::Relaxed);
+        let swapped = self
+            .inbox
+            .as_mut()
+            .map(|i| i.take(&mut self.pattern))
+            .unwrap_or(false);
         if let Some(b) = beat0 {
             if self.cursor.needs_seek(generation) {
                 self.cursor
                     .seek(&self.pattern.beats, self.pattern.length_beats, b);
                 self.cursor.mark(generation);
                 self.gate = false;
+            } else if swapped {
+                // New pattern mid-flight: keep the sounding note, continue from here.
+                self.cursor
+                    .seek(&self.pattern.beats, self.pattern.length_beats, b);
             }
         } else {
             self.gate = false;

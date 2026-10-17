@@ -9,9 +9,9 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
 use audio_engine::{
-    BassNoteEvent, BassParams, BassPatternData, BassSource, BeatClock, DrumEvent, DrumKind,
-    DrumParams, DrumPatternData, DrumSource, GraphCmd, NotePatternData, PatternNote, PatternParams,
-    PatternSynthSource,
+    pattern_channel, BassNoteEvent, BassParams, BassPatternData, BassSource, BeatClock, DrumEvent,
+    DrumKind, DrumParams, DrumPatternData, DrumSource, GraphCmd, NotePatternData, PatternNote,
+    PatternParams, PatternSwap, PatternSynthSource,
 };
 use music_core::{
     generate_arpeggio, generate_bass, generate_groove, generate_ostinato, static_spans,
@@ -160,6 +160,11 @@ pub struct RhythmLive {
     /// Build keys per slot (pattern-affecting inputs).
     pub keys: [String; 4],
     pub motif: Option<Motif>,
+    /// Pattern hand-offs to the live sources (a slider move never restarts a voice).
+    pub drum_swap: Option<PatternSwap<DrumPatternData>>,
+    pub bass_swap: Option<PatternSwap<BassPatternData>>,
+    pub ost_swap: Option<PatternSwap<NotePatternData>>,
+    pub arp_swap: Option<PatternSwap<NotePatternData>>,
 }
 
 fn timing(s: &Inner) -> CmdResult<(f64, Meter)> {
@@ -538,6 +543,13 @@ fn sync(s: &mut Inner, set: RhythmSettings) -> CmdResult<()> {
             clock.set_bpm(bpm as f32, frame, sr);
         }
     }
+    let RhythmLive {
+        drum_swap,
+        bass_swap,
+        ost_swap,
+        arp_swap,
+        ..
+    } = live_prev;
     let mut live = RhythmLive {
         clock: Arc::clone(&clock),
         drums: live_prev.drums.clone(),
@@ -547,109 +559,143 @@ fn sync(s: &mut Inner, set: RhythmSettings) -> CmdResult<()> {
         settings: set.clone(),
         keys: live_prev.keys.clone(),
         motif: live_prev.motif.clone(),
+        drum_swap,
+        bass_swap,
+        ost_swap,
+        arp_swap,
     };
     // Drums.
     if set.drums.on {
-        if live.drums.is_none() || live.keys[0] != new_keys[0] {
+        if live.drums.is_none() {
             let pat = build_drums(&set, &meter);
-            let p = live
-                .drums
-                .clone()
-                .unwrap_or_else(|| Arc::new(DrumParams::default()));
+            let p = Arc::new(DrumParams::default());
+            let (swap, inbox) = pattern_channel::<DrumPatternData>();
             let g = s.graph.as_mut().expect("graph");
             g.params().layers[DRUMS_SLOT].gain_db.set(-60.0);
             g.send(GraphCmd::SetSource {
                 slot: DRUMS_SLOT,
-                source: Box::new(DrumSource::new(Arc::clone(&p), Arc::clone(&clock), pat)),
+                source: Box::new(
+                    DrumSource::new(Arc::clone(&p), Arc::clone(&clock), pat).with_inbox(inbox),
+                ),
             });
             live.drums = Some(p);
+            live.drum_swap = Some(swap);
+            live.keys[0] = new_keys[0].clone();
+        } else if live.keys[0] != new_keys[0] {
+            let pat = build_drums(&set, &meter);
+            if let Some(sw) = live.drum_swap.as_mut() {
+                sw.send(pat);
+            }
             live.keys[0] = new_keys[0].clone();
         }
     } else if live.drums.is_some() {
         clear(s, DRUMS_SLOT);
         live.drums = None;
+        live.drum_swap = None;
         live.keys[0].clear();
     }
     // Bass (ducked by the drums when they run).
     if set.bass.on {
         let drums_changed = live_prev.drums.is_some() != live.drums.is_some();
-        if live.bass.is_none() || live.keys[1] != new_keys[1] || drums_changed {
+        if live.bass.is_none() || drums_changed {
+            // (Re)build: first time, or the drums appeared/vanished (the sidechain
+            // reads their envelope). Keep the params so the knobs stay where they are.
             let pat = build_bass(s, &set, &meter, root, &pcs);
             let p = live
                 .bass
                 .clone()
                 .unwrap_or_else(|| Arc::new(BassParams::default()));
+            let (swap, inbox) = pattern_channel::<BassPatternData>();
             let drums = live.drums.clone();
             let g = s.graph.as_mut().expect("graph");
-            g.params().layers[BASS_SLOT].gain_db.set(-60.0);
+            if live.bass.is_none() {
+                g.params().layers[BASS_SLOT].gain_db.set(-60.0);
+            }
             g.send(GraphCmd::SetSource {
                 slot: BASS_SLOT,
-                source: Box::new(BassSource::new(
-                    Arc::clone(&p),
-                    Arc::clone(&clock),
-                    pat,
-                    drums,
-                )),
+                source: Box::new(
+                    BassSource::new(Arc::clone(&p), Arc::clone(&clock), pat, drums)
+                        .with_inbox(inbox),
+                ),
             });
             live.bass = Some(p);
+            live.bass_swap = Some(swap);
+            live.keys[1] = new_keys[1].clone();
+        } else if live.keys[1] != new_keys[1] {
+            let pat = build_bass(s, &set, &meter, root, &pcs);
+            if let Some(sw) = live.bass_swap.as_mut() {
+                sw.send(pat);
+            }
             live.keys[1] = new_keys[1].clone();
         }
     } else if live.bass.is_some() {
         clear(s, BASS_SLOT);
         live.bass = None;
+        live.bass_swap = None;
         live.keys[1].clear();
     }
     // Ostinato.
     if set.ostinato.on {
-        if live.ostinato.is_none() || live.keys[2] != new_keys[2] {
+        if live.ostinato.is_none() {
             let (pat, motif) = build_ostinato(s, &set, &meter, &pcs);
-            let p = live
-                .ostinato
-                .clone()
-                .unwrap_or_else(|| Arc::new(PatternParams::default()));
+            let p = Arc::new(PatternParams::default());
+            let (swap, inbox) = pattern_channel::<NotePatternData>();
             let g = s.graph.as_mut().expect("graph");
             g.params().layers[OSTINATO_SLOT].gain_db.set(-60.0);
             g.send(GraphCmd::SetSource {
                 slot: OSTINATO_SLOT,
-                source: Box::new(PatternSynthSource::new(
-                    Arc::clone(&p),
-                    Arc::clone(&clock),
-                    pat,
-                )),
+                source: Box::new(
+                    PatternSynthSource::new(Arc::clone(&p), Arc::clone(&clock), pat)
+                        .with_inbox(inbox),
+                ),
             });
             live.ostinato = Some(p);
+            live.ost_swap = Some(swap);
+            live.keys[2] = new_keys[2].clone();
+            live.motif = Some(motif);
+        } else if live.keys[2] != new_keys[2] {
+            let (pat, motif) = build_ostinato(s, &set, &meter, &pcs);
+            if let Some(sw) = live.ost_swap.as_mut() {
+                sw.send(pat);
+            }
             live.keys[2] = new_keys[2].clone();
             live.motif = Some(motif);
         }
     } else if live.ostinato.is_some() {
         clear(s, OSTINATO_SLOT);
         live.ostinato = None;
+        live.ost_swap = None;
         live.keys[2].clear();
     }
     // Arpeggio.
     if set.arp.on {
-        if live.arp.is_none() || live.keys[3] != new_keys[3] {
+        if live.arp.is_none() {
             let pat = build_arp(s, &set, &meter, &pcs);
-            let p = live
-                .arp
-                .clone()
-                .unwrap_or_else(|| Arc::new(PatternParams::default()));
+            let p = Arc::new(PatternParams::default());
+            let (swap, inbox) = pattern_channel::<NotePatternData>();
             let g = s.graph.as_mut().expect("graph");
             g.params().layers[ARP_SLOT].gain_db.set(-60.0);
             g.send(GraphCmd::SetSource {
                 slot: ARP_SLOT,
-                source: Box::new(PatternSynthSource::new(
-                    Arc::clone(&p),
-                    Arc::clone(&clock),
-                    pat,
-                )),
+                source: Box::new(
+                    PatternSynthSource::new(Arc::clone(&p), Arc::clone(&clock), pat)
+                        .with_inbox(inbox),
+                ),
             });
             live.arp = Some(p);
+            live.arp_swap = Some(swap);
+            live.keys[3] = new_keys[3].clone();
+        } else if live.keys[3] != new_keys[3] {
+            let pat = build_arp(s, &set, &meter, &pcs);
+            if let Some(sw) = live.arp_swap.as_mut() {
+                sw.send(pat);
+            }
             live.keys[3] = new_keys[3].clone();
         }
     } else if live.arp.is_some() {
         clear(s, ARP_SLOT);
         live.arp = None;
+        live.arp_swap = None;
         live.keys[3].clear();
     }
     if let Some(g) = s.graph.as_ref() {
@@ -772,6 +818,10 @@ pub async fn start_rhythm(
             settings: settings.clone(),
             keys: Default::default(),
             motif: None,
+            drum_swap: None,
+            bass_swap: None,
+            ost_swap: None,
+            arp_swap: None,
         });
     }
     if let Err(e) = sync(&mut s, settings) {

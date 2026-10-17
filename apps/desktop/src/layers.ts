@@ -180,7 +180,12 @@ export function useBackgroundLayers() {
   const scaleKey = scale ? `${scale.tonic_pc}:${scale.degrees_cents.join(",")}` : "";
   useEffect(() => {
     if (!rhythmOn || !useStore.getState().rhythmStatus) return;
-    api.setRhythm(rhythmSettings()).then((st) => useStore.getState().setRhythmStatus(st)).catch(fail);
+    // A slider sends many values per second; the engine swaps patterns in place,
+    // but 120 ms of quiet keeps it to the values the user actually settles on.
+    const id = window.setTimeout(() => {
+      api.setRhythm(rhythmSettings()).then((st) => useStore.getState().setRhythmStatus(st)).catch(fail);
+    }, 120);
+    return () => window.clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rhythmOn, rhythmPrefs, padChord, dRoot, scaleKey, profileKey, a4, timingKey, dronePrefs.intonation]);
 

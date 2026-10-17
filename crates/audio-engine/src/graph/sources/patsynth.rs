@@ -6,7 +6,7 @@
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::Arc;
 
-use super::rhythm::{BeatClock, Cursor};
+use super::rhythm::{BeatClock, Cursor, PatternInbox};
 use crate::graph::params::{ramp_samples, undenormal, Ramp, SmoothedParam};
 use crate::graph::Source;
 use crate::synth::Voice as Timbre;
@@ -102,9 +102,15 @@ pub struct PatternSynthSource {
     lp: f32,
     counter: u64,
     frame: u64,
+    inbox: Option<PatternInbox<NotePatternData>>,
 }
 
 impl PatternSynthSource {
+    pub fn with_inbox(mut self, inbox: PatternInbox<NotePatternData>) -> Self {
+        self.inbox = Some(inbox);
+        self
+    }
+
     pub fn new(
         params: Arc<PatternParams>,
         clock: Arc<BeatClock>,
@@ -120,6 +126,7 @@ impl PatternSynthSource {
             lp: 0.0,
             counter: 0,
             frame: 0,
+            inbox: None,
         }
     }
 
@@ -175,8 +182,13 @@ impl Source for PatternSynthSource {
         let beat0 = self.clock.beat_at(frame, sample_rate);
         let bpf = self.clock.beats_per_frame(sample_rate);
         let generation = self.clock.generation.load(Ordering::Relaxed);
+        let swapped = self
+            .inbox
+            .as_mut()
+            .map(|i| i.take(&mut self.pattern))
+            .unwrap_or(false);
         if let Some(b) = beat0 {
-            if self.cursor.needs_seek(generation) {
+            if swapped || self.cursor.needs_seek(generation) {
                 self.cursor
                     .seek(&self.pattern.beats, self.pattern.length_beats, b);
                 self.cursor.mark(generation);

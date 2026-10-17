@@ -30,7 +30,8 @@ pub use patsynth::{NotePatternData, PatternNote, PatternParams, PatternSynthSour
 pub use pluck::{PluckParams, PluckSource, PLUCK_VOICES};
 pub use reverb::Reverb;
 pub use rhythm::{
-    BeatClock, DrumEvent, DrumKind, DrumParams, DrumPatternData, DrumSource, DRUM_KINDS,
+    pattern_channel, BeatClock, DrumEvent, DrumKind, DrumParams, DrumPatternData, DrumSource,
+    PatternInbox, PatternSwap, DRUM_KINDS,
 };
 pub use texture::{TextureParams, TextureSource};
 pub use wind::{WindParams, WindSource};
