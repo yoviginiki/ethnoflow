@@ -3,21 +3,30 @@
 //! Rules: no default key, tempo or meter anywhere; every "what key is this" answer is
 //! a ranked list with probabilities; non-tempered (custom) scales are first-class.
 
+pub mod bassline;
+pub mod counter;
 pub mod events;
+pub mod groove;
 pub mod harmony;
 pub mod intent;
 pub mod key;
 pub mod midi;
 pub mod notes;
+pub mod ostinato;
+pub mod pattern;
 pub mod phrase;
 pub mod pitch;
 pub mod quantize;
 pub mod scale;
+pub mod tempo;
 pub mod theory;
 pub mod tracker;
 pub mod trainer;
 
+pub use bassline::{generate_bass, static_spans, BassParams, ChordSpan};
+pub use counter::{generate_countermelody, CounterParams, CounterRegister, ToneSpan};
 pub use events::{parse_smf, tick_to_seconds, MidiClip, MidiError, NoteEvent, TrackInfo};
+pub use groove::{generate_groove, Drum, DrumHit, DrumPattern, GrooveParams, GrooveStyle};
 pub use harmony::{
     propose, propose_all, BassEvent, ChordEvent, ChordTone, HarmonyParams, HarmonyProposal,
     HarmonyReason, ScoreBreakdown, Shape, Strategy,
@@ -32,12 +41,17 @@ pub use key::{
 };
 pub use midi::{write_smf, SmfOptions, TECHNICAL_TEMPO_BPM};
 pub use notes::{extract_notes, Note, NoteParams, PitchSample};
+pub use ostinato::{
+    generate_arpeggio, generate_ostinato, ArpDirection, ArpParams, Motif, OstinatoParams,
+};
+pub use pattern::{tones_in_register, BeatNote, Meter};
 pub use phrase::{
     segment_phrases, stable_tones, BoundaryCause, ContourShape, Phrase, PhraseParams, StableTone,
 };
 pub use pitch::{cents_between, pitch_class_name, Pitch, Reference, PITCH_CLASS_NAMES};
 pub use quantize::{quantize, Grid, QuantizeParams};
 pub use scale::{DegreeMatch, Scale, ScaleKind};
+pub use tempo::{estimate_tempo, TempoCandidate};
 pub use theory::{detect_chords, interval, transpose, ChordKind, ChordMatch, Interval};
 pub use tracker::{ChangeEvidence, Locks, TonalContext, TonalTracker, TrackerParams};
 pub use trainer::{evaluate, NoteResult, Report, Summary, Tolerance, Verdict};
