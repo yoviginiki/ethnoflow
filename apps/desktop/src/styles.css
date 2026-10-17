@@ -390,3 +390,6 @@ button.small { font-size: 12px; padding: 3px 7px; }
 .counter { gap: 6px; }
 
 .timing summary button.on, .transport button.on { background: var(--accent); color: #111; border-color: var(--accent); }
+
+/* Status badges keep their place when inactive, so rows never jump. */
+.invisible { visibility: hidden; }

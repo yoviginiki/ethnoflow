@@ -160,7 +160,9 @@ export function RhythmPanel() {
             {t.barShort} {status.bar} · {status.bpm.toFixed(0)} BPM{status.root_pc !== null ? ` · ${t.noteNames[status.root_pc]}` : ""}
           </span>
         )}
-        {status && status.limiter_gain < 0.98 && <span className="badge warn">{t.limiterActive}</span>}
+        <span className={`badge warn ${status && status.limiter_gain < 0.98 ? "" : "invisible"}`} aria-hidden={!(status && status.limiter_gain < 0.98)}>
+          {t.limiterActive}
+        </span>
       </div>
       {!hasTiming && <div className="muted small">{t.rhythmNeedsTiming}</div>}
       <div className="muted small">{t.rhythmSectionHint}</div>

@@ -367,7 +367,9 @@ export function Ambient() {
           <div className="meter" style={{ width: 120 }} role="meter" aria-valuemin={-60} aria-valuemax={0} aria-valuenow={Math.round(masterPeakDb)} aria-label={t.mixTitle}>
             <div className={`meter-fill ${masterPeakDb > -3 ? "hot" : masterPeakDb > -12 ? "warm" : ""}`} style={{ width: `${meterFraction(masterPeakDb) * 100}%` }} />
           </div>
-          {status && status.limiter_gain < 0.98 && <span className="badge warn">{t.limiterActive}</span>}
+          <span className={`badge warn ${status && status.limiter_gain < 0.98 ? "" : "invisible"}`} aria-hidden={!(status && status.limiter_gain < 0.98)}>
+            {t.limiterActive}
+          </span>
           {status && status.stream_errors > 0 && (
             <span className="clip">
               {status.stream_errors} {t.droneStreamErrors}
