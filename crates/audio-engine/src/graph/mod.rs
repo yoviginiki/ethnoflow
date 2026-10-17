@@ -17,6 +17,7 @@ use serde::{Deserialize, Serialize};
 use crate::buffer::AudioBuffer;
 use limiter::Limiter;
 use params::{db_to_gain, ramp_samples, undenormal, Ramp, SmoothedParam};
+use sources::Reverb;
 
 pub const MAX_LAYERS: usize = 16;
 /// Frames rendered per inner block (parameter ramps are recomputed per block).
@@ -75,6 +76,10 @@ impl LayerParams {
 
 pub struct MasterParams {
     pub gain_db: SmoothedParam,
+    /// 0..1 reverb mix on the master ("space", F1A.2); 0 = the reverb is bypassed.
+    pub space: SmoothedParam,
+    /// 0..1 reverb size.
+    pub space_size: SmoothedParam,
     peak_bits: AtomicU32,
     limiter_gain_bits: AtomicU32,
 }
@@ -84,6 +89,8 @@ impl Default for MasterParams {
         Self {
             // Headphone safety (F1A.2): start at −18 dB.
             gain_db: SmoothedParam::new(-18.0, -120.0, 6.0),
+            space: SmoothedParam::new(0.0, 0.0, 1.0),
+            space_size: SmoothedParam::new(0.6, 0.0, 1.0),
             peak_bits: AtomicU32::new(0),
             limiter_gain_bits: AtomicU32::new(1.0f32.to_bits()),
         }
@@ -154,6 +161,11 @@ pub struct Graph {
     layers: Vec<LayerState>,
     sample_rate: u32,
     master_gain: Ramp,
+    space: Ramp,
+    /// One reverb per channel (slightly different sizes for width); mono uses the first.
+    reverb: [Reverb; 2],
+    /// Frames of tail still to render after the mix went to zero.
+    reverb_tail: u32,
     limiter: Limiter,
     ramp: f32,
 }
@@ -178,6 +190,12 @@ impl Graph {
             .collect();
         Self {
             master_gain: Ramp::new(db_to_gain(params.master.gain_db.target())),
+            space: Ramp::new(params.master.space.target()),
+            reverb: [
+                Reverb::new(sample_rate),
+                Reverb::new(sample_rate + sample_rate / 40),
+            ],
+            reverb_tail: 0,
             limiter: Limiter::new(sample_rate, db_to_gain(-0.3), 0.08),
             ramp: ramp_samples(sample_rate),
             params,
@@ -295,13 +313,46 @@ impl Graph {
                 }
                 p.peak_bits.store(peak.to_bits(), Ordering::Relaxed);
             }
-            // Master: gain ramp, limiter, meter.
+            // Master: gain ramp, space (reverb), limiter, meter.
             let target_master = db_to_gain(self.params.master.gain_db.target());
             self.master_gain.begin(target_master, self.ramp);
+            let target_space = self.params.master.space.target();
+            self.space.begin(target_space, self.ramp * 5.0);
+            let size = self.params.master.space_size.target();
+            let wet_on = target_space > 0.0 || self.space.current > 0.0 || self.reverb_tail > 0;
+            if wet_on {
+                for r in self.reverb.iter_mut() {
+                    r.set(size, 0.35);
+                }
+                if target_space > 0.0 || self.space.current > 0.0 {
+                    self.reverb_tail = self.sample_rate * 6; // ring out up to 6 s
+                } else {
+                    self.reverb_tail = self.reverb_tail.saturating_sub(n as u32);
+                    if self.reverb_tail == 0 {
+                        for r in self.reverb.iter_mut() {
+                            r.clear();
+                        }
+                    }
+                }
+            }
             for frame in block.chunks_mut(channels) {
                 let g = self.master_gain.next(target_master);
+                let mix = self.space.next(target_space);
                 for s in frame.iter_mut() {
                     *s *= g;
+                }
+                if wet_on {
+                    // Wet is fed from the (gained) dry mix; stereo gets two decorrelated tails.
+                    if channels == 1 {
+                        let w = self.reverb[0].process(frame[0]);
+                        frame[0] += w * mix * 0.8;
+                    } else {
+                        let input = (frame[0] + frame[1]) * 0.5;
+                        let wl = self.reverb[0].process(input);
+                        let wr = self.reverb[1].process(input);
+                        frame[0] += wl * mix * 0.8;
+                        frame[1] += wr * mix * 0.8;
+                    }
                 }
                 self.limiter.process_frame(frame);
             }

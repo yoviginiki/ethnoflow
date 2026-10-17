@@ -5,6 +5,7 @@
 //! settings, migrations) and `assets/originals/` (immutable recordings and imports).
 //! See docs/DECISIONS.md ADR-0015.
 
+pub mod ambient;
 pub mod arrangement;
 pub mod db;
 pub mod error;
@@ -12,6 +13,7 @@ pub mod instrument;
 pub mod manifest;
 pub mod project;
 
+pub use ambient::{Ambient, AmbientLayer, LayerSource, Macros, AMBIENT_FILE, MAX_AMBIENT_LAYERS};
 pub use arrangement::{
     Arrangement, Clip, Track, ARRANGEMENT_FILE, MAX_TRACKS as MAX_ARRANGEMENT_TRACKS,
 };
