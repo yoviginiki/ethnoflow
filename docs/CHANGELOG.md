@@ -87,6 +87,16 @@
   1-5-9) or 1-3-5(-7) from the chosen scale with its own cents — intonated like the
   drone. Drone and pad share one output stream (slots 0 and 1); the stream stops when
   both are off. Not yet: tempo-synced LFO, voicings from F3.4, stereo width.
+- **F3.5 Compose First** (0.2.7): the "Accompanist" area opens "Prepare background":
+  tonal centre and mode (saved as the project scale, so the tuner, keyboard Scale Lock
+  and pad voicings follow), tempo and meter (incl. 5/8, 7/8, 9/8), three working styles
+  (Traditional Drone, Emotional Liquid, Cinematic Ambient) that set the drone and pad at
+  once — Deep Ethno DnB and Ambient No Key are shown as planned (phase 4 / 1A), not
+  faked — "allow tension" (otherwise voicings with a note outside the scale cannot be
+  chosen), and "Play & record", which keeps the background running and starts a
+  microphone take in the studio right away. Drone and pad are now driven by
+  `useBackgroundLayers` at the app level: they keep playing across screens, with a
+  floating badge and a "Stop background" button.
 
 ### Measurements (owner's laptop, release build, YIN hop 10 ms, window 1024)
 | material | pitch time | voiced | f0 p05 / median / p95 | confidence p10 / median | octave-sized jumps |
