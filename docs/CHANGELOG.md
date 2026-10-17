@@ -118,6 +118,19 @@
   80 % correct, blips, ornaments, ±30 ¢ intonation, slides, variable tempo, breath noise
   and new phrases; a deliberate mode change is accepted after 2–4 phrases; literal mode
   switches 3–16 times on the same material.
+- **F3.4 harmonic strategies** (0.2.7): `music_core::harmony` turns the per-phrase
+  intent and the tracked tonal context into three proposals — drone only, modal pads
+  (one chord per phrase from the mode's own degrees, cents included), liquid chords
+  (7ths, add9, sus, quartal) — each voiced in a register with voice leading, scored on
+  melodic compatibility, modal fidelity, voice leading, tension target, rhythmic fit,
+  register separation and variety, with avoid notes as soft penalties, a hold rule
+  ("harmonic movement"), chord/mode/tonic locks and a low-confidence rule that keeps the
+  chord and says so. Every chord carries its reasons ("the melody sits on F and A",
+  "stays because the analysis is unsure"); seeded choices reproduce; wrong notes in the
+  performance do not move the chords (test). The studio's "Harmony — proposals" panel
+  shows the three cards with score bars, "why it works", "Play as A/B" (the pad and the
+  drone follow the armed proposal during playback, changing only at phrase boundaries),
+  seed and MIDI export of chords + bass.
 
 ### Measurements (owner's laptop, release build, YIN hop 10 ms, window 1024)
 | material | pitch time | voiced | f0 p05 / median / p95 | confidence p10 / median | octave-sized jumps |
