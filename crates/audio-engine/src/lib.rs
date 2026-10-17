@@ -21,6 +21,7 @@ pub mod monitor;
 pub mod peaks;
 pub mod pitch;
 pub mod player;
+pub mod process;
 pub mod recorder;
 pub mod resample;
 mod stream_thread;
@@ -60,6 +61,10 @@ pub use pitch::{
     PitchEstimate, PitchTracker,
 };
 pub use player::{adapt_for_device, PlayOptions, Player, PlayerStatus};
+pub use process::{
+    apply_recipe, detect_silence, loop_crossfade, nearest_zero_crossing, normalize, sound_bounds,
+    Recipe,
+};
 pub use recorder::{RecordedTake, Recorder, RecorderStatus};
 pub use resample::resample_linear;
 pub use synth::{render_notes, SynthConfig, SynthNote, Voice};

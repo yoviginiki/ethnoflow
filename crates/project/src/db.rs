@@ -36,6 +36,9 @@ const MIGRATIONS: &[&str] = &[
     CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);",
     // v2: takes cut out of another take keep a link to their parent
     "ALTER TABLE takes ADD COLUMN derived_from TEXT;",
+    // v3 (F1A.6 Sample Lab): non-destructive processing recipe and tags, as JSON
+    "ALTER TABLE takes ADD COLUMN recipe_json TEXT;
+     ALTER TABLE takes ADD COLUMN meta_json TEXT;",
 ];
 
 pub fn schema_version() -> u32 {
@@ -146,11 +149,27 @@ pub struct Take {
     pub trim_out_frames: Option<u64>,
     /// Parent take id for `TakeSource::Derived`.
     pub derived_from: Option<String>,
+    /// Non-destructive processing the take is heard through (F1A.6).
+    pub recipe: audio_engine::Recipe,
+    /// User tags: category, place, notes, mic, licence (F1A.6).
+    pub meta: TakeMeta,
+}
+
+/// Free-text tags of a take. Location is whatever the user types, never a GPS fix.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct TakeMeta {
+    pub category: String,
+    pub location: String,
+    pub notes: String,
+    pub mic: String,
+    pub license: String,
+    pub tags: Vec<String>,
 }
 
 const TAKE_COLS: &str = "id, number, file, label, source, state, created_at_ms, sample_rate, \
     channels, frames, blake3, original_name, device, overrun_samples, clipped_samples, \
-    trim_in_frames, trim_out_frames, derived_from";
+    trim_in_frames, trim_out_frames, derived_from, recipe_json, meta_json";
 
 fn row_to_take(r: &Row) -> rusqlite::Result<Take> {
     let source: String = r.get(4)?;
@@ -183,7 +202,41 @@ fn row_to_take(r: &Row) -> rusqlite::Result<Take> {
         trim_in_frames: r.get(15)?,
         trim_out_frames: r.get(16)?,
         derived_from: r.get(17)?,
+        recipe: r
+            .get::<_, Option<String>>(18)?
+            .and_then(|j| serde_json::from_str(&j).ok())
+            .unwrap_or_default(),
+        meta: r
+            .get::<_, Option<String>>(19)?
+            .and_then(|j| serde_json::from_str(&j).ok())
+            .unwrap_or_default(),
     })
+}
+
+pub fn set_recipe(conn: &Connection, id: &str, recipe: &audio_engine::Recipe) -> Result<Take> {
+    let json = if recipe.is_identity() {
+        None
+    } else {
+        Some(serde_json::to_string(recipe)?)
+    };
+    conn.execute(
+        "UPDATE takes SET recipe_json = ?2 WHERE id = ?1",
+        params![id, json],
+    )?;
+    get_take(conn, id)
+}
+
+pub fn set_meta(conn: &Connection, id: &str, meta: &TakeMeta) -> Result<Take> {
+    let json = if *meta == TakeMeta::default() {
+        None
+    } else {
+        Some(serde_json::to_string(meta)?)
+    };
+    conn.execute(
+        "UPDATE takes SET meta_json = ?2 WHERE id = ?1",
+        params![id, json],
+    )?;
+    get_take(conn, id)
 }
 
 pub struct NewTake<'a> {
@@ -358,6 +411,30 @@ mod tests {
         let t = get_take(&conn, "old").unwrap();
         assert_eq!(t.derived_from, None);
         assert_eq!(t.source, TakeSource::Microphone);
+        assert!(t.recipe.is_identity() && t.meta == TakeMeta::default());
+        // v3 columns round-trip; the identity recipe is stored as NULL.
+        let r = audio_engine::Recipe {
+            normalize_peak_dbfs: Some(-3.0),
+            fade_out_s: 0.5,
+            ..Default::default()
+        };
+        let t = set_recipe(&conn, "old", &r).unwrap();
+        assert_eq!(t.recipe, r);
+        let m = TakeMeta {
+            category: "water".into(),
+            location: "Rila, a stream".into(),
+            tags: vec!["river".into()],
+            ..Default::default()
+        };
+        let t = set_meta(&conn, "old", &m).unwrap();
+        assert_eq!(t.meta, m);
+        let t = set_recipe(&conn, "old", &audio_engine::Recipe::default()).unwrap();
+        let raw: Option<String> = conn
+            .query_row("SELECT recipe_json FROM takes WHERE id = 'old'", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert!(raw.is_none() && t.recipe.is_identity());
         let v: u32 = conn
             .query_row("SELECT MAX(version) FROM schema_migrations", [], |r| {
                 r.get(0)

@@ -63,6 +63,32 @@ export type TakeSource = "microphone" | "imported_file" | "derived" | "midi_file
 export type TakeState = "recording" | "complete" | "recovered";
 export type TakeHealth = "ok" | "missing" | "checksum_mismatch" | "unverified";
 
+// Sample Lab (F1A.6): audio-engine/src/process.rs + project db TakeMeta
+export interface Recipe {
+  dc_remove: boolean;
+  highpass_hz: number | null;
+  gain_db: number;
+  normalize_peak_dbfs: number | null;
+  fade_in_s: number;
+  fade_out_s: number;
+  loop_crossfade_s: number;
+  reverse: boolean;
+}
+export interface TakeMeta {
+  category: string;
+  location: string;
+  notes: string;
+  mic: string;
+  license: string;
+  tags: string[];
+}
+export interface SilenceReport {
+  sound_start: number | null;
+  sound_end: number | null;
+  silences: [number, number][];
+  threshold_dbfs: number;
+}
+
 export interface TakeView {
   id: string;
   number: number;
@@ -81,6 +107,8 @@ export interface TakeView {
   clipped_samples: number;
   health: TakeHealth | null;
   derived_from: string | null;
+  recipe: Recipe;
+  meta: TakeMeta;
 }
 
 export interface RecordingStopped {
@@ -934,6 +962,10 @@ export const api = {
   setTrim: (id: string, inSeconds: number, outSeconds: number | null) =>
     invoke<ProjectView>("set_trim", { id, inSeconds, outSeconds }),
   relinkTake: (id: string, path: string) => invoke<ProjectView>("relink_take", { id, path }),
+  setTakeRecipe: (id: string, recipe: Recipe) => invoke<ProjectView>("set_take_recipe", { id, recipe }),
+  setTakeMeta: (id: string, meta: TakeMeta) => invoke<ProjectView>("set_take_meta", { id, meta }),
+  analyzeSilence: (id: string, thresholdDbfs: number | null) => invoke<SilenceReport>("analyze_silence", { id, thresholdDbfs }),
+  snapTrimToZero: (id: string) => invoke<ProjectView>("snap_trim_to_zero", { id }),
   verifyTakes: () => invoke<ProjectView>("verify_takes"),
   importAudio: (path: string) => invoke<ProjectView>("import_audio", { path }),
   saveSelectionAsTake: (inSeconds: number, outSeconds: number, label: string | null) =>

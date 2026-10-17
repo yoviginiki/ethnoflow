@@ -4,6 +4,7 @@ import { api, describeError, IMPORT_EXTENSIONS, type Note, type NoteClass, type 
 import { HarmonyPanel, useHarmonyFollow, useHarmonyProposals } from "./HarmonyPanel";
 import { IntentPanel, usePerformanceAnalysis } from "./IntentPanel";
 import { AnalysisPanel } from "./AnalysisPanel";
+import { SampleLab } from "./SampleLab";
 import { BackgroundTransport } from "./BackgroundTransport";
 import { DronePanel } from "./DronePanel";
 import { FallingNotes } from "./FallingNotes";
@@ -997,6 +998,7 @@ export function Studio() {
               </button>
             )}
           </section>
+          {s.loaded && loadedTake && loadedTake.source !== "midi_file" && <SampleLab take={loadedTake} selectTake={selectTake} withPending={withPending} />}
 
           <section className="transport">
             <span className="spacer" />

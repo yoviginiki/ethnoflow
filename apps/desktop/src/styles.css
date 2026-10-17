@@ -369,3 +369,10 @@ button.small { font-size: 12px; padding: 3px 7px; }
 .scene.add { align-items: center; justify-content: center; cursor: pointer; opacity: 0.8; }
 .scene-name { font-weight: 600; width: 100%; }
 .scene input[type="number"] { width: 4.5em; }
+
+/* Sample Lab (F1A.6) */
+.sample-lab .meta-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 6px 12px; }
+.sample-lab .meta-grid label { display: flex; flex-direction: column; gap: 2px; font-size: 12px; }
+.sample-lab .meta-grid label.wide { grid-column: 1 / -1; }
+.sample-lab .meta-grid textarea { resize: vertical; font: inherit; }
+.take-search { width: 100%; margin-bottom: 6px; }

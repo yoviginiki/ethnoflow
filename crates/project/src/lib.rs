@@ -21,7 +21,7 @@ pub use ambient_presets::{factory_presets, Preset, TAGS as AMBIENT_TAGS};
 pub use arrangement::{
     Arrangement, Clip, Track, ARRANGEMENT_FILE, MAX_TRACKS as MAX_ARRANGEMENT_TRACKS,
 };
-pub use db::{Take, TakeSource, TakeState};
+pub use db::{Take, TakeMeta, TakeSource, TakeState};
 pub use error::{ProjectError, Result};
 pub use instrument::{
     InstrumentProfile, InstrumentType, ProfileDiagnosis, ProfileNote, ProfileStore, ProfileSummary,

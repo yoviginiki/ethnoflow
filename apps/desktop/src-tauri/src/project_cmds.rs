@@ -39,6 +39,9 @@ pub struct TakeView {
     /// Result of the last checksum check (None = not checked yet).
     pub health: Option<TakeHealth>,
     pub derived_from: Option<String>,
+    /// Non-destructive processing (F1A.6) and tags.
+    pub recipe: audio_engine::Recipe,
+    pub meta: project::TakeMeta,
 }
 
 pub fn take_view(s: &Inner, t: &Take) -> TakeView {
@@ -61,6 +64,8 @@ pub fn take_view(s: &Inner, t: &Take) -> TakeView {
         clipped_samples: t.clipped_samples,
         health: s.health.get(&t.id).copied(),
         derived_from: t.derived_from.clone(),
+        recipe: t.recipe.clone(),
+        meta: t.meta.clone(),
     }
 }
 
@@ -194,11 +199,13 @@ pub fn load_take_into(s: &mut Inner, id: &str) -> CmdResult<LoadedTakeInfo> {
         .map(|f| f as usize)
         .unwrap_or(full.frames());
     let start = take.trim_in_frames as usize;
-    let buf = if start > 0 || end < full.frames() {
+    let trimmed = if start > 0 || end < full.frames() {
         full.slice_frames(start, end)
     } else {
         full
     };
+    // The recipe (F1A.6) is applied on load: playback, peaks and analysis all hear it.
+    let buf = audio_engine::apply_recipe(&trimmed, &take.recipe);
     let info = LoadedTakeInfo {
         id: take.id.clone(),
         sample_rate: buf.sample_rate,
@@ -451,6 +458,104 @@ pub async fn delete_take(state: State<'_, AppState>, id: String) -> CmdResult<Pr
     s.health.remove(&id);
     crate::arrangement_cmds::forget_take(&mut s, &id);
     crate::ambient_cmds::forget_take(&mut s, &id);
+    view(&s)
+}
+
+/// Replace the take's processing recipe (F1A.6); reloads it when it is the loaded one.
+#[tauri::command]
+pub async fn set_take_recipe(
+    state: State<'_, AppState>,
+    id: String,
+    recipe: audio_engine::Recipe,
+) -> CmdResult<ProjectView> {
+    let mut s = state.lock();
+    project_mut(&mut s)?.set_take_recipe(&id, &recipe)?;
+    s.clip_cache
+        .retain(|k, _| !k.starts_with(&format!("{id}:")));
+    if s.loaded.as_ref().is_some_and(|l| l.id == id) {
+        load_take_into(&mut s, &id)?;
+    }
+    view(&s)
+}
+
+#[tauri::command]
+pub async fn set_take_meta(
+    state: State<'_, AppState>,
+    id: String,
+    meta: project::TakeMeta,
+) -> CmdResult<ProjectView> {
+    let mut s = state.lock();
+    project_mut(&mut s)?.set_take_meta(&id, &meta)?;
+    view(&s)
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct SilenceReport {
+    /// Where the sound starts/ends in the original, seconds (None = all silent).
+    pub sound_start: Option<f64>,
+    pub sound_end: Option<f64>,
+    /// Silent regions of the original, seconds.
+    pub silences: Vec<(f64, f64)>,
+    pub threshold_dbfs: f64,
+}
+
+/// Silence analysis of the *original* file (F1A.6), for a suggested trim.
+#[tauri::command]
+pub async fn analyze_silence(
+    state: State<'_, AppState>,
+    id: String,
+    threshold_dbfs: Option<f64>,
+) -> CmdResult<SilenceReport> {
+    let thr = threshold_dbfs.unwrap_or(-45.0).clamp(-90.0, -10.0);
+    let s = state.lock();
+    let p = project_ref(&s)?;
+    let take = p.take(&id)?;
+    let path = p.take_path(&take);
+    let full = if path
+        .extension()
+        .is_some_and(|e| e.eq_ignore_ascii_case("wav"))
+    {
+        read_wav(&path)?
+    } else {
+        decode_file(&path)?
+    };
+    let bounds = audio_engine::sound_bounds(&full, thr);
+    Ok(SilenceReport {
+        sound_start: bounds.map(|b| b.0),
+        sound_end: bounds.map(|b| b.1),
+        silences: audio_engine::detect_silence(&full, thr, 0.25, 0.02),
+        threshold_dbfs: thr,
+    })
+}
+
+/// Move the current trim points to the nearest upward zero crossings (F1A.6), so a
+/// cut never clicks. Searches up to 20 ms around each point.
+#[tauri::command]
+pub async fn snap_trim_to_zero(state: State<'_, AppState>, id: String) -> CmdResult<ProjectView> {
+    let mut s = state.lock();
+    let (trim_in, trim_out) = {
+        let p = project_ref(&s)?;
+        let take = p.take(&id)?;
+        let path = p.take_path(&take);
+        let full = if path
+            .extension()
+            .is_some_and(|e| e.eq_ignore_ascii_case("wav"))
+        {
+            read_wav(&path)?
+        } else {
+            decode_file(&path)?
+        };
+        let search = (full.sample_rate as usize) / 50;
+        let tin = audio_engine::nearest_zero_crossing(&full, take.trim_in_frames as usize, search);
+        let tout = take
+            .trim_out_frames
+            .map(|o| audio_engine::nearest_zero_crossing(&full, o as usize, search) as u64);
+        (tin as u64, tout)
+    };
+    project_mut(&mut s)?.set_trim(&id, trim_in, trim_out)?;
+    if s.loaded.as_ref().is_some_and(|l| l.id == id) {
+        load_take_into(&mut s, &id)?;
+    }
     view(&s)
 }
 

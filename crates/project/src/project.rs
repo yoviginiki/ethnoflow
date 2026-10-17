@@ -400,6 +400,33 @@ impl Project {
         db::set_label(&self.conn, id, label)
     }
 
+    /// Non-destructive processing recipe (the file is never changed).
+    pub fn set_take_recipe(&mut self, id: &str, recipe: &audio_engine::Recipe) -> Result<Take> {
+        recipe.validate().map_err(ProjectError::InvalidState)?;
+        db::set_recipe(&self.conn, id, recipe)
+    }
+
+    pub fn set_take_meta(&mut self, id: &str, meta: &db::TakeMeta) -> Result<Take> {
+        let mut m = meta.clone();
+        for f in [
+            &mut m.category,
+            &mut m.location,
+            &mut m.notes,
+            &mut m.mic,
+            &mut m.license,
+        ] {
+            *f = f.trim().chars().take(2000).collect();
+        }
+        m.tags = m
+            .tags
+            .iter()
+            .map(|t| t.trim().to_lowercase())
+            .filter(|t| !t.is_empty())
+            .collect();
+        m.tags.dedup();
+        db::set_meta(&self.conn, id, &m)
+    }
+
     /// Non-destructive trim: only the in/out points are stored.
     pub fn set_trim(&mut self, id: &str, trim_in: u64, trim_out: Option<u64>) -> Result<Take> {
         let take = self.take(id)?;

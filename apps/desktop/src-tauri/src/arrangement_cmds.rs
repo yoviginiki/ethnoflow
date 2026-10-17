@@ -76,8 +76,12 @@ pub(crate) fn take_buffer(s: &mut Inner, take_id: &str, rate: u32) -> CmdResult<
         return Err(err("invalid_state", "This take is still being recorded"));
     }
     let key = format!(
-        "{}:{}:{:?}:{}",
-        take.id, take.trim_in_frames, take.trim_out_frames, rate
+        "{}:{}:{:?}:{}:{}",
+        take.id,
+        take.trim_in_frames,
+        take.trim_out_frames,
+        rate,
+        serde_json::to_string(&take.recipe).unwrap_or_default()
     );
     if let Some(b) = s.clip_cache.get(&key) {
         return Ok(Arc::clone(b));
@@ -118,7 +122,8 @@ pub(crate) fn take_buffer(s: &mut Inner, take_id: &str, rate: u32) -> CmdResult<
             full
         }
     };
-    let mono = trimmed.to_mono();
+    let processed = audio_engine::apply_recipe(&trimmed, &take.recipe);
+    let mono = processed.to_mono();
     let at_rate = if mono.sample_rate == rate {
         mono
     } else {

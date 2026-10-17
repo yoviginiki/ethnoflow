@@ -23,6 +23,13 @@ export function TakeList({ onSelect }: Props) {
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [toDelete, setToDelete] = useState<TakeView | null>(null);
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
+  const matches = (tk: TakeView) => {
+    if (!q) return true;
+    const hay = [takeName(tk, t.take), tk.original_name ?? "", tk.meta.category, tk.meta.location, tk.meta.notes, tk.meta.mic, tk.meta.license, ...tk.meta.tags].join(" ").toLowerCase();
+    return hay.includes(q);
+  };
   const busy = mode !== "idle" || pending !== null;
 
   const run = async (f: () => Promise<void>, label?: string) => {
@@ -75,10 +82,12 @@ export function TakeList({ onSelect }: Props) {
         </button>
       </div>
       {project.takes.length === 0 && <div className="muted small">{t.noTakes}</div>}
+      {project.takes.length > 3 && <input type="search" className="take-search" value={query} placeholder={t.searchTakes} aria-label={t.searchTakes} onChange={(e) => setQuery(e.target.value)} />}
       <ul>
         {project.takes
           .slice()
           .reverse()
+          .filter(matches)
           .map((tk) => {
             const name = takeName(tk, t.take);
             const selected = loaded?.id === tk.id;
@@ -129,6 +138,8 @@ export function TakeList({ onSelect }: Props) {
                   {missing && <span className="badge error">{t.missing}</span>}
                   {changed && <span className="badge error">{t.changed}</span>}
                   {(tk.trim_in_seconds > 0 || tk.trim_out_seconds != null) && <span className="badge">{t.trimmed}</span>}
+                  {tk.meta.category && <span className="badge">{t.categories[tk.meta.category as keyof typeof t.categories] ?? tk.meta.category}</span>}
+                  {JSON.stringify(tk.recipe) !== JSON.stringify({ dc_remove: false, highpass_hz: null, gain_db: 0, normalize_peak_dbfs: null, fade_in_s: 0, fade_out_s: 0, loop_crossfade_s: 0, reverse: false }) && <span className="badge">{t.recipeActive}</span>}
                 </div>
                 <div className="take-actions">
                   {missing && (
