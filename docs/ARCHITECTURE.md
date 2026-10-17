@@ -87,6 +87,33 @@ Rules enforced across boundaries:
   the engine is platform-specific; CI should run `cargo test` on all three.
 * WebView differences (WebView2 / WebKit / WebKitGTK) only affect the UI layer.
 
+## 6a. Ambient Playground on the audio graph (Phase 1A, 0.3.0)
+
+Graph slots: 0 drone, 1 pad, 2 arrangement clips, 3 reserved, **4..12 the ambient
+rack** (layer *i* → slot 4 + *i*), 16 total. One `GraphPlayer` stream serves all of
+them; the stream stops when every owner has released its slots (`Inner::graph_idle`).
+
+- **Sources** (`crates/audio-engine/src/graph/sources/`): each is a `Source` with an
+  `Arc<…Params>` of smoothed atomics; `gen.rs` holds the shared seeded RNG, the
+  sparse trigger (exponential gaps, events placed on their exact sample so a bounce
+  equals playback), the bounded random walk and the SVF. Tonal sources read a
+  `PitchSet` the shell fills from the project's scale.
+- **Model** (`crates/project/src/ambient.rs`, `ambient.json`): layers with a tagged
+  `LayerSource` per kind, macros, automation lanes and the scene program. Presets are
+  the same structure (`ambient_presets.rs` in code, user files in the app config dir).
+- **Shell** (`apps/desktop/src-tauri/src/ambient_cmds.rs`): `sync_live` rebuilds a slot
+  only when its build key (kind + seed, or loop take/region/reverse) changes; every
+  other edit is an atomic write. A 25 ms worker thread computes
+  `program::effective(rack, program_t, lane_t)` — rack → scene snapshot (crossfaded)
+  → lanes — and pushes it through the same `apply_*` functions. The offline bounce
+  runs the same code per 512-frame block on a private `Graph`, with
+  `render_with_stems` for per-layer stems (post-fader, pre-master).
+- **Master**: gain → "space" reverb (two decorrelated Schroeder tails, bypassed at 0)
+  → limiter → meters.
+- **Sample Lab** (`audio_engine::process`): a `Recipe` is applied when a take is loaded
+  (studio, clips, loops); originals are never rewritten; recipe and tags live in
+  `project.db` (schema v3).
+
 ## 6. Known architectural debt after Phase 0
 
 * In-memory take with a 30-minute cap → streaming writer in P1.

@@ -158,6 +158,28 @@
   pan (stored, not audible — the clip source is mono per slot), MIDI clips as editable
   notes (a MIDI take is a rendered clip), automation, recording-latency compensation
   (F1.4), the background inside the exported mix (stems, F5.4).
+- **Phase 1A — "Atmosphere" ambient playground (0.3.0)**, the first-release product of
+  AMBIENT_HARMONY_SPEC: a rack of up to 8 synthesized layers on graph slots 4..12
+  (noise colours, wind, resonator texture, FM/modal bells, Karplus–Strong strings,
+  looped take) next to the drone, the pad and the tracks — one master, one limiter;
+  controls per source type, level/pan/LP/HP/M/S/lock per layer, meters, tonal layers
+  on the project's mode (profile intonation) or a seeded "no key" set; macros
+  (intensity, brightness, motion, space = new master reverb, tonal gravity, width);
+  Play/Stop (never auto-play), fade out, sleep timer, > 0 dB warning. **Presets**: 9
+  factory racks, user presets as JSON, tag browser, search, favourites, recents, A/B,
+  "Surprise me" within musical bounds with per-layer locks and undo, snapshot history.
+  **Automation**: lanes as pure functions of time (LFO, seeded walk, keyframes,
+  humanize) on layer and macro parameters, 25 ms clock while playing. **Scenes**:
+  snapshots on a timeline with crossfaded transitions, loop, duration in bars when the
+  project has a tempo, preview from any point, **offline bounce** of the program with
+  optional stems per layer (10 min × 8 layers ≈ 19 s in release). **Sample Lab**:
+  non-destructive recipe per take (DC, high-pass, gain, normalise, fades, loop
+  crossfade, reverse) applied on load and in clips/loops, silence detection → trim to
+  the sound, snap trim to zero crossings, tags (category, place, notes, mic, licence)
+  in project.db v3, search in the take list, "→ Layer in the Atmosphere". Licensing:
+  `docs/AUDIO-LICENSING.md`, `assets/ATTRIBUTION.md`, manifest + CI gate (no bundled
+  audio: everything is synthesized). Not run: the owner's listening pass and the
+  clean-machine walk-through (see ROADMAP "Phase 1A — phase report").
 
 ### Measurements (owner's laptop, release build, YIN hop 10 ms, window 1024)
 | material | pitch time | voiced | f0 p05 / median / p95 | confidence p10 / median | octave-sized jumps |

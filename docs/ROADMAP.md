@@ -126,7 +126,7 @@ sources). Order:
    error-tolerant performance intelligence** (phrases, tonal tracker with hysteresis,
    note classifier, Stable/Assisted/Creative with an on/off switch and a visible badge)
    → F3.4 harmony proposals consuming IntentEstimate (3 styles, A/B) → F3.6 controls.
-4. Phase 1A Ambient Playground on the same graph, then Phase 4.
+4. Phase 1A Ambient Playground on the same graph (**done in 0.3.0**), then Phase 4.
 
 **Adjustment after the owner's first hands-on test (2026-10-17, 0.2.7/0.2.8):** the
 owner asked where the tracks are, how to hear two things at once, and for play/stop
@@ -134,6 +134,47 @@ on the background. F5.1 (tracks and clips) was therefore pulled forward onto the
 audio graph — the clips, the drone and the pad share one transport, one master and
 one limiter — together with an explicit background play/stop in every screen
 (0.2.9). Phase 1A and Phase 4 follow as before; F5.2–F5.4 stay in Phase 5.
+
+## Phase 1A — Ambient Playground (0.3.0, 2026-10-17) — phase report
+
+**Implemented.** "Atmosphere" screen: up to 8 synthesized layers (noise, wind,
+texture, bells, strings, looped take) on the same audio graph as the drone, the pad
+and the tracks; macros, master reverb, fade out, sleep timer, never auto-play; 9
+factory presets + user presets, tag browser, favourites/recents, A/B, "Surprise me"
+with locks and undo, snapshot history; automation lanes (LFO, seeded walk, keyframes,
+humanize) and scene programs with crossfaded transitions, loop and offline bounce with
+stems; Sample Lab recipe per take (normalise, fades, DC, high-pass, loop crossfade,
+reverse), silence/zero-crossing tools, tags and licence, search; licensing docs with a
+CI gate. Details per feature: FEATURE_SPEC status table (F1A.1–F1A.8).
+
+**Tested.** `cargo test --workspace` green (engine 120 + 3 integration, project 24 +
+12, music-core 52, shell 10); clippy `-D warnings` clean; `npm run typecheck`; vitest
+21. Key acceptance tests: 8 layers 1 min / 10 min (release, ignored test) without a
+silent block or click; every slider measurably changes the sound; automation value at
+t = 37.25 s identical across runs and a JSON round-trip; scene transitions without
+jumps; offline render chunk-independent (< 0.1 dB per second) and stems sum to the
+mix; presets save → reopen identical; randomize never touches a locked layer; bells
+and strings in tune across the register; db v1/v2 → v3 upgrade.
+
+**Not run.** Listening by the owner (the DoD says "musically convincing, not only
+tests"); the clean-Windows-11 install → Play → save Program → record → loop → export →
+reopen walk-through (§14 of AMBIENT_HARMONY_SPEC); a realtime-vs-offline comparison
+on a real device; the 20-minute program bounce timing on the owner's laptop (release
+build renders 10 min × 8 layers in ≈ 19 s on the dev machine).
+
+**Known issues.** Layer reorder is by buttons, not drag-and-drop; the sliders show the
+base state while automation/scenes move the sound (no live value display); reverb is
+master-only (no per-layer send); automation has no MIDI learn (F1.4); a take's recipe
+applies on load, so changing it reloads the take (a short pause); recorded clips in
+"My studio" still have no latency compensation (F1.4).
+
+**Next.** Owner's listening pass on the 9 presets and the Mountain mist / Night
+scenes; then Phase 4 (ostinato, bass, Liquid DnB) per the agreed order, or fixes from
+the test first.
+
+**User decisions.** Master stays at 0 dB with a > 0 dB warning (owner's 0.2.8
+decision) instead of the spec's −18 dB start; preset names are Bulgarian-first with
+English in the catalogue; no recorded audio is bundled — all sounds are synthesized.
 
 ## Phase 2 — Pitch, notation & practice (plan, approved 2026-10-16)
 
