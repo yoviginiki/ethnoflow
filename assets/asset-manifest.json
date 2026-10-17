@@ -1,0 +1,5 @@
+{
+  "schema_version": 1,
+  "note": "Every audio file shipped with EthnoFlow Studio has an entry here; see docs/AUDIO-LICENSING.md. Paths are relative to the repository root.",
+  "assets": []
+}
