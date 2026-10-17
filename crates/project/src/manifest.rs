@@ -56,6 +56,15 @@ pub struct Manifest {
     /// Tuning reference for this project; `None` = the app default (440 Hz).
     #[serde(default)]
     pub a4_hz: Option<f64>,
+    /// Instrument profile the project uses (global store id + the version seen).
+    #[serde(default)]
+    pub instrument: Option<InstrumentRef>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct InstrumentRef {
+    pub id: String,
+    pub version: u32,
 }
 
 impl Manifest {
@@ -71,6 +80,7 @@ impl Manifest {
             markers: Vec::new(),
             scale: None,
             a4_hz: None,
+            instrument: None,
         }
     }
 
