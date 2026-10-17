@@ -180,6 +180,19 @@
   `docs/AUDIO-LICENSING.md`, `assets/ATTRIBUTION.md`, manifest + CI gate (no bundled
   audio: everything is synthesized). Not run: the owner's listening pass and the
   clean-machine walk-through (see ROADMAP "Phase 1A — phase report").
+- **Phase 4 — rhythm section (0.4.0)**: `music-core` generators (groove, bass line on
+  chord spans, ostinato with locked motifs, arpeggiator, countermelody in the rests,
+  tempo estimate from onsets — all pure and seeded) + engine `BeatClock` (shared
+  frame/beat/bpm anchor; `Source::render_at` carries the graph frame), synthesized
+  `DrumSource` (kick/snare/ghost/hats/shaker, kick envelope for sidechain), mono
+  `BassSource` (sub/pluck/Reese, glide, beat-synced wobble, sidechain ducking),
+  `PatternSynthSource` (8 voices with cents). Shell: slots 12..16, one rhythm switch
+  in the background transport, patterns rebuilt in place on the same clock, tempo
+  changes keep the beat, "→ MIDI takes" (drums on GM channel 10), locks + regenerate,
+  section markers, "Suggest tempo from the take", countermelody → MIDI take. UI: the
+  "Rhythm section" panel in Compose First replaces the Phase-4 placeholders; the
+  "Deep Ethno DnB" style is live. Deferred: CLAP spike (F4.4) pending the owner's
+  approval of the dependency.
 
 ### Measurements (owner's laptop, release build, YIN hop 10 ms, window 1024)
 | material | pitch time | voiced | f0 p05 / median / p95 | confidence p10 / median | octave-sized jumps |

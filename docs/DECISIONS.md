@@ -194,7 +194,10 @@ Rust instruments use `nih-plug`. Our instruments can additionally ship as CLAP/V
 other DAWs via `clap-wrapper`.
 Consequences: one host, two languages; the RT rules (no allocation/locks in process())
 apply to every instrument; a misbehaving C++ instrument can crash the process, so
-out-of-process hosting is a later option. Spike at end of Phase 4; VST3 hosting of
+out-of-process hosting is a later option. **Status 2026-10-17 (0.4.0):** Phase 4
+shipped without the spike — it needs new crates (`clap-sys` or `nih-plug`) and a
+C++ toolchain on the dev machine, which rule 10 reserves for the owner's explicit
+yes; everything in Phase 4 is Rust-native on the graph. Spike at end of Phase 4; VST3 hosting of
 third-party plugins stays "Later". Licence review needed before the spike: CLAP (MIT),
 clap-helpers (MIT), nih-plug (ISC), clap-wrapper (MIT), JUCE (GPLv3 or commercial —
 only if a C++ instrument actually uses it).

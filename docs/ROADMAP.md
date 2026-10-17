@@ -10,7 +10,7 @@ this file tracks status and the concrete Phase 1 plan.
 | 1 | Core recording & project system | **implemented 2026-10-16 (0.1.0)**; DoD manual items (≥3-min reopen, real crash, 30-min, clean-machine install) pending owner — see CHANGELOG known issues |
 | 2 | Pitch, notation & practice | **approved 2026-10-16; 2.1–2.5 implemented the same day; DoD (2.6) needs the owner's kaval test and a DAW re-import** |
 | 3 | Harmony / drone MVP | not started |
-| 4 | Liquid DnB engine | not started |
+| 4 | Liquid DnB engine | **0.4.0**: rhythm section (synthesized drums, bass, ostinato, arpeggio) on one beat clock in Compose First, sections, tempo from the take, countermelody; F4.4 CLAP spike deferred (needs owner's go for the dependency) |
 | 5 | Mini DAW + export | **F5.1 pulled forward (0.2.9)**: tracks/clips editor on the audio graph, after the owner's feedback that the pieces were not connected; F5.2–F5.4 not started |
 | 6 | Beginner Academy v1 | not started |
 | 7 | Intelligent variations | not started |
@@ -134,6 +134,46 @@ on the background. F5.1 (tracks and clips) was therefore pulled forward onto the
 audio graph — the clips, the drone and the pad share one transport, one master and
 one limiter — together with an explicit background play/stop in every screen
 (0.2.9). Phase 1A and Phase 4 follow as before; F5.2–F5.4 stay in Phase 5.
+
+## Phase 4 — Liquid DnB machine (0.4.0, 2026-10-17) — phase report
+
+**Implemented.** A rhythm section in "Prepare background": synthesized drums (liquid
+two-step, halftime, ethno by meter groups; complexity, humanize, swing, fills), a mono
+bass (sub / pluck / Reese, glide, beat-synced wobble, sidechain from the kick) that
+follows the armed proposal's chord or the mode, an ostinato with lockable motifs and
+an arpeggiator — all on one beat clock from the project's tempo and meter, started and
+stopped with the background like the drone and the pad; locks per part and
+"Regenerate" for the unlocked ones; "→ MIDI takes" (drums on GM channel 10) so bass
+and drums are editable, placeable as clips and exportable as .mid; the "Deep Ethno
+DnB" style (172 BPM 4/4 when nothing is set, liquid drums + Reese + pad); section
+markers in "My studio"; "Suggest tempo from the take" (onsets → bpm + offset, the
+take is never moved); countermelody answers in the rests → new MIDI take.
+
+**Tested.** Workspace tests green (music-core 61 + 2 integration, engine 126, project
+24 + 12, shell 10), clippy clean, typecheck, vitest 21, vite build. Key tests: groove
+backbone/fills/odd meters, bass roots on changes in scale and register, ostinato
+locked motif unchanged under a new seed, arpeggio directions with no hanging notes,
+zero countermelody overlaps at tension 0, tempo of a rubato phrase within 1 BPM,
+beat clock continuity through a tempo change, drums on the grid, bass in tune with
+glide and audible sidechain, pattern synth releases when the clock stops.
+
+**Not run.** Listening by the owner (a real ethno liquid DnB track is the exit
+criterion); the spectral "< 80 Hz drops ≥ 6 dB under the kick" measurement (the
+sidechain is verified as an RMS ratio); a long session with all four parts plus the
+atmosphere and the tracks on one device.
+
+**Known issues / deferred.** Patterns are edited through their MIDI takes, not with a
+step sequencer in the panel; breakbeat slicing of a user sample is not built; the
+tempo offset from the estimate is shown, not stored as a tempo map; F4.4 (CLAP host
+spike) needs a new dependency and a C++ toolchain → waits for the owner's explicit
+yes (rule 10); no recorded drum samples by policy (everything synthesized).
+
+**Next.** Owner's listening pass of the DnB style on a kaval take; then Phase 5
+(F5.2–F5.4: chopper, stems, DAW export) or fixes first.
+
+**User decisions.** Drums are synthesized, not sampled (consistent with F1A.8); the
+rhythm section is one background switch (not four) so "Play/Stop background" covers
+it; "Deep Ethno DnB" sets 172 BPM / 4/4 only when the project has no tempo yet.
 
 ## Phase 1A — Ambient Playground (0.3.0, 2026-10-17) — phase report
 
