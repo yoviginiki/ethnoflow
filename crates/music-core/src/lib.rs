@@ -8,11 +8,15 @@ pub mod key;
 pub mod midi;
 pub mod notes;
 pub mod pitch;
+pub mod quantize;
 pub mod scale;
+pub mod theory;
 
 pub use events::{parse_smf, tick_to_seconds, MidiClip, MidiError, NoteEvent, TrackInfo};
 pub use key::{rank_hypotheses, Hypothesis, PitchClassHistogram};
 pub use midi::{write_smf, SmfOptions, TECHNICAL_TEMPO_BPM};
 pub use notes::{extract_notes, Note, NoteParams, PitchSample};
 pub use pitch::{cents_between, pitch_class_name, Pitch, Reference, PITCH_CLASS_NAMES};
+pub use quantize::{quantize, Grid, QuantizeParams};
 pub use scale::{DegreeMatch, Scale, ScaleKind};
+pub use theory::{detect_chords, interval, transpose, ChordKind, ChordMatch, Interval};
