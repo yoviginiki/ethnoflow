@@ -4,7 +4,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { AMBIENT_TAGS, api, describeError, IMPORT_EXTENSIONS, type Ambient as AmbientRack, type AmbientLayer, type AmbientTag, type LayerKind, type LayerSource, type Macros, type PresetSummary } from "./api";
 import { DEFAULT_MACROS, KIND_LABEL, MAX_AMBIENT_LAYERS, defaultSource, makeLayer } from "./ambientPresets";
 import { randomizeRack } from "./ambientRandom";
-import { MACRO_SLIDERS, REGISTER, SOURCE_SLIDERS, hasTonal, pct } from "./ambientSpecs";
+import { MACRO_SLIDERS, REGISTER, SHIMMER_ST, SOURCE_SLIDERS, hasTonal, pct } from "./ambientSpecs";
 import { LaneEditor, ProgramPanel } from "./AmbientProgram";
 import { BackgroundTransport } from "./BackgroundTransport";
 import { ConfirmDialog } from "./ConfirmDialog";
@@ -666,6 +666,16 @@ export function Ambient() {
               </label>
             ))}
           </div>
+          <label className="inline small" title={t.shimmerStHint}>
+            {t.shimmerStLabel}
+            <select value={macros.shimmer_st} disabled={!rack} onChange={(e) => setMacro("shimmer_st", Number(e.target.value))}>
+              {SHIMMER_ST.map((o) => (
+                <option key={o.st} value={o.st}>
+                  {t[o.label]}
+                </option>
+              ))}
+            </select>
+          </label>
           <div className="muted small">{t.macroHint}</div>
           {rack && <LaneEditor rack={rack} layerId={null} source={null} laneTime={status?.lane_time ?? 0} onChange={commit} />}
 

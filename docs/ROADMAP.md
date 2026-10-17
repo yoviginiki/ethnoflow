@@ -140,7 +140,7 @@ one limiter — together with an explicit background play/stop in every screen
 | # | Item | Status / where |
 |---|---|---|
 | 1 | Cloud (granular pad from a take) | done 2026-10-17 (F1B.2) |
-| 2 | Shimmer (transposed reverb) | next Soundscapes slice |
+| 2 | Shimmer (transposed reverb) | done 2026-10-18 (macro on the master space) |
 | 3 | Resonator (bells, bowls, strings from the mode) | after Shimmer |
 | 4 | Sound Designer for the rhythm section | **P1 R2 done as the Instrument Designer (bass/drums/synth presets)** |
 | 5 | New rhythm instruments (pad synth, keys, percussion: tapan, darbuka, daire; lead) | P1 R3 (InstrumentRack) |

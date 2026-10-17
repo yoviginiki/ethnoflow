@@ -28,7 +28,7 @@ const rack: Ambient = {
     layer("c", { source: { kind: "wind", gust: 0.5, speed: 0.3, center_hz: 600, resonance: 0.5 } }),
     layer("d", { source: { kind: "loop", take_id: "t1", start: 1, end: 3, crossfade: 0.1, rate: 1, reverse: false } }),
   ],
-  macros: { intensity: 1, brightness: 0.5, motion: 0.5, space: 0.3, space_size: 0.6, tonal_gravity: 0.5, width: 1 },
+  macros: { intensity: 1, brightness: 0.5, motion: 0.5, space: 0.3, space_size: 0.6, tonal_gravity: 0.5, width: 1, shimmer: 0, shimmer_st: 12 },
   preset: "mountain_mist",
   tags: [],
   automation: [],

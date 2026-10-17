@@ -114,6 +114,8 @@ fn push_effective(s: &Inner, layers: &[AmbientLayer], macros: &Macros) {
     }
     g.params().master.space.set(macros.space as f32);
     g.params().master.space_size.set(macros.space_size as f32);
+    g.params().master.shimmer.set(macros.shimmer as f32);
+    g.params().master.shimmer_st.set(macros.shimmer_st as f32);
 }
 
 /// Start the worker that advances the automation/program time and pushes the
@@ -623,6 +625,8 @@ fn sync_live(s: &mut Inner) -> CmdResult<()> {
     if let Some(g) = s.graph.as_ref() {
         g.params().master.space.set(a.macros.space as f32);
         g.params().master.space_size.set(a.macros.space_size as f32);
+        g.params().master.shimmer.set(a.macros.shimmer as f32);
+        g.params().master.shimmer_st.set(a.macros.shimmer_st as f32);
     }
     Ok(())
 }
@@ -1016,6 +1020,8 @@ pub async fn export_ambient(
         }
         gp.master.space.set(macros.space as f32);
         gp.master.space_size.set(macros.space_size as f32);
+        gp.master.shimmer.set(macros.shimmer as f32);
+        gp.master.shimmer_st.set(macros.shimmer_st as f32);
         if done == 0 {
             // Start exactly at the first state: no fade-in ramp from −60 dB.
             let mut warm = vec![0.0f32; 2048 * ch];

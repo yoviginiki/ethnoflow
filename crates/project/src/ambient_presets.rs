@@ -90,6 +90,8 @@ fn m(space: f64, size: f64, brightness: f64, motion: f64) -> Macros {
         space_size: size,
         tonal_gravity: 0.5,
         width: 1.0,
+        shimmer: 0.0,
+        shimmer_st: 12.0,
     }
 }
 

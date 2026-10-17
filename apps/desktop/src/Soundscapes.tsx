@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { api, describeError, type AmbientLayer, type LayerKind, type LayerSource } from "./api";
 import { DEFAULT_MACROS, KIND_LABEL, MAX_AMBIENT_LAYERS, defaultSource, makeLayer } from "./ambientPresets";
 import { mulberry, randomizeLayer } from "./ambientRandom";
-import { MACRO_SLIDERS, REGISTER, SOURCE_SLIDERS, hasTonal, pct } from "./ambientSpecs";
+import { MACRO_SLIDERS, REGISTER, SHIMMER_ST, SOURCE_SLIDERS, hasTonal, pct } from "./ambientSpecs";
 import { BackgroundTransport } from "./BackgroundTransport";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Knob } from "./Knob";
@@ -331,6 +331,16 @@ export function Soundscapes() {
               </div>
             ))}
           </div>
+          <label className="inline small" title={t.shimmerStHint}>
+            {t.shimmerStLabel}
+            <select value={macros.shimmer_st} disabled={!rack} onChange={(e) => setMacro("shimmer_st", Number(e.target.value))}>
+              {SHIMMER_ST.map((o) => (
+                <option key={o.st} value={o.st}>
+                  {t[o.label]}
+                </option>
+              ))}
+            </select>
+          </label>
           <div className="muted small">{t.macroHint}</div>
         </aside>
       </div>

@@ -67,6 +67,14 @@ export const MACRO_SLIDERS: { key: keyof Macros; label: StringMessageKey }[] = [
   { key: "space_size", label: "macroSpaceSize" },
   { key: "tonal_gravity", label: "macroGravity" },
   { key: "width", label: "macroWidth" },
+  { key: "shimmer", label: "macroShimmer" },
+];
+/** Shimmer transpositions offered in the UI (semitones). */
+export const SHIMMER_ST: { st: number; label: StringMessageKey }[] = [
+  { st: 12, label: "shimmerOctave" },
+  { st: 7, label: "shimmerFifth" },
+  { st: 19, label: "shimmerOctaveFifth" },
+  { st: 5, label: "shimmerFourth" },
 ];
 
 export function hasTonal(src: LayerSource): src is Extract<LayerSource, { tonal: boolean }> {

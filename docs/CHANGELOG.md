@@ -202,6 +202,12 @@
   import in Atmosphere**: "Import samples…" (multi-file) or drag-and-drop from
   Explorer / a sample manager such as Soundly — each file becomes a take in the
   project (named after the file) and a looped layer.
+- **Shimmer (F1B.3, 2026-10-18, night)**: the master space gained a transposed feedback
+  path (delay-line pitch shifter with two windowed taps, soft-clipped loop): macro
+  "Shimmer" 0..1 and a transposition choice (octave / fifth / octave+fifth / fourth) in
+  Atmosphere and Soundscapes, automatable, saved with the rack; engine tests: the shifter
+  doubles a sine's frequency; the reverb tail with shimmer is an octave brighter and
+  still decays.
 - **Program P1, R1 + R2 PoC (2026-10-18, night)**: instruments as presets with identity
   (`crates/project/src/forge.rs`: schema v1, validation, migration, fork lineage, 14
   curated factory presets that differ measurably); user presets in the library (kind

@@ -14,6 +14,7 @@ pub mod patsynth;
 pub mod pluck;
 pub mod reverb;
 pub mod rhythm;
+pub mod shimmer;
 pub mod texture;
 pub mod wind;
 
@@ -35,5 +36,6 @@ pub use rhythm::{
     pattern_channel, BeatClock, DrumEvent, DrumKind, DrumParams, DrumPatternData, DrumSource,
     PatternInbox, PatternSwap, DRUM_KINDS,
 };
+pub use shimmer::PitchShifter;
 pub use texture::{TextureParams, TextureSource};
 pub use wind::{WindParams, WindSource};

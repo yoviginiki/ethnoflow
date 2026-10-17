@@ -89,6 +89,10 @@ pub struct MasterParams {
     pub space: SmoothedParam,
     /// 0..1 reverb size.
     pub space_size: SmoothedParam,
+    /// 0..1 shimmer: how much of the reverb's output is fed back pitch-shifted (F1B.3).
+    pub shimmer: SmoothedParam,
+    /// Shimmer transposition, semitones (0..24; 12 = octave, 7 = fifth, 19 = octave+fifth).
+    pub shimmer_st: SmoothedParam,
     peak_bits: AtomicU32,
     limiter_gain_bits: AtomicU32,
 }
@@ -100,6 +104,8 @@ impl Default for MasterParams {
             gain_db: SmoothedParam::new(-18.0, -120.0, 6.0),
             space: SmoothedParam::new(0.0, 0.0, 1.0),
             space_size: SmoothedParam::new(0.6, 0.0, 1.0),
+            shimmer: SmoothedParam::new(0.0, 0.0, 1.0),
+            shimmer_st: SmoothedParam::new(12.0, 0.0, 24.0),
             peak_bits: AtomicU32::new(0),
             limiter_gain_bits: AtomicU32::new(1.0f32.to_bits()),
         }
@@ -178,6 +184,9 @@ pub struct Graph {
     reverb: [Reverb; 2],
     /// Frames of tail still to render after the mix went to zero.
     reverb_tail: u32,
+    /// Shimmer: pitch shifters in the reverb feedback, one per channel, and the last wet sample.
+    shimmer: [sources::PitchShifter; 2],
+    shimmer_fb: [f32; 2],
     limiter: Limiter,
     ramp: f32,
     /// Frames rendered so far.
@@ -210,6 +219,11 @@ impl Graph {
                 Reverb::new(sample_rate + sample_rate / 40),
             ],
             reverb_tail: 0,
+            shimmer: [
+                sources::PitchShifter::new(sample_rate),
+                sources::PitchShifter::new(sample_rate),
+            ],
+            shimmer_fb: [0.0; 2],
             limiter: Limiter::new(sample_rate, db_to_gain(-0.3), 0.08),
             ramp: ramp_samples(sample_rate),
             frame: 0,
@@ -388,10 +402,15 @@ impl Graph {
             let target_space = self.params.master.space.target();
             self.space.begin(target_space, self.ramp * 5.0);
             let size = self.params.master.space_size.target();
+            let shimmer = self.params.master.shimmer.target();
+            let shimmer_ratio = 2f32.powf(self.params.master.shimmer_st.target() / 12.0);
             let wet_on = target_space > 0.0 || self.space.current > 0.0 || self.reverb_tail > 0;
             if wet_on {
                 for r in self.reverb.iter_mut() {
-                    r.set(size, 0.35);
+                    r.set(size, 0.35 + 0.2 * shimmer);
+                }
+                for sh in self.shimmer.iter_mut() {
+                    sh.set_ratio(shimmer_ratio);
                 }
                 if target_space > 0.0 || self.space.current > 0.0 {
                     self.reverb_tail = self.sample_rate * 6; // ring out up to 6 s
@@ -401,6 +420,10 @@ impl Graph {
                         for r in self.reverb.iter_mut() {
                             r.clear();
                         }
+                        for sh in self.shimmer.iter_mut() {
+                            sh.clear();
+                        }
+                        self.shimmer_fb = [0.0; 2];
                     }
                 }
             }
@@ -412,13 +435,36 @@ impl Graph {
                 }
                 if wet_on {
                     // Wet is fed from the (gained) dry mix; stereo gets two decorrelated tails.
+                    // Shimmer: the previous wet sample comes back transposed into the
+                    // reverb's input (soft-clipped so the loop can never run away).
                     if channels == 1 {
-                        let w = self.reverb[0].process(frame[0]);
+                        let fb = if shimmer > 0.0 {
+                            sources::gen::soft(
+                                self.shimmer[0].process(self.shimmer_fb[0]) * shimmer * 0.08,
+                            )
+                        } else {
+                            0.0
+                        };
+                        let w = self.reverb[0].process(frame[0] + fb);
+                        self.shimmer_fb[0] = w;
                         frame[0] += w * mix * 0.8;
                     } else {
                         let input = (frame[0] + frame[1]) * 0.5;
-                        let wl = self.reverb[0].process(input);
-                        let wr = self.reverb[1].process(input);
+                        let (fl, fr) = if shimmer > 0.0 {
+                            (
+                                sources::gen::soft(
+                                    self.shimmer[0].process(self.shimmer_fb[0]) * shimmer * 0.08,
+                                ),
+                                sources::gen::soft(
+                                    self.shimmer[1].process(self.shimmer_fb[1]) * shimmer * 0.08,
+                                ),
+                            )
+                        } else {
+                            (0.0, 0.0)
+                        };
+                        let wl = self.reverb[0].process(input + fl);
+                        let wr = self.reverb[1].process(input + fr);
+                        self.shimmer_fb = [wl, wr];
                         frame[0] += wl * mix * 0.8;
                         frame[1] += wr * mix * 0.8;
                     }
@@ -505,6 +551,55 @@ mod tests {
         let sr = b.sample_rate as f64;
         b.slice_frames((from * sr) as usize, (to * sr) as usize)
             .rms()
+    }
+
+    #[test]
+    fn shimmer_adds_an_octave_to_the_reverb_tail_without_running_away() {
+        use crate::graph::sources::loop_player::{LoopParams, LoopSource};
+        // One second of 220 Hz, then three seconds of silence, looped: the tail is exposed.
+        let mut samples = vec![0.0f32; 4 * 48_000];
+        for (i, s) in samples.iter_mut().enumerate().take(48_000) {
+            *s = (i as f32 * 220.0 / 48_000.0 * std::f32::consts::TAU).sin() * 0.5;
+        }
+        let render = |shimmer: f32| {
+            let p = Arc::new(GraphParams::default());
+            p.master.gain_db.set(0.0);
+            p.master.space.set(0.6);
+            p.master.space_size.set(0.7);
+            p.master.shimmer.set(shimmer);
+            p.master.shimmer_st.set(12.0);
+            p.layers[0].gain_db.set(0.0);
+            let mut g = Graph::new(Arc::clone(&p), 48_000);
+            let buf = Arc::new(AudioBuffer::new(48_000, 1, samples.clone()));
+            g.set_source(
+                0,
+                Box::new(LoopSource::new(Arc::new(LoopParams::default()), buf)),
+            );
+            g.render_offline(3.5, 1)
+        };
+        let dry = render(0.0);
+        let wet = render(1.0);
+        // High-frequency share of a window: RMS of the first difference over the RMS.
+        let bright = |b: &AudioBuffer, from: f64, to: f64| {
+            let a = (from * 48_000.0) as usize;
+            let z = (to * 48_000.0) as usize;
+            let x = &b.samples[a..z];
+            let d: f32 = x.windows(2).map(|w| (w[1] - w[0]).powi(2)).sum::<f32>();
+            let e: f32 = x.iter().map(|v| v * v).sum::<f32>();
+            (d / e.max(1e-12)).sqrt()
+        };
+        assert!(wet.samples.iter().all(|s| s.is_finite() && s.abs() <= 1.0));
+        let (bd, bw) = (bright(&dry, 1.6, 2.4), bright(&wet, 1.6, 2.4));
+        assert!(
+            bw > bd * 1.15,
+            "shimmer tail is brighter (octave up fed back): {bw} vs {bd}"
+        );
+        assert!(
+            rms(&wet, 1.6, 2.4) > rms(&dry, 1.6, 2.4) * 1.05,
+            "the fed-back octave adds energy to the tail"
+        );
+        // The tail still decays (no self-oscillation).
+        assert!(rms(&wet, 3.0, 3.4) < rms(&wet, 1.2, 1.6), "tail decays");
     }
 
     #[test]

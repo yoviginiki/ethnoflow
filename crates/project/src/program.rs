@@ -90,7 +90,7 @@ pub fn param_range(param: &str) -> Option<(f64, f64)> {
         "pitch" => (-24.0, 24.0),
         "jitter" => (0.0, 100.0),
         // macros
-        "intensity" | "space" | "space_size" | "tonal_gravity" | "width" => (0.0, 1.0),
+        "intensity" | "space" | "space_size" | "tonal_gravity" | "width" | "shimmer" => (0.0, 1.0),
         _ => return None,
     })
 }
@@ -118,7 +118,7 @@ pub fn source_params(src: &LayerSource) -> &'static [&'static str] {
     }
 }
 pub const STRIP_PARAMS: [&str; 4] = ["gain_db", "pan", "lowpass_hz", "highpass_hz"];
-pub const MACRO_PARAMS: [&str; 7] = [
+pub const MACRO_PARAMS: [&str; 8] = [
     "intensity",
     "brightness",
     "motion",
@@ -126,6 +126,7 @@ pub const MACRO_PARAMS: [&str; 7] = [
     "space_size",
     "tonal_gravity",
     "width",
+    "shimmer",
 ];
 
 /// Read a numeric parameter of a layer by name.
@@ -251,6 +252,7 @@ pub fn macro_param(m: &Macros, param: &str) -> Option<f64> {
         "space_size" => m.space_size,
         "tonal_gravity" => m.tonal_gravity,
         "width" => m.width,
+        "shimmer" => m.shimmer,
         _ => return None,
     })
 }
@@ -258,6 +260,7 @@ pub fn macro_param(m: &Macros, param: &str) -> Option<f64> {
 pub fn set_macro_param(m: &mut Macros, param: &str, v: f64) -> bool {
     let v = v.clamp(0.0, 1.0);
     match param {
+        "shimmer" => m.shimmer = v,
         "intensity" => m.intensity = v,
         "brightness" => m.brightness = v,
         "motion" => m.motion = v,
@@ -569,6 +572,9 @@ fn lerp_macros(a: &Macros, b: &Macros, r: f64) -> Macros {
         space_size: lerp(a.space_size, b.space_size, r),
         tonal_gravity: lerp(a.tonal_gravity, b.tonal_gravity, r),
         width: lerp(a.width, b.width, r),
+        shimmer: lerp(a.shimmer, b.shimmer, r),
+        // The transposition is a choice, not a continuum: switch halfway.
+        shimmer_st: if r < 0.5 { a.shimmer_st } else { b.shimmer_st },
     }
 }
 

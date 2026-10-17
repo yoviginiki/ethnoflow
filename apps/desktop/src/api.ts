@@ -545,6 +545,8 @@ export interface Macros {
   space_size: number;
   tonal_gravity: number;
   width: number;
+  shimmer: number;
+  shimmer_st: number;
 }
 
 // Automation (F1A.4) and scenes (F1A.5): project/src/program.rs

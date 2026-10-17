@@ -327,6 +327,16 @@ pub struct Macros {
     pub tonal_gravity: f64,
     /// 0..1 stereo width (scales the pans).
     pub width: f64,
+    /// 0..1 shimmer: transposed feedback in the master space (F1B.3).
+    #[serde(default)]
+    pub shimmer: f64,
+    /// Shimmer transposition in semitones (0..24; 12 octave, 7 fifth, 19 octave + fifth).
+    #[serde(default = "default_shimmer_st")]
+    pub shimmer_st: f64,
+}
+
+fn default_shimmer_st() -> f64 {
+    12.0
 }
 
 impl Default for Macros {
@@ -339,6 +349,8 @@ impl Default for Macros {
             space_size: 0.6,
             tonal_gravity: 0.5,
             width: 1.0,
+            shimmer: 0.0,
+            shimmer_st: 12.0,
         }
     }
 }
@@ -353,10 +365,16 @@ impl Macros {
             self.space_size,
             self.tonal_gravity,
             self.width,
+            self.shimmer,
         ] {
             if !(0.0..=1.0).contains(&v) {
                 return Err(ProjectError::InvalidState("macro must be 0..1".into()));
             }
+        }
+        if !(0.0..=24.0).contains(&self.shimmer_st) {
+            return Err(ProjectError::InvalidState(
+                "shimmer_st must be 0..24".into(),
+            ));
         }
         Ok(())
     }

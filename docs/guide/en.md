@@ -46,7 +46,7 @@ The pad and the textures always sit **below** the melody (about two octaves unde
 
 - Up to 8 layers: noise, wind, texture, bells, plucks, looped take. Each has level, pan, filters, its own parameters, M/S and a lock.
 - **Presets** on the left (factory and yours), "Surprise me" changes the unlocked layers, the history goes back.
-- **Macros** act on everything: intensity, brightness, motion, space and its size, tonal gravity, width.
+- **Macros** act on everything: intensity, brightness, motion, space and its size, tonal gravity, width, **shimmer** (the space's tail comes back transposed by an octave, a fifth or octave+fifth: an "angelic choir" behind every tone; 20–40 % for glitter, 60 %+ for a cloud of overtones).
 - **Automation and scenes**: lanes over time and a program of scenes; export to WAV with stems.
 - **Samples**: "Import samples…" or drag files onto the window (e.g. from Soundly). Each file becomes a take and a looped layer.
 - A slider at its minimum means the layer is off (silence), not "very quiet".

@@ -14,6 +14,8 @@ export const DEFAULT_MACROS: Macros = {
   space_size: 0.6,
   tonal_gravity: 0.5,
   width: 1,
+  shimmer: 0,
+  shimmer_st: 12,
 };
 
 export function newId(): string {

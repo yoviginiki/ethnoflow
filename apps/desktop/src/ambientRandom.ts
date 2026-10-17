@@ -92,6 +92,7 @@ export function randomizeMacros(rnd: () => number, m: Macros): Macros {
     motion: nudge(rnd, m.motion, 0.2, 0.2, 0.9),
     space: nudge(rnd, m.space, 0.15, 0, 0.7),
     space_size: nudge(rnd, m.space_size, 0.15, 0.2, 1),
+    shimmer: nudge(rnd, m.shimmer, 0.15, 0, 0.6),
   };
 }
 
