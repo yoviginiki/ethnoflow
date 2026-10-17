@@ -9,6 +9,7 @@ mod intent_cmds;
 mod midi_cmds;
 mod midi_in_cmds;
 mod pad_cmds;
+mod preset_cmds;
 mod project_cmds;
 mod settings;
 mod state;
@@ -29,8 +30,11 @@ pub fn run() {
         )
         .manage(AppState::default())
         .setup(|app| {
-            let dir = app.path().app_config_dir()?.join("instruments");
-            app.state::<AppState>().lock().profiles_dir = Some(dir);
+            let config = app.path().app_config_dir()?;
+            let state = app.state::<AppState>();
+            let mut s = state.lock();
+            s.profiles_dir = Some(config.join("instruments"));
+            s.presets_dir = Some(config.join("ambient-presets"));
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -128,6 +132,10 @@ pub fn run() {
             ambient_cmds::ambient_stop,
             ambient_cmds::ambient_status,
             ambient_cmds::background_fade_out,
+            preset_cmds::ambient_presets,
+            preset_cmds::ambient_preset_load,
+            preset_cmds::ambient_preset_save,
+            preset_cmds::ambient_preset_delete,
         ])
         .build(tauri::generate_context!())
         .expect("error while building EthnoFlow Studio")

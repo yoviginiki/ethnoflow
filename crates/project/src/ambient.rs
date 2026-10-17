@@ -239,6 +239,9 @@ pub struct AmbientLayer {
     /// Licence record of the audio an audio loop uses (F1A.8), if any.
     #[serde(default)]
     pub license_ref: Option<String>,
+    /// "Keep what I like": randomize never changes a locked layer (F1A.3).
+    #[serde(default)]
+    pub locked: bool,
 }
 
 fn default_lowpass() -> f64 {
@@ -313,6 +316,9 @@ pub struct Ambient {
     /// Name of the preset this rack came from, if any (informational).
     #[serde(default)]
     pub preset: Option<String>,
+    /// Tags when saved as a preset (ids from `ambient_presets::TAGS`).
+    #[serde(default)]
+    pub tags: Vec<String>,
 }
 
 impl Default for Ambient {
@@ -322,6 +328,7 @@ impl Default for Ambient {
             layers: Vec::new(),
             macros: Macros::default(),
             preset: None,
+            tags: Vec::new(),
         }
     }
 }
@@ -412,6 +419,7 @@ mod tests {
                 solo: false,
                 seed: 7 + i as u32,
                 license_ref: None,
+                locked: false,
             });
         }
         a.layers.push(AmbientLayer {
@@ -433,6 +441,7 @@ mod tests {
             solo: false,
             seed: 1,
             license_ref: Some("own-recording".into()),
+            locked: false,
         });
         a.macros.space = 0.4;
         a

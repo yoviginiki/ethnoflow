@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { api, describeError, type Ambient as AmbientRack, type AmbientLayer, type LayerKind, type LayerSource, type Macros } from "./api";
-import { DEFAULT_MACROS, KIND_LABEL, MAX_AMBIENT_LAYERS, defaultSource, makeLayer, starter, type StarterKey } from "./ambientPresets";
+import { AMBIENT_TAGS, api, describeError, type Ambient as AmbientRack, type AmbientLayer, type AmbientTag, type LayerKind, type LayerSource, type Macros, type PresetSummary } from "./api";
+import { DEFAULT_MACROS, KIND_LABEL, MAX_AMBIENT_LAYERS, defaultSource, makeLayer } from "./ambientPresets";
+import { randomizeRack } from "./ambientRandom";
 import { BackgroundTransport } from "./BackgroundTransport";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { formatDb, linearToDb, meterFraction, noteParts, takeName } from "./format";
@@ -9,7 +10,37 @@ import { messages, type StringMessageKey } from "./i18n";
 import { useStore } from "./store";
 
 const KINDS: LayerKind[] = ["noise", "wind", "texture", "bells", "pluck"];
-const STARTERS: StarterKey[] = ["starterMountain", "starterNoKey", "starterNight"];
+const HISTORY_MAX = 20;
+/** Factory preset ids → their names in the UI language (user presets show their file name). */
+const PRESET_NAME: Record<string, StringMessageKey> = {
+  mountain_mist: "presetMountainMist",
+  forest_morning: "presetForestMorning",
+  river: "presetRiver",
+  night: "presetNight",
+  fog_no_key: "presetFogNoKey",
+  meditation: "presetMeditation",
+  warm_hearth: "presetWarmHearth",
+  liquid_glass: "presetLiquidGlass",
+  dark_cave: "presetDarkCave",
+};
+const TAG_NAME: Record<AmbientTag, StringMessageKey> = {
+  forest: "tagForest",
+  river: "tagRiver",
+  night: "tagNight",
+  fog: "tagFog",
+  mountain: "tagMountain",
+  ethno: "tagEthno",
+  meditation: "tagMeditation",
+  dark: "tagDark",
+  warm: "tagWarm",
+  liquid: "tagLiquid",
+  no_key: "tagNoKey",
+};
+interface Snapshot {
+  at: number;
+  label: string;
+  rack: AmbientRack;
+}
 const POLL_MS = 150;
 const COMMIT_MS = 80;
 const REGISTER = Array.from({ length: 73 }, (_, i) => 36 + i); // C2 … C8
@@ -83,12 +114,24 @@ export function Ambient() {
   const playing = s.layers.ambient;
   const status = s.ambientStatus;
   const [selected, setSelected] = useState<string | null>(null);
-  const [confirm, setConfirm] = useState<{ kind: "remove"; id: string } | { kind: "starter"; key: StarterKey } | null>(null);
+  const [confirm, setConfirm] = useState<{ kind: "remove"; id: string } | { kind: "deletePreset"; id: string } | null>(null);
+  const [presets, setPresets] = useState<PresetSummary[]>([]);
+  const [tagFilter, setTagFilter] = useState<AmbientTag | "fav" | "recent" | null>(null);
+  const [search, setSearch] = useState("");
+  const [saveName, setSaveName] = useState("");
+  const [saveTags, setSaveTags] = useState<AmbientTag[]>([]);
+  const [showSave, setShowSave] = useState(false);
+  const [ab, setAb] = useState<{ a: AmbientRack | null; b: AmbientRack | null; side: "a" | "b" }>({ a: null, b: null, side: "a" });
+  const [history, setHistory] = useState<Snapshot[]>([]);
   const [fadeSeconds, setFadeSeconds] = useState(15);
   const [editingName, setEditingName] = useState<string | null>(null);
   const fail = useCallback((e: unknown) => useStore.getState().setError(describeError(e)), []);
   const pendingRef = useRef<AmbientRack | null>(null);
   const timerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    api.ambientPresets().then(setPresets).catch(fail);
+  }, [fail]);
 
   // Load the rack if the project opened before the hook fetched it.
   useEffect(() => {
@@ -152,6 +195,80 @@ export function Ambient() {
     [t],
   );
 
+  /** Remember the current rack before a big change (preset, surprise, A/B, starter). */
+  const snapshot = (label: string) => {
+    if (!rack) return;
+    setHistory((h) => [{ at: Date.now(), label, rack }, ...h].slice(0, HISTORY_MAX));
+  };
+  const restore = (snap: Snapshot) => {
+    snapshot(t.historyBeforeRestore);
+    commit(snap.rack);
+    setSelected(null);
+  };
+  const presetName = (p: PresetSummary) => (p.factory && PRESET_NAME[p.id] ? t[PRESET_NAME[p.id]] : p.name);
+  const loadPreset = async (p: PresetSummary) => {
+    try {
+      const r = await api.ambientPresetLoad(p.id);
+      snapshot(`${t.historyBeforePreset} ${presetName(p)}`);
+      commit(r);
+      setSelected(null);
+      const recent = [p.id, ...(s.prefs.recentPresets ?? []).filter((x) => x !== p.id)].slice(0, 8);
+      s.setPref("recentPresets", recent);
+    } catch (e) {
+      fail(e);
+    }
+  };
+  const toggleFav = (id: string) => {
+    const fav = s.prefs.favPresets ?? [];
+    s.setPref("favPresets", fav.includes(id) ? fav.filter((x) => x !== id) : [...fav, id]);
+  };
+  const savePreset = async () => {
+    if (!rack || !saveName.trim()) return;
+    try {
+      setPresets(await api.ambientPresetSave(saveName.trim(), saveTags, rack));
+      s.setMessage(`${t.presetSaved}: ${saveName.trim()}`);
+      setShowSave(false);
+      setSaveName("");
+    } catch (e) {
+      fail(e);
+    }
+  };
+  const deletePreset = async (id: string) => {
+    try {
+      setPresets(await api.ambientPresetDelete(id));
+    } catch (e) {
+      fail(e);
+    }
+  };
+  const surprise = () => {
+    if (!rack || rack.layers.length === 0) return;
+    snapshot(t.historyBeforeSurprise);
+    commit(randomizeRack(rack, Math.floor(Math.random() * 2_000_000_000)));
+  };
+  const undoLast = () => {
+    const [last, ...rest] = history;
+    if (!last) return;
+    setHistory(rest);
+    commit(last.rack);
+    setSelected(null);
+  };
+  const storeAb = (side: "a" | "b") => rack && setAb({ ...ab, [side]: rack, side });
+  const switchAb = (side: "a" | "b") => {
+    const target = ab[side];
+    if (!target || !rack) return;
+    // Keep the other side current so A/B flips back to what was just heard.
+    setAb({ ...ab, [ab.side]: rack, side });
+    commit(target);
+    setSelected(null);
+  };
+  const filteredPresets = presets.filter((p) => {
+    if (tagFilter === "fav" && !(s.prefs.favPresets ?? []).includes(p.id)) return false;
+    if (tagFilter === "recent" && !(s.prefs.recentPresets ?? []).includes(p.id)) return false;
+    if (tagFilter && tagFilter !== "fav" && tagFilter !== "recent" && !p.tags.includes(tagFilter)) return false;
+    const q = search.trim().toLowerCase();
+    return !q || presetName(p).toLowerCase().includes(q) || p.tags.some((tg) => t[TAG_NAME[tg as AmbientTag]]?.toLowerCase().includes(q));
+  });
+
   const patchLayer = (id: string, patch: Partial<AmbientLayer>) => {
     if (!rack) return;
     commit({ ...rack, layers: rack.layers.map((l) => (l.id === id ? { ...l, ...patch } : l)) });
@@ -180,10 +297,6 @@ export function Ambient() {
     const next = [...rack.layers];
     [next[i], next[j]] = [next[j], next[i]];
     commit({ ...rack, layers: next });
-  };
-  const applyStarter = (key: StarterKey) => {
-    commit(starter(key, kindNames));
-    setSelected(null);
   };
   const setMacro = (key: keyof Macros, v: number) => rack && commit({ ...rack, macros: { ...rack.macros, [key]: v } });
 
@@ -266,15 +379,101 @@ export function Ambient() {
 
       <div className="ambient-body">
         <aside className="panel ambient-left">
-          <h3>{t.starters}</h3>
-          <div className="style-row">
-            {STARTERS.map((k) => (
-              <button key={k} className="ghost" onClick={() => (layers.length ? setConfirm({ kind: "starter", key: k }) : applyStarter(k))}>
-                {t[k]}
+          <h3>{t.presetsTitle}</h3>
+          <input type="search" value={search} placeholder={t.presetSearch} onChange={(e) => setSearch(e.target.value)} aria-label={t.presetSearch} />
+          <div className="tag-row">
+            <button className={`chip ${tagFilter === null ? "on" : ""}`} onClick={() => setTagFilter(null)}>
+              {t.tagAll}
+            </button>
+            <button className={`chip ${tagFilter === "fav" ? "on" : ""}`} onClick={() => setTagFilter("fav")}>
+              ★ {t.tagFavorites}
+            </button>
+            <button className={`chip ${tagFilter === "recent" ? "on" : ""}`} onClick={() => setTagFilter("recent")}>
+              {t.tagRecent}
+            </button>
+            {AMBIENT_TAGS.map((tg) => (
+              <button key={tg} className={`chip ${tagFilter === tg ? "on" : ""}`} onClick={() => setTagFilter(tagFilter === tg ? null : tg)}>
+                {t[TAG_NAME[tg]]}
               </button>
             ))}
           </div>
-          <div className="muted small">{t.starterHint}</div>
+          <ul className="preset-list">
+            {filteredPresets.map((p) => (
+              <li key={p.id} className={rack?.preset === p.id ? "current" : ""}>
+                <button className="ghost preset-name" onClick={() => void loadPreset(p)} title={p.tags.map((tg) => t[TAG_NAME[tg as AmbientTag]] ?? tg).join(", ")}>
+                  {presetName(p)} <span className="muted small">· {p.layer_count}</span>
+                </button>
+                <button className={`ghost small ${(s.prefs.favPresets ?? []).includes(p.id) ? "on" : ""}`} title={t.tagFavorites} onClick={() => toggleFav(p.id)}>
+                  {(s.prefs.favPresets ?? []).includes(p.id) ? "★" : "☆"}
+                </button>
+                {!p.factory && (
+                  <button className="ghost small" title={t.presetDelete} onClick={() => setConfirm({ kind: "deletePreset", id: p.id })}>
+                    ✕
+                  </button>
+                )}
+              </li>
+            ))}
+            {filteredPresets.length === 0 && <li className="muted small">{t.presetNone}</li>}
+          </ul>
+          <div className="style-row">
+            <button className="ghost" disabled={!rack || layers.length === 0} onClick={() => setShowSave((v) => !v)}>
+              {t.presetSaveAs}
+            </button>
+            <button className="ghost" disabled={!rack || layers.length === 0} onClick={surprise} title={t.surpriseHint}>
+              🎲 {t.surprise}
+            </button>
+            <button className="ghost" disabled={history.length === 0} onClick={undoLast} title={history[0]?.label ?? ""}>
+              {t.undo}
+            </button>
+          </div>
+          {showSave && (
+            <div className="panel save-preset">
+              <input type="text" value={saveName} placeholder={t.presetNamePlaceholder} onChange={(e) => setSaveName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && void savePreset()} />
+              <div className="tag-row">
+                {AMBIENT_TAGS.map((tg) => (
+                  <button key={tg} className={`chip ${saveTags.includes(tg) ? "on" : ""}`} onClick={() => setSaveTags(saveTags.includes(tg) ? saveTags.filter((x) => x !== tg) : [...saveTags, tg])}>
+                    {t[TAG_NAME[tg]]}
+                  </button>
+                ))}
+              </div>
+              <div className="style-row">
+                <button className="primary" disabled={!saveName.trim()} onClick={() => void savePreset()}>
+                  {t.presetSave}
+                </button>
+                <button className="ghost" onClick={() => setShowSave(false)}>
+                  {t.cancel}
+                </button>
+              </div>
+            </div>
+          )}
+          <div className="style-row" title={t.abHint}>
+            <span className="muted small">A/B</span>
+            <button className={`ghost small ${ab.side === "a" ? "on" : ""}`} onClick={() => (ab.a ? switchAb("a") : storeAb("a"))} disabled={!rack}>
+              A{ab.a ? "" : " +"}
+            </button>
+            <button className={`ghost small ${ab.side === "b" ? "on" : ""}`} onClick={() => (ab.b ? switchAb("b") : storeAb("b"))} disabled={!rack}>
+              B{ab.b ? "" : " +"}
+            </button>
+            <button className="ghost small" onClick={() => storeAb(ab.side)} disabled={!rack} title={t.abStore}>
+              ↓ {ab.side.toUpperCase()}
+            </button>
+          </div>
+          {history.length > 0 && (
+            <details>
+              <summary className="muted small">
+                {t.historyTitle} ({history.length})
+              </summary>
+              <ul className="preset-list">
+                {history.map((h) => (
+                  <li key={h.at}>
+                    <button className="ghost preset-name small" onClick={() => restore(h)}>
+                      {new Date(h.at).toLocaleTimeString()} · {h.label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
           <h3>{t.addLayer}</h3>
           <div className="style-row">
             {KINDS.map((k) => (
@@ -343,6 +542,9 @@ export function Ambient() {
                     </button>
                     <button className={l.solo ? "on" : ""} title={t.solo} onClick={(e) => (e.stopPropagation(), patchLayer(l.id, { solo: !l.solo }))}>
                       {t.soloAbbr}
+                    </button>
+                    <button className={l.locked ? "on" : ""} title={t.lockLayer} aria-pressed={l.locked} onClick={(e) => (e.stopPropagation(), patchLayer(l.id, { locked: !l.locked }))}>
+                      {l.locked ? "🔒" : "🔓"}
                     </button>
                   </div>
                   <div className="track-ctl">
@@ -480,14 +682,14 @@ export function Ambient() {
           onCancel={() => setConfirm(null)}
         />
       )}
-      {confirm?.kind === "starter" && (
+      {confirm?.kind === "deletePreset" && (
         <ConfirmDialog
-          title={t[confirm.key]}
-          body={t.starterReplaceExplain}
-          confirmLabel={t.starterReplace}
+          title={t.presetDelete}
+          body={t.presetDeleteExplain}
+          confirmLabel={t.presetDelete}
           cancelLabel={t.cancel}
           onConfirm={() => {
-            applyStarter(confirm.key);
+            void deletePreset(confirm.id);
             setConfirm(null);
           }}
           onCancel={() => setConfirm(null)}

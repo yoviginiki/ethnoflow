@@ -504,6 +504,8 @@ export interface AmbientLayer {
   solo: boolean;
   seed: number;
   license_ref: string | null;
+  /** "Keep what I like": randomize never changes a locked layer. */
+  locked: boolean;
 }
 
 export interface Macros {
@@ -521,7 +523,19 @@ export interface Ambient {
   layers: AmbientLayer[];
   macros: Macros;
   preset: string | null;
+  tags: string[];
 }
+
+export interface PresetSummary {
+  id: string;
+  name: string;
+  tags: string[];
+  factory: boolean;
+  layer_count: number;
+}
+
+export const AMBIENT_TAGS = ["forest", "river", "night", "fog", "mountain", "ethno", "meditation", "dark", "warm", "liquid", "no_key"] as const;
+export type AmbientTag = (typeof AMBIENT_TAGS)[number];
 
 export interface AmbientView {
   ambient: Ambient;
@@ -942,6 +956,10 @@ export const api = {
   ambientStop: () => invoke<void>("ambient_stop"),
   ambientStatus: () => invoke<AmbientStatus>("ambient_status"),
   backgroundFadeOut: (seconds: number) => invoke<void>("background_fade_out", { seconds }),
+  ambientPresets: () => invoke<PresetSummary[]>("ambient_presets"),
+  ambientPresetLoad: (id: string) => invoke<Ambient>("ambient_preset_load", { id }),
+  ambientPresetSave: (name: string, tags: string[], rack: Ambient) => invoke<PresetSummary[]>("ambient_preset_save", { name, tags, rack }),
+  ambientPresetDelete: (id: string) => invoke<PresetSummary[]>("ambient_preset_delete", { id }),
   arrangementGet: () => invoke<ArrangementView>("arrangement_get"),
   setArrangement: (arrangement: Arrangement) => invoke<ArrangementView>("set_arrangement", { arrangement }),
   arrangementPlay: (device: string | null, fromSeconds: number | null) =>

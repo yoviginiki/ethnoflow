@@ -64,6 +64,9 @@ export interface Prefs {
   harmony: HarmonyPrefs;
   /** Master level of the background (drone + pad) in dB. */
   masterDb: number;
+  /** Ambient preset ids marked as favourites / recently loaded (F1A.3). */
+  favPresets: string[];
+  recentPresets: string[];
 }
 
 export interface HarmonyPrefs {
@@ -172,6 +175,8 @@ export const DEFAULT_PREFS: Prefs = {
   intent: DEFAULT_INTENT,
   harmony: DEFAULT_HARMONY,
   masterDb: 0,
+  favPresets: [],
+  recentPresets: [],
 };
 
 function loadPrefs(): Prefs {

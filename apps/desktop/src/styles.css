@@ -344,3 +344,15 @@ button.small { font-size: 12px; padding: 3px 7px; }
 @media (max-width: 1100px) {
   .ambient-body { grid-template-columns: 1fr; }
 }
+
+/* Atmosphere: preset browser (F1A.3) */
+.tag-row { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip { font-size: 11px; padding: 1px 8px; border-radius: 10px; border: 1px solid var(--axis); background: transparent; color: var(--muted); }
+.chip.on { background: var(--accent); color: #111; border-color: var(--accent); }
+.preset-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; max-height: 220px; overflow-y: auto; }
+.preset-list li { display: flex; align-items: center; gap: 4px; }
+.preset-list li.current .preset-name { color: var(--accent); }
+.preset-list .preset-name { flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.preset-list button.on { color: var(--warn); }
+.save-preset { gap: 6px; padding: 8px; }
+.ambient-left button.on { background: var(--accent); color: #111; border-color: var(--accent); }
