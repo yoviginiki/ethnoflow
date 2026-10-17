@@ -743,6 +743,22 @@ score (voice leading, clashes, density, register), не естетика; Evolve
 Останало: live beat follower с confidence; predictive режим експериментален и обозначен;
 RØDECaster Smart Pads и NI NKS след лицензна проверка (ADR).
 
+## Phase 10 — Rhythm Laboratory & Instrument Forge (owner spec 2026-10-18)
+Спецификация: `docs/ETHNOFLOW_RHYTHM_INSTRUMENT_FORGE_MASTER_SPEC.md` (R0–R8). Поглъща
+F4.8/F4.9. Статус: R0 одит и план в `docs/rhythm/` — чака одобрение; код не се пише
+преди него. Критерий за PoC (R2): един инструмент в собствена страница с реална обработка,
+Save As, връщане в ритъм секцията, запис/отваряне, WAV.
+
+## Phase 11 — Music DNA Analyzer · Arrangement Composer · Musical Director (owner spec 2026-10-18)
+Спецификация: `docs/ETHNOFLOW_MUSIC_DNA_ARRANGEMENT_COMPOSER_MASTER_SPEC.md` (A–G).
+Разширява Phase 7 (вариации) и F5.4 (експорт). Статус: Phase A одит в `docs/music-dna/`
+— чака одобрение.
+
+## Phase 12 — Live Performance Director & Interactive Song Map (owner spec 2026-10-18)
+Спецификация: `docs/ETHNOFLOW_LIVE_PERFORMANCE_DIRECTOR_SPEC.md` (0–7). Разширява F8.1 и
+Академията. Статус: Phase 0 одит + UI blueprint в `docs/performance-director/` — чака
+одобрение.
+
 ## Phase 9 — Release
 Академия 4–6, локализация, инсталатори, подпис или ясно „unsigned", security review,
 достъпност, crash reports opt-in, лицензи на всички семпли и soundfont-ове.

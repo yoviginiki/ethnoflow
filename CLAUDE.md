@@ -89,6 +89,15 @@ first (scale, tempo, takes), never assume a key or tempo, keep levels safe, save
 you set as presets **with notes that explain why**, start sound only when asked, and
 answer in Bulgarian with what to turn to change the character.
 
+## Owner programs with gates (2026-10-18)
+
+Three owner specifications live in `docs/`: `ETHNOFLOW_RHYTHM_INSTRUMENT_FORGE_MASTER_SPEC.md`,
+`ETHNOFLOW_MUSIC_DNA_ARRANGEMENT_COMPOSER_MASTER_SPEC.md`,
+`ETHNOFLOW_LIVE_PERFORMANCE_DIRECTOR_SPEC.md` (and `ETHNOFLOW_IMPLEMENTATION_QUALITY_CONTRACT.md`
+= the fidelity contract). Each starts with an audit/plan gate and the owner's approval
+before any code: see `docs/ROADMAP.md` § "Programs received 2026-10-18" for the current
+gate status and `docs/audits/CURRENT_STATE.md` for the shared inventory.
+
 ## Fidelity contract (mandatory, 2026-10-17)
 
 `docs/CONTRACT_FIDELITY.md` is the owner's engineering contract and binds every slice: no

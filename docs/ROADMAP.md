@@ -135,6 +135,30 @@ audio graph — the clips, the drone and the pad share one transport, one master
 one limiter — together with an explicit background play/stop in every screen
 (0.2.9). Phase 1A and Phase 4 follow as before; F5.2–F5.4 stay in Phase 5.
 
+## Programs received 2026-10-18 (owner specifications; gated, audits first)
+
+Three master specifications arrived from the owner on 2026-10-18, each with its own
+phase gates and the rule "no code before the audit/plan is approved":
+
+| Program | Spec | First gate | Audit / plan |
+|---|---|---|---|
+| **P1 Rhythm Laboratory & Instrument Forge** (R0–R8) | `docs/ETHNOFLOW_RHYTHM_INSTRUMENT_FORGE_MASTER_SPEC.md` | R0 audit + plan → approval → R1 registry → R2 Instrument Designer MVP (PoC: one instrument in its own page, real DSP, Save As, back into the rhythm section, save/reopen, WAV) | `docs/rhythm/AUDIT.md`, `docs/rhythm/IMPLEMENTATION_PLAN.md` |
+| **P2 Music DNA Analyzer, Arrangement Composer, Musical Director** (A–G) | `docs/ETHNOFLOW_MUSIC_DNA_ARRANGEMENT_COMPOSER_MASTER_SPEC.md` | Phase A audit only → approval | `docs/music-dna/` |
+| **P3 Live Performance Director & Interactive Song Map** (0–7) | `docs/ETHNOFLOW_LIVE_PERFORMANCE_DIRECTOR_SPEC.md` | Phase 0 audit + UI blueprint → approval | `docs/performance-director/` |
+
+Shared artifacts required by the quality contract: `docs/audits/CURRENT_STATE.md`
+(inventory with file references and real screenshots) and
+`docs/traceability/FEATURE_MATRIX.md`. They absorb and supersede the "Sound Designer /
+new instruments" items of Phase 1B (F4.8/F4.9 → P1) and extend Phases 5, 7 and 8 of the
+FEATURE_SPEC (studio export → P2 F; intelligent variations → P2 D/E; live accompanist →
+P3). The Soundscapes modules still pending (Shimmer, Resonator, Choir drone, Bloom, Tape
+loop, Spaces) continue as small slices between the gates, because they do not depend on
+the programs' architecture decisions.
+
+**Recorded order after the owner's messages of 2026-10-18:** background mixer (done) →
+audits for P1/P2/P3 (this commit) → owner approval → P1 R1/R2 PoC → P2 B/C → P3 1/2 …,
+interleaved as the owner decides at each gate.
+
 ## Phase 1B — Soundscapes & Sound Designer (approved 2026-10-17, in progress)
 
 **Owner decision (2026-10-17 evening):** "davai napred" on the proposal below, in the
