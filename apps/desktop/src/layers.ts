@@ -122,6 +122,7 @@ export function useBackgroundLayers() {
       if (st.layers.pad) useStore.getState().setLayer("pad", false);
       if (st.layers.ambient) useStore.getState().setLayer("ambient", false);
       if (st.layers.rhythm) useStore.getState().setLayer("rhythm", false);
+      if (st.metronomeOn) useStore.getState().setMetronomeOn(false);
       useStore.getState().setAmbient(null);
       useStore.getState().setSleepAt(null);
     }
@@ -182,6 +183,30 @@ export function useBackgroundLayers() {
     api.setRhythm(rhythmSettings()).then((st) => useStore.getState().setRhythmStatus(st)).catch(fail);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rhythmOn, rhythmPrefs, padChord, dRoot, scaleKey, profileKey, a4, timingKey, dronePrefs.intonation]);
+
+  // Standalone metronome: follows its switch, the output device and the timing.
+  const metronomeOn = useStore((s) => s.metronomeOn);
+  const mode = useStore((s) => s.mode);
+  useEffect(() => {
+    if (!metronomeOn || !project) return;
+    if (mode === "recording") {
+      // The recording brings its own click (count-in, click while recording).
+      useStore.getState().setMetronomeOn(false);
+      return;
+    }
+    let cancelled = false;
+    api.startMetronome(output).catch((e) => {
+      if (!cancelled) {
+        fail(e);
+        useStore.getState().setMetronomeOn(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+      void api.stopMetronome().catch(() => undefined);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [metronomeOn, output, timingKey, mode === "recording", !!project]);
 
   // Sleep timer (F1A.2): when it is due, fade everything out.
   const sleepAt = useStore((s) => s.sleepAt);

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api, describeError, type TempoCandidate } from "./api";
 import { formatGrouping, parseGrouping } from "./format";
 import { messages } from "./i18n";
+import { MetronomeButton } from "./MetronomeButton";
 import { useStore } from "./store";
 
 const UNITS = [2, 4, 8, 16];
@@ -77,7 +78,8 @@ export function TimingPanel() {
           {hasClick
             ? `${timing.bpm} · ${timing.numerator}/${timing.unit}${timing.grouping.length ? ` (${formatGrouping(timing.grouping)})` : ""}`
             : t.noTiming}
-        </span>
+        </span>{" "}
+        <MetronomeButton compact />
       </summary>
       <form className="timing-form" onSubmit={apply}>
         <label>

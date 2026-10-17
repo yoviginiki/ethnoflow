@@ -388,3 +388,5 @@ button.small { font-size: 12px; padding: 3px 7px; }
 .rhythm .part-head { border-top: 1px solid var(--axis); padding-top: 6px; }
 .rhythm button.on { background: var(--accent); color: #111; border-color: var(--accent); }
 .counter { gap: 6px; }
+
+.timing summary button.on, .transport button.on { background: var(--accent); color: #111; border-color: var(--accent); }

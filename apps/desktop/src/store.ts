@@ -301,6 +301,9 @@ interface Store {
   setAmbientStatus: (s: AmbientStatus | null) => void;
   rhythmStatus: RhythmStatus | null;
   setRhythmStatus: (s: RhythmStatus | null) => void;
+  /** Standalone metronome switch (the click without recording/playback). */
+  metronomeOn: boolean;
+  setMetronomeOn: (on: boolean) => void;
   /** Sleep timer: epoch ms at which the background fades out, or null. */
   sleepAt: number | null;
   setSleepAt: (t: number | null) => void;
@@ -353,6 +356,8 @@ export const useStore = create<Store>((set, get) => ({
   setAmbientStatus: (ambientStatus) => set({ ambientStatus }),
   rhythmStatus: null,
   setRhythmStatus: (rhythmStatus) => set({ rhythmStatus }),
+  metronomeOn: false,
+  setMetronomeOn: (metronomeOn) => set({ metronomeOn }),
   sleepAt: null,
   setSleepAt: (sleepAt) => set({ sleepAt }),
   droneStatus: null,

@@ -5,6 +5,7 @@ import { HarmonyPanel, useHarmonyFollow, useHarmonyProposals } from "./HarmonyPa
 import { IntentPanel, usePerformanceAnalysis } from "./IntentPanel";
 import { AnalysisPanel } from "./AnalysisPanel";
 import { SampleLab } from "./SampleLab";
+import { MetronomeButton } from "./MetronomeButton";
 import { BackgroundTransport } from "./BackgroundTransport";
 import { DronePanel } from "./DronePanel";
 import { FallingNotes } from "./FallingNotes";
@@ -914,6 +915,7 @@ export function Studio() {
           {s.loaded && <AnalysisPanel withPending={withPending} selectTake={selectTake} />}
 
           <section className="transport">
+            <MetronomeButton />
             {s.mode === "recording" ? (
               <button className="danger" onClick={onStopRecord} aria-keyshortcuts="R Escape">
                 ■ {t.stop}

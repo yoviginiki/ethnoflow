@@ -508,3 +508,37 @@ mod tests {
         assert_eq!(t.grouping, vec![2, 2, 2, 3]);
     }
 }
+
+/// A click on its own (no recording, no playback), from the project's tempo and
+/// meter. Starting a recording replaces it with the recording's own click.
+#[tauri::command]
+pub async fn start_metronome(
+    state: State<'_, AppState>,
+    device: Option<String>,
+) -> CmdResult<MetronomeStatus> {
+    let mut s = state.lock();
+    if s.recording.is_some() {
+        return Err(err("recording", "The recording has its own click"));
+    }
+    let cfg = project_timing(&s)?.click(CLICK_LEVEL)?;
+    s.stop_metronome();
+    let m = Metronome::start(device.as_deref(), &cfg)?;
+    let st = m.status();
+    s.metronome = Some(m);
+    Ok(st)
+}
+
+#[tauri::command]
+pub async fn stop_metronome(state: State<'_, AppState>) -> CmdResult<()> {
+    let mut s = state.lock();
+    if s.recording.is_none() {
+        s.stop_metronome();
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn metronome_status(state: State<'_, AppState>) -> CmdResult<Option<MetronomeStatus>> {
+    let s = state.lock();
+    Ok(s.metronome.as_ref().map(|m| m.status()))
+}

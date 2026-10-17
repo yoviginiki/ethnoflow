@@ -1162,6 +1162,9 @@ export const api = {
   setPlaybackLoop: (loopSeconds: [number, number] | null) =>
     invoke<void>("set_playback_loop", { loopSeconds }),
   setPlaybackClick: (on: boolean) => invoke<void>("set_playback_click", { on }),
+  startMetronome: (device: string | null) => invoke<MetronomeStatus>("start_metronome", { device }),
+  stopMetronome: () => invoke<void>("stop_metronome"),
+  metronomeStatus: () => invoke<MetronomeStatus | null>("metronome_status"),
   stopPlayback: () => invoke<void>("stop_playback"),
 
   ambientGet: () => invoke<AmbientView>("ambient_get"),
