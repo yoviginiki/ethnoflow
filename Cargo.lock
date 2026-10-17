@@ -872,7 +872,7 @@ dependencies = [
 
 [[package]]
 name = "ethnoflow-audio-engine"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "cpal",
  "hound",
@@ -886,7 +886,7 @@ dependencies = [
 
 [[package]]
 name = "ethnoflow-desktop"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "ethnoflow-audio-engine",
  "ethnoflow-music-core",
@@ -902,7 +902,7 @@ dependencies = [
 
 [[package]]
 name = "ethnoflow-music-core"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "midly",
  "serde",
@@ -910,7 +910,7 @@ dependencies = [
 
 [[package]]
 name = "ethnoflow-project"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "blake3",
  "ethnoflow-audio-engine",
