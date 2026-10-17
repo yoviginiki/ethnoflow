@@ -4,6 +4,7 @@
 //! a ranked list with probabilities; non-tempered (custom) scales are first-class.
 
 pub mod events;
+pub mod harmony;
 pub mod intent;
 pub mod key;
 pub mod midi;
@@ -17,6 +18,10 @@ pub mod tracker;
 pub mod trainer;
 
 pub use events::{parse_smf, tick_to_seconds, MidiClip, MidiError, NoteEvent, TrackInfo};
+pub use harmony::{
+    propose, propose_all, BassEvent, ChordEvent, ChordTone, HarmonyParams, HarmonyProposal,
+    HarmonyReason, ScoreBreakdown, Shape, Strategy,
+};
 pub use intent::{
     analyze_performance, classify, estimate_intent, AnalysisInput, Annotation, Calibration,
     Classified, ClassifierParams, ClassifyInput, Expected, IntentEstimate, Mode, ModeParams,
