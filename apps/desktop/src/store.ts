@@ -6,8 +6,10 @@ import { create } from "zustand";
 import type {
   AnalysisView,
   DeviceInfo,
+  DroneStatus,
   Emotion,
   Intonation,
+  PadStatus,
   LoadedTakeInfo,
   MidiEvent,
   MidiTakeView,
@@ -24,7 +26,7 @@ import type {
 import type { Lang } from "./i18n";
 
 export type Mode = "idle" | "recording" | "playing";
-export type Screen = "home" | "play";
+export type Screen = "home" | "play" | "compose";
 
 export interface Prefs {
   lang: Lang;
@@ -225,6 +227,17 @@ interface Store {
   meterDb: number;
   setMeterDb: (db: number) => void;
 
+  /** Background layers on the audio graph (F3.2/F3.3); run by `useBackgroundLayers`. */
+  layers: { drone: boolean; pad: boolean };
+  setLayer: (name: "drone" | "pad", on: boolean) => void;
+  droneStatus: DroneStatus | null;
+  setDroneStatus: (s: DroneStatus | null) => void;
+  padStatus: PadStatus | null;
+  setPadStatus: (s: PadStatus | null) => void;
+  /** Compose First asked for a recording: the studio starts it on arrival. */
+  pendingRecord: boolean;
+  setPendingRecord: (p: boolean) => void;
+
   message: string | null;
   error: string | null;
   setMessage: (m: string | null) => void;
@@ -241,6 +254,15 @@ export const useStore = create<Store>((set, get) => ({
 
   screen: "home",
   setScreen: (screen) => set({ screen }),
+
+  layers: { drone: false, pad: false },
+  setLayer: (name, on) => set({ layers: { ...get().layers, [name]: on } }),
+  droneStatus: null,
+  setDroneStatus: (droneStatus) => set({ droneStatus }),
+  padStatus: null,
+  setPadStatus: (padStatus) => set({ padStatus }),
+  pendingRecord: false,
+  setPendingRecord: (pendingRecord) => set({ pendingRecord }),
 
   inputDevices: [],
   outputDevices: [],

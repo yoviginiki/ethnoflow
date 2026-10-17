@@ -1,4 +1,6 @@
+import { Compose } from "./Compose";
 import { Home } from "./Home";
+import { useBackgroundLayers } from "./layers";
 import { ProjectPicker } from "./ProjectPicker";
 import { Studio } from "./Studio";
 import { messages, type Lang } from "./i18n";
@@ -11,7 +13,10 @@ export default function App() {
   const setScreen = useStore((s) => s.setScreen);
   const project = useStore((s) => s.project);
   const mode = useStore((s) => s.mode);
+  const layers = useStore((s) => s.layers);
+  const setLayer = useStore((s) => s.setLayer);
   const t = messages[lang];
+  useBackgroundLayers();
 
   return (
     <div className="app">
@@ -43,6 +48,26 @@ export default function App() {
 
       {screen === "home" && <Home />}
       {screen === "play" && (project ? <Studio /> : <ProjectPicker />)}
+      {screen === "compose" && (project ? <Compose /> : <ProjectPicker />)}
+      {(layers.drone || layers.pad) && screen !== "compose" && (
+        <div className="layers-badge small" role="status">
+          {layers.drone && t.drone}
+          {layers.drone && layers.pad && " · "}
+          {layers.pad && t.pad}
+          <button className="ghost small" onClick={() => setScreen("compose")}>
+            {t.areaAccomp}
+          </button>
+          <button
+            className="ghost small"
+            onClick={() => {
+              setLayer("drone", false);
+              setLayer("pad", false);
+            }}
+          >
+            {t.stopLayers}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

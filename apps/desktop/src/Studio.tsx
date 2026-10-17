@@ -68,6 +68,15 @@ export function Studio() {
     void refreshDevices();
   }, [refreshDevices]);
 
+  // Compose First's "Play & record": start recording as soon as the studio is up.
+  useEffect(() => {
+    const st = useStore.getState();
+    if (!st.pendingRecord) return;
+    st.setPendingRecord(false);
+    if (st.mode === "idle" && st.pending === null) void onRecord();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const selectTake = useCallback(
     async (id: string) => {
       const st = useStore.getState();

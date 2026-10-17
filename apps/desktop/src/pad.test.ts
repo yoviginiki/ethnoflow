@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { voicingNotes } from "./PadPanel";
+import { voicingNotes } from "./layers";
 import type { Scale } from "./api";
 
 describe("voicingNotes (F3.3)", () => {

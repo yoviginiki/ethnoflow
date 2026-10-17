@@ -249,3 +249,24 @@ button.small { font-size: 12px; padding: 3px 7px; }
 .xy-label { position: absolute; pointer-events: none; }
 .xy-label.x { right: 6px; bottom: 2px; }
 .xy-label.y { left: 2px; top: 4px; writing-mode: vertical-rl; transform: rotate(180deg); }
+
+/* Compose First (F3.5) */
+.compose { display: flex; flex-direction: column; gap: 10px; padding: 12px 16px; }
+.compose h2 { margin: 0 0 4px; }
+.compose h3 { margin: 0 0 6px; font-size: 1em; }
+.style-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.style-row .area { padding: 6px 10px; display: inline-flex; gap: 6px; align-items: center; }
+.layers-badge {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--panel, #222);
+  border: 1px solid var(--axis);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  z-index: 20;
+}
