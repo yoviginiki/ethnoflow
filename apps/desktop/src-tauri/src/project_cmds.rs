@@ -231,6 +231,7 @@ pub fn close_inner(s: &mut Inner) {
     s.stop_playback();
     s.stop_metronome();
     s.stop_monitor();
+    s.stop_live_synth();
     s.loaded = None;
     s.health.clear();
     s.project = None;

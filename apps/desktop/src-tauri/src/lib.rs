@@ -5,6 +5,7 @@ mod midi_cmds;
 mod project_cmds;
 mod settings;
 mod state;
+mod synth_cmds;
 mod trainer_cmds;
 
 use state::AppState;
@@ -80,6 +81,11 @@ pub fn run() {
             instrument_cmds::remove_profile_note,
             instrument_cmds::play_profile_note,
             trainer_cmds::evaluate_performance,
+            synth_cmds::start_live_synth,
+            synth_cmds::stop_live_synth,
+            synth_cmds::synth_note,
+            synth_cmds::synth_all_off,
+            synth_cmds::live_synth_status,
             project_cmds::export_wav,
         ])
         .build(tauri::generate_context!())

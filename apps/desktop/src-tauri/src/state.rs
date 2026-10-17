@@ -7,7 +7,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use audio_engine::{AudioBuffer, InputMonitor, Metronome, Player, Recorder};
+use audio_engine::{AudioBuffer, InputMonitor, LiveSynth, Metronome, Player, Recorder};
 use project::{Project, TakeHealth};
 
 pub struct ActiveRecording {
@@ -70,6 +70,8 @@ pub struct Inner {
     pub tone: Option<Player>,
     /// "Play the notes": the synth rendering of the current notes, playing.
     pub notes_player: Option<Player>,
+    /// Live synth driven by the computer keyboard / MIDI input.
+    pub live_synth: Option<LiveSynth>,
     pub loaded: Option<LoadedTake>,
 }
 
@@ -97,6 +99,12 @@ impl Inner {
     pub fn stop_monitor(&mut self) {
         if let Some(m) = self.monitor.take() {
             m.stop();
+        }
+    }
+
+    pub fn stop_live_synth(&mut self) {
+        if let Some(s) = self.live_synth.take() {
+            s.stop();
         }
     }
 }

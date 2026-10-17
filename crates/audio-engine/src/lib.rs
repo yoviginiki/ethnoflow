@@ -13,6 +13,7 @@ pub mod buffer;
 pub mod decode;
 pub mod devices;
 pub mod error;
+pub mod live_synth;
 pub mod metronome;
 pub mod monitor;
 pub mod peaks;
@@ -32,6 +33,7 @@ pub use devices::{
     STANDARD_RATES,
 };
 pub use error::{AudioError, Result};
+pub use live_synth::{Cmd as SynthCmd, LiveEngine, LiveSynth, LiveSynthStatus};
 pub use metronome::{
     mix_click, ClickConfig, ClickKind, ClickSynth, GridPosition, Metronome, MetronomeStatus,
 };

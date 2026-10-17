@@ -74,7 +74,7 @@ fn bend_at(bend: &[(f64, f64)], t: f64) -> f64 {
     c0 + (c1 - c0) * (t - t0) / (t1 - t0)
 }
 
-fn wave(voice: Voice, phase: f64, t_in_note: f64) -> f64 {
+pub(crate) fn wave(voice: Voice, phase: f64, t_in_note: f64) -> f64 {
     let p = phase * std::f64::consts::TAU;
     match voice {
         Voice::Sine => p.sin(),
