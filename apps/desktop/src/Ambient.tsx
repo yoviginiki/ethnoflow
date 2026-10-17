@@ -124,6 +124,8 @@ export function Ambient() {
   const [showSave, setShowSave] = useState(false);
   const [ab, setAb] = useState<{ a: AmbientRack | null; b: AmbientRack | null; side: "a" | "b" }>({ a: null, b: null, side: "a" });
   const [history, setHistory] = useState<Snapshot[]>([]);
+  const [showLeft, setShowLeft] = useState(true);
+  const [showRight, setShowRight] = useState(true);
   const [fadeSeconds, setFadeSeconds] = useState(15);
   const [editingName, setEditingName] = useState<string | null>(null);
   const fail = useCallback((e: unknown) => useStore.getState().setError(describeError(e)), []);
@@ -378,9 +380,16 @@ export function Ambient() {
         <div className="muted small">{t.ambientIntro}</div>
       </section>
 
-      <div className="ambient-body">
+      <div className={`ambient-body ${showLeft ? "" : "left-collapsed"} ${showRight ? "" : "right-collapsed"}`}>
         <aside className="panel ambient-left">
-          <h3>{t.presetsTitle}</h3>
+          <div className="panel-head">
+            {showLeft && <h3>{t.presetsTitle}</h3>}
+            <button className="ghost small" title={showLeft ? t.minimizePanel : t.restorePanel} aria-expanded={showLeft} onClick={() => setShowLeft((v) => !v)}>
+              {showLeft ? "◀" : "▶"}
+            </button>
+          </div>
+          {showLeft && (
+            <>
           <input type="search" value={search} placeholder={t.presetSearch} onChange={(e) => setSearch(e.target.value)} aria-label={t.presetSearch} />
           <div className="tag-row">
             <button className={`chip ${tagFilter === null ? "on" : ""}`} onClick={() => setTagFilter(null)}>
@@ -496,6 +505,8 @@ export function Ambient() {
           </label>
           {layers.length >= MAX_AMBIENT_LAYERS && <div className="muted small">{t.maxLayers}</div>}
           <div className="muted small">{t.safeStartHint}</div>
+            </>
+          )}
         </aside>
 
         <section className="panel ambient-rack" aria-label={t.ambientTitle}>
@@ -566,7 +577,14 @@ export function Ambient() {
         </section>
 
         <aside className="panel ambient-right">
-          <h3>{t.macrosTitle}</h3>
+          <div className="panel-head">
+            <button className="ghost small" title={showRight ? t.minimizePanel : t.restorePanel} aria-expanded={showRight} onClick={() => setShowRight((v) => !v)}>
+              {showRight ? "▶" : "◀"}
+            </button>
+            {showRight && <h3>{t.macrosTitle}</h3>}
+          </div>
+          {showRight && (
+            <>
           <div className="drone-sliders one-col">
             {MACRO_SLIDERS.map(({ key, label }) => (
               <label key={key} className="drone-slider">
@@ -668,6 +686,8 @@ export function Ambient() {
               </label>
               {rack && <LaneEditor rack={rack} layerId={sel.id} source={sel.source} laneTime={status?.lane_time ?? 0} onChange={commit} />}
             </div>
+          )}
+            </>
           )}
         </aside>
       </div>

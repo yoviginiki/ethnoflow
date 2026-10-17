@@ -226,6 +226,7 @@ export function ProgramPanel({ rack, status, timing, projectName, onChange }: Pr
   const [inBars, setInBars] = useState(!!barSeconds);
   const [stems, setStems] = useState(false);
   const [exportSeconds, setExportSeconds] = useState(300);
+  const [collapsed, setCollapsed] = useState(false);
   const fail = (e: unknown) => useStore.getState().setError(describeError(e));
   const pos = status?.program_position ?? 0;
   const running = status?.program_playing ?? false;
@@ -279,6 +280,9 @@ export function ProgramPanel({ rack, status, timing, projectName, onChange }: Pr
   return (
     <section className="panel program">
       <div className="analysis-row">
+        <button className="ghost small" title={collapsed ? t.restorePanel : t.minimizePanel} aria-expanded={!collapsed} onClick={() => setCollapsed((v) => !v)}>
+          {collapsed ? "▸" : "▾"}
+        </button>
         <h3>{t.programTitle}</h3>
         <button className="ghost" disabled={!s.layers.ambient || scenes.length === 0} onClick={() => void transport(!running, null)} title={s.layers.ambient ? "" : t.programNeedsRack}>
           {running ? "❚❚" : "▶"} {t.programPlay}
@@ -322,6 +326,8 @@ export function ProgramPanel({ rack, status, timing, projectName, onChange }: Pr
           </label>
         )}
       </div>
+      {!collapsed && (
+        <>
       <div className="scenes">
         {scenes.map((sc, i) => {
           const active = pos >= sc.start_s && pos < sc.start_s + sc.duration_s && scenes.length > 0;
@@ -383,6 +389,8 @@ export function ProgramPanel({ rack, status, timing, projectName, onChange }: Pr
         </label>
         <span className="muted small">{t.exportProgramHint}</span>
       </div>
+        </>
+      )}
     </section>
   );
 }

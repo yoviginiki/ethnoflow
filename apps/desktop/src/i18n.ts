@@ -5,7 +5,7 @@ export type Lang = "bg" | "en";
 
 const bg = {
   appTitle: "EthnoFlow Studio",
-  phase: "Фаза 1 · Запис и проекти",
+  phase: "Начало · избери област",
   language: "Език",
   back: "Начало",
   comingSoon: "Скоро",
@@ -756,6 +756,8 @@ const bg = {
   sectionAtCursor: "секция при курсора",
   sectionsHint: "Маркери Intro / A / B / Build / Drop / Break / Outro на линийката; ✕ маха най-близкия до курсора.",
   sectionRemoveNearest: "Махни най-близкия маркер",
+  minimizePanel: "Свий панела",
+  restorePanel: "Разгъни панела",
   addLayer: "Добави слой",
   kindNoise: "Шум",
   kindWind: "Вятър",
@@ -819,7 +821,7 @@ const bg = {
 
 const en: typeof bg = {
   appTitle: "EthnoFlow Studio",
-  phase: "Phase 1 · Recording & projects",
+  phase: "Home · choose an area",
   language: "Language",
   back: "Home",
   comingSoon: "Coming",
@@ -1548,6 +1550,8 @@ const en: typeof bg = {
   sectionAtCursor: "section at cursor",
   sectionsHint: "Intro / A / B / Build / Drop / Break / Outro markers on the ruler; ✕ removes the one nearest the cursor.",
   sectionRemoveNearest: "Remove the nearest marker",
+  minimizePanel: "Collapse panel",
+  restorePanel: "Expand panel",
   addLayer: "Add layer",
   kindNoise: "Noise",
   kindWind: "Wind",

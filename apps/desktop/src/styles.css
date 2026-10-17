@@ -321,9 +321,16 @@ button.small { font-size: 12px; padding: 3px 7px; }
 }
 
 /* Atmosphere: ambient playground (F1A.1) */
-.ambient { display: flex; flex-direction: column; gap: 10px; padding: 12px 16px; flex: 1; min-height: 0; }
+.ambient { display: flex; flex-direction: column; gap: 10px; padding: 12px 16px; }
 .ambient h3 { margin: 0; font-size: 1em; }
-.ambient-body { display: grid; grid-template-columns: minmax(200px, 240px) 1fr minmax(260px, 320px); gap: 10px; flex: 1; min-height: 0; align-items: start; }
+.ambient-body { display: grid; grid-template-columns: minmax(200px, 240px) 1fr minmax(260px, 320px); gap: 10px; align-items: start; }
+.ambient-body.left-collapsed { grid-template-columns: auto 1fr minmax(260px, 320px); }
+.ambient-body.right-collapsed { grid-template-columns: minmax(200px, 240px) 1fr auto; }
+.ambient-body.left-collapsed.right-collapsed { grid-template-columns: auto 1fr auto; }
+.panel-head { display: flex; align-items: center; gap: 8px; }
+.panel-head h3 { flex: 1; }
+.breadcrumb { color: var(--muted); font-size: 12px; }
+.breadcrumb strong { color: var(--text); font-weight: 600; }
 .ambient-left, .ambient-right { gap: 8px; }
 .ambient-rack { min-height: 320px; overflow-x: auto; }
 .strips { display: flex; gap: 8px; align-items: stretch; }

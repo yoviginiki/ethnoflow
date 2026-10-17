@@ -6,8 +6,16 @@ import { Home } from "./Home";
 import { useBackgroundLayers } from "./layers";
 import { ProjectPicker } from "./ProjectPicker";
 import { Studio } from "./Studio";
-import { messages, type Lang } from "./i18n";
-import { useStore } from "./store";
+import { messages, type Lang, type StringMessageKey } from "./i18n";
+import { useStore, type Screen } from "./store";
+
+/** Title of each area, shown in the top bar so the user always sees where they are. */
+const SCREEN_TITLE: Record<Exclude<Screen, "home">, StringMessageKey> = {
+  play: "areaPlay",
+  compose: "areaAccomp",
+  studio: "areaStudio",
+  ambient: "areaAmbient",
+};
 
 export default function App() {
   const lang = useStore((s) => s.prefs.lang);
@@ -36,7 +44,15 @@ export default function App() {
           )}
           <div>
             <h1>{t.appTitle}</h1>
-            <div className="muted small">{t.phase}</div>
+            <div className="breadcrumb" aria-live="polite">
+              {screen === "home" ? (
+                t.phase
+              ) : (
+                <>
+                  {t.back} › <strong>{t[SCREEN_TITLE[screen]]}</strong>
+                </>
+              )}
+            </div>
           </div>
         </div>
         <label className="inline">
