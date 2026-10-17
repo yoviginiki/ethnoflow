@@ -127,6 +127,9 @@ interface Store {
   notesUndo: Note[][];
   pushUndo: (notes: Note[]) => void;
   popUndo: () => Note[] | undefined;
+  notesRedo: Note[][];
+  pushRedo: (notes: Note[]) => void;
+  popRedo: () => Note[] | undefined;
 
   /** Live tuner reading while idle (input monitor), or null. */
   monitor: MonitorStatus | null;
@@ -192,7 +195,7 @@ export const useStore = create<Store>((set, get) => ({
   setPending: (pending) => set({ pending }),
 
   analysis: null,
-  setAnalysis: (analysis) => set({ analysis, selectedNote: null, notesUndo: [] }),
+  setAnalysis: (analysis) => set({ analysis, selectedNote: null, notesUndo: [], notesRedo: [] }),
   patchAnalysis: (analysis) =>
     set((st) => ({
       analysis,
@@ -201,11 +204,19 @@ export const useStore = create<Store>((set, get) => ({
   selectedNote: null,
   setSelectedNote: (selectedNote) => set({ selectedNote }),
   notesUndo: [],
-  pushUndo: (notes) => set({ notesUndo: [...get().notesUndo.slice(-49), notes] }),
+  pushUndo: (notes) => set({ notesUndo: [...get().notesUndo.slice(-49), notes], notesRedo: [] }),
   popUndo: () => {
     const stack = get().notesUndo;
     if (stack.length === 0) return undefined;
     set({ notesUndo: stack.slice(0, -1) });
+    return stack[stack.length - 1];
+  },
+  notesRedo: [],
+  pushRedo: (notes) => set({ notesRedo: [...get().notesRedo.slice(-49), notes] }),
+  popRedo: () => {
+    const stack = get().notesRedo;
+    if (stack.length === 0) return undefined;
+    set({ notesRedo: stack.slice(0, -1) });
     return stack[stack.length - 1];
   },
 

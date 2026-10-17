@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ContourView, Note, Scale } from "./api";
 import { centsFromScale } from "./format";
 
@@ -15,20 +15,31 @@ interface Props {
   onSelect: (index: number | null) => void;
   onSeek: (seconds: number) => void;
   onKey: (e: React.KeyboardEvent<HTMLCanvasElement>) => void;
+  /** A note was dragged: new start/end in seconds (pitch unchanged). */
+  onDrag?: (index: number, start: number, end: number) => void;
+  /** Alt+click on empty space: add a note at this time and pitch. */
+  onAdd?: (start: number, midi: number) => void;
 }
 
 const LANE_PX = 10;
 const MARGIN_PX = 2;
 const GUTTER_PX = 34;
+const EDGE_PX = 6;
+const DRAG_THRESHOLD_PX = 3;
+const MIN_NOTE_S = 0.03;
+const NEW_NOTE_S = 0.25;
 
 /**
  * Canvas piano roll aligned to the waveform's time axis: contour as a thin line,
  * notes as bars (shifted by their cents), lanes tinted when they belong to the
  * chosen scale. Editing is driven by the parent through `onKey`.
  */
-export function PianoRoll({ notes, contour, duration, cursor, playhead, selected, scale, noteNames, label, onSelect, onSeek, onKey }: Props) {
+export function PianoRoll({ notes, contour, duration, cursor, playhead, selected, scale, noteNames, label, onSelect, onSeek, onKey, onDrag, onAdd }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const drag = useRef<{ index: number; mode: "move" | "resize"; startX: number; origStart: number; origEnd: number; moved: boolean } | null>(null);
+  /** Live preview of the dragged note (start, end) until the pointer is released. */
+  const [preview, setPreview] = useState<{ index: number; start: number; end: number } | null>(null);
 
   // Pitch range from the data, with two semitones of air.
   const midis = [...notes.map((n) => n.midi), ...contour.filter((c) => c.midi !== null).map((c) => Math.round(c.midi!))];
@@ -107,8 +118,9 @@ export function PianoRoll({ notes, contour, duration, cursor, playhead, selected
 
       // Notes as bars, offset by their cents; out-of-scale notes outlined in red.
       notes.forEach((n, i) => {
-        const x = toX(n.start);
-        const wid = Math.max(2, toX(n.end) - x);
+        const pv = preview && preview.index === i ? preview : null;
+        const x = toX(pv ? pv.start : n.start);
+        const wid = Math.max(2, toX(pv ? pv.end : n.end) - x);
         const y = toY(n.midi + n.cents / 100) + 1;
         const out = scale ? Math.abs(centsFromScale(scale, n.midi)) > 1 : false;
         ctx.fillStyle = i === selected ? colHead : colWave;
@@ -144,26 +156,86 @@ export function PianoRoll({ notes, contour, duration, cursor, playhead, selected
     const ro = new ResizeObserver(draw);
     ro.observe(wrap);
     return () => ro.disconnect();
-  }, [notes, contour, duration, cursor, playhead, selected, scale, noteNames, height, hi, lo]);
+  }, [notes, contour, duration, cursor, playhead, selected, scale, noteNames, height, hi, lo, preview]);
 
-  const onClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const locate = (e: React.PointerEvent<HTMLCanvasElement> | React.MouseEvent<HTMLCanvasElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    if (x < GUTTER_PX || duration <= 0) return;
-    const sec = ((x - GUTTER_PX) / (rect.width - GUTTER_PX)) * duration;
+    const pxPerSec = duration > 0 ? (rect.width - GUTTER_PX) / duration : 0;
+    const sec = pxPerSec > 0 ? (x - GUTTER_PX) / pxPerSec : 0;
     const midi = hi - Math.floor(y / LANE_PX);
     const hit = notes.findIndex((n) => sec >= n.start && sec <= n.end && Math.abs(n.midi + n.cents / 100 - midi) < 0.75);
-    if (hit >= 0) onSelect(hit);
-    else {
+    const nearEnd = hit >= 0 && pxPerSec > 0 && (notes[hit].end - sec) * pxPerSec <= EDGE_PX;
+    return { x, sec, midi, hit, nearEnd, pxPerSec };
+  };
+
+  const onPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (e.button !== 0 || duration <= 0) return;
+    const { x, sec, midi, hit, nearEnd } = locate(e);
+    if (x < GUTTER_PX) return;
+    if (hit < 0) {
+      if (e.altKey && onAdd) {
+        onAdd(Math.max(0, sec), midi);
+        return;
+      }
       onSelect(null);
-      onSeek(sec);
+      onSeek(Math.max(0, Math.min(duration, sec)));
+      return;
     }
+    onSelect(hit);
+    e.currentTarget.setPointerCapture(e.pointerId);
+    drag.current = { index: hit, mode: nearEnd ? "resize" : "move", startX: e.clientX, origStart: notes[hit].start, origEnd: notes[hit].end, moved: false };
+  };
+
+  const onPointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const d = drag.current;
+    if (!d) {
+      const { hit, nearEnd } = locate(e);
+      e.currentTarget.style.cursor = hit >= 0 ? (nearEnd ? "ew-resize" : "grab") : "crosshair";
+      return;
+    }
+    const dx = e.clientX - d.startX;
+    if (!d.moved && Math.abs(dx) < DRAG_THRESHOLD_PX) return;
+    d.moved = true;
+    const { pxPerSec } = locate(e);
+    const dt = pxPerSec > 0 ? dx / pxPerSec : 0;
+    if (d.mode === "move") {
+      const len = d.origEnd - d.origStart;
+      const start = Math.max(0, Math.min(duration - len, d.origStart + dt));
+      setPreview({ index: d.index, start, end: start + len });
+    } else {
+      const end = Math.max(d.origStart + MIN_NOTE_S, Math.min(duration, d.origEnd + dt));
+      setPreview({ index: d.index, start: d.origStart, end });
+    }
+  };
+
+  const onPointerUp = () => {
+    const d = drag.current;
+    drag.current = null;
+    if (d && d.moved && preview && onDrag) onDrag(preview.index, preview.start, preview.end);
+    setPreview(null);
   };
 
   return (
     <div ref={wrapRef} className="pianoroll-wrap" style={{ height }}>
-      <canvas ref={canvasRef} className="pianoroll" onClick={onClick} onKeyDown={onKey} role="img" aria-label={label} tabIndex={0} />
+      <canvas
+        ref={canvasRef}
+        className="pianoroll"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={() => {
+          drag.current = null;
+          setPreview(null);
+        }}
+        onKeyDown={onKey}
+        role="img"
+        aria-label={label}
+        tabIndex={0}
+      />
     </div>
   );
 }
+
+export { NEW_NOTE_S };

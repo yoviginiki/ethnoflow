@@ -6,7 +6,7 @@ import { FallingNotes } from "./FallingNotes";
 import { MidiPanel } from "./MidiPanel";
 import { formatBytes, formatDb, formatTime, isTypingTarget, linearToDb, meterFraction, takeName } from "./format";
 import { messages } from "./i18n";
-import { PianoRoll } from "./PianoRoll";
+import { NEW_NOTE_S, PianoRoll } from "./PianoRoll";
 import { TakeList } from "./TakeList";
 import { TimingPanel } from "./TimingPanel";
 import { Tuner } from "./Tuner";
@@ -301,10 +301,46 @@ export function Studio() {
   const undoNotes = useCallback(async () => {
     const st = useStore.getState();
     const prev = st.popUndo();
-    if (!prev) return;
+    if (!prev || !st.analysis) return;
+    st.pushRedo(st.analysis.notes);
     const v = await withPending(messages[st.prefs.lang].saving, () => api.updateNotes(prev));
     if (v) useStore.getState().patchAnalysis(v);
   }, [withPending]);
+
+  const redoNotes = useCallback(async () => {
+    const st = useStore.getState();
+    const next = st.popRedo();
+    if (!next || !st.analysis) return;
+    // Keep the undo chain without clearing redo.
+    useStore.setState({ notesUndo: [...st.notesUndo.slice(-49), st.analysis.notes] });
+    const v = await withPending(messages[st.prefs.lang].saving, () => api.updateNotes(next));
+    if (v) useStore.getState().patchAnalysis(v);
+  }, [withPending]);
+
+  const onDragNote = useCallback(
+    (index: number, start: number, end: number) => {
+      const st = useStore.getState();
+      if (!st.analysis || st.mode !== "idle") return;
+      const notes = st.analysis.notes.map((n) => ({ ...n }));
+      notes[index] = { ...notes[index], start, end };
+      void commitNotes(notes);
+    },
+    [commitNotes],
+  );
+
+  const onAddNote = useCallback(
+    (start: number, midi: number) => {
+      const st = useStore.getState();
+      if (!st.analysis || st.mode !== "idle" || !st.loaded) return;
+      const end = Math.min(st.loaded.duration_seconds, start + NEW_NOTE_S);
+      if (end - start < 0.03) return;
+      const notes = [...st.analysis.notes, { start, end, midi: Math.max(0, Math.min(127, midi)), cents: 0, confidence: 1, velocity: 0.7, bend: [] as [number, number][] }];
+      notes.sort((a, b) => a.start - b.start);
+      void commitNotes(notes);
+      st.setSelectedNote(notes.findIndex((n) => n.start === start && n.midi === midi));
+    },
+    [commitNotes],
+  );
 
   const onPianoKey = (e: React.KeyboardEvent<HTMLCanvasElement>) => {
     const st = useStore.getState();
@@ -313,7 +349,14 @@ export function Studio() {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
       e.preventDefault();
       e.stopPropagation();
-      void undoNotes();
+      if (e.shiftKey) void redoNotes();
+      else void undoNotes();
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") {
+      e.preventDefault();
+      e.stopPropagation();
+      void redoNotes();
       return;
     }
     const i = st.selectedNote;
@@ -726,8 +769,12 @@ export function Studio() {
                       if (s.mode === "playing") void onPlay(sec);
                     }}
                     onKey={onPianoKey}
+                    onDrag={onDragNote}
+                    onAdd={onAddNote}
                   />
-                  <div className="muted small">{t.pianoRollHint}</div>
+                  <div className="muted small">
+                    {t.pianoRollHint} {t.addNoteHint}
+                  </div>
                 </>
               ) : (
                 <FallingNotes

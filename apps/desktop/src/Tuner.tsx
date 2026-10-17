@@ -16,6 +16,60 @@ interface Props {
 const IN_SCALE_TOLERANCE_CENTS = 25;
 const PRACTICE_TOLERANCE_CENTS = 15;
 const PRACTICE_HOLD_MS = 1000;
+const HOLD_WINDOW_S = 10;
+const HOLD_TOLERANCE_CENTS = 15;
+
+interface HoldSample {
+  t: number;
+  cents: number | null;
+}
+
+/** Drift strip for "Hold the tone": cents over the last seconds, tolerance band shaded. */
+function HoldStrip({ samples, now }: { samples: HoldSample[]; now: number }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const c = ref.current;
+    if (!c) return;
+    const dpr = window.devicePixelRatio || 1;
+    const w = c.clientWidth;
+    const h = c.clientHeight;
+    if (c.width !== Math.floor(w * dpr) || c.height !== Math.floor(h * dpr)) {
+      c.width = Math.floor(w * dpr);
+      c.height = Math.floor(h * dpr);
+    }
+    const ctx = c.getContext("2d");
+    if (!ctx) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    const style = getComputedStyle(c);
+    const col = (v: string, d: string) => style.getPropertyValue(v).trim() || d;
+    const yOf = (cents: number) => h / 2 - (Math.max(-50, Math.min(50, cents)) / 50) * (h / 2 - 2);
+    ctx.fillStyle = col("--selection", "rgba(255,180,84,0.22)");
+    ctx.fillRect(0, yOf(HOLD_TOLERANCE_CENTS), w, yOf(-HOLD_TOLERANCE_CENTS) - yOf(HOLD_TOLERANCE_CENTS));
+    ctx.strokeStyle = col("--axis", "#333");
+    ctx.beginPath();
+    ctx.moveTo(0, h / 2 + 0.5);
+    ctx.lineTo(w, h / 2 + 0.5);
+    ctx.stroke();
+    ctx.strokeStyle = col("--wave", "#7fd6c2");
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    let pen = false;
+    for (const s of samples) {
+      const x = w - ((now - s.t) / HOLD_WINDOW_S) * w;
+      if (s.cents === null || x < 0) {
+        pen = false;
+        continue;
+      }
+      const y = yOf(s.cents);
+      if (pen) ctx.lineTo(x, y);
+      else ctx.moveTo(x, y);
+      pen = true;
+    }
+    ctx.stroke();
+  }, [samples, now]);
+  return <canvas ref={ref} className="hold-strip" aria-hidden="true" />;
+}
 
 /**
  * Live tuner: note name, cents needle, Hz, confidence, in-scale indicator when the
@@ -27,7 +81,41 @@ export function Tuner({ hz, confidence, a4, scale, active }: Props) {
   const [hit, setHit] = useState(false);
   const heldSince = useRef<number | null>(null);
 
+  // "Hold the tone": the first stable note latches as the reference; samples of the
+  // drift are kept for a strip, and seconds within tolerance add up.
+  const [holdOn, setHoldOn] = useState(false);
+  const [holdRef, setHoldRef] = useState<number | null>(null);
+  const [holdSamples, setHoldSamples] = useState<HoldSample[]>([]);
+  const [holdSeconds, setHoldSeconds] = useState(0);
+  const [holdNow, setHoldNow] = useState(0);
+  const lastHoldT = useRef<number | null>(null);
+
   const midiFrac = hz !== null && confidence >= 0.5 ? hzToMidi(hz, a4) : null;
+
+  useEffect(() => {
+    if (!holdOn) return;
+    const now = performance.now() / 1000;
+    setHoldNow(now);
+    let ref = holdRef;
+    if (ref === null && midiFrac !== null) {
+      ref = Math.round(midiFrac);
+      setHoldRef(ref);
+    }
+    const cents = midiFrac !== null && ref !== null ? (midiFrac - ref) * 100 : null;
+    setHoldSamples((prev) => [...prev.filter((s) => now - s.t <= HOLD_WINDOW_S), { t: now, cents }]);
+    if (lastHoldT.current !== null && cents !== null && Math.abs(cents) <= HOLD_TOLERANCE_CENTS) {
+      setHoldSeconds((s) => s + Math.min(0.2, now - lastHoldT.current!));
+    }
+    lastHoldT.current = now;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [midiFrac, holdOn]);
+
+  const resetHold = () => {
+    setHoldRef(null);
+    setHoldSamples([]);
+    setHoldSeconds(0);
+    lastHoldT.current = null;
+  };
   const parts = midiFrac !== null ? noteParts(midiFrac) : null;
   const scaleOff = midiFrac !== null && scale ? centsFromScale(scale, midiFrac) : null;
 
@@ -77,6 +165,29 @@ export function Tuner({ hz, confidence, a4, scale, active }: Props) {
       </div>
 
       <div className="practice">
+        <label className="inline small">
+          <input
+            type="checkbox"
+            checked={holdOn}
+            onChange={(e) => {
+              setHoldOn(e.target.checked);
+              resetHold();
+            }}
+          />
+          {t.holdTone}
+        </label>
+        {holdOn && (
+          <div className="hold" title={t.holdHint}>
+            <HoldStrip samples={holdSamples} now={holdNow} />
+            <span className="small mono-num">
+              {t.holdTarget}:{" "}
+              {holdRef !== null ? `${t.noteNames[noteParts(holdRef).pc]}${noteParts(holdRef).octave}` : "—"} · {holdSeconds.toFixed(1)} {t.holdSeconds}
+            </span>
+            <button className="ghost small" onClick={resetHold}>
+              {t.holdReset}
+            </button>
+          </div>
+        )}
         <span className="small muted">{t.hitTheNote}</span>
         <label className="inline">
           {t.target}
