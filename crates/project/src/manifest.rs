@@ -9,6 +9,7 @@ use std::path::Path;
 use serde::{Deserialize, Serialize};
 
 use crate::error::{ProjectError, Result};
+use crate::songmap::SongMap;
 
 pub const MANIFEST_FILE: &str = "project.json";
 pub const FORMAT_ID: &str = "ethnoflow-project";
@@ -50,6 +51,10 @@ pub struct Manifest {
     pub time_signatures: Vec<TimeSignaturePoint>,
     #[serde(default)]
     pub markers: Vec<Marker>,
+    /// The song's form in ticks (sections, tempo and meter maps); None until first edited,
+    /// in which case the view derives it from the markers at the project's tempo.
+    #[serde(default)]
+    pub song_map: Option<SongMap>,
     /// Scale the user chose (never inferred silently); `None` = not chosen.
     #[serde(default)]
     pub scale: Option<music_core::Scale>,
@@ -78,6 +83,7 @@ impl Manifest {
             tempo_map: Vec::new(),
             time_signatures: Vec::new(),
             markers: Vec::new(),
+            song_map: None,
             scale: None,
             a4_hz: None,
             instrument: None,

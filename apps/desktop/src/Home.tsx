@@ -24,6 +24,7 @@ const AREAS: Area[] = [
   { title: "areaLearn", desc: "areaLearnDesc", phase: 6 },
   { title: "areaCreate", desc: "areaCreateDesc", phase: 5 },
   { title: "areaStudio", desc: "areaStudioDesc", phase: null, screen: "studio" },
+  { title: "areaSongMap", desc: "areaSongMapDesc", phase: null, screen: "songmap" },
   { title: "areaLibrary", desc: "areaLibraryDesc", phase: null, screen: "library" },
   { title: "areaSamples", desc: "areaSamplesDesc", phase: 5 },
   { title: "areaHelp", desc: "areaHelpDesc", phase: null, screen: "help" },

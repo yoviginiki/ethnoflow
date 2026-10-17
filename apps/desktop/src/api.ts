@@ -820,12 +820,46 @@ export interface Marker {
 }
 export const SECTION_NAMES = ["Intro", "A", "B", "Build", "Drop", "Break", "Outro"] as const;
 
+// ---------- Song map (project songmap.rs) ----------
+export interface TempoSegment {
+  tick: number;
+  bpm: number;
+}
+export interface MeterSegment {
+  tick: number;
+  numerator: number;
+  unit: number;
+  grouping: number[];
+}
+export interface Section {
+  id: string;
+  role: string;
+  name: string;
+  start_tick: number;
+  end_tick: number;
+  energy: number;
+  density: number;
+  tension: number;
+  roles: string[];
+  transition_out: string | null;
+  locked: boolean;
+  notes: string;
+}
+export interface SongMap {
+  schema_version: number;
+  ppq: number;
+  tempo_map: TempoSegment[];
+  meter_map: MeterSegment[];
+  sections: Section[];
+}
+
 export interface ProjectView {
   name: string;
   root: string;
   timing: Timing;
   takes: TakeView[];
   markers: Marker[];
+  song_map: SongMap;
   loaded_take: string | null;
   scale: Scale | null;
   a4_hz: number;
@@ -1283,6 +1317,7 @@ export const api = {
   rhythmRender: (path: string, settings: RhythmSettings, bars: number | null, stems: boolean) =>
     invoke<{ path: string; stems: string[]; seconds: number; bars: number; bpm: number; sample_rate: number; peak: number }>("rhythm_render", { path, settings, bars, stems }),
   setMarkers: (markers: Marker[]) => invoke<ProjectView>("set_markers", { markers }),
+  setSongMap: (songMap: SongMap) => invoke<ProjectView>("set_song_map", { songMap }),
   estimateTakeTempo: (bpmLow: number | null, bpmHigh: number | null) => invoke<TempoCandidate[]>("estimate_take_tempo", { bpmLow, bpmHigh }),
   countermelodyToTake: (intent: IntentSettings, params: CounterUiParams, proposal: HarmonyProposal | null, label: string | null) =>
     invoke<{ project: ProjectView; take_id: string }>("countermelody_to_take", { intent, params, proposal, label }),

@@ -168,6 +168,7 @@ pub fn run() {
             library_cmds::library_replace_payload,
             library_cmds::library_delete,
             library_cmds::library_facets,
+            project_cmds::set_song_map,
             project_cmds::session_get,
             project_cmds::session_set,
             assistant_cmds::assistant_dir,

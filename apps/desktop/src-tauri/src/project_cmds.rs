@@ -80,6 +80,8 @@ pub struct ProjectView {
     pub scale: Option<music_core::Scale>,
     /// Section markers (F4.3): Intro / A / B / Build / Drop / Break / Outro, seconds.
     pub markers: Vec<project::Marker>,
+    /// The song map in ticks (stored, or derived from the markers when not yet edited).
+    pub song_map: project::SongMap,
     /// Tuning reference in effect (project value or the 440 Hz default).
     pub a4_hz: f64,
     /// The project's instrument profile (from the global store), if attached.
@@ -136,6 +138,7 @@ fn view(s: &Inner) -> CmdResult<ProjectView> {
         loaded_take: s.loaded.as_ref().map(|l| l.id.clone()),
         scale: p.manifest().scale.clone(),
         markers: p.manifest().markers.clone(),
+        song_map: derived_song_map(p.manifest()),
         a4_hz: p
             .manifest()
             .a4_hz
@@ -468,6 +471,50 @@ pub async fn delete_take(state: State<'_, AppState>, id: String) -> CmdResult<Pr
     view(&s)
 }
 
+/// The stored song map, or one derived from the markers at the project's tempo/meter
+/// (120 BPM 4/4 when the project has none yet; the UI shows that it is a draft).
+pub fn derived_song_map(m: &project::Manifest) -> project::SongMap {
+    if let Some(sm) = m.song_map.as_ref() {
+        return sm.clone();
+    }
+    let bpm = m.tempo_map.first().map(|t| t.bpm).unwrap_or(120.0);
+    let (num, unit, grouping) = m
+        .time_signatures
+        .first()
+        .map(|t| (t.numerator, t.unit, t.grouping.clone()))
+        .unwrap_or((4, 4, Vec::new()));
+    project::SongMap::from_markers(bpm, num, unit, grouping, &m.markers, 8)
+}
+
+/// Replace the song map (validated); seconds-based markers are rewritten from the
+/// sections so older screens keep showing the same form.
+#[tauri::command]
+pub async fn set_song_map(
+    state: State<'_, AppState>,
+    song_map: project::SongMap,
+) -> CmdResult<ProjectView> {
+    song_map
+        .validate()
+        .map_err(|e| err("invalid_argument", e.to_string()))?;
+    if song_map.sections.len() > 256 {
+        return Err(err("invalid_argument", "too many sections"));
+    }
+    let mut s = state.lock();
+    let markers: Vec<project::Marker> = song_map
+        .sections
+        .iter()
+        .map(|sec| project::Marker {
+            at_seconds: song_map.tick_to_seconds(sec.start_tick),
+            name: sec.name.clone(),
+        })
+        .collect();
+    project_mut(&mut s)?.update_manifest(|m| {
+        m.song_map = Some(song_map.clone());
+        m.markers = markers;
+    })?;
+    view(&s)
+}
+
 /// Replace the section markers (F4.3). Names are free text; times in seconds.
 #[tauri::command]
 pub async fn set_markers(
@@ -484,7 +531,21 @@ pub async fn set_markers(
     let mut s = state.lock();
     let mut sorted = markers;
     sorted.sort_by(|a, b| a.at_seconds.partial_cmp(&b.at_seconds).unwrap());
-    project_mut(&mut s)?.update_manifest(|m| m.markers = sorted)?;
+    project_mut(&mut s)?.update_manifest(|m| {
+        m.markers = sorted;
+        // Markers and the song map describe the same form: an edit here re-derives the map.
+        if m.song_map.is_some() {
+            let bpm = m.tempo_map.first().map(|t| t.bpm).unwrap_or(120.0);
+            let (num, unit, grouping) = m
+                .time_signatures
+                .first()
+                .map(|t| (t.numerator, t.unit, t.grouping.clone()))
+                .unwrap_or((4, 4, Vec::new()));
+            m.song_map = Some(project::SongMap::from_markers(
+                bpm, num, unit, grouping, &m.markers, 8,
+            ));
+        }
+    })?;
     view(&s)
 }
 

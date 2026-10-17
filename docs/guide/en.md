@@ -62,6 +62,12 @@ The same layers as Atmosphere, one at a time, with big knobs:
 - **Module presets** (💾/📚) with tags and notes, in the shared Library.
 - On the right: a mini mixer and the macros as knobs. Whatever you do here shows in Atmosphere too.
 
+## Song map
+
+- From Home → **Song map** or from 🗺 in My studio. Sections (intro, establish, build, drop, variation, break, bridge, outro) sit on a bar ruler; edges drag by whole bars, "Split at position" cuts on a bar line, ⇥ merges with the next, 🔒 locks.
+- Every section has **energy** and **density** (0..1): the targets the Composer and the Director will read. The map is stored in the project in ticks (with tempo and meter maps); the studio's markers are updated from it.
+- Clicking the ruler moves the clip transport; the current bar and the bars until the next section are shown. One beat transport for all layers is the next step.
+
 ## Instruments (designer)
 
 - From Home → **Instruments** or from ✎ next to each part in the rhythm section. Left: factory and your presets by category (drums, bass, synth) with search. Right: the chosen instrument with knobs.

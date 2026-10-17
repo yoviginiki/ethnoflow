@@ -46,7 +46,7 @@ requirement *groups*; each program phase adds its rows when it starts.
 |---|---|---|---|
 | A audit | `docs/music-dna/*` | — | IMPLEMENTING (docs) |
 | B analyzer foundation (import, tempo candidates with ½/2×, features, novelty/recurrence, editable map) | `crates/analysis` (new, Rust FFT — ADR needed), `DnaAnalyzer.tsx` | synthetic 174/87 fixture, boundary tolerance fixtures | NOT STARTED |
-| C blueprint schema + song form timeline (beats, tempo map) | `crates/project/src/songmap.rs` (new), `SongMap.tsx` | migration, round-trip | NOT STARTED |
+| C blueprint schema + song form timeline (beats, tempo map) | `crates/project/src/songmap.rs`, `SongMapPanel.tsx`, `SongMapScreen.tsx` | 3 Rust tests (round trip, migration, validation/split/merge), vitest helpers | FUNCTIONAL (song map); blueprint extraction NOT STARTED |
 | D first full-song arrangement | `crates/music-core/arranger/` (new): form planner, orchestrator, groove evolution, motif engine, transitions; renderer on the graph | distinctness, locks, determinism, 2–4 min render | NOT STARTED |
 | E Musical Director | `director.rs` heuristics + panel | fixture critiques | NOT STARTED |
 | F DAW export (aligned stems, MIDI, markers) | export service | alignment tests | NOT STARTED (ambient stems exist) |
@@ -56,7 +56,7 @@ requirement *groups*; each program phase adds its rows when it starts.
 | Req | Target component | Tests | Status |
 |---|---|---|---|
 | 0 audit + blueprint | `docs/performance-director/*` | — | IMPLEMENTING (docs) |
-| 1 interactive song map slice (6 sections, zoom, playhead in bars, persistence) | `songmap.rs` (shared with P2 C), `SongMapView.tsx`, beat transport status | seek/loop/tempo tests | NOT STARTED |
+| 1 interactive song map slice (6 sections, zoom, playhead in bars, persistence) | `songmap.rs`, `SongMapPanel.tsx` | Rust + vitest; transport tests pending | FUNCTIONAL (editing, persistence, position from the clip transport); unified beat transport NOT STARTED |
 | 2 cue scheduler (lookahead, latency-compensated countdown) | engine `CueQueue` on `BeatClock`, shell events | scheduling accuracy, seek invalidation | NOT STARTED |
 | 3 cue planner v1 | `music-core/cues.rs` | plans distinct, constraints, seeds | NOT STARTED |
 | 4 guided recording & take review | recorder + `intent.rs` alignment | synthetic + mic | NOT STARTED (recording and analysis exist) |

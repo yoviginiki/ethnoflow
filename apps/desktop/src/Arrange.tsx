@@ -963,6 +963,9 @@ export function Arrange() {
             </button>
           )}
         </label>
+        <button className="ghost" onClick={() => useStore.getState().setScreen("songmap")} title={t.songMapOpenHint}>
+          🗺 {t.songMapShort}
+        </button>
         <button className="ghost" onClick={() => void seek(0)} title={t.toStart} aria-label={t.toStart}>
           ⏮
         </button>

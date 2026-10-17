@@ -202,6 +202,14 @@
   import in Atmosphere**: "Import samples…" (multi-file) or drag-and-drop from
   Explorer / a sample manager such as Soundly — each file becomes a take in the
   project (named after the file) and a looped layer.
+- **Song map (P2 Phase C / P3 Phase 1 slice, 2026-10-18, night)**: the song's form in
+  ticks (`crates/project/src/songmap.rs`: tempo map, meter map, sections with role /
+  energy / density / tension / roles / lock, validation, split/merge, migration from the
+  seconds markers with bar snapping; tests across tempo and meter changes); stored in
+  `project.json`, derived from markers until first edited, markers kept in sync; screen
+  "Карта на песента" with a bar ruler, draggable bar-snapped edges, add/split/merge/lock,
+  energy/density, transport position and "next section in N bars". Not yet: one beat
+  transport for clips + rhythm + atmosphere (next P3 step).
 - **Shimmer (F1B.3, 2026-10-18, night)**: the master space gained a transposed feedback
   path (delay-line pitch shifter with two windowed taps, soft-clipped loop): macro
   "Shimmer" 0..1 and a transposition choice (octave / fifth / octave+fifth / fourth) in

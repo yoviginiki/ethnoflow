@@ -504,3 +504,21 @@ button.ghost.on { border-color: var(--accent); color: var(--accent); }
 .forge-group h4 { margin: 6px 0; }
 .forge-name { font-size: 20px; font-weight: 600; min-width: 240px; }
 .forge-notes textarea { width: 100%; box-sizing: border-box; }
+
+/* Song map */
+.songmap { display: flex; flex-direction: column; gap: 8px; }
+.songmap-scroll { overflow-x: auto; border: 1px solid var(--axis); border-radius: 8px; padding: 6px; background: var(--bg); }
+.songmap-ruler { position: relative; height: 16px; }
+.songmap-bar { position: absolute; top: 0; font-size: 10px; color: var(--muted); border-left: 1px solid var(--axis); padding-left: 2px; height: 16px; }
+.songmap-lane { position: relative; height: 64px; cursor: crosshair; }
+.songmap-section { position: absolute; top: 4px; height: 56px; border-radius: 6px; color: #fff; overflow: hidden; cursor: pointer; opacity: 0.9; box-sizing: border-box; border: 2px solid transparent; }
+.songmap-section.selected { border-color: #fff; opacity: 1; }
+.songmap-section.locked { outline: 1px dashed #fff; }
+.songmap-name { position: absolute; left: 6px; top: 4px; font-size: 12px; font-weight: 600; white-space: nowrap; text-shadow: 0 1px 2px rgba(0,0,0,0.6); }
+.songmap-energy { position: absolute; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.18); }
+.songmap-handle { position: absolute; top: 0; bottom: 0; width: 8px; cursor: ew-resize; }
+.songmap-handle.left { left: 0; }
+.songmap-handle.right { right: 0; }
+.songmap-head { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--accent); pointer-events: none; }
+.songmap-inspector input[type="text"], .songmap-inspector input:not([type]) { width: 160px; }
+.songmap-screen { display: flex; flex-direction: column; gap: 10px; }

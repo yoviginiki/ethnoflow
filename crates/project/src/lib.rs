@@ -16,6 +16,7 @@ pub mod licensing;
 pub mod manifest;
 pub mod program;
 pub mod project;
+pub mod songmap;
 
 pub use ambient::{Ambient, AmbientLayer, LayerSource, Macros, AMBIENT_FILE, MAX_AMBIENT_LAYERS};
 pub use ambient_presets::{factory_presets, Preset, TAGS as AMBIENT_TAGS};
@@ -40,6 +41,9 @@ pub use program::{
 pub use project::{
     checksum_file, sanitize_name, OpenReport, Project, TakeCheck, TakeHealth, DERIVED_DIR,
     ORIGINALS_DIR, PROJECT_EXT,
+};
+pub use songmap::{
+    MeterSegment, Section, SongMap, TempoSegment, PPQ, SECTION_ROLES, SONG_MAP_SCHEMA_VERSION,
 };
 
 /// Milliseconds since the epoch (for ids the shell generates).
