@@ -202,6 +202,13 @@
   import in Atmosphere**: "Import samples…" (multi-file) or drag-and-drop from
   Explorer / a sample manager such as Soundly — each file becomes a take in the
   project (named after the file) and a looped layer.
+- **Start from a melody, Help, user guide (2026-10-17, night)**: Home opens with "Start
+  from a melody": import/record/pick a take → Analyse (on request only) → key, tempo
+  and register proposals → five complete starters (quiet ambient, dark drone, liquid
+  DnB, ambient DnB, ethno pulse) tuned to the melody, each with its facts (what was
+  assumed and where it came from), Try / Save as session / Undo. **User guide**
+  `docs/guide/bg.md` + `en.md`, rendered in the app (Home → Help) with contents and
+  search; rule 12 in CLAUDE.md keeps it current.
 - **Soundscapes screen (F1B.1) and assistant bridge (2026-10-17, night)**: the
   atmosphere rack one module at a time with big knobs, a how-to text per module, module
   presets, shuffle/lock, mini mixer and macro knobs; **assistant bridge**

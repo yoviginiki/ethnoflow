@@ -2,6 +2,7 @@ import { Ambient } from "./Ambient";
 import { Arrange } from "./Arrange";
 import { BackgroundTransport } from "./BackgroundTransport";
 import { Compose } from "./Compose";
+import { Help } from "./Help";
 import { Home } from "./Home";
 import { Library } from "./Library";
 import { PresetLibrary } from "./PresetLibrary";
@@ -12,6 +13,7 @@ import { ProjectMenu } from "./ProjectMenu";
 import { ProjectPicker } from "./ProjectPicker";
 import { RhythmScreen } from "./RhythmScreen";
 import { Soundscapes } from "./Soundscapes";
+import { Start } from "./Start";
 import { Studio } from "./Studio";
 import { messages, type Lang, type StringMessageKey } from "./i18n";
 import { useStore, type Screen } from "./store";
@@ -25,6 +27,8 @@ const SCREEN_TITLE: Record<Exclude<Screen, "home">, StringMessageKey> = {
   rhythm: "areaRhythm",
   library: "areaLibrary",
   soundscapes: "areaSoundscapes",
+  start: "areaStart",
+  help: "areaHelp",
 };
 
 export default function App() {
@@ -93,6 +97,8 @@ export default function App() {
       {screen === "rhythm" && (project ? <RhythmScreen /> : <ProjectPicker />)}
       {screen === "library" && <Library />}
       {screen === "soundscapes" && (project ? <Soundscapes /> : <ProjectPicker />)}
+      {screen === "start" && (project ? <Start /> : <ProjectPicker />)}
+      {screen === "help" && <Help />}
       {(layers.drone || layers.pad || layers.ambient || layers.rhythm) && (
         <div className="layers-badge small" role="status">
           <BackgroundTransport compact />

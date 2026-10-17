@@ -110,7 +110,11 @@ answer in Bulgarian with what to turn to change the character.
 10. Ask before: paid APIs, uploads of user audio, destructive file operations, or changing
     the stack (Tauri/React/cpal). Propose an ADR instead of migrating.
 11. UI strings go through `apps/desktop/src/i18n.ts` (BG + EN). No bare literals in JSX.
-12. The phase gate is real: finish the phase's definition of done, write the
+12. **Document how it is used.** Every user-facing feature adds or updates its paragraph
+    in `docs/guide/bg.md` and `docs/guide/en.md` (the in-app Help renders these files,
+    so there is one place to keep current). The owner's words: "however you do it, we
+    must describe somewhere how it is used, because it gets forgotten."
+13. The phase gate is real: finish the phase's definition of done, write the
     `Implemented / Tested / Known Issues / Next / User Decisions` report, then stop.
 
 ## Phase 0 → Phase 1 hand-off (first thing to do on the Windows laptop)

@@ -458,3 +458,25 @@ button.ghost.on { border-color: var(--accent); color: var(--accent); }
 .hmeter-fill { height: 100%; background: var(--accent); }
 .hmeter-fill.warm { background: #d9a441; }
 .hmeter-fill.hot { background: #e05a4f; }
+
+/* Start from a melody */
+.start { display: flex; flex-direction: column; gap: 10px; }
+.start-card-home { width: 100%; margin-bottom: 12px; border-color: var(--accent); }
+.start-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 8px; }
+.start-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.start-card { display: flex; flex-direction: column; gap: 6px; }
+.start-card.selected { outline: 2px solid var(--accent); }
+.start-card h4 { margin: 0; }
+.start-fact-list { margin: 0; padding-left: 18px; }
+/* Help */
+.help { display: flex; flex-direction: column; gap: 10px; }
+.help-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 12px; align-items: start; }
+@media (max-width: 860px) { .help-layout { grid-template-columns: 1fr; } }
+.help-toc { display: flex; flex-direction: column; gap: 2px; position: sticky; top: 8px; }
+.help-toc button { text-align: left; }
+.help-body { line-height: 1.5; }
+.help-body h2 { margin-top: 0; }
+.help-body h3 { margin: 18px 0 6px; }
+.help-body pre { background: var(--bg); border: 1px solid var(--axis); border-radius: 6px; padding: 8px; overflow: auto; }
+.help-body code { background: var(--bg); border-radius: 4px; padding: 0 4px; }
+.help-section + .help-section { border-top: 1px solid var(--axis); margin-top: 12px; padding-top: 6px; }

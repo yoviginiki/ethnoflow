@@ -25,7 +25,7 @@ const AREAS: Area[] = [
   { title: "areaStudio", desc: "areaStudioDesc", phase: null, screen: "studio" },
   { title: "areaLibrary", desc: "areaLibraryDesc", phase: null, screen: "library" },
   { title: "areaSamples", desc: "areaSamplesDesc", phase: 5 },
-  { title: "areaHelp", desc: "areaHelpDesc", phase: 6 },
+  { title: "areaHelp", desc: "areaHelpDesc", phase: null, screen: "help" },
 ];
 
 export function Home() {
@@ -46,6 +46,10 @@ export function Home() {
           <ProjectPicker />
         </>
       )}
+    <button className="area active start-card-home" onClick={() => setScreen("start")}>
+      <span className="area-title">▶ {t.areaStart}</span>
+      <span className="small">{t.areaStartDesc}</span>
+    </button>
     <nav className="home-grid" aria-label={t.appTitle}>
       {AREAS.map((a) =>
         a.phase === null ? (
