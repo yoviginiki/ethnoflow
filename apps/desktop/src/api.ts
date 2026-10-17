@@ -755,11 +755,18 @@ export interface CounterUiParams {
   seed: number;
 }
 
+export interface Marker {
+  at_seconds: number;
+  name: string;
+}
+export const SECTION_NAMES = ["Intro", "A", "B", "Build", "Drop", "Break", "Outro"] as const;
+
 export interface ProjectView {
   name: string;
   root: string;
   timing: Timing;
   takes: TakeView[];
+  markers: Marker[];
   loaded_take: string | null;
   scale: Scale | null;
   a4_hz: number;
@@ -1172,6 +1179,8 @@ export const api = {
   rhythmStatus: () => invoke<RhythmStatus>("rhythm_status"),
   rhythmRestart: () => invoke<RhythmStatus>("rhythm_restart"),
   rhythmRegenerate: (settings: RhythmSettings) => invoke<RhythmSettings>("rhythm_regenerate", { settings }),
+  rhythmToTakes: (settings: RhythmSettings) => invoke<{ project: ProjectView; created: string[] }>("rhythm_to_takes", { settings }),
+  setMarkers: (markers: Marker[]) => invoke<ProjectView>("set_markers", { markers }),
   estimateTakeTempo: (bpmLow: number | null, bpmHigh: number | null) => invoke<TempoCandidate[]>("estimate_take_tempo", { bpmLow, bpmHigh }),
   countermelodyToTake: (intent: IntentSettings, params: CounterUiParams, proposal: HarmonyProposal | null, label: string | null) =>
     invoke<{ project: ProjectView; take_id: string }>("countermelody_to_take", { intent, params, proposal, label }),

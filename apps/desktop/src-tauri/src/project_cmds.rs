@@ -78,6 +78,8 @@ pub struct ProjectView {
     pub loaded_take: Option<String>,
     /// Scale the user chose, if any (never inferred silently).
     pub scale: Option<music_core::Scale>,
+    /// Section markers (F4.3): Intro / A / B / Build / Drop / Break / Outro, seconds.
+    pub markers: Vec<project::Marker>,
     /// Tuning reference in effect (project value or the 440 Hz default).
     pub a4_hz: f64,
     /// The project's instrument profile (from the global store), if attached.
@@ -133,6 +135,7 @@ fn view(s: &Inner) -> CmdResult<ProjectView> {
         takes,
         loaded_take: s.loaded.as_ref().map(|l| l.id.clone()),
         scale: p.manifest().scale.clone(),
+        markers: p.manifest().markers.clone(),
         a4_hz: p
             .manifest()
             .a4_hz
@@ -462,6 +465,26 @@ pub async fn delete_take(state: State<'_, AppState>, id: String) -> CmdResult<Pr
     s.health.remove(&id);
     crate::arrangement_cmds::forget_take(&mut s, &id);
     crate::ambient_cmds::forget_take(&mut s, &id);
+    view(&s)
+}
+
+/// Replace the section markers (F4.3). Names are free text; times in seconds.
+#[tauri::command]
+pub async fn set_markers(
+    state: State<'_, AppState>,
+    markers: Vec<project::Marker>,
+) -> CmdResult<ProjectView> {
+    if markers.len() > 256
+        || markers
+            .iter()
+            .any(|m| !m.at_seconds.is_finite() || m.at_seconds < 0.0 || m.name.len() > 64)
+    {
+        return Err(err("invalid_argument", "markers out of range"));
+    }
+    let mut s = state.lock();
+    let mut sorted = markers;
+    sorted.sort_by(|a, b| a.at_seconds.partial_cmp(&b.at_seconds).unwrap());
+    project_mut(&mut s)?.update_manifest(|m| m.markers = sorted)?;
     view(&s)
 }
 

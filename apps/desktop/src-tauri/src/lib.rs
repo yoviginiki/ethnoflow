@@ -64,6 +64,7 @@ pub fn run() {
             project_cmds::rename_take,
             project_cmds::delete_take,
             project_cmds::set_trim,
+            project_cmds::set_markers,
             project_cmds::set_take_recipe,
             project_cmds::set_take_meta,
             project_cmds::analyze_silence,
@@ -150,6 +151,7 @@ pub fn run() {
             rhythm_cmds::rhythm_restart,
             rhythm_cmds::rhythm_regenerate,
             rhythm_cmds::estimate_take_tempo,
+            rhythm_cmds::rhythm_to_takes,
             harmony_cmds::countermelody_to_take,
         ])
         .build(tauri::generate_context!())

@@ -124,6 +124,27 @@ export function RhythmPanel() {
         <button className="ghost" onClick={() => void regenerate()} title={t.regenerateHint}>
           ♻ {t.regenerate}
         </button>
+        <button
+          className="ghost"
+          disabled={!canPlay || s.pending !== null || s.mode !== "idle"}
+          title={t.rhythmToTakesHint}
+          onClick={() =>
+            void (async () => {
+              try {
+                s.setPending(t.saving);
+                const res = await api.rhythmToTakes({ ...r, chord: s.padChord, root_midi: s.prefs.drone?.rootMidi ?? null, intonation: s.prefs.drone?.intonation ?? "profile" });
+                s.setProject(res.project);
+                s.setMessage(`${t.rhythmTakesCreated}: ${res.created.length}`);
+              } catch (e) {
+                s.setError(describeError(e));
+              } finally {
+                useStore.getState().setPending(null);
+              }
+            })()
+          }
+        >
+          ♩ {t.rhythmToTakes}
+        </button>
         <label className="inline small">
           {t.barsLabel}
           <select value={r.bars} onChange={(e) => set({ bars: Number(e.target.value) })}>

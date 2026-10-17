@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as RPointerEvent, type WheelEvent as RWheelEvent } from "react";
 import { save } from "@tauri-apps/plugin-dialog";
-import { api, describeError, type Arrangement, type ArrangeStatus, type Clip, type RecordingStatus, type TakeView, type Track, type WaveformPeaks } from "./api";
+import { api, describeError, type Arrangement, type ArrangeStatus, type Clip, type RecordingStatus, type TakeView, type Track, type WaveformPeaks, SECTION_NAMES } from "./api";
 import { BackgroundTransport } from "./BackgroundTransport";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { formatBytes, formatDb, formatTime, isTypingTarget, linearToDb, meterFraction, takeName } from "./format";
@@ -705,6 +705,20 @@ export function Arrange() {
       ctx.stroke();
       ctx.fillText(formatTime(s), x + 3, 3);
     }
+    // Section markers (F4.3): accent lines with their names.
+    for (const m of project.markers) {
+      const x = Math.round(toX(m.at_seconds)) + 0.5;
+      if (x < -40 || x > w + 40) continue;
+      ctx.strokeStyle = colAccent;
+      ctx.fillStyle = colAccent;
+      ctx.globalAlpha = 0.9;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, h);
+      ctx.stroke();
+      ctx.fillText(m.name, x + 4, RULER_H - 23 < 3 ? 3 : 12);
+      ctx.globalAlpha = 1;
+    }
     if (barSeconds && barSeconds * pps >= 14) {
       ctx.strokeStyle = colMuted;
       ctx.fillStyle = colMuted;
@@ -873,7 +887,7 @@ export function Arrange() {
     ctx.stroke();
     ctx.lineWidth = 1;
     // Redraw on resize.
-  }, [arr, pps, scroll, selected, selectedTrack, headSeconds, playing, recording, rec, peaksVersion, barSeconds, beatSeconds, timing.numerator, takeById, t, toX, tick]);
+  }, [arr, pps, scroll, selected, selectedTrack, headSeconds, playing, recording, rec, peaksVersion, barSeconds, beatSeconds, timing.numerator, takeById, t, toX, tick, project.markers]);
 
   useEffect(() => {
     const wrap = wrapRef.current;
@@ -919,6 +933,36 @@ export function Arrange() {
     <main className="arrange" aria-busy={busy}>
       <section className="transport">
         <h2 className="arrange-title">{t.arrangeTitle}</h2>
+        <label className="inline small" title={t.sectionsHint}>
+          {t.sectionsLabel}
+          <select
+            value=""
+            onChange={(e) => {
+              const name = e.target.value;
+              if (!name) return;
+              const at = Math.round(headSeconds * 100) / 100;
+              void api
+                .setMarkers([...project.markers.filter((m) => Math.abs(m.at_seconds - at) > 0.01), { at_seconds: at, name }])
+                .then((pv) => useStore.getState().setProject(pv))
+                .catch(fail);
+            }}
+          >
+            <option value="">+ {t.sectionAtCursor}</option>
+            {SECTION_NAMES.map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+          {project.markers.length > 0 && (
+            <button className="ghost small" title={t.sectionRemoveNearest} onClick={() => {
+              const nearest = project.markers.reduce((best, m) => (Math.abs(m.at_seconds - headSeconds) < Math.abs(best.at_seconds - headSeconds) ? m : best), project.markers[0]);
+              void api.setMarkers(project.markers.filter((m) => m !== nearest)).then((pv) => useStore.getState().setProject(pv)).catch(fail);
+            }}>
+              ✕
+            </button>
+          )}
+        </label>
         <button className="ghost" onClick={() => void seek(0)} title={t.toStart} aria-label={t.toStart}>
           ⏮
         </button>

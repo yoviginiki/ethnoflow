@@ -860,3 +860,186 @@ pub async fn estimate_take_tempo(
         4,
     ))
 }
+
+#[derive(Debug, Clone, Serialize)]
+pub struct RhythmTakesResult {
+    pub project: crate::project_cmds::ProjectView,
+    pub created: Vec<String>,
+}
+
+fn beats_to_notes(notes: &[music_core::BeatNote], bpm: f64) -> Vec<music_core::Note> {
+    let spb = 60.0 / bpm;
+    notes
+        .iter()
+        .map(|n| music_core::Note {
+            start: n.start_beat * spb,
+            end: (n.start_beat + n.length_beats) * spb,
+            midi: n.midi,
+            cents: n.cents,
+            confidence: 1.0,
+            velocity: n.velocity,
+            bend: Vec::new(),
+        })
+        .collect()
+}
+
+/// General MIDI percussion numbers for the synthesized kit.
+fn gm_drum(d: Drum) -> i32 {
+    match d {
+        Drum::Kick => 36,
+        Drum::Snare => 38,
+        Drum::Ghost => 38,
+        Drum::HatClosed => 42,
+        Drum::HatOpen => 46,
+        Drum::Shaker => 70,
+    }
+}
+
+/// Write the enabled parts as MIDI takes (editable in the player, placeable as clips
+/// in "My studio", exportable as .mid) — the Phase 4 "editable bass/drums" exit.
+/// Drums go on channel 10 with GM numbers; pitched parts carry their cents as bends.
+#[tauri::command]
+pub async fn rhythm_to_takes(
+    state: State<'_, AppState>,
+    settings: RhythmSettings,
+) -> CmdResult<RhythmTakesResult> {
+    validate(&settings)?;
+    let mut s = state.lock();
+    if s.mode_busy() {
+        return Err(err("busy", "Stop recording or playback first"));
+    }
+    let (bpm, meter) = timing(&s)?;
+    let (root, pcs) = chord_pcs(&s, &settings)?;
+    let ts = (meter.numerator as u8, meter.unit as u8);
+    let mut parts: Vec<(&str, Vec<music_core::Note>, u8)> = Vec::new();
+    if settings.drums.on {
+        let d = &settings.drums;
+        let pat = generate_groove(
+            &GrooveParams {
+                style: d.style,
+                complexity: d.complexity,
+                humanize: d.humanize,
+                swing: d.swing,
+                fill_every_bars: d.fill_every_bars,
+                seed: d.seed,
+                bars: settings.bars.clamp(1, 64),
+            },
+            &meter,
+        );
+        let spb = 60.0 / bpm;
+        let notes: Vec<music_core::Note> = pat
+            .hits
+            .iter()
+            .map(|h| music_core::Note {
+                start: h.start_beat * spb,
+                end: h.start_beat * spb + 0.1,
+                midi: gm_drum(h.drum),
+                cents: 0.0,
+                confidence: 1.0,
+                velocity: if h.drum == Drum::Ghost {
+                    h.velocity * 0.5
+                } else {
+                    h.velocity
+                },
+                bend: Vec::new(),
+            })
+            .collect();
+        parts.push(("drums", notes, 9));
+    }
+    if settings.bass.on {
+        let spans = static_spans(root, &pcs, settings.bars.clamp(1, 64), &meter);
+        let scale = s.project.as_ref().and_then(|p| p.manifest().scale.clone());
+        let b = &settings.bass;
+        let notes = generate_bass(
+            &spans,
+            scale.as_ref(),
+            &BassGenParams {
+                density: b.density,
+                syncopation: b.syncopation,
+                passing: b.passing,
+                register: (b.register_low, b.register_high),
+                swing: 0.0,
+                seed: b.seed,
+            },
+            &meter,
+        );
+        parts.push(("bass", beats_to_notes(&notes, bpm), 0));
+    }
+    if settings.ostinato.on {
+        let o = &settings.ostinato;
+        let tones = tones_in_register(&pcs, o.register_low, o.register_high);
+        let params = OstinatoParams {
+            steps: o.steps,
+            step_beats: o.step_beats,
+            density: o.density,
+            probability: o.probability,
+            variation_every_bars: o.variation_every_bars,
+            swing: o.swing,
+            seed: o.seed,
+            bars: settings.bars.clamp(1, 64),
+        };
+        let notes = generate_ostinato(&tones, &params, &meter, o.motif.as_ref());
+        parts.push(("ostinato", beats_to_notes(&notes, bpm), 0));
+    }
+    if settings.arp.on {
+        let a = &settings.arp;
+        let chord = tones_in_register(&pcs, a.register_low, a.register_low + 11);
+        let notes = generate_arpeggio(
+            &chord,
+            &ArpParams {
+                direction: a.direction,
+                octaves: a.octaves,
+                step_beats: a.step_beats,
+                gate: a.gate,
+                density: a.density,
+                swing: a.swing,
+                seed: a.seed,
+                bars: settings.bars.clamp(1, 64),
+            },
+            &meter,
+        );
+        parts.push(("arp", beats_to_notes(&notes, bpm), 0));
+    }
+    if parts.is_empty() {
+        return Err(err("empty", "No part is switched on"));
+    }
+    let mut created = Vec::new();
+    let tmp_dir = std::env::temp_dir().join("ethnoflow-rhythm");
+    std::fs::create_dir_all(&tmp_dir).map_err(|e| err("io", e.to_string()))?;
+    let stamp = project::now_ms_pub();
+    for (name, notes, channel) in parts {
+        if notes.is_empty() {
+            continue;
+        }
+        let bytes = music_core::write_smf(
+            &notes,
+            &music_core::SmfOptions {
+                tempo_bpm: bpm,
+                time_signature: Some(ts),
+                channel,
+                ..music_core::SmfOptions::default()
+            },
+        );
+        let path = tmp_dir.join(format!("{name}-{stamp}.mid"));
+        std::fs::write(&path, &bytes).map_err(|e| err("io", e.to_string()))?;
+        let pv = crate::midi_cmds::import_midi(&mut s, &path);
+        let _ = std::fs::remove_file(&path);
+        let pv = pv?;
+        if let Some(t) = pv.takes.iter().max_by_key(|t| t.number) {
+            let label = match name {
+                "drums" => "Drums",
+                "bass" => "Bass",
+                "ostinato" => "Ostinato",
+                _ => "Arpeggio",
+            };
+            if let Some(p) = s.project.as_mut() {
+                let _ = p.rename_take(&t.id, Some(label));
+            }
+            created.push(t.id.clone());
+        }
+    }
+    Ok(RhythmTakesResult {
+        project: crate::project_cmds::project_view(&s)?,
+        created,
+    })
+}
