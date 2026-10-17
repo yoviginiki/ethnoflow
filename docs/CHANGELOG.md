@@ -70,6 +70,13 @@
   note, else the user chooses (no built-in key). Presets Traditional / Deep Ethno /
   Cinematic; parameter changes never restart the stream. Not yet: "Liquid Resonator"
   (spectral freeze over a monochord), stereo motion, reverb ("space").
+- **F3.1 explanations** (0.2.7): `music_core::explain` gives the facts behind each
+  hypothesis (tonic and fifth share, coverage, the decisive pitch class against the
+  nearest rival with a different note set, loudest off-scale classes); the analysis
+  panel words them under every suggestion ("D holds 38 % of the time; B♭ is 60 % more
+  frequent than B (vs D dorian); 96 % in the scale"). 11 modal fixtures in
+  `qa/fixtures/modal/` (JSON note lists with the known tonic/mode) are a regression
+  test: the known mode must be in the top 2 — currently all are #1.
 
 ### Measurements (owner's laptop, release build, YIN hop 10 ms, window 1024)
 | material | pitch time | voiced | f0 p05 / median / p95 | confidence p10 / median | octave-sized jumps |
