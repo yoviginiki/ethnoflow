@@ -4,6 +4,8 @@
 
 import { create } from "zustand";
 import type {
+  Ambient,
+  AmbientStatus,
   AnalysisView,
   DeviceInfo,
   DroneStatus,
@@ -30,7 +32,9 @@ import type {
 import type { Lang } from "./i18n";
 
 export type Mode = "idle" | "recording" | "playing";
-export type Screen = "home" | "play" | "compose" | "studio";
+export type Screen = "home" | "play" | "compose" | "studio" | "ambient";
+export type LayerName = "drone" | "pad" | "ambient";
+export type LayerSwitches = Record<LayerName, boolean>;
 
 export interface Prefs {
   lang: Lang;
@@ -267,11 +271,19 @@ interface Store {
   setMeterDb: (db: number) => void;
 
   /** Background layers on the audio graph (F3.2/F3.3); run by `useBackgroundLayers`. */
-  layers: { drone: boolean; pad: boolean };
-  setLayer: (name: "drone" | "pad", on: boolean) => void;
+  layers: LayerSwitches;
+  setLayer: (name: LayerName, on: boolean) => void;
   /** Which layers were on before "Stop background", so "Play background" brings them back. */
-  lastLayers: { drone: boolean; pad: boolean };
-  setLastLayers: (l: { drone: boolean; pad: boolean }) => void;
+  lastLayers: LayerSwitches;
+  setLastLayers: (l: LayerSwitches) => void;
+  /** The project's ambient rack (F1A.1), loaded when a project opens / the screen mounts. */
+  ambient: Ambient | null;
+  setAmbient: (a: Ambient | null) => void;
+  ambientStatus: AmbientStatus | null;
+  setAmbientStatus: (s: AmbientStatus | null) => void;
+  /** Sleep timer: epoch ms at which the background fades out, or null. */
+  sleepAt: number | null;
+  setSleepAt: (t: number | null) => void;
   droneStatus: DroneStatus | null;
   setDroneStatus: (s: DroneStatus | null) => void;
   padStatus: PadStatus | null;
@@ -311,10 +323,16 @@ export const useStore = create<Store>((set, get) => ({
   screen: "home",
   setScreen: (screen) => set({ screen }),
 
-  layers: { drone: false, pad: false },
+  layers: { drone: false, pad: false, ambient: false },
   setLayer: (name, on) => set({ layers: { ...get().layers, [name]: on } }),
-  lastLayers: { drone: true, pad: false },
+  lastLayers: { drone: true, pad: false, ambient: false },
   setLastLayers: (lastLayers) => set({ lastLayers }),
+  ambient: null,
+  setAmbient: (ambient) => set({ ambient }),
+  ambientStatus: null,
+  setAmbientStatus: (ambientStatus) => set({ ambientStatus }),
+  sleepAt: null,
+  setSleepAt: (sleepAt) => set({ sleepAt }),
   droneStatus: null,
   setDroneStatus: (droneStatus) => set({ droneStatus }),
   padStatus: null,

@@ -69,7 +69,7 @@ fn view(s: &mut Inner) -> CmdResult<ArrangementView> {
 }
 
 /// A take's playable audio (trim applied, mono, at `rate`), cached per take/trim/rate.
-fn take_buffer(s: &mut Inner, take_id: &str, rate: u32) -> CmdResult<Arc<AudioBuffer>> {
+pub(crate) fn take_buffer(s: &mut Inner, take_id: &str, rate: u32) -> CmdResult<Arc<AudioBuffer>> {
     let p = project_ref(s)?;
     let take = p.take(take_id)?;
     if take.state == TakeState::Recording {
@@ -141,6 +141,15 @@ fn prune_cache(s: &mut Inner) {
                 .collect()
         })
         .unwrap_or_default();
+    // Audio loops of the ambient rack share this cache.
+    let mut used = used;
+    if let Some(a) = s.ambient.as_ref() {
+        for l in &a.layers {
+            if let project::LayerSource::Loop { take_id, .. } = &l.source {
+                used.push(format!("{take_id}:"));
+            }
+        }
+    }
     s.clip_cache
         .retain(|k, _| used.iter().any(|prefix| k.starts_with(prefix)));
 }

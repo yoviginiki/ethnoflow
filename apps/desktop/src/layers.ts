@@ -68,6 +68,25 @@ export function padSettings(p: PadPrefs, notes: PadNote[]): PadSettings {
  * `set_*` (no restart), and the status (meters, applied intonation) is polled while on.
  * Mounted once in `App`.
  */
+/** Fade the whole background (rack, drone, pad) out over `seconds` and switch it off. */
+export async function fadeOutBackground(seconds: number): Promise<void> {
+  const st = useStore.getState();
+  if (!st.layers.drone && !st.layers.pad && !st.layers.ambient) return;
+  st.setLastLayers({ ...st.layers });
+  try {
+    await api.backgroundFadeOut(seconds);
+  } catch (e) {
+    st.setError(describeError(e));
+    return;
+  }
+  window.setTimeout(() => {
+    const s = useStore.getState();
+    s.setLayer("drone", false);
+    s.setLayer("pad", false);
+    s.setLayer("ambient", false);
+  }, seconds * 1000 + 150);
+}
+
 export function useBackgroundLayers() {
   const droneOn = useStore((s) => s.layers.drone);
   const padOn = useStore((s) => s.layers.pad);
@@ -87,14 +106,61 @@ export function useBackgroundLayers() {
   const padNotes = padChord ?? (pRoot === null ? null : voicingNotes(padPrefs.voicing, pRoot, scale));
   const fail = (e: unknown) => useStore.getState().setError(describeError(e));
 
+  const ambientOn = useStore((s) => s.layers.ambient);
+
   // Closing the project stops everything (the backend does too).
   useEffect(() => {
     if (!project) {
       const st = useStore.getState();
       if (st.layers.drone) st.setLayer("drone", false);
       if (st.layers.pad) useStore.getState().setLayer("pad", false);
+      if (st.layers.ambient) useStore.getState().setLayer("ambient", false);
+      useStore.getState().setAmbient(null);
+      useStore.getState().setSleepAt(null);
     }
   }, [project]);
+
+  // The rack is loaded with the project so "Play background" knows whether it has layers.
+  const projectRoot = project?.root ?? null;
+  useEffect(() => {
+    if (!projectRoot) return;
+    api
+      .ambientGet()
+      .then((v) => useStore.getState().setAmbient(v.ambient))
+      .catch(() => undefined);
+  }, [projectRoot]);
+
+  // Ambient rack lifecycle (F1A.1): start/stop on its switch or an output change.
+  useEffect(() => {
+    if (!ambientOn || !project) return;
+    let cancelled = false;
+    api
+      .ambientPlay(output)
+      .then((st) => !cancelled && useStore.getState().setAmbientStatus(st))
+      .catch((e) => {
+        fail(e);
+        useStore.getState().setLayer("ambient", false);
+      });
+    return () => {
+      cancelled = true;
+      useStore.getState().setAmbientStatus(null);
+      void api.ambientStop().catch(() => undefined);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ambientOn, output, !!project]);
+
+  // Sleep timer (F1A.2): when it is due, fade everything out.
+  const sleepAt = useStore((s) => s.sleepAt);
+  useEffect(() => {
+    if (sleepAt === null) return;
+    const id = window.setInterval(() => {
+      if (Date.now() >= sleepAt) {
+        useStore.getState().setSleepAt(null);
+        void fadeOutBackground(20);
+      }
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [sleepAt]);
 
   // Drone lifecycle: start/stop on the switch or an output-device change.
   useEffect(() => {
@@ -152,11 +218,12 @@ export function useBackgroundLayers() {
   const masterDb = useStore((s) => s.prefs.masterDb ?? 0);
   const droneStarted = useStore((s) => s.droneStatus !== null);
   const padStarted = useStore((s) => s.padStatus !== null);
+  const ambientStarted = useStore((s) => s.ambientStatus !== null);
   useEffect(() => {
-    if (!droneStarted && !padStarted) return;
+    if (!droneStarted && !padStarted && !ambientStarted) return;
     api.setGraphMaster(masterDb).catch(fail);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [masterDb, droneStarted, padStarted]);
+  }, [masterDb, droneStarted, padStarted, ambientStarted]);
 
   // Meters while anything plays.
   useEffect(() => {

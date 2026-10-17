@@ -93,6 +93,12 @@ pub struct Inner {
     pub clips: Option<Arc<audio_engine::ClipsParams>>,
     /// Takes' playable audio for clips (mono, at the stream rate), by take/trim/rate.
     pub clip_cache: HashMap<String, Arc<AudioBuffer>>,
+    /// The project's ambient rack (F1A.1), loaded on first use.
+    pub ambient: Option<project::Ambient>,
+    /// Whether the rack is on the graph (slots 4..12).
+    pub ambient_on: bool,
+    /// Live handles per rack layer while it plays (None = slot not built).
+    pub ambient_live: Vec<Option<crate::ambient_cmds::LiveLayer>>,
 }
 
 impl Inner {
@@ -128,6 +134,11 @@ impl Inner {
         }
     }
 
+    /// True when nothing uses the graph's stream any more.
+    pub fn graph_idle(&self) -> bool {
+        self.drone.is_none() && self.pad.is_none() && self.clips.is_none() && !self.ambient_on
+    }
+
     pub fn stop_graph(&mut self) {
         // Fade the layer first so stopping the stream does not click.
         if let Some(g) = self.graph.as_ref() {
@@ -144,6 +155,8 @@ impl Inner {
         self.pad = None;
         self.pad_settings = None;
         self.clips = None;
+        self.ambient_on = false;
+        self.ambient_live.clear();
     }
 }
 

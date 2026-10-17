@@ -22,7 +22,7 @@ const STYLES: Style[] = [
   { key: "styleLiquid", phase: null, drone: { ...DRONE_PRESETS.dronePresetDeep, on: true, levelDb: -16 }, pad: { on: true, emotion: "melancholy", voicing: "scale_triad", levelDb: -12 } },
   { key: "styleCinematic", phase: null, drone: { ...DRONE_PRESETS.dronePresetCinematic, on: true, levelDb: -14 }, pad: { on: true, emotion: "calm", voicing: "fifth9", levelDb: -12 } },
   { key: "styleDnb", phase: 4, drone: { on: false }, pad: { on: false } },
-  { key: "styleNoKey", phase: 1, drone: { on: false }, pad: { on: false } },
+  { key: "styleNoKey", phase: null, drone: { on: false }, pad: { on: false } },
 ];
 
 /** Compose First (F3.5): a sounding background in a chosen tonal centre and mode,
@@ -57,6 +57,13 @@ export function Compose() {
   };
 
   const applyStyle = (st: Style) => {
+    if (st.key === "styleNoKey") {
+      // Ambient No Key: textures without a tonal centre live in the Atmosphere rack.
+      s.setLayer("drone", false);
+      s.setLayer("pad", false);
+      s.setScreen("ambient");
+      return;
+    }
     const { on: droneOn, ...d } = st.drone;
     const { on: padOn, ...p } = st.pad;
     s.setPref("drone", { ...dronePrefs, ...d });
@@ -118,12 +125,12 @@ export function Compose() {
         <div className="style-row">
           {STYLES.map((st) =>
             st.phase === null ? (
-              <button key={st.key} className="ghost" onClick={() => applyStyle(st)} disabled={busy || !scale}>
+              <button key={st.key} className="ghost" onClick={() => applyStyle(st)} disabled={busy || (!scale && st.key !== "styleNoKey")}>
                 {t[st.key]}
               </button>
             ) : (
               <span key={st.key} className="area small" aria-disabled="true">
-                {t[st.key]} <span className="badge">{st.phase === 1 ? t.availableFromPhase1A : `${t.availableFromPhase} ${st.phase}`}</span>
+                {t[st.key]} <span className="badge">{`${t.availableFromPhase} ${st.phase}`}</span>
               </span>
             ),
           )}

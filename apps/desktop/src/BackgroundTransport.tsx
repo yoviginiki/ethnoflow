@@ -28,24 +28,30 @@ export function BackgroundTransport({ compact = false }: Props) {
   const profile = project?.instrument ?? null;
   const canDrone = droneRoot(dronePrefs, scale, profile) !== null;
   const canPad = padRoot(padPrefs, dronePrefs, scale, profile) !== null;
-  const on = layers.drone || layers.pad;
+  const canAmbient = (useStore((s) => s.ambient?.layers.length) ?? 0) > 0;
+  const on = layers.drone || layers.pad || layers.ambient;
+  const canPlay = canDrone || canPad || canAmbient;
 
   const play = () => {
     const want = {
-      drone: (lastLayers.drone || !lastLayers.pad) && canDrone,
+      drone: (lastLayers.drone || (!lastLayers.pad && !lastLayers.ambient)) && canDrone,
       pad: lastLayers.pad && canPad,
+      ambient: lastLayers.ambient && canAmbient,
     };
-    if (!want.drone && !want.pad) {
+    if (!want.drone && !want.pad && !want.ambient) {
       if (canDrone) want.drone = true;
       else if (canPad) want.pad = true;
+      else if (canAmbient) want.ambient = true;
     }
     setLayer("drone", want.drone);
     setLayer("pad", want.pad);
+    setLayer("ambient", want.ambient);
   };
   const stop = () => {
     setLastLayers({ ...layers });
     setLayer("drone", false);
     setLayer("pad", false);
+    setLayer("ambient", false);
   };
 
   return (
@@ -55,7 +61,7 @@ export function BackgroundTransport({ compact = false }: Props) {
           ■ {compact ? t.background : t.bgStop}
         </button>
       ) : (
-        <button onClick={play} disabled={!project || (!canDrone && !canPad)} aria-label={t.bgPlay} title={canDrone || canPad ? t.bgPlay : t.bgNeedsRoot}>
+        <button onClick={play} disabled={!project || !canPlay} aria-label={t.bgPlay} title={canPlay ? t.bgPlay : t.bgNeedsRoot}>
           ▶ {compact ? t.background : t.bgPlay}
         </button>
       )}
@@ -67,6 +73,10 @@ export function BackgroundTransport({ compact = false }: Props) {
         <input type="checkbox" checked={layers.pad} disabled={!canPad} onChange={(e) => setLayer("pad", e.target.checked)} />
         {compact ? t.padShort : t.pad}
       </label>
+      <label className="inline">
+        <input type="checkbox" checked={layers.ambient} disabled={!canAmbient} onChange={(e) => setLayer("ambient", e.target.checked)} />
+        {compact ? t.ambientShort : t.areaAmbient}
+      </label>
       <label className="inline" title={t.backgroundLevel}>
         🔊
         <input type="range" min={-40} max={6} step={1} value={masterDb} onChange={(e) => setPref("masterDb", Number(e.target.value))} style={{ width: compact ? 80 : 140 }} />
@@ -75,7 +85,7 @@ export function BackgroundTransport({ compact = false }: Props) {
           {masterDb} dB
         </span>
       </label>
-      {!compact && !canDrone && !canPad && <span className="muted small">{t.bgNeedsRoot}</span>}
+      {!compact && !canPlay && <span className="muted small">{t.bgNeedsRoot}</span>}
     </span>
   );
 }

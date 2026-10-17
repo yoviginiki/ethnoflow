@@ -482,6 +482,62 @@ export interface CalibrationResult {
   profile: ProfileView;
 }
 
+// Ambient Playground (F1A.1/F1A.2): project/src/ambient.rs
+export type LayerSource =
+  | { kind: "noise"; color: number }
+  | { kind: "wind"; gust: number; speed: number; center_hz: number; resonance: number }
+  | { kind: "texture"; brightness: number; motion: number; resonance: number; tonal: boolean; register: [number, number] }
+  | { kind: "bells"; density: number; decay_s: number; brightness: number; velocity_spread: number; tonal: boolean; register: [number, number] }
+  | { kind: "pluck"; density: number; damping: number; brightness: number; velocity_spread: number; tonal: boolean; register: [number, number] }
+  | { kind: "loop"; take_id: string; start: number; end: number; crossfade: number; rate: number; reverse: boolean };
+export type LayerKind = LayerSource["kind"];
+
+export interface AmbientLayer {
+  id: string;
+  name: string;
+  source: LayerSource;
+  gain_db: number;
+  pan: number;
+  lowpass_hz: number;
+  highpass_hz: number;
+  mute: boolean;
+  solo: boolean;
+  seed: number;
+  license_ref: string | null;
+}
+
+export interface Macros {
+  intensity: number;
+  brightness: number;
+  motion: number;
+  space: number;
+  space_size: number;
+  tonal_gravity: number;
+  width: number;
+}
+
+export interface Ambient {
+  schema_version: number;
+  layers: AmbientLayer[];
+  macros: Macros;
+  preset: string | null;
+}
+
+export interface AmbientView {
+  ambient: Ambient;
+  playing: boolean;
+}
+
+export interface AmbientStatus {
+  playing: boolean;
+  sample_rate: number;
+  layer_peaks: number[];
+  master_peak: number;
+  limiter_gain: number;
+  stream_errors: number;
+  pitches_hz: number[][];
+}
+
 export interface ProjectView {
   name: string;
   root: string;
@@ -880,6 +936,12 @@ export const api = {
   setPlaybackClick: (on: boolean) => invoke<void>("set_playback_click", { on }),
   stopPlayback: () => invoke<void>("stop_playback"),
 
+  ambientGet: () => invoke<AmbientView>("ambient_get"),
+  setAmbient: (ambient: Ambient) => invoke<AmbientView>("set_ambient", { ambient }),
+  ambientPlay: (device: string | null) => invoke<AmbientStatus>("ambient_play", { device }),
+  ambientStop: () => invoke<void>("ambient_stop"),
+  ambientStatus: () => invoke<AmbientStatus>("ambient_status"),
+  backgroundFadeOut: (seconds: number) => invoke<void>("background_fade_out", { seconds }),
   arrangementGet: () => invoke<ArrangementView>("arrangement_get"),
   setArrangement: (arrangement: Arrangement) => invoke<ArrangementView>("set_arrangement", { arrangement }),
   arrangementPlay: (device: string | null, fromSeconds: number | null) =>

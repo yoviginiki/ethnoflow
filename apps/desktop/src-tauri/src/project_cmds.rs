@@ -236,6 +236,7 @@ pub fn close_inner(s: &mut Inner) {
     s.midi_input = None;
     s.loaded = None;
     s.arrangement = None;
+    s.ambient = None;
     s.clip_cache.clear();
     s.health.clear();
     s.project = None;
@@ -449,6 +450,7 @@ pub async fn delete_take(state: State<'_, AppState>, id: String) -> CmdResult<Pr
     project_mut(&mut s)?.delete_take(&id)?;
     s.health.remove(&id);
     crate::arrangement_cmds::forget_take(&mut s, &id);
+    crate::ambient_cmds::forget_take(&mut s, &id);
     view(&s)
 }
 

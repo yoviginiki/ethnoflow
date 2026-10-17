@@ -1,6 +1,7 @@
 //! The audio graph in the app (F1.6) and the drone on it (F3.2). One output stream
 //! owns the graph; slot 0 is the drone, slot 1 the pad (`pad_cmds.rs`), slot 2 the
-//! arrangement's clips (`arrangement_cmds.rs`). Parameters
+//! arrangement's clips (`arrangement_cmds.rs`), slots 4..12 the ambient rack
+//! (`ambient_cmds.rs`). Parameters
 //! change through atomics (no restart, no click); notes are intonated to the
 //! project's instrument profile when the user asks for that, otherwise to equal
 //! temperament at the project's A4.
@@ -121,7 +122,7 @@ pub fn release_slot(s: &mut Inner, slot: usize) {
         crate::arrangement_cmds::ARRANGE_SLOT => s.clips = None,
         _ => {}
     }
-    if s.drone.is_none() && s.pad.is_none() && s.clips.is_none() {
+    if s.graph_idle() {
         s.stop_graph();
     }
 }

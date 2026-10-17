@@ -1,3 +1,4 @@
+mod ambient_cmds;
 mod analysis_cmds;
 mod arrangement_cmds;
 mod commands;
@@ -121,6 +122,12 @@ pub fn run() {
             arrangement_cmds::arrangement_status,
             arrangement_cmds::take_peaks,
             arrangement_cmds::export_arrangement_mix,
+            ambient_cmds::ambient_get,
+            ambient_cmds::set_ambient,
+            ambient_cmds::ambient_play,
+            ambient_cmds::ambient_stop,
+            ambient_cmds::ambient_status,
+            ambient_cmds::background_fade_out,
         ])
         .build(tauri::generate_context!())
         .expect("error while building EthnoFlow Studio")

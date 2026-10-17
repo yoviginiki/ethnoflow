@@ -1,3 +1,4 @@
+import { Ambient } from "./Ambient";
 import { Arrange } from "./Arrange";
 import { BackgroundTransport } from "./BackgroundTransport";
 import { Compose } from "./Compose";
@@ -51,7 +52,8 @@ export default function App() {
       {screen === "play" && (project ? <Studio /> : <ProjectPicker />)}
       {screen === "compose" && (project ? <Compose /> : <ProjectPicker />)}
       {screen === "studio" && (project ? <Arrange /> : <ProjectPicker />)}
-      {(layers.drone || layers.pad) && (
+      {screen === "ambient" && (project ? <Ambient /> : <ProjectPicker />)}
+      {(layers.drone || layers.pad || layers.ambient) && (
         <div className="layers-badge small" role="status">
           <BackgroundTransport compact />
           <button className="ghost small" disabled={mode !== "idle"} onClick={() => setScreen(screen === "compose" ? "play" : "compose")}>
@@ -60,6 +62,11 @@ export default function App() {
           {screen !== "studio" && (
             <button className="ghost small" disabled={mode !== "idle"} onClick={() => setScreen("studio")}>
               {t.areaStudio}
+            </button>
+          )}
+          {screen !== "ambient" && (
+            <button className="ghost small" disabled={mode !== "idle"} onClick={() => setScreen("ambient")}>
+              {t.areaAmbient}
             </button>
           )}
         </div>
