@@ -193,6 +193,16 @@
   "Rhythm section" panel in Compose First replaces the Phase-4 placeholders; the
   "Deep Ethno DnB" style is live. Deferred: CLAP spike (F4.4) pending the owner's
   approval of the dependency.
+- **After 0.4.0, owner feedback (2026-10-17)**: breadcrumb with the screen name; the
+  Atmosphere panels no longer overlap (collapsible side panels); import button in My
+  studio; standalone metronome start/stop; the rhythm section as its own screen; the
+  limiter badge keeps its place; rhythm patterns swap in place while playing (no chop
+  when a slider moves); level floors are silence (layer off); per-strip rotary knobs
+  with a "View: sliders / knobs" switch; factory layer names localized; **sample
+  import in Atmosphere**: "Import samples…" (multi-file) or drag-and-drop from
+  Explorer / a sample manager such as Soundly — each file becomes a take in the
+  project (named after the file) and a looped layer. Preset library store in the
+  shell (`library_cmds.rs`: kinds, tags, notes, search, sort); its UI is next.
 
 ### Measurements (owner's laptop, release build, YIN hop 10 ms, window 1024)
 | material | pitch time | voiced | f0 p05 / median / p95 | confidence p10 / median | octave-sized jumps |
