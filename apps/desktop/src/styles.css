@@ -163,6 +163,10 @@ button.small { font-size: 12px; padding: 3px 7px; }
 .hyp-bar { position: absolute; left: 0; top: 0; bottom: 0; background: var(--selection); z-index: 0; }
 .hyp-label { position: relative; z-index: 1; flex: 1; }
 .hypotheses li > .mono-num, .hypotheses li > button { position: relative; z-index: 1; }
+.falling-wrap { background: var(--panel); border: 1px solid var(--axis); border-radius: 8px; overflow: hidden; height: 320px; }
+.falling { width: 100%; height: 100%; display: block; }
+.midi-panel { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.midi-panel input[type="range"] { width: 160px; }
 .pianoroll-wrap { background: var(--panel); border: 1px solid var(--axis); border-radius: 8px; overflow: hidden; }
 .pianoroll { width: 100%; height: 100%; display: block; cursor: crosshair; }
 

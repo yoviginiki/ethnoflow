@@ -118,7 +118,9 @@ export function TakeList({ onSelect }: Props) {
                         ? `${t.imported}${tk.original_name ? `: ${tk.original_name}` : ""}`
                         : tk.source === "derived"
                           ? `${t.derivedFrom} ${tk.derived_from ? parentName(tk.derived_from) : "?"}`
-                          : t.microphone}
+                          : tk.source === "midi_file"
+                            ? `${t.midiFile}${tk.original_name ? `: ${tk.original_name}` : ""}`
+                            : t.microphone}
                     </span>
                   </button>
                 )}

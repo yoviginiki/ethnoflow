@@ -59,7 +59,7 @@ export interface RecordingStarted {
   count_in_seconds: number;
 }
 
-export type TakeSource = "microphone" | "imported_file" | "derived";
+export type TakeSource = "microphone" | "imported_file" | "derived" | "midi_file";
 export type TakeState = "recording" | "complete" | "recovered";
 export type TakeHealth = "ok" | "missing" | "checksum_mismatch" | "unverified";
 
@@ -187,6 +187,32 @@ export interface MonitorStatus {
   pitch_confidence: number;
 }
 
+export type Voice = "sine" | "triangle" | "flute";
+export const VOICES: Voice[] = ["flute", "sine", "triangle"];
+
+export interface MidiRender {
+  tempo_factor: number;
+  muted_tracks: number[];
+  voice: Voice;
+}
+
+export interface TrackInfo {
+  index: number;
+  name: string | null;
+  program: number | null;
+  channels: number[];
+  note_count: number;
+}
+
+export interface MidiTakeView {
+  tracks: TrackInfo[];
+  tempo_from_file: boolean;
+  bpm: number;
+  time_signature: [number, number] | null;
+  render: MidiRender;
+  duration_seconds: number;
+}
+
 export interface MidiExportResult {
   path: string;
   bytes: number;
@@ -290,7 +316,7 @@ export function describeError(e: unknown): string {
   return String(e);
 }
 
-export const IMPORT_EXTENSIONS = ["wav", "mp3", "flac", "ogg"];
+export const IMPORT_EXTENSIONS = ["wav", "mp3", "flac", "ogg", "mid"];
 
 export const api = {
   audioHost: () => invoke<AudioHostInfo>("audio_host"),
@@ -329,6 +355,12 @@ export const api = {
   setScale: (scale: Scale | null) => invoke<ProjectView>("set_scale", { scale }),
   setReference: (a4Hz: number | null) => invoke<ProjectView>("set_reference", { a4Hz }),
   exportMidi: (path: string) => invoke<MidiExportResult>("export_midi", { path }),
+  midiTake: () => invoke<MidiTakeView | null>("midi_take"),
+  setMidiRender: (render: MidiRender) => invoke<MidiTakeView>("set_midi_render", { render }),
+  playNotes: (device: string | null, voice: Voice | null) =>
+    invoke<PlayerStatus>("play_notes", { device, voice }),
+  notesPlaybackStatus: () => invoke<PlayerStatus | null>("notes_playback_status"),
+  stopNotes: () => invoke<void>("stop_notes"),
   startMonitor: (device: string | null, sampleRate: number | null) =>
     invoke<void>("start_monitor", { device, sampleRate }),
   stopMonitor: () => invoke<void>("stop_monitor"),

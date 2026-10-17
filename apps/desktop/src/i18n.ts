@@ -201,6 +201,24 @@ const bg = {
   mergeNote: "Слей",
   up: "Нагоре",
   down: "Надолу",
+
+  // Phase 2.7: MIDI takes, falling notes, note player
+  midiFile: "MIDI файл",
+  viewRoll: "Piano roll",
+  viewFalling: "Падащи ноти",
+  playNotes: "Пусни нотите",
+  stopNotes: "Спри нотите",
+  playingNotes: "Свири нотите",
+  voice: "Глас",
+  voices: { flute: "флейта", sine: "синус", triangle: "триъгълник" },
+  midiTempo: "Темпо",
+  midiTempoFromFile: "от файла",
+  midiTempoDefault: "файлът няма темпо: 120 BPM по MIDI стандарт",
+  tracks: "Писти",
+  track: "писта",
+  mute: "без звук",
+  noteNamesOnKeys: "Имена на клавишите",
+  lookahead: "Поглед напред",
 };
 
 const en: typeof bg = {
@@ -390,6 +408,23 @@ const en: typeof bg = {
   mergeNote: "Merge",
   up: "Up",
   down: "Down",
+
+  midiFile: "MIDI file",
+  viewRoll: "Piano roll",
+  viewFalling: "Falling notes",
+  playNotes: "Play the notes",
+  stopNotes: "Stop the notes",
+  playingNotes: "Playing the notes",
+  voice: "Voice",
+  voices: { flute: "flute", sine: "sine", triangle: "triangle" },
+  midiTempo: "Tempo",
+  midiTempoFromFile: "from the file",
+  midiTempoDefault: "the file has no tempo: 120 BPM per the MIDI standard",
+  tracks: "Tracks",
+  track: "track",
+  mute: "mute",
+  noteNamesOnKeys: "Note names on keys",
+  lookahead: "Lookahead",
 };
 
 export const messages: Record<Lang, typeof bg> = { bg, en };

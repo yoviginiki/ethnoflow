@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef } from "react";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { api, describeError, IMPORT_EXTENSIONS, type Note, type WavFormat } from "./api";
 import { AnalysisPanel } from "./AnalysisPanel";
+import { FallingNotes } from "./FallingNotes";
+import { MidiPanel } from "./MidiPanel";
 import { formatBytes, formatDb, formatTime, isTypingTarget, linearToDb, meterFraction, takeName } from "./format";
 import { messages } from "./i18n";
 import { PianoRoll } from "./PianoRoll";
@@ -75,6 +77,7 @@ export function Studio() {
         const peaks = await api.getWaveform(WAVEFORM_BINS);
         useStore.getState().setLoaded(info, peaks);
         useStore.getState().setAnalysis(await api.getAnalysis());
+        useStore.getState().setMidi(await api.midiTake());
         return true;
       });
       if (!ok) {
@@ -224,6 +227,63 @@ export function Studio() {
       cancelled = true;
     };
   }, [s.prefs.tuner, s.mode, s.prefs.selectedInput, s.prefs.sampleRate, fail]);
+
+  // ---------- "play the notes" (synth) ----------
+
+  const onPlayNotes = useCallback(async () => {
+    const st = useStore.getState();
+    try {
+      st.setError(null);
+      const ps = await api.playNotes(st.prefs.selectedOutput, st.prefs.voice);
+      st.setNotesPlayer(ps);
+    } catch (e) {
+      fail(e);
+    }
+  }, [fail]);
+
+  const onStopNotes = useCallback(async () => {
+    await api.stopNotes().catch(() => undefined);
+    useStore.getState().setNotesPlayer(null);
+  }, []);
+
+  useEffect(() => {
+    if (!s.notesPlayer) return;
+    let cancelled = false;
+    const tick = async () => {
+      if (cancelled) return;
+      try {
+        const p = await api.notesPlaybackStatus();
+        if (!p || p.finished) {
+          useStore.getState().setNotesPlayer(null);
+          return;
+        }
+        useStore.getState().setNotesPlayer(p);
+      } catch (e) {
+        fail(e);
+        useStore.getState().setNotesPlayer(null);
+        return;
+      }
+      setTimeout(tick, STATUS_POLL_MS);
+    };
+    void tick();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [s.notesPlayer !== null, fail]);
+
+  /** After a MIDI re-render: refresh waveform, analysis and MIDI view. */
+  const reloadRendered = useCallback(async () => {
+    const st = useStore.getState();
+    const peaks = await api.getWaveform(WAVEFORM_BINS);
+    st.setPeaks(peaks);
+    st.setAnalysis(await api.getAnalysis());
+    if (st.loaded) {
+      const m = await api.midiTake();
+      st.setMidi(m);
+      if (m) useStore.setState({ loaded: { ...st.loaded, duration_seconds: m.duration_seconds } });
+    }
+  }, []);
 
   // ---------- note editing (piano roll) ----------
 
@@ -603,26 +663,93 @@ export function Studio() {
             label={loadedTake ? takeName(loadedTake, t.take) : t.noTakes}
           />
 
+          {s.loaded && <MidiPanel onRerendered={reloadRendered} />}
           {s.loaded && s.analysis && (
             <>
-              <PianoRoll
-                notes={s.analysis.notes}
-                contour={s.analysis.contour}
-                duration={s.loaded.duration_seconds}
-                cursor={s.mode === "idle" ? s.cursor : null}
-                playhead={s.mode === "playing" && s.player ? s.player.position_seconds : null}
-                selected={s.selectedNote}
-                scale={project.scale}
-                noteNames={t.noteNames}
-                label={t.pianoRoll}
-                onSelect={(i) => s.setSelectedNote(i)}
-                onSeek={(sec) => {
-                  s.setCursor(sec);
-                  if (s.mode === "playing") void onPlay(sec);
-                }}
-                onKey={onPianoKey}
-              />
-              <div className="muted small">{t.pianoRollHint}</div>
+              <div className="transport">
+                <label className="inline">
+                  <input type="radio" name="notesView" checked={s.prefs.notesView === "roll"} onChange={() => s.setPref("notesView", "roll")} />
+                  {t.viewRoll}
+                </label>
+                <label className="inline">
+                  <input type="radio" name="notesView" checked={s.prefs.notesView === "falling"} onChange={() => s.setPref("notesView", "falling")} />
+                  {t.viewFalling}
+                </label>
+                {s.prefs.notesView === "falling" && (
+                  <label className="inline">
+                    <input type="checkbox" checked={s.prefs.keyNames} onChange={(e) => s.setPref("keyNames", e.target.checked)} />
+                    {t.noteNamesOnKeys}
+                  </label>
+                )}
+                <span className="spacer" />
+                <label className="inline">
+                  {t.voice}
+                  <select value={s.prefs.voice} onChange={(e) => s.setPref("voice", e.target.value as typeof s.prefs.voice)}>
+                    {(["flute", "sine", "triangle"] as const).map((v) => (
+                      <option key={v} value={v}>
+                        {t.voices[v]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {s.notesPlayer ? (
+                  <button onClick={onStopNotes}>
+                    ■ {t.stopNotes} <span className="mono-num">{formatTime(s.notesPlayer.position_seconds)}</span>
+                  </button>
+                ) : (
+                  <button onClick={onPlayNotes} disabled={busy || s.analysis.notes.length === 0}>
+                    ♪ {t.playNotes}
+                  </button>
+                )}
+              </div>
+              {s.prefs.notesView === "roll" ? (
+                <>
+                  <PianoRoll
+                    notes={s.analysis.notes}
+                    contour={s.analysis.contour}
+                    duration={s.loaded.duration_seconds}
+                    cursor={s.mode === "idle" && !s.notesPlayer ? s.cursor : null}
+                    playhead={
+                      s.notesPlayer
+                        ? s.notesPlayer.position_seconds
+                        : s.mode === "playing" && s.player
+                          ? s.player.position_seconds
+                          : null
+                    }
+                    selected={s.selectedNote}
+                    scale={project.scale}
+                    noteNames={t.noteNames}
+                    label={t.pianoRoll}
+                    onSelect={(i) => s.setSelectedNote(i)}
+                    onSeek={(sec) => {
+                      s.setCursor(sec);
+                      if (s.mode === "playing") void onPlay(sec);
+                    }}
+                    onKey={onPianoKey}
+                  />
+                  <div className="muted small">{t.pianoRollHint}</div>
+                </>
+              ) : (
+                <FallingNotes
+                  notes={s.analysis.notes}
+                  position={
+                    s.notesPlayer
+                      ? s.notesPlayer.position_seconds
+                      : s.mode === "playing" && s.player
+                        ? s.player.position_seconds
+                        : s.cursor
+                  }
+                  lookahead={3}
+                  scale={project.scale}
+                  noteNames={t.noteNames}
+                  showNames={s.prefs.keyNames}
+                  label={t.viewFalling}
+                  onSeek={(sec) => {
+                    s.setCursor(sec);
+                    if (s.mode === "playing") void onPlay(sec);
+                  }}
+                />
+              )}
             </>
           )}
           {s.loaded && <AnalysisPanel withPending={withPending} />}

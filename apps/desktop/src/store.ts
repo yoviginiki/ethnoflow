@@ -7,8 +7,10 @@ import type {
   AnalysisView,
   DeviceInfo,
   LoadedTakeInfo,
+  MidiTakeView,
   MonitorStatus,
   Note,
+  Voice,
   OpenReport,
   PlayerStatus,
   ProjectView,
@@ -32,6 +34,9 @@ export interface Prefs {
   clickPlay: boolean;
   loop: boolean;
   tuner: boolean;
+  notesView: "roll" | "falling";
+  keyNames: boolean;
+  voice: Voice;
 }
 
 const PREFS_KEY = "ethnoflow.prefs.v1";
@@ -47,6 +52,9 @@ export const DEFAULT_PREFS: Prefs = {
   clickPlay: false,
   loop: false,
   tuner: false,
+  notesView: "roll",
+  keyNames: true,
+  voice: "flute",
 };
 
 function loadPrefs(): Prefs {
@@ -124,6 +132,13 @@ interface Store {
   monitor: MonitorStatus | null;
   setMonitor: (m: MonitorStatus | null) => void;
 
+  /** Loaded take is a MIDI file: its tracks and render options. */
+  midi: MidiTakeView | null;
+  setMidi: (m: MidiTakeView | null) => void;
+  /** "Play the notes" synth playback status, or null when not playing. */
+  notesPlayer: PlayerStatus | null;
+  setNotesPlayer: (p: PlayerStatus | null) => void;
+
   /** Peak hold for the input meter, decays in the UI tick. */
   meterDb: number;
   setMeterDb: (db: number) => void;
@@ -158,7 +173,7 @@ export const useStore = create<Store>((set, get) => ({
   loaded: null,
   peaks: null,
   setLoaded: (loaded, peaks) =>
-    set({ loaded, peaks, cursor: 0, selection: null, analysis: null, selectedNote: null, notesUndo: [] }),
+    set({ loaded, peaks, cursor: 0, selection: null, analysis: null, selectedNote: null, notesUndo: [], midi: null, notesPlayer: null }),
   setPeaks: (peaks) => set({ peaks }),
 
   mode: "idle",
@@ -196,6 +211,11 @@ export const useStore = create<Store>((set, get) => ({
 
   monitor: null,
   setMonitor: (monitor) => set({ monitor }),
+
+  midi: null,
+  setMidi: (midi) => set({ midi }),
+  notesPlayer: null,
+  setNotesPlayer: (notesPlayer) => set({ notesPlayer }),
 
   meterDb: -120,
   setMeterDb: (meterDb) => set({ meterDb }),
