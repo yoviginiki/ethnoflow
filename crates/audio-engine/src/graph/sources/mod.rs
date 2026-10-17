@@ -3,4 +3,4 @@
 
 pub mod drone;
 
-pub use drone::{DroneParams, DroneSource};
+pub use drone::{root_hz, DroneParams, DroneSource};
