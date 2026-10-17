@@ -6,7 +6,7 @@ import { isSessionPayload, mergeSessionPrefs, pickSessionPrefs, rackForProject }
 describe("session", () => {
   it("picks only the session keys", () => {
     const p = pickSessionPrefs(DEFAULT_PREFS);
-    expect(Object.keys(p).sort()).toEqual(["drone", "harmony", "intent", "masterDb", "pad", "rhythm", "stripControl"]);
+    expect(Object.keys(p).sort()).toEqual(["drone", "harmony", "intent", "masterDb", "mixer", "pad", "rhythm", "stripControl"]);
   });
 
   it("merges saved objects over the defaults and ignores unknown keys", () => {

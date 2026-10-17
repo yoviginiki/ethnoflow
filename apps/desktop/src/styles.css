@@ -480,3 +480,14 @@ button.ghost.on { border-color: var(--accent); color: var(--accent); }
 .help-body pre { background: var(--bg); border: 1px solid var(--axis); border-radius: 6px; padding: 8px; overflow: auto; }
 .help-body code { background: var(--bg); border-radius: 4px; padding: 0 4px; }
 .help-section + .help-section { border-top: 1px solid var(--axis); margin-top: 12px; padding-top: 6px; }
+
+/* Background mixer */
+.bg-transport { position: relative; }
+.bg-mixer-pop { position: absolute; left: 0; top: calc(100% + 6px); z-index: 60; min-width: min(920px, 92vw); max-width: 96vw; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+.bg-mixer-pop.up { top: auto; bottom: calc(100% + 6px); }
+.bg-mixer { display: flex; gap: 10px; flex-wrap: wrap; align-items: stretch; }
+.bg-strip { display: flex; flex-direction: column; gap: 6px; align-items: center; min-width: 160px; padding: 8px; border: 1px solid var(--axis); border-radius: 8px; }
+.bg-strip.off { opacity: 0.6; }
+.bg-strip .hmeter { width: 100%; flex: none; }
+.bg-strip-knobs { display: flex; flex-wrap: wrap; gap: 4px 6px; justify-content: center; max-width: 240px; }
+.bg-strip.master { min-width: 180px; border-color: var(--accent); }

@@ -66,6 +66,8 @@ pub struct Inner {
     pub presets_dir: Option<std::path::PathBuf>,
     /// Assistant bridge folder (inbox/outbox/state.json), next to the presets.
     pub assistant_dir: Option<std::path::PathBuf>,
+    /// Background mixer buses (drone, pad, atmosphere, rhythm): trim/pan/filters/fade.
+    pub bus: [crate::bus_cmds::BusState; 4],
     /// Result of the last checksum verification, by take id.
     pub health: HashMap<String, TakeHealth>,
     pub recording: Option<ActiveRecording>,

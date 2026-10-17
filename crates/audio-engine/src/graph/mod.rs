@@ -55,6 +55,9 @@ pub struct LayerParams {
     pub highpass_hz: SmoothedParam,
     pub mute: AtomicBool,
     pub solo: AtomicBool,
+    /// Length of the gain ramp towards a new target, ms; 0 = the default 20 ms.
+    /// Long values make switch-on / switch-off a fade (background mixer).
+    pub fade_ms: AtomicU32,
     /// Peak of the last block (f32 bits), for meters.
     peak_bits: AtomicU32,
 }
@@ -68,6 +71,7 @@ impl Default for LayerParams {
             highpass_hz: SmoothedParam::new(10.0, 10.0, 8_000.0),
             mute: AtomicBool::new(false),
             solo: AtomicBool::new(false),
+            fade_ms: AtomicU32::new(0),
             peak_bits: AtomicU32::new(0),
         }
     }
@@ -311,7 +315,13 @@ impl Graph {
                     p.peak_bits.store(0, Ordering::Relaxed);
                     continue;
                 }
-                layer.gain.begin(target_gain, self.ramp);
+                let fade_ms = p.fade_ms.load(Ordering::Relaxed);
+                let gain_ramp = if fade_ms > 0 {
+                    fade_ms as f32 * self.sample_rate as f32 / 1000.0
+                } else {
+                    self.ramp
+                };
+                layer.gain.begin(target_gain, gain_ramp);
                 layer.pan.begin(p.pan.target(), self.ramp);
                 layer.lp.begin(p.lowpass_hz.target(), self.ramp);
                 layer.hp.begin(p.highpass_hz.target(), self.ramp);
@@ -495,6 +505,32 @@ mod tests {
         let sr = b.sample_rate as f64;
         b.slice_frames((from * sr) as usize, (to * sr) as usize)
             .rms()
+    }
+
+    #[test]
+    fn fade_ms_stretches_the_gain_ramp() {
+        let p = Arc::new(GraphParams::default());
+        p.master.gain_db.set(0.0);
+        p.layers[0].gain_db.set(-120.0);
+        let mut g = Graph::new(Arc::clone(&p), 48_000);
+        g.set_source(0, Box::new(SineSource::new(220.0, 0.25)));
+        p.layers[0].fade_ms.store(1000, Ordering::Relaxed);
+        p.layers[0].gain_db.set(0.0);
+        let b = g.render_offline(2.0, 1);
+        let early = rms(&b, 0.2, 0.3);
+        let late = rms(&b, 1.5, 2.0);
+        assert!(early < late * 0.5, "1 s fade: early {early} vs late {late}");
+        assert!(late > 0.15, "reached the level: {late}");
+        // Back to the default: the next change settles within the 20 ms ramp.
+        p.layers[0].fade_ms.store(0, Ordering::Relaxed);
+        p.layers[0].gain_db.set(-12.0);
+        let c = g.render_offline(0.5, 1);
+        let soon = rms(&c, 0.05, 0.15);
+        let settled = rms(&c, 0.4, 0.5);
+        assert!(
+            (soon - settled).abs() < 0.02,
+            "20 ms ramp: {soon} vs {settled}"
+        );
     }
 
     #[test]

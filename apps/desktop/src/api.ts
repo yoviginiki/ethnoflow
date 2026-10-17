@@ -1061,6 +1061,14 @@ export function describeError(e: unknown): string {
 
 export const IMPORT_EXTENSIONS = ["wav", "mp3", "flac", "ogg", "mid"];
 
+/** One background bus strip (drone, pad, atmosphere, rhythm): trim, pan, cuts. */
+export interface BusStrip {
+  gain_db: number;
+  pan: number;
+  lowpass_hz: number;
+  highpass_hz: number;
+}
+
 // ---------- Preset library (shell library_cmds.rs) ----------
 export const LIBRARY_KINDS = ["session", "module", "drone", "pad", "rhythm", "harmony", "intent", "ambient", "background"] as const;
 export type LibraryKind = (typeof LIBRARY_KINDS)[number];
@@ -1244,6 +1252,11 @@ export const api = {
   libraryReplacePayload: (id: string, payload: unknown) => invoke<LibrarySummary>("library_replace_payload", { id, payload }),
   libraryDelete: (id: string) => invoke<void>("library_delete", { id }),
   libraryFacets: () => invoke<LibraryFacets>("library_facets"),
+  // Background mixer buses (bus_cmds.rs)
+  busGet: () => invoke<BusStrip[]>("bus_get"),
+  busSet: (name: string, strip: BusStrip) => invoke<void>("bus_set", { name, strip }),
+  busFade: (name: string, fadeMs: number, muted: boolean) => invoke<void>("bus_fade", { name, fadeMs, muted }),
+  busStatus: () => invoke<number[]>("bus_status"),
   // Assistant bridge (docs/ASSISTANT_BRIDGE.md)
   assistantDir: () => invoke<string>("assistant_dir"),
   assistantPoll: () => invoke<{ name: string; body: unknown }[]>("assistant_poll"),

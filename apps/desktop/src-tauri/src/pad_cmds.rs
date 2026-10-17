@@ -144,6 +144,7 @@ pub async fn start_pad(
         .set(settings.level_db);
     s.pad = Some(params);
     s.pad_settings = Some(settings.clone());
+    crate::bus_cmds::refresh(&mut s, crate::bus_cmds::BUS_PAD);
     status(&mut s, &settings, hz, used)
 }
 
@@ -156,6 +157,7 @@ pub async fn set_pad(state: State<'_, AppState>, settings: PadSettings) -> CmdRe
     };
     let (hz, used) = apply(&s, &params, &settings);
     s.pad_settings = Some(settings.clone());
+    crate::bus_cmds::refresh(&mut s, crate::bus_cmds::BUS_PAD);
     status(&mut s, &settings, hz, used)
 }
 

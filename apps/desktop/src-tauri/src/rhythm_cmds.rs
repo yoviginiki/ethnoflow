@@ -482,12 +482,32 @@ fn validate(set: &RhythmSettings) -> CmdResult<()> {
     Ok(())
 }
 
+/// Re-push the levels and the strip (background mixer bus) into the running section.
+pub fn reapply(s: &Inner) {
+    if let Some(live) = s.rhythm.as_ref() {
+        apply_live(s, live);
+    }
+}
+
 fn apply_live(s: &Inner, live: &RhythmLive) {
     let Some(g) = s.graph.as_ref() else { return };
     let set = &live.settings;
     let layer = |slot: usize| &g.params().layers[slot];
-    // The slider's floor (−40) is silence.
-    let lvl = |db: f32| if db <= -39.5 { -120.0 } else { db };
+    // The slider's floor (−40) is silence; the bus trim and its mute come on top.
+    let lvl = |db: f32| {
+        let own = if db <= -39.5 { -120.0 } else { db };
+        crate::bus_cmds::bus_gain(s, crate::bus_cmds::BUS_RHYTHM, own)
+    };
+    for slot in [DRUMS_SLOT, BASS_SLOT, OSTINATO_SLOT, ARP_SLOT] {
+        crate::bus_cmds::apply_bus_strip(
+            s,
+            crate::bus_cmds::BUS_RHYTHM,
+            layer(slot),
+            0.0,
+            20_000.0,
+            10.0,
+        );
+    }
     if let Some(p) = live.drums.as_ref() {
         p.kick_hz.set(set.drums.kick_hz);
         p.decay.set(set.drums.decay);

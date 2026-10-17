@@ -248,6 +248,7 @@ pub async fn start_drone(
         .set(settings.level_db);
     s.drone = Some(params);
     s.drone_settings = Some(settings);
+    crate::bus_cmds::refresh(&mut s, crate::bus_cmds::BUS_DRONE);
     status(&mut s, &r)
 }
 
@@ -264,6 +265,7 @@ pub async fn set_drone(
     };
     apply(params, &graph.params().layers[DRONE_SLOT], &settings, &r);
     s.drone_settings = Some(settings);
+    crate::bus_cmds::refresh(&mut s, crate::bus_cmds::BUS_DRONE);
     status(&mut s, &r)
 }
 

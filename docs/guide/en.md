@@ -9,6 +9,13 @@ This guide is also shown inside the app (Home → Help, with search). It lives i
 - Every project **remembers its own settings**: drone, pad, rhythm, harmony, atmosphere. Open another project and its settings come back.
 - The floating bar at the bottom appears when something plays in the background: play/stop, switches for drone, pad, atmosphere and rhythm, the level, and quick buttons to the screens.
 
+## Background mixer
+
+- The **🎚** button (in the floating bar and wherever "Background: play and level" is) opens the mixer: one strip each for drone, pad, atmosphere and rhythm, plus the master.
+- Each strip has **Playing/Stopped**, a meter, **Level** (a trim on top of the modules' own levels), **Pan**, **HP/LP** cuts and **Fade in/out** in seconds. Switching on is no longer a click: the layer comes in over its fade-in and goes out over its fade-out (defaults 2 s / 3 s, rhythm 0.5 s / 1 s).
+- The strip's cuts add to the modules' own (the stricter wins). Level at the minimum = the layer is off.
+- Mixer settings are part of the session and are remembered per project.
+
 ## Start from a melody
 
 The quickest path from an idea to a background:

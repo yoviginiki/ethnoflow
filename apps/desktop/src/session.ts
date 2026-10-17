@@ -3,7 +3,7 @@ import { api, describeError, type Ambient as AmbientRack, type LibraryKind } fro
 import { useStore, type LayerName, type Prefs, type Screen } from "./store";
 
 /** The preference keys a session (or a per-project autosave) carries. */
-export const SESSION_PREF_KEYS = ["drone", "pad", "intent", "harmony", "rhythm", "masterDb", "stripControl"] as const;
+export const SESSION_PREF_KEYS = ["drone", "pad", "intent", "harmony", "rhythm", "masterDb", "stripControl", "mixer"] as const;
 export type SessionPrefKey = (typeof SESSION_PREF_KEYS)[number];
 export type SessionPrefs = Partial<Pick<Prefs, SessionPrefKey>>;
 

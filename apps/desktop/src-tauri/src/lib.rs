@@ -2,6 +2,7 @@ mod ambient_cmds;
 mod analysis_cmds;
 mod arrangement_cmds;
 mod assistant_cmds;
+mod bus_cmds;
 mod commands;
 mod graph_cmds;
 mod harmony_cmds;
@@ -172,6 +173,10 @@ pub fn run() {
             assistant_cmds::assistant_poll,
             assistant_cmds::assistant_reply,
             assistant_cmds::assistant_write_state,
+            bus_cmds::bus_get,
+            bus_cmds::bus_set,
+            bus_cmds::bus_fade,
+            bus_cmds::bus_status,
         ])
         .build(tauri::generate_context!())
         .expect("error while building EthnoFlow Studio")

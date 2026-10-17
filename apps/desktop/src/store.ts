@@ -31,11 +31,21 @@ import type {
   WaveformPeaks,
   WavFormat,
 } from "./api";
+import type { BusStrip } from "./api";
 import type { Lang } from "./i18n";
 
 export type Mode = "idle" | "recording" | "playing";
 export type Screen = "home" | "play" | "compose" | "studio" | "ambient" | "rhythm" | "library" | "soundscapes" | "start" | "help";
 export type LayerName = "drone" | "pad" | "ambient" | "rhythm";
+
+/** Background mixer strip per layer: the bus (trim, pan, cuts) plus fade times in seconds. */
+export interface MixerStrip extends BusStrip {
+  fadeIn: number;
+  fadeOut: number;
+}
+export type MixerPrefs = Record<LayerName, MixerStrip>;
+const DEFAULT_STRIP: MixerStrip = { gain_db: 0, pan: 0, lowpass_hz: 20_000, highpass_hz: 10, fadeIn: 2, fadeOut: 3 };
+export const DEFAULT_MIXER: MixerPrefs = { drone: { ...DEFAULT_STRIP }, pad: { ...DEFAULT_STRIP }, ambient: { ...DEFAULT_STRIP }, rhythm: { ...DEFAULT_STRIP, fadeIn: 0.5, fadeOut: 1 } };
 export type LayerSwitches = Record<LayerName, boolean>;
 
 export interface Prefs {
@@ -75,6 +85,8 @@ export interface Prefs {
   stripControl: "slider" | "knob";
   /** Assistant bridge (docs/ASSISTANT_BRIDGE.md): the app watches its inbox folder. */
   assistantBridge: boolean;
+  /** Background mixer: one strip per layer (bus_cmds.rs) with fade in/out times. */
+  mixer: MixerPrefs;
 }
 
 export const DEFAULT_RHYTHM: RhythmPrefs = {
@@ -196,6 +208,7 @@ export const DEFAULT_PREFS: Prefs = {
   rhythm: DEFAULT_RHYTHM,
   stripControl: "slider",
   assistantBridge: true,
+  mixer: DEFAULT_MIXER,
 };
 
 function loadPrefs(): Prefs {

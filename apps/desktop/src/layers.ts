@@ -1,6 +1,34 @@
 import { useEffect } from "react";
 import { api, describeError, type DroneSettings, type InstrumentProfile, type PadNote, type PadSettings, type Scale } from "./api";
-import { DEFAULT_DRONE, DEFAULT_PAD, DEFAULT_RHYTHM, useStore, type DronePrefs, type PadPrefs, type Voicing } from "./store";
+import { DEFAULT_DRONE, DEFAULT_MIXER, DEFAULT_PAD, DEFAULT_RHYTHM, useStore, type DronePrefs, type LayerName, type PadPrefs, type Voicing } from "./store";
+
+// ---------- background mixer: fades around every layer's start and stop ----------
+const BUS_NAMES: LayerName[] = ["drone", "pad", "ambient", "rhythm"];
+const pendingStops: Partial<Record<LayerName, number>> = {};
+function fadeMs(name: LayerName, which: "fadeIn" | "fadeOut"): number {
+  const m = (useStore.getState().prefs.mixer ?? DEFAULT_MIXER)[name];
+  return Math.round(Math.max(0, m?.[which] ?? 0) * 1000);
+}
+/** Before a layer starts: cancel a pending stop, set its fade-in and unmute its bus. */
+async function busIn(name: LayerName): Promise<void> {
+  const t = pendingStops[name];
+  if (t !== undefined) {
+    window.clearTimeout(t);
+    delete pendingStops[name];
+  }
+  await api.busFade(name, fadeMs(name, "fadeIn"), false).catch(() => undefined);
+}
+/** When a layer switches off: fade its bus out, then stop its sources. */
+function busOut(name: LayerName, stop: () => Promise<unknown>): void {
+  const ms = fadeMs(name, "fadeOut");
+  void api.busFade(name, ms, true).catch(() => undefined);
+  const t = pendingStops[name];
+  if (t !== undefined) window.clearTimeout(t);
+  pendingStops[name] = window.setTimeout(() => {
+    delete pendingStops[name];
+    void stop().catch(() => undefined);
+  }, ms + 60);
+}
 
 /** Suggested root: the project's scale tonic, else the lowest calibrated note. Never a
  *  built-in key — if nothing is known the user picks one. */
@@ -142,8 +170,8 @@ export function useBackgroundLayers() {
   useEffect(() => {
     if (!ambientOn || !project) return;
     let cancelled = false;
-    api
-      .ambientPlay(output)
+    busIn("ambient")
+      .then(() => api.ambientPlay(output))
       .then((st) => !cancelled && useStore.getState().setAmbientStatus(st))
       .catch((e) => {
         fail(e);
@@ -152,7 +180,7 @@ export function useBackgroundLayers() {
     return () => {
       cancelled = true;
       useStore.getState().setAmbientStatus(null);
-      void api.ambientStop().catch(() => undefined);
+      busOut("ambient", () => api.ambientStop());
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ambientOn, output, !!project]);
@@ -161,8 +189,8 @@ export function useBackgroundLayers() {
   useEffect(() => {
     if (!rhythmOn || !project) return;
     let cancelled = false;
-    api
-      .startRhythm(output, rhythmSettings())
+    busIn("rhythm")
+      .then(() => api.startRhythm(output, rhythmSettings()))
       .then((st) => !cancelled && useStore.getState().setRhythmStatus(st))
       .catch((e) => {
         fail(e);
@@ -171,7 +199,7 @@ export function useBackgroundLayers() {
     return () => {
       cancelled = true;
       useStore.getState().setRhythmStatus(null);
-      void api.stopRhythm().catch(() => undefined);
+      busOut("rhythm", () => api.stopRhythm());
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rhythmOn, output, !!project]);
@@ -230,8 +258,8 @@ export function useBackgroundLayers() {
   useEffect(() => {
     if (!droneOn || dRoot === null || !project) return;
     let cancelled = false;
-    api
-      .startDrone(output, droneSettings(dronePrefs, dRoot))
+    busIn("drone")
+      .then(() => api.startDrone(output, droneSettings(dronePrefs, dRoot)))
       .then((st) => !cancelled && useStore.getState().setDroneStatus(st))
       .catch((e) => {
         fail(e);
@@ -240,7 +268,7 @@ export function useBackgroundLayers() {
     return () => {
       cancelled = true;
       useStore.getState().setDroneStatus(null);
-      void api.stopDrone().catch(() => undefined);
+      busOut("drone", () => api.stopDrone());
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [droneOn, output, !!project]);
@@ -256,8 +284,8 @@ export function useBackgroundLayers() {
   useEffect(() => {
     if (!padOn || !padNotes || !project) return;
     let cancelled = false;
-    api
-      .startPad(output, padSettings(padPrefs, padNotes))
+    busIn("pad")
+      .then(() => api.startPad(output, padSettings(padPrefs, padNotes)))
       .then((st) => !cancelled && useStore.getState().setPadStatus(st))
       .catch((e) => {
         fail(e);
@@ -266,7 +294,7 @@ export function useBackgroundLayers() {
     return () => {
       cancelled = true;
       useStore.getState().setPadStatus(null);
-      void api.stopPad().catch(() => undefined);
+      busOut("pad", () => api.stopPad());
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [padOn, output, !!project]);
@@ -277,6 +305,15 @@ export function useBackgroundLayers() {
     api.setPad(padSettings(padPrefs, padNotes)).then((st) => useStore.getState().setPadStatus(st)).catch(fail);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [padOn, padPrefs, padNotesKey, profileKey, a4]);
+
+  // Background mixer strips: pushed whenever they change (the shell keeps them for later starts).
+  const mixer = useStore((s) => s.prefs.mixer ?? DEFAULT_MIXER);
+  useEffect(() => {
+    for (const n of BUS_NAMES) {
+      const m = mixer[n];
+      api.busSet(n, { gain_db: m.gain_db, pan: m.pan, lowpass_hz: m.lowpass_hz, highpass_hz: m.highpass_hz }).catch(() => undefined);
+    }
+  }, [mixer]);
 
   // Master level of the background, whenever it changes and once per start.
   const masterDb = useStore((s) => s.prefs.masterDb ?? 0);

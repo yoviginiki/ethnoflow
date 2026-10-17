@@ -103,7 +103,13 @@ fn push_effective(s: &Inner, layers: &[AmbientLayer], macros: &Macros) {
             apply_source(s, &live.params, l, macros);
         }
         if AMBIENT_SLOT0 + i < audio_engine::MAX_LAYERS {
-            apply_layer_strip(&g.params().layers[AMBIENT_SLOT0 + i], l, macros, any_solo);
+            apply_layer_strip(
+                &g.params().layers[AMBIENT_SLOT0 + i],
+                l,
+                macros,
+                any_solo,
+                s,
+            );
         }
     }
     g.params().master.space.set(macros.space as f32);
@@ -255,11 +261,31 @@ fn build_key(l: &AmbientLayer, rate: u32) -> String {
 }
 
 /// Apply macros + the layer's own level/pan/filters to its graph slot.
+/// Re-push every layer's strip (level/pan/filters) through the atmosphere bus.
+pub fn reapply_strips(s: &Inner) {
+    let (Some(a), Some(g)) = (s.ambient.as_ref(), s.graph.as_ref()) else {
+        return;
+    };
+    let any_solo = a.layers.iter().any(|l| l.solo);
+    for (i, l) in a.layers.iter().enumerate() {
+        if AMBIENT_SLOT0 + i < audio_engine::MAX_LAYERS {
+            apply_layer_strip(
+                &g.params().layers[AMBIENT_SLOT0 + i],
+                l,
+                &a.macros,
+                any_solo,
+                s,
+            );
+        }
+    }
+}
+
 fn apply_layer_strip(
     layer: &audio_engine::LayerParams,
     l: &AmbientLayer,
     m: &Macros,
     any_solo: bool,
+    s: &Inner,
 ) {
     // Intensity: −40 dB at 0 … 0 dB at 1 (log-ish curve so the slider feels even).
     let intensity_db = if m.intensity <= 0.0 {
@@ -281,12 +307,21 @@ fn apply_layer_strip(
     } else {
         (l.gain_db + intensity_db + gravity_db).clamp(-120.0, 12.0)
     };
-    layer.gain_db.set(gain as f32);
-    layer.pan.set((l.pan * m.width) as f32);
+    layer.gain_db.set(crate::bus_cmds::bus_gain(
+        s,
+        crate::bus_cmds::BUS_AMBIENT,
+        gain as f32,
+    ));
     // Brightness: shifts the low-pass by ±2 octaves around the layer's own setting.
     let lp = (l.lowpass_hz * 2f64.powf((m.brightness - 0.5) * 4.0)).clamp(40.0, 20_000.0);
-    layer.lowpass_hz.set(lp as f32);
-    layer.highpass_hz.set(l.highpass_hz as f32);
+    crate::bus_cmds::apply_bus_strip(
+        s,
+        crate::bus_cmds::BUS_AMBIENT,
+        layer,
+        (l.pan * m.width) as f32,
+        lp as f32,
+        l.highpass_hz as f32,
+    );
     layer.mute.store(l.mute, Ordering::Relaxed);
     // Solo is rack-wide, but the graph's solo is graph-wide; keep the drone/pad/clips
     // audible by expressing a rack solo as mutes of the other rack layers.
@@ -568,6 +603,7 @@ fn sync_live(s: &mut Inner) -> CmdResult<()> {
             l,
             &a.macros,
             any_solo,
+            &*s,
         );
     }
     // Layers that no longer exist: fade and clear.
@@ -970,7 +1006,13 @@ pub async fn export_ambient(
                     _ => {}
                 }
             }
-            apply_layer_strip(&gp.layers[AMBIENT_SLOT0 + i], l, &macros, any_solo);
+            apply_layer_strip(
+                &gp.layers[AMBIENT_SLOT0 + i],
+                l,
+                &macros,
+                any_solo,
+                &offline,
+            );
         }
         gp.master.space.set(macros.space as f32);
         gp.master.space_size.set(macros.space_size as f32);

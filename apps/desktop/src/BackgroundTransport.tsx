@@ -1,3 +1,5 @@
+import { useEffect, useRef, useState } from "react";
+import { BackgroundMixer } from "./BackgroundMixer";
 import { droneRoot, padRoot } from "./layers";
 import { messages } from "./i18n";
 import { DEFAULT_DRONE, DEFAULT_PAD, useStore } from "./store";
@@ -33,6 +35,19 @@ export function BackgroundTransport({ compact = false }: Props) {
   const canRhythm = !!timing && timing.bpm !== null && timing.numerator !== null && timing.unit !== null && (scale !== null || canDrone);
   const on = layers.drone || layers.pad || layers.ambient || layers.rhythm;
   const canPlay = canDrone || canPad || canAmbient || canRhythm;
+  const [showMixer, setShowMixer] = useState(false);
+  const ref = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!showMixer) return;
+    const onDoc = (e: MouseEvent) => ref.current && !ref.current.contains(e.target as Node) && setShowMixer(false);
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setShowMixer(false);
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [showMixer]);
 
   const play = () => {
     const want = {
@@ -61,7 +76,15 @@ export function BackgroundTransport({ compact = false }: Props) {
   };
 
   return (
-    <span className={`bg-transport ${compact ? "compact" : ""}`}>
+    <span className={`bg-transport ${compact ? "compact" : ""}`} ref={ref}>
+      <button className={`ghost ${showMixer ? "on" : ""}`} onClick={() => setShowMixer((v) => !v)} aria-expanded={showMixer} title={t.bgMixerHint}>
+        🎚 {compact ? "" : t.bgMixer}
+      </button>
+      {showMixer && (
+        <div className={`panel bg-mixer-pop ${compact ? "up" : ""}`} role="dialog" aria-label={t.bgMixer}>
+          <BackgroundMixer />
+        </div>
+      )}
       {on ? (
         <button onClick={stop} aria-label={t.bgStop} title={t.bgStop}>
           ■ {compact ? t.background : t.bgStop}

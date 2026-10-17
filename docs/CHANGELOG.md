@@ -202,6 +202,13 @@
   import in Atmosphere**: "Import samples…" (multi-file) or drag-and-drop from
   Explorer / a sample manager such as Soundly — each file becomes a take in the
   project (named after the file) and a looped layer.
+- **Background mixer (2026-10-18)**: the on/off switches of the background became fades.
+  Four buses (drone, pad, atmosphere, rhythm) in the shell (`bus_cmds.rs`), folded into
+  every member slot: trim (−40..+12 dB), pan, low/high cut, fade in/out in seconds; the
+  engine's slots gained `fade_ms` so a gain change ramps over the chosen time (test:
+  1 s fade vs 20 ms default). UI: 🎚 popover from the floating bar with knobs, meters per
+  bus and the master; part of the session, per project. Owner's words: "not on/off, that
+  is crude — like a real mix".
 - **Cloud module (F1B.2, 2026-10-17, night)**: granular cloud of a take (grain, density,
   position, spray, scan/freeze, pitch, jitter, reverse and octave probabilities) as a new
   atmosphere layer kind, automatable, with engine tests (continuity, octave = 2× frequency,
