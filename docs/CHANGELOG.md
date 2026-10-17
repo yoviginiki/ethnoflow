@@ -77,6 +77,16 @@
   frequent than B (vs D dorian); 96 % in the scale"). 11 modal fixtures in
   `qa/fixtures/modal/` (JSON note lists with the known tonic/mode) are a regression
   test: the known mode must be in the top 2 — currently all are #1.
+- **F3.3 Liquid pad** (0.2.7): `PadSource` — up to six chord voices (two detuned
+  polyBLEP saws + a sub sine each, smooth attack/release so chord changes crossfade and
+  retunes glide), Chamberlin SVF with a slow LFO, small Schroeder reverb (pre-allocated),
+  four emotion presets (calm / melancholy / light / dark = brightness, movement, warmth,
+  space, slowness) and an X/Y macro on top (X brightness·movement, Y depth·space); a
+  seed fixes the oscillator and LFO phases so a render is reproducible. The "Pad" panel
+  builds the chord from a root and a voicing — mode-neutral ones (1-5-8, sus2, sus4,
+  1-5-9) or 1-3-5(-7) from the chosen scale with its own cents — intonated like the
+  drone. Drone and pad share one output stream (slots 0 and 1); the stream stops when
+  both are off. Not yet: tempo-synced LFO, voicings from F3.4, stereo width.
 
 ### Measurements (owner's laptop, release build, YIN hop 10 ms, window 1024)
 | material | pitch time | voiced | f0 p05 / median / p95 | confidence p10 / median | octave-sized jumps |
