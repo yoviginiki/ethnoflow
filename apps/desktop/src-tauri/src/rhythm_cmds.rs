@@ -1126,10 +1126,12 @@ pub async fn rhythm_render(
             render_section(
                 &s,
                 &settings,
-                bpm,
-                &meter,
-                root,
-                &pcs,
+                &SectionContext {
+                    bpm,
+                    meter: &meter,
+                    root,
+                    pcs: &pcs,
+                },
                 bars,
                 rate,
                 stems.unwrap_or(true),
