@@ -6,6 +6,8 @@
 
 pub mod limiter;
 pub mod params;
+pub mod player;
+pub mod sources;
 
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::Arc;
@@ -203,6 +205,23 @@ impl Graph {
         self.set_source(slot, Box::new(Silence));
     }
 
+    /// Swap a slot's source and hand the old one back (so the caller can drop it off
+    /// the audio thread). Allocation-free.
+    pub fn replace_source(
+        &mut self,
+        slot: usize,
+        source: Box<dyn Source>,
+    ) -> Option<Box<dyn Source>> {
+        if slot >= MAX_LAYERS {
+            return Some(source);
+        }
+        let l = &mut self.layers[slot];
+        l.lp_state = 0.0;
+        l.hp_state_in = 0.0;
+        l.hp_state_out = 0.0;
+        Some(std::mem::replace(&mut l.source, source))
+    }
+
     pub fn reset(&mut self) {
         for l in self.layers.iter_mut() {
             l.source.reset();
@@ -315,7 +334,8 @@ impl Graph {
 pub struct SineSource {
     pub hz: f32,
     pub amp: f32,
-    phase: f32,
+    // f64 so an hour of accumulation stays within a few ppb (f32 drifts ~5 ppm).
+    phase: f64,
 }
 
 impl SineSource {
@@ -330,9 +350,9 @@ impl SineSource {
 
 impl Source for SineSource {
     fn render(&mut self, out: &mut [f32], sample_rate: u32) {
-        let inc = self.hz / sample_rate.max(1) as f32;
+        let inc = self.hz as f64 / sample_rate.max(1) as f64;
         for s in out.iter_mut() {
-            *s = self.amp * (self.phase * std::f32::consts::TAU).sin();
+            *s = self.amp * (self.phase * std::f64::consts::TAU).sin() as f32;
             self.phase += inc;
             if self.phase >= 1.0 {
                 self.phase -= 1.0;
@@ -434,6 +454,39 @@ mod tests {
         assert_eq!(
             a.samples, b.samples,
             "same params and sources → identical bytes"
+        );
+    }
+
+    /// F1.6 "1 hour without drift": the sample count is exact and the sine keeps its
+    /// phase (zero crossings match the ideal count) across an hour of chunked rendering.
+    #[test]
+    fn one_hour_of_chunked_rendering_keeps_time() {
+        let p = Arc::new(GraphParams::default());
+        p.master.gain_db.set(0.0);
+        p.layers[0].gain_db.set(0.0);
+        let mut g = Graph::new(Arc::clone(&p), 48_000);
+        g.set_source(0, Box::new(SineSource::new(100.0, 0.5)));
+        let mut buf = vec![0.0f32; 1000]; // odd chunk size on purpose
+        let total = 48_000u64 * 3600;
+        let mut rendered = 0u64;
+        let mut crossings = 0u64;
+        let mut prev = 0.0f32;
+        while rendered < total {
+            let n = ((total - rendered) as usize).min(buf.len());
+            g.render(&mut buf[..n], 1);
+            for &s in &buf[..n] {
+                if prev < 0.0 && s >= 0.0 {
+                    crossings += 1;
+                }
+                prev = s;
+            }
+            rendered += n as u64;
+        }
+        assert_eq!(rendered, total);
+        // 100 Hz for 3600 s = 360 000 upward zero crossings (±1 for the edges).
+        assert!(
+            (crossings as i64 - 360_000).abs() <= 1,
+            "crossings {crossings}"
         );
     }
 

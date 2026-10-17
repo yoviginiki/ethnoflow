@@ -35,6 +35,8 @@ pub use devices::{
     STANDARD_RATES,
 };
 pub use error::{AudioError, Result};
+pub use graph::player::{GraphCmd, GraphPlayer, GraphStatus};
+pub use graph::sources::{root_hz as drone_root_hz, DroneParams, DroneSource};
 pub use graph::{
     Graph, GraphMeters, GraphParams, LayerParams, MasterParams, SineSource, Source, MAX_LAYERS,
 };

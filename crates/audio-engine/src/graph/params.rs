@@ -36,6 +36,7 @@ impl SmoothedParam {
 #[derive(Debug, Clone, Copy)]
 pub struct Ramp {
     pub current: f32,
+    target: f32,
     step: f32,
 }
 
@@ -43,13 +44,20 @@ impl Ramp {
     pub fn new(initial: f32) -> Self {
         Self {
             current: initial,
+            target: initial,
             step: 0.0,
         }
     }
 
-    /// Prepare the ramp for a block: `ramp_samples` samples to reach `target`.
+    /// Prepare the ramp for a block: `ramp_samples` samples to reach `target`. The step
+    /// is recomputed only when the target changes, so a ramp longer than one block stays
+    /// linear instead of decaying exponentially block by block.
     #[inline]
     pub fn begin(&mut self, target: f32, ramp_samples: f32) {
+        if target == self.target && (self.step != 0.0 || self.current == target) {
+            return;
+        }
+        self.target = target;
         self.step = if ramp_samples > 0.0 {
             (target - self.current) / ramp_samples
         } else {
