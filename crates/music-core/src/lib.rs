@@ -3,12 +3,14 @@
 //! Rules: no default key, tempo or meter anywhere; every "what key is this" answer is
 //! a ranked list with probabilities; non-tempered (custom) scales are first-class.
 
+pub mod events;
 pub mod key;
 pub mod midi;
 pub mod notes;
 pub mod pitch;
 pub mod scale;
 
+pub use events::{parse_smf, tick_to_seconds, MidiClip, MidiError, NoteEvent, TrackInfo};
 pub use key::{rank_hypotheses, Hypothesis, PitchClassHistogram};
 pub use midi::{write_smf, SmfOptions, TECHNICAL_TEMPO_BPM};
 pub use notes::{extract_notes, Note, NoteParams, PitchSample};

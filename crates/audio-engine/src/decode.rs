@@ -17,7 +17,8 @@ use symphonia::core::meta::MetadataOptions;
 use crate::buffer::AudioBuffer;
 use crate::error::{AudioError, Result};
 
-/// File extensions the importer accepts (lower case).
+/// Audio file extensions the importer accepts (lower case). MIDI (`mid`) is handled
+/// separately by the project layer (parsed, not decoded).
 pub const IMPORT_EXTENSIONS: &[&str] = &["wav", "mp3", "flac", "ogg"];
 
 fn sym(e: SymError) -> AudioError {

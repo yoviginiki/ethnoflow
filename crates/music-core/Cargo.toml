@@ -11,3 +11,4 @@ path = "src/lib.rs"
 
 [dependencies]
 serde = { workspace = true }
+midly = { version = "0.5", default-features = false, features = ["std"] }

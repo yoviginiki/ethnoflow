@@ -21,6 +21,7 @@ pub mod player;
 pub mod recorder;
 pub mod resample;
 mod stream_thread;
+pub mod synth;
 pub mod take_writer;
 pub mod wav;
 
@@ -42,5 +43,6 @@ pub use pitch::{
 pub use player::{adapt_for_device, PlayOptions, Player, PlayerStatus};
 pub use recorder::{RecordedTake, Recorder, RecorderStatus};
 pub use resample::resample_linear;
+pub use synth::{render_notes, SynthConfig, SynthNote, Voice};
 pub use take_writer::TakeWriter;
 pub use wav::{read_wav, repair_wav_header, wav_info, write_wav, WavFormat, WavInfo};
