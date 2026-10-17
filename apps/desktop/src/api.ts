@@ -1060,6 +1060,36 @@ export function describeError(e: unknown): string {
 
 export const IMPORT_EXTENSIONS = ["wav", "mp3", "flac", "ogg", "mid"];
 
+// ---------- Preset library (shell library_cmds.rs) ----------
+export const LIBRARY_KINDS = ["session", "drone", "pad", "rhythm", "harmony", "intent", "ambient", "background"] as const;
+export type LibraryKind = (typeof LIBRARY_KINDS)[number];
+export type LibrarySortBy = "date_desc" | "date_asc" | "name" | "kind";
+export interface LibrarySummary {
+  id: string;
+  kind: string;
+  name: string;
+  tags: string[];
+  notes: string;
+  project: string;
+  created_ms: number;
+  updated_ms: number;
+}
+export interface LibraryEntry extends LibrarySummary {
+  payload: unknown;
+}
+export interface LibraryFacets {
+  projects: string[];
+  tags: string[];
+  counts: [string, number][];
+}
+export interface NewLibraryEntry {
+  kind: LibraryKind;
+  name: string;
+  tags: string[];
+  notes: string;
+  payload: unknown;
+}
+
 export const api = {
   audioHost: () => invoke<AudioHostInfo>("audio_host"),
   listInputDevices: () => invoke<DeviceInfo[]>("list_input_devices"),
@@ -1202,4 +1232,18 @@ export const api = {
   takePeaks: (takeId: string, bins: number) => invoke<WaveformPeaks>("take_peaks", { takeId, bins }),
   exportArrangementMix: (path: string, format: WavFormat | null, sampleRate: number | null) =>
     invoke<ExportResult>("export_arrangement_mix", { path, format, sampleRate }),
+
+  // Preset library
+  libraryList: (kind: LibraryKind | null, project: string | null, query: string | null, sortBy: LibrarySortBy) =>
+    invoke<LibrarySummary[]>("library_list", { kind, project, query, sortBy }),
+  librarySave: (entry: NewLibraryEntry) => invoke<LibrarySummary>("library_save", { entry }),
+  libraryGet: (id: string) => invoke<LibraryEntry>("library_get", { id }),
+  libraryUpdate: (id: string, name: string, tags: string[], notes: string) =>
+    invoke<LibrarySummary>("library_update", { id, name, tags, notes }),
+  libraryReplacePayload: (id: string, payload: unknown) => invoke<LibrarySummary>("library_replace_payload", { id, payload }),
+  libraryDelete: (id: string) => invoke<void>("library_delete", { id }),
+  libraryFacets: () => invoke<LibraryFacets>("library_facets"),
+  // Per-project remembered session (session.json in the project folder)
+  sessionGet: () => invoke<unknown | null>("session_get"),
+  sessionSet: (session: unknown) => invoke<void>("session_set", { session }),
 };

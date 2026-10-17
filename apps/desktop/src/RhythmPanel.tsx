@@ -3,6 +3,7 @@ import { api, describeError, type ArpDirection, type GrooveStyle, type RhythmPre
 import { formatDb, linearToDb, meterFraction, noteParts } from "./format";
 import { Knob } from "./Knob";
 import { messages, type StringMessageKey } from "./i18n";
+import { PresetLibrary } from "./PresetLibrary";
 import { DEFAULT_RHYTHM, useStore } from "./store";
 
 const pct = (v: number) => `${Math.round(v * 100)}%`;
@@ -115,6 +116,7 @@ export function RhythmPanel() {
     <section className="panel rhythm">
       <div className="analysis-row">
         <h3>{t.rhythmTitle}</h3>
+        <PresetLibrary kind="rhythm" compact getPayload={() => useStore.getState().prefs.rhythm} apply={(p) => s.setPref("rhythm", { ...useStore.getState().prefs.rhythm, ...(p as object) })} />
         {on ? (
           <button className="primary" onClick={() => s.setLayer("rhythm", false)}>
             ■ {t.rackStop}

@@ -3,6 +3,9 @@ import { Arrange } from "./Arrange";
 import { BackgroundTransport } from "./BackgroundTransport";
 import { Compose } from "./Compose";
 import { Home } from "./Home";
+import { Library } from "./Library";
+import { PresetLibrary } from "./PresetLibrary";
+import { applySession, collectSession, useProjectSession } from "./session";
 import { useBackgroundLayers } from "./layers";
 import { ProjectMenu } from "./ProjectMenu";
 import { ProjectPicker } from "./ProjectPicker";
@@ -18,6 +21,7 @@ const SCREEN_TITLE: Record<Exclude<Screen, "home">, StringMessageKey> = {
   studio: "areaStudio",
   ambient: "areaAmbient",
   rhythm: "areaRhythm",
+  library: "areaLibrary",
 };
 
 export default function App() {
@@ -30,6 +34,7 @@ export default function App() {
   const layers = useStore((s) => s.layers);
   const t = messages[lang];
   useBackgroundLayers();
+  useProjectSession();
 
   return (
     <div className="app">
@@ -59,6 +64,12 @@ export default function App() {
           </div>
         </div>
         <div className="topbar-right">
+          {project && (
+            <div className="session-bar" title={t.libSessionHint}>
+              <span className="muted small">{t.libSession}</span>
+              <PresetLibrary kind="session" compact getPayload={collectSession} apply={(p) => void applySession(p, true).catch((e) => useStore.getState().setError(String(e)))} />
+            </div>
+          )}
           <ProjectMenu />
           <label className="inline">
             {t.language}
@@ -76,6 +87,7 @@ export default function App() {
       {screen === "studio" && (project ? <Arrange /> : <ProjectPicker />)}
       {screen === "ambient" && (project ? <Ambient /> : <ProjectPicker />)}
       {screen === "rhythm" && (project ? <RhythmScreen /> : <ProjectPicker />)}
+      {screen === "library" && <Library />}
       {(layers.drone || layers.pad || layers.ambient || layers.rhythm) && (
         <div className="layers-badge small" role="status">
           <BackgroundTransport compact />

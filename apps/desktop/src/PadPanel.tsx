@@ -4,6 +4,7 @@ import { ROOT_RANGE } from "./DronePanel";
 import { centsFromScale, formatDb, linearToDb, meterFraction, noteParts } from "./format";
 import { padRoot, voicingNotes } from "./layers";
 import { messages } from "./i18n";
+import { PresetLibrary } from "./PresetLibrary";
 import { DEFAULT_DRONE, DEFAULT_PAD, useStore, VOICINGS, type PadPrefs, type Voicing } from "./store";
 
 interface Props {
@@ -58,6 +59,7 @@ export function PadPanel({ scale, profile, allowTension = true }: Props) {
           <input type="checkbox" checked={on} disabled={!notes} onChange={(e) => s.setLayer("pad", e.target.checked)} />
           <strong>{t.pad}</strong>
         </label>
+        <PresetLibrary kind="pad" compact getPayload={() => useStore.getState().prefs.pad} apply={(p) => s.setPref("pad", { ...useStore.getState().prefs.pad, ...(p as object) })} />
         <label>
           {t.droneRoot}
           <select value={rootMidi ?? ""} onChange={(e) => set({ rootMidi: e.target.value ? Number(e.target.value) : null })}>

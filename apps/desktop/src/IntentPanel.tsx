@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { api, describeError, NOTE_CLASSES, type IntentMode, type IntentSettings, type NoteClass, type PerformanceAnalysis } from "./api";
 import { messages, type Messages } from "./i18n";
+import { PresetLibrary } from "./PresetLibrary";
 import { DEFAULT_INTENT, useStore } from "./store";
 
 const MODES: IntentMode[] = ["stable", "assisted", "creative"];
@@ -100,6 +101,9 @@ export function IntentPanel() {
       <summary>
         {t.intentTitle} · <IntentBadge />
       </summary>
+      <div className="analysis-row">
+        <PresetLibrary kind="intent" compact getPayload={() => useStore.getState().prefs.intent} apply={(p) => s.setPref("intent", { ...useStore.getState().prefs.intent, ...(p as object) })} />
+      </div>
       <div className="muted small">{t.intentHint}</div>
       <div className="analysis-row">
         {MODES.map((m) => (

@@ -34,7 +34,7 @@ import type {
 import type { Lang } from "./i18n";
 
 export type Mode = "idle" | "recording" | "playing";
-export type Screen = "home" | "play" | "compose" | "studio" | "ambient" | "rhythm";
+export type Screen = "home" | "play" | "compose" | "studio" | "ambient" | "rhythm" | "library";
 export type LayerName = "drone" | "pad" | "ambient" | "rhythm";
 export type LayerSwitches = Record<LayerName, boolean>;
 

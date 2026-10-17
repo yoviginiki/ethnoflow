@@ -423,3 +423,19 @@ button.small { font-size: 12px; padding: 3px 7px; }
 .project-menu-new { display: flex; gap: 6px; }
 .project-menu-new input { flex: 1; }
 .home-project { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; margin: 0 0 12px; }
+
+/* Preset library (per panel) and the Library screen */
+.preset-lib { position: relative; display: inline-flex; gap: 6px; align-items: center; }
+.preset-lib-pop { position: absolute; left: 0; top: calc(100% + 4px); z-index: 40; min-width: 320px; box-shadow: 0 8px 24px rgba(0,0,0,0.35); }
+.preset-lib-pop.wide { min-width: 460px; max-width: 640px; max-height: 60vh; overflow: auto; }
+.preset-lib-pop textarea, .preset-lib-edit textarea { width: 100%; box-sizing: border-box; resize: vertical; }
+.preset-lib-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.preset-lib-row { display: flex; gap: 4px; align-items: center; }
+.preset-lib-edit { display: flex; flex-direction: column; gap: 4px; }
+.grow { flex: 1; text-align: left; min-width: 0; }
+.session-bar { display: inline-flex; gap: 6px; align-items: center; }
+.session-bar .preset-lib-pop { left: auto; right: 0; }
+.library { display: flex; flex-direction: column; gap: 10px; }
+.library-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.library-notes { white-space: pre-wrap; }
+button.ghost.on { border-color: var(--accent); color: var(--accent); }

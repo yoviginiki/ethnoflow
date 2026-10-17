@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { save } from "@tauri-apps/plugin-dialog";
 import { api, describeError, type ChordEvent, type HarmonyProposal, type HarmonyReason, type HarmonyUiParams, type Strategy } from "./api";
 import { messages, type Messages } from "./i18n";
+import { PresetLibrary } from "./PresetLibrary";
 import { DEFAULT_HARMONY, DEFAULT_INTENT, useStore, type HarmonyPrefs } from "./store";
 import { noteParts } from "./format";
 
@@ -150,6 +151,9 @@ export function HarmonyPanel() {
         {t.harmonyTitle}
         {s.armed.a !== null || s.armed.b !== null ? ` · ${t.playing}: ${s.armed.side.toUpperCase()}` : ""}
       </summary>
+      <div className="analysis-row">
+        <PresetLibrary kind="harmony" compact getPayload={() => useStore.getState().prefs.harmony} apply={(p) => set(p as Partial<HarmonyPrefs>)} />
+      </div>
       <div className="muted small">{t.harmonyHint}</div>
       <div className="drone-sliders">
         <label className="drone-slider">

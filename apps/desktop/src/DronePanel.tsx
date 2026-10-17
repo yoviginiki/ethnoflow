@@ -2,6 +2,7 @@ import { type InstrumentProfile, type Scale } from "./api";
 import { formatDb, linearToDb, meterFraction, noteParts } from "./format";
 import { droneRoot } from "./layers";
 import { messages, type StringMessageKey } from "./i18n";
+import { PresetLibrary } from "./PresetLibrary";
 import { DEFAULT_DRONE, useStore, type DronePrefs } from "./store";
 
 interface Props {
@@ -50,6 +51,7 @@ export function DronePanel({ scale, profile }: Props) {
           <input type="checkbox" checked={on} disabled={rootMidi === null} onChange={(e) => s.setLayer("drone", e.target.checked)} />
           <strong>{t.drone}</strong>
         </label>
+        <PresetLibrary kind="drone" compact getPayload={() => useStore.getState().prefs.drone} apply={(p) => set(p as Partial<DronePrefs>)} />
         <label>
           {t.droneRoot}
           <select value={rootMidi ?? ""} onChange={(e) => set({ rootMidi: e.target.value ? Number(e.target.value) : null })}>

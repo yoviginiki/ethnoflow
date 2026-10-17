@@ -676,6 +676,33 @@ pub async fn import_audio(state: State<'_, AppState>, path: String) -> CmdResult
     view(&s)
 }
 
+const SESSION_FILE: &str = "session.json";
+
+/// The project's remembered UI session (`session.json` in the project folder), if any.
+/// The shell does not interpret it: it is the UI's own JSON.
+#[tauri::command]
+pub async fn session_get(state: State<'_, AppState>) -> CmdResult<Option<serde_json::Value>> {
+    let s = state.lock();
+    let path = project_ref(&s)?.root().join(SESSION_FILE);
+    if !path.exists() {
+        return Ok(None);
+    }
+    let text = std::fs::read_to_string(&path).map_err(|e| err("io", e.to_string()))?;
+    Ok(serde_json::from_str(&text).ok())
+}
+
+/// Replace the project's remembered session (atomic write).
+#[tauri::command]
+pub async fn session_set(state: State<'_, AppState>, session: serde_json::Value) -> CmdResult<()> {
+    let s = state.lock();
+    let path = project_ref(&s)?.root().join(SESSION_FILE);
+    let tmp = path.with_extension("json.tmp");
+    let text = serde_json::to_string_pretty(&session).map_err(|e| err("io", e.to_string()))?;
+    std::fs::write(&tmp, text).map_err(|e| err("io", e.to_string()))?;
+    std::fs::rename(&tmp, &path).map_err(|e| err("io", e.to_string()))?;
+    Ok(())
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct ExportResult {
     pub path: String,

@@ -12,7 +12,8 @@ use tauri::State;
 use crate::commands::{err, CmdResult};
 use crate::state::{AppState, Inner};
 
-pub const KINDS: [&str; 7] = [
+pub const KINDS: [&str; 8] = [
+    "session",
     "drone",
     "pad",
     "rhythm",

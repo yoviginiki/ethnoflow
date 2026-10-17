@@ -7,6 +7,8 @@ import { randomizeRack } from "./ambientRandom";
 import { LaneEditor, ProgramPanel } from "./AmbientProgram";
 import { BackgroundTransport } from "./BackgroundTransport";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { PresetLibrary } from "./PresetLibrary";
+import { rackForProject } from "./session";
 import { Knob } from "./Knob";
 import { formatDb, linearToDb, meterFraction, noteParts, takeName } from "./format";
 import { fadeOutBackground } from "./layers";
@@ -530,6 +532,16 @@ export function Ambient() {
               {t.undo}
             </button>
           </div>
+          <PresetLibrary
+            kind="ambient"
+            getPayload={() => useStore.getState().ambient}
+            apply={(p) => {
+              const cur = useStore.getState();
+              if (!cur.ambient || !p) return;
+              snapshot(t.historyBeforePreset);
+              commit(rackForProject(p as AmbientRack, new Set(cur.project?.takes.map((x) => x.id) ?? [])));
+            }}
+          />
           {showSave && (
             <div className="panel save-preset">
               <input type="text" value={saveName} placeholder={t.presetNamePlaceholder} onChange={(e) => setSaveName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && void savePreset()} />
