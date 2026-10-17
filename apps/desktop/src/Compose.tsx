@@ -6,7 +6,8 @@ import { DRONE_PRESETS, DronePanel } from "./DronePanel";
 import { messages, type StringMessageKey } from "./i18n";
 import { IntentBadge } from "./IntentPanel";
 import { PadPanel } from "./PadPanel";
-import { DEFAULT_DRONE, DEFAULT_PAD, useStore, type DronePrefs, type PadPrefs } from "./store";
+import { RhythmPanel } from "./RhythmPanel";
+import { DEFAULT_DRONE, DEFAULT_PAD, DEFAULT_RHYTHM, useStore, type DronePrefs, type PadPrefs } from "./store";
 import { TimingPanel } from "./TimingPanel";
 
 /** Styles: what each one sets on the layers. Styles that need later phases are shown
@@ -21,7 +22,7 @@ const STYLES: Style[] = [
   { key: "styleTraditional", phase: null, drone: { ...DRONE_PRESETS.dronePresetTraditional, on: true, levelDb: -10 }, pad: { on: false } },
   { key: "styleLiquid", phase: null, drone: { ...DRONE_PRESETS.dronePresetDeep, on: true, levelDb: -16 }, pad: { on: true, emotion: "melancholy", voicing: "scale_triad", levelDb: -12 } },
   { key: "styleCinematic", phase: null, drone: { ...DRONE_PRESETS.dronePresetCinematic, on: true, levelDb: -14 }, pad: { on: true, emotion: "calm", voicing: "fifth9", levelDb: -12 } },
-  { key: "styleDnb", phase: 4, drone: { on: false }, pad: { on: false } },
+  { key: "styleDnb", phase: null, drone: { ...DRONE_PRESETS.dronePresetDeep, on: false, levelDb: -18 }, pad: { on: true, emotion: "melancholy", voicing: "scale_7th", levelDb: -14 } },
   { key: "styleNoKey", phase: null, drone: { on: false }, pad: { on: false } },
 ];
 
@@ -56,7 +57,27 @@ export function Compose() {
     }
   };
 
-  const applyStyle = (st: Style) => {
+  const applyStyle = async (st: Style) => {
+    if (st.key === "styleDnb") {
+      // Deep Ethno DnB: 172 BPM in 4/4 when the project has no tempo yet (the user
+      // pressed the style), liquid drums + Reese bass + pad; the drone steps back.
+      const tm = project.timing;
+      if (tm.bpm === null || tm.numerator === null || tm.unit === null) {
+        try {
+          s.setProject(await api.setTiming({ bpm: tm.bpm ?? 172, numerator: tm.numerator ?? 4, unit: tm.unit ?? 4, grouping: tm.grouping }));
+        } catch (e) {
+          fail(e);
+          return;
+        }
+      }
+      const rp = s.prefs.rhythm ?? DEFAULT_RHYTHM;
+      s.setPref("rhythm", {
+        ...rp,
+        drums: { ...rp.drums, on: true, style: "liquid", complexity: 0.45, level_db: -10 },
+        bass: { ...rp.bass, on: true, voice: 2, density: 0.5, syncopation: 0.4, wobble_div: 8, wobble_depth: 0.4, sidechain: 0.7, level_db: -12 },
+      });
+      s.setLayer("rhythm", true);
+    }
     if (st.key === "styleNoKey") {
       // Ambient No Key: textures without a tonal centre live in the Atmosphere rack.
       s.setLayer("drone", false);
@@ -125,7 +146,7 @@ export function Compose() {
         <div className="style-row">
           {STYLES.map((st) =>
             st.phase === null ? (
-              <button key={st.key} className="ghost" onClick={() => applyStyle(st)} disabled={busy || (!scale && st.key !== "styleNoKey")}>
+              <button key={st.key} className="ghost" onClick={() => void applyStyle(st)} disabled={busy || (!scale && st.key !== "styleNoKey")}>
                 {t[st.key]}
               </button>
             ) : (
@@ -146,16 +167,7 @@ export function Compose() {
       <DronePanel scale={scale} profile={project.instrument} />
       <PadPanel scale={scale} profile={project.instrument} allowTension={tension} />
 
-      <section className="panel">
-        <div className="style-row">
-          <span className="area small" aria-disabled="true">
-            {t.layerOstinato} <span className="badge">{t.availableFromPhase} 4</span>
-          </span>
-          <span className="area small" aria-disabled="true">
-            {t.layerBass} <span className="badge">{t.availableFromPhase} 4</span>
-          </span>
-        </div>
-      </section>
+      <RhythmPanel />
 
       <section className="panel">
         <h3>{t.backgroundTransport}</h3>

@@ -11,6 +11,7 @@ mod midi_in_cmds;
 mod pad_cmds;
 mod preset_cmds;
 mod project_cmds;
+mod rhythm_cmds;
 mod settings;
 mod state;
 mod synth_cmds;
@@ -142,6 +143,14 @@ pub fn run() {
             preset_cmds::ambient_preset_load,
             preset_cmds::ambient_preset_save,
             preset_cmds::ambient_preset_delete,
+            rhythm_cmds::start_rhythm,
+            rhythm_cmds::set_rhythm,
+            rhythm_cmds::stop_rhythm,
+            rhythm_cmds::rhythm_status,
+            rhythm_cmds::rhythm_restart,
+            rhythm_cmds::rhythm_regenerate,
+            rhythm_cmds::estimate_take_tempo,
+            harmony_cmds::countermelody_to_take,
         ])
         .build(tauri::generate_context!())
         .expect("error while building EthnoFlow Studio")

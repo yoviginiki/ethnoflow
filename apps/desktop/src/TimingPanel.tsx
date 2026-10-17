@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api, describeError } from "./api";
+import { api, describeError, type TempoCandidate } from "./api";
 import { formatGrouping, parseGrouping } from "./format";
 import { messages } from "./i18n";
 import { useStore } from "./store";
@@ -21,6 +21,16 @@ export function TimingPanel() {
   const [num, setNum] = useState("");
   const [unit, setUnit] = useState("");
   const [group, setGroup] = useState("");
+  const [candidates, setCandidates] = useState<TempoCandidate[] | null>(null);
+  const hasNotes = useStore((s) => (s.analysis?.notes.length ?? 0) >= 4);
+  const suggest = async () => {
+    try {
+      setError(null);
+      setCandidates(await api.estimateTakeTempo(null, null));
+    } catch (err) {
+      setError(describeError(err));
+    }
+  };
 
   useEffect(() => {
     setBpm(timing.bpm != null ? String(timing.bpm) : "");
@@ -51,6 +61,14 @@ export function TimingPanel() {
   };
 
   const busy = mode !== "idle";
+  const useCandidate = async (c: TempoCandidate) => {
+    try {
+      setProject(await api.setTiming({ bpm: Math.round(c.bpm * 2) / 2, numerator: timing.numerator ?? 4, unit: timing.unit ?? 4, grouping: timing.grouping }));
+      setCandidates(null);
+    } catch (err) {
+      setError(describeError(err));
+    }
+  };
   return (
     <details className="panel timing">
       <summary>
@@ -97,6 +115,20 @@ export function TimingPanel() {
         </button>
         <span className="muted small">{t.bpmUnitNote}</span>
       </form>
+      {hasNotes && (
+        <div className="analysis-row small">
+          <button className="ghost small" onClick={() => void suggest()} disabled={busy}>
+            {t.tempoFromTake}
+          </button>
+          {candidates && candidates.length === 0 && <span className="muted">{t.tempoNone}</span>}
+          {candidates?.map((c) => (
+            <button key={c.bpm} className="ghost small" onClick={() => void useCandidate(c)} title={`${t.tempoOffset} ${c.offset_s.toFixed(2)} s`}>
+              {c.bpm.toFixed(1)} BPM · {Math.round(c.fit * 100)}%
+            </button>
+          ))}
+          {candidates && candidates.length > 0 && <span className="muted">{t.tempoFromTakeHint}</span>}
+        </div>
+      )}
       <div className="timing-toggles">
         <label className="inline">
           <input type="checkbox" checked={prefs.clickRec} disabled={!hasClick || busy} onChange={(e) => setPref("clickRec", e.target.checked)} />

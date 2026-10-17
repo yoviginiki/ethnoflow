@@ -7,6 +7,8 @@ import type {
   Ambient,
   AmbientStatus,
   AnalysisView,
+  RhythmPrefs,
+  RhythmStatus,
   DeviceInfo,
   DroneStatus,
   Emotion,
@@ -33,7 +35,7 @@ import type { Lang } from "./i18n";
 
 export type Mode = "idle" | "recording" | "playing";
 export type Screen = "home" | "play" | "compose" | "studio" | "ambient";
-export type LayerName = "drone" | "pad" | "ambient";
+export type LayerName = "drone" | "pad" | "ambient" | "rhythm";
 export type LayerSwitches = Record<LayerName, boolean>;
 
 export interface Prefs {
@@ -67,7 +69,17 @@ export interface Prefs {
   /** Ambient preset ids marked as favourites / recently loaded (F1A.3). */
   favPresets: string[];
   recentPresets: string[];
+  /** Rhythm section settings (Phase 4). */
+  rhythm: RhythmPrefs;
 }
+
+export const DEFAULT_RHYTHM: RhythmPrefs = {
+  drums: { on: true, style: "liquid", complexity: 0.4, humanize: 0.3, swing: 0, fill_every_bars: 4, seed: 1, level_db: -10, kick_hz: 50, decay: 0.5, brightness: 0.5, locked: false },
+  bass: { on: true, voice: 0, density: 0.4, syncopation: 0.3, passing: 0.3, register_low: 31, register_high: 43, seed: 1, level_db: -12, cutoff_hz: 400, resonance: 0.2, drive: 0.3, glide_s: 0.08, sidechain: 0.6, wobble_div: 0, wobble_depth: 0.5, warmth: 0.5, locked: false },
+  ostinato: { on: false, steps: 8, step_beats: 0.5, density: 0.6, probability: 1, variation_every_bars: 4, swing: 0, seed: 1, level_db: -16, register_low: 55, register_high: 79, timbre: 2, release_s: 0.15, locked: false, motif: null },
+  arp: { on: false, direction: "up", octaves: 1, step_beats: 0.25, gate: 0.6, density: 1, swing: 0, seed: 1, level_db: -18, register_low: 60, timbre: 0, release_s: 0.12, locked: false },
+  bars: 4,
+};
 
 export interface HarmonyPrefs {
   tension: number;
@@ -177,6 +189,7 @@ export const DEFAULT_PREFS: Prefs = {
   masterDb: 0,
   favPresets: [],
   recentPresets: [],
+  rhythm: DEFAULT_RHYTHM,
 };
 
 function loadPrefs(): Prefs {
@@ -286,6 +299,8 @@ interface Store {
   setAmbient: (a: Ambient | null) => void;
   ambientStatus: AmbientStatus | null;
   setAmbientStatus: (s: AmbientStatus | null) => void;
+  rhythmStatus: RhythmStatus | null;
+  setRhythmStatus: (s: RhythmStatus | null) => void;
   /** Sleep timer: epoch ms at which the background fades out, or null. */
   sleepAt: number | null;
   setSleepAt: (t: number | null) => void;
@@ -328,14 +343,16 @@ export const useStore = create<Store>((set, get) => ({
   screen: "home",
   setScreen: (screen) => set({ screen }),
 
-  layers: { drone: false, pad: false, ambient: false },
+  layers: { drone: false, pad: false, ambient: false, rhythm: false },
   setLayer: (name, on) => set({ layers: { ...get().layers, [name]: on } }),
-  lastLayers: { drone: true, pad: false, ambient: false },
+  lastLayers: { drone: true, pad: false, ambient: false, rhythm: false },
   setLastLayers: (lastLayers) => set({ lastLayers }),
   ambient: null,
   setAmbient: (ambient) => set({ ambient }),
   ambientStatus: null,
   setAmbientStatus: (ambientStatus) => set({ ambientStatus }),
+  rhythmStatus: null,
+  setRhythmStatus: (rhythmStatus) => set({ rhythmStatus }),
   sleepAt: null,
   setSleepAt: (sleepAt) => set({ sleepAt }),
   droneStatus: null,

@@ -103,6 +103,8 @@ pub struct Inner {
     pub ambient_live: Vec<Option<crate::ambient_cmds::LiveLayer>>,
     /// Automation / program clock while the rack plays (F1A.4/F1A.5).
     pub ambient_clock: Option<crate::ambient_cmds::Clock>,
+    /// Rhythm section (Phase 4) on slots 12..16 while it plays.
+    pub rhythm: Option<crate::rhythm_cmds::RhythmLive>,
 }
 
 impl Inner {
@@ -140,7 +142,11 @@ impl Inner {
 
     /// True when nothing uses the graph's stream any more.
     pub fn graph_idle(&self) -> bool {
-        self.drone.is_none() && self.pad.is_none() && self.clips.is_none() && !self.ambient_on
+        self.drone.is_none()
+            && self.pad.is_none()
+            && self.clips.is_none()
+            && !self.ambient_on
+            && self.rhythm.is_none()
     }
 
     pub fn stop_graph(&mut self) {
@@ -164,6 +170,7 @@ impl Inner {
         if let Some(c) = self.ambient_clock.take() {
             c.stop();
         }
+        self.rhythm = None;
     }
 }
 

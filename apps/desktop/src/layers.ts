@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { api, describeError, type DroneSettings, type InstrumentProfile, type PadNote, type PadSettings, type Scale } from "./api";
-import { DEFAULT_DRONE, DEFAULT_PAD, useStore, type DronePrefs, type PadPrefs, type Voicing } from "./store";
+import { DEFAULT_DRONE, DEFAULT_PAD, DEFAULT_RHYTHM, useStore, type DronePrefs, type PadPrefs, type Voicing } from "./store";
 
 /** Suggested root: the project's scale tonic, else the lowest calibrated note. Never a
  *  built-in key — if nothing is known the user picks one. */
@@ -71,7 +71,7 @@ export function padSettings(p: PadPrefs, notes: PadNote[]): PadSettings {
 /** Fade the whole background (rack, drone, pad) out over `seconds` and switch it off. */
 export async function fadeOutBackground(seconds: number): Promise<void> {
   const st = useStore.getState();
-  if (!st.layers.drone && !st.layers.pad && !st.layers.ambient) return;
+  if (!st.layers.drone && !st.layers.pad && !st.layers.ambient && !st.layers.rhythm) return;
   st.setLastLayers({ ...st.layers });
   try {
     await api.backgroundFadeOut(seconds);
@@ -84,6 +84,7 @@ export async function fadeOutBackground(seconds: number): Promise<void> {
     s.setLayer("drone", false);
     s.setLayer("pad", false);
     s.setLayer("ambient", false);
+    s.setLayer("rhythm", false);
   }, seconds * 1000 + 150);
 }
 
@@ -107,6 +108,11 @@ export function useBackgroundLayers() {
   const fail = (e: unknown) => useStore.getState().setError(describeError(e));
 
   const ambientOn = useStore((s) => s.layers.ambient);
+  const rhythmOn = useStore((s) => s.layers.rhythm);
+  const rhythmPrefs = useStore((s) => s.prefs.rhythm ?? DEFAULT_RHYTHM);
+  const timing = project?.timing ?? null;
+  const timingKey = timing ? `${timing.bpm}:${timing.numerator}:${timing.unit}:${timing.grouping.join(",")}` : "";
+  const rhythmSettings = () => ({ ...rhythmPrefs, chord: padChord, root_midi: dRoot, intonation: dronePrefs.intonation });
 
   // Closing the project stops everything (the backend does too).
   useEffect(() => {
@@ -115,6 +121,7 @@ export function useBackgroundLayers() {
       if (st.layers.drone) st.setLayer("drone", false);
       if (st.layers.pad) useStore.getState().setLayer("pad", false);
       if (st.layers.ambient) useStore.getState().setLayer("ambient", false);
+      if (st.layers.rhythm) useStore.getState().setLayer("rhythm", false);
       useStore.getState().setAmbient(null);
       useStore.getState().setSleepAt(null);
     }
@@ -148,6 +155,33 @@ export function useBackgroundLayers() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ambientOn, output, !!project]);
+
+  // Rhythm section lifecycle (Phase 4): start/stop on its switch or an output change.
+  useEffect(() => {
+    if (!rhythmOn || !project) return;
+    let cancelled = false;
+    api
+      .startRhythm(output, rhythmSettings())
+      .then((st) => !cancelled && useStore.getState().setRhythmStatus(st))
+      .catch((e) => {
+        fail(e);
+        useStore.getState().setLayer("rhythm", false);
+      });
+    return () => {
+      cancelled = true;
+      useStore.getState().setRhythmStatus(null);
+      void api.stopRhythm().catch(() => undefined);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rhythmOn, output, !!project]);
+
+  // Rhythm parameters, the followed chord and the project's mode: pushed live.
+  const scaleKey = scale ? `${scale.tonic_pc}:${scale.degrees_cents.join(",")}` : "";
+  useEffect(() => {
+    if (!rhythmOn || !useStore.getState().rhythmStatus) return;
+    api.setRhythm(rhythmSettings()).then((st) => useStore.getState().setRhythmStatus(st)).catch(fail);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rhythmOn, rhythmPrefs, padChord, dRoot, scaleKey, profileKey, a4, timingKey, dronePrefs.intonation]);
 
   // Sleep timer (F1A.2): when it is due, fade everything out.
   const sleepAt = useStore((s) => s.sleepAt);
@@ -219,17 +253,24 @@ export function useBackgroundLayers() {
   const droneStarted = useStore((s) => s.droneStatus !== null);
   const padStarted = useStore((s) => s.padStatus !== null);
   const ambientStarted = useStore((s) => s.ambientStatus !== null);
+  const rhythmStarted = useStore((s) => s.rhythmStatus !== null);
   useEffect(() => {
-    if (!droneStarted && !padStarted && !ambientStarted) return;
+    if (!droneStarted && !padStarted && !ambientStarted && !rhythmStarted) return;
     api.setGraphMaster(masterDb).catch(fail);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [masterDb, droneStarted, padStarted, ambientStarted]);
+  }, [masterDb, droneStarted, padStarted, ambientStarted, rhythmStarted]);
 
   // Meters while anything plays.
   useEffect(() => {
-    if (!droneOn && !padOn) return;
+    if (!droneOn && !padOn && !rhythmOn) return;
     const id = window.setInterval(() => {
       const st = useStore.getState();
+      if (st.layers.rhythm && st.rhythmStatus) {
+        api
+          .rhythmStatus()
+          .then((r) => useStore.getState().setRhythmStatus(r))
+          .catch(() => undefined);
+      }
       if (st.layers.drone && st.droneStatus) {
         api
           .droneStatus()
@@ -244,5 +285,5 @@ export function useBackgroundLayers() {
       }
     }, 200);
     return () => window.clearInterval(id);
-  }, [droneOn, padOn]);
+  }, [droneOn, padOn, rhythmOn]);
 }

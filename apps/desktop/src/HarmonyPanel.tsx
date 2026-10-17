@@ -94,6 +94,21 @@ export function useHarmonyFollow(position: number | null) {
 export function HarmonyPanel() {
   const s = useStore();
   const t = messages[s.prefs.lang];
+  const [counter, setCounter] = useState<{ register: "below" | "above"; adventure: number; tension: number; min_rest_s: number }>({ register: "below", adventure: 0.4, tension: 0, min_rest_s: 0.6 });
+  const makeCounter = async () => {
+    const armedIndex = s.armed.side === "a" ? s.armed.a : s.armed.b;
+    const proposal = armedIndex !== null && s.harmony ? s.harmony[armedIndex] : null;
+    try {
+      s.setPending(t.saving);
+      const r = await api.countermelodyToTake(s.prefs.intent, { ...counter, seed: 1 + Math.floor(Math.random() * 1_000_000) }, proposal, null);
+      s.setProject(r.project);
+      s.setMessage(t.counterCreated);
+    } catch (e) {
+      s.setError(describeError(e));
+    } finally {
+      useStore.getState().setPending(null);
+    }
+  };
   const h = s.prefs.harmony ?? DEFAULT_HARMONY;
   const set = (patch: Partial<HarmonyPrefs>) => s.setPref("harmony", { ...h, ...patch });
   const [open, setOpen] = useState<number | null>(null);
@@ -240,6 +255,35 @@ export function HarmonyPanel() {
           ))}
         </div>
       )}
-    </details>
+          <div className="panel counter">
+        <div className="analysis-row">
+          <strong>{t.counterTitle}</strong>
+          <label className="inline small">
+            {t.registerLabel}
+            <select value={counter.register} onChange={(e) => setCounter({ ...counter, register: e.target.value as "below" | "above" })}>
+              <option value="below">{t.counterBelow}</option>
+              <option value="above">{t.counterAbove}</option>
+            </select>
+          </label>
+          <label className="inline small">
+            {t.adventureLabel}
+            <input type="range" min={0} max={1} step={0.05} value={counter.adventure} onChange={(e) => setCounter({ ...counter, adventure: Number(e.target.value) })} style={{ width: 90 }} />
+          </label>
+          <label className="inline small">
+            {t.hTension}
+            <input type="range" min={0} max={1} step={0.05} value={counter.tension} onChange={(e) => setCounter({ ...counter, tension: Number(e.target.value) })} style={{ width: 90 }} />
+          </label>
+          <label className="inline small">
+            {t.minRestLabel}
+            <input type="number" min={0.2} max={5} step={0.1} value={counter.min_rest_s} onChange={(e) => setCounter({ ...counter, min_rest_s: Number(e.target.value) })} />
+            s
+          </label>
+          <button onClick={() => void makeCounter()} disabled={s.pending !== null || s.mode !== "idle" || !s.analysis}>
+            {t.counterMake}
+          </button>
+        </div>
+        <div className="muted small">{t.counterHint}</div>
+      </div>
+</details>
   );
 }

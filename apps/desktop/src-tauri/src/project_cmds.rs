@@ -386,6 +386,7 @@ pub async fn project_state(state: State<'_, AppState>) -> CmdResult<Option<Proje
 pub async fn set_timing(state: State<'_, AppState>, timing: Timing) -> CmdResult<ProjectView> {
     timing.validate()?;
     let mut s = state.lock();
+    let had_rhythm = s.rhythm.is_some();
     if s.recording.is_some() {
         return Err(err(
             "recording",
@@ -412,6 +413,9 @@ pub async fn set_timing(state: State<'_, AppState>, timing: Timing) -> CmdResult
             _ => Vec::new(),
         };
     })?;
+    if had_rhythm {
+        crate::rhythm_cmds::on_timing_changed(&mut s);
+    }
     view(&s)
 }
 

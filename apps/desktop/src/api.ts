@@ -641,6 +641,120 @@ export interface AmbientStatus {
   lane_time: number;
 }
 
+// Rhythm section (Phase 4): src-tauri/src/rhythm_cmds.rs
+export type GrooveStyle = "liquid" | "halftime" | "ethno";
+export type ArpDirection = "up" | "down" | "up_down" | "random";
+export interface Motif {
+  cells: ([number, number] | null)[];
+}
+export interface DrumsSettings {
+  on: boolean;
+  style: GrooveStyle;
+  complexity: number;
+  humanize: number;
+  swing: number;
+  fill_every_bars: number;
+  seed: number;
+  level_db: number;
+  kick_hz: number;
+  decay: number;
+  brightness: number;
+  locked: boolean;
+}
+export interface BassSettings {
+  on: boolean;
+  voice: number;
+  density: number;
+  syncopation: number;
+  passing: number;
+  register_low: number;
+  register_high: number;
+  seed: number;
+  level_db: number;
+  cutoff_hz: number;
+  resonance: number;
+  drive: number;
+  glide_s: number;
+  sidechain: number;
+  wobble_div: number;
+  wobble_depth: number;
+  warmth: number;
+  locked: boolean;
+}
+export interface OstinatoSettings {
+  on: boolean;
+  steps: number;
+  step_beats: number;
+  density: number;
+  probability: number;
+  variation_every_bars: number;
+  swing: number;
+  seed: number;
+  level_db: number;
+  register_low: number;
+  register_high: number;
+  timbre: number;
+  release_s: number;
+  locked: boolean;
+  motif: Motif | null;
+}
+export interface ArpSettings {
+  on: boolean;
+  direction: ArpDirection;
+  octaves: number;
+  step_beats: number;
+  gate: number;
+  density: number;
+  swing: number;
+  seed: number;
+  level_db: number;
+  register_low: number;
+  timbre: number;
+  release_s: number;
+  locked: boolean;
+}
+/** What the user edits (persisted in prefs); chord/root/intonation are added at send time. */
+export interface RhythmPrefs {
+  drums: DrumsSettings;
+  bass: BassSettings;
+  ostinato: OstinatoSettings;
+  arp: ArpSettings;
+  bars: number;
+}
+export interface RhythmSettings extends RhythmPrefs {
+  chord: PadNote[] | null;
+  root_midi: number | null;
+  intonation: Intonation;
+}
+export interface RhythmStatus {
+  playing: boolean;
+  sample_rate: number;
+  bpm: number;
+  beat: number;
+  bar: number;
+  beat_in_bar: number;
+  peaks: [number, number, number, number];
+  master_peak: number;
+  limiter_gain: number;
+  stream_errors: number;
+  motif: Motif | null;
+  root_pc: number | null;
+  chord_pcs: number[];
+}
+export interface TempoCandidate {
+  bpm: number;
+  offset_s: number;
+  fit: number;
+}
+export type CounterRegister = "below" | "above";
+export interface CounterUiParams {
+  register: CounterRegister;
+  adventure: number;
+  tension: number;
+  min_rest_s: number;
+  seed: number;
+}
+
 export interface ProjectView {
   name: string;
   root: string;
@@ -1052,6 +1166,15 @@ export const api = {
   ambientProgramSet: (playing: boolean | null, position: number | null) => invoke<AmbientStatus>("ambient_program_set", { playing, position }),
   exportAmbient: (path: string, format: WavFormat | null, seconds: number | null, stems: boolean, sampleRate: number | null) =>
     invoke<AmbientExportResult>("export_ambient", { path, format, seconds, stems, sampleRate }),
+  startRhythm: (device: string | null, settings: RhythmSettings) => invoke<RhythmStatus>("start_rhythm", { device, settings }),
+  setRhythm: (settings: RhythmSettings) => invoke<RhythmStatus>("set_rhythm", { settings }),
+  stopRhythm: () => invoke<void>("stop_rhythm"),
+  rhythmStatus: () => invoke<RhythmStatus>("rhythm_status"),
+  rhythmRestart: () => invoke<RhythmStatus>("rhythm_restart"),
+  rhythmRegenerate: (settings: RhythmSettings) => invoke<RhythmSettings>("rhythm_regenerate", { settings }),
+  estimateTakeTempo: (bpmLow: number | null, bpmHigh: number | null) => invoke<TempoCandidate[]>("estimate_take_tempo", { bpmLow, bpmHigh }),
+  countermelodyToTake: (intent: IntentSettings, params: CounterUiParams, proposal: HarmonyProposal | null, label: string | null) =>
+    invoke<{ project: ProjectView; take_id: string }>("countermelody_to_take", { intent, params, proposal, label }),
   ambientPresets: () => invoke<PresetSummary[]>("ambient_presets"),
   ambientPresetLoad: (id: string) => invoke<Ambient>("ambient_preset_load", { id }),
   ambientPresetSave: (name: string, tags: string[], rack: Ambient) => invoke<PresetSummary[]>("ambient_preset_save", { name, tags, rack }),

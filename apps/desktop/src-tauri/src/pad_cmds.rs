@@ -13,7 +13,7 @@ use crate::commands::{err, CmdResult};
 use crate::graph_cmds::{ensure_graph, note_hz, release_slot, Intonation, PAD_SLOT};
 use crate::state::{AppState, Inner};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PadNote {
     pub midi: u8,
     pub cents: f64,

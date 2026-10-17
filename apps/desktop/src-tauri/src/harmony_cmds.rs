@@ -4,8 +4,8 @@
 use std::path::PathBuf;
 
 use music_core::{
-    propose_all, write_smf, HarmonyParams, HarmonyProposal, Locks, Note, SmfOptions, Strategy,
-    TECHNICAL_TEMPO_BPM,
+    generate_countermelody, propose_all, write_smf, CounterParams, CounterRegister, HarmonyParams,
+    HarmonyProposal, Locks, Note, SmfOptions, Strategy, ToneSpan, TECHNICAL_TEMPO_BPM,
 };
 use serde::{Deserialize, Serialize};
 use tauri::State;
@@ -144,4 +144,84 @@ pub async fn export_harmony_midi(
         chords,
         bass_notes: proposal.bass.len(),
     })
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CounterUiParams {
+    pub register: CounterRegister,
+    pub adventure: f64,
+    pub tension: f64,
+    pub min_rest_s: f64,
+    pub seed: u32,
+}
+
+/// Countermelody (F4.7): answers in the rests of the loaded take, on the tones of
+/// the given proposal (or the mode), rendered as a new MIDI take in the player so it
+/// can be heard, edited and exported like any other take.
+#[tauri::command]
+pub async fn countermelody_to_take(
+    state: State<'_, AppState>,
+    intent: IntentSettings,
+    params: CounterUiParams,
+    proposal: Option<HarmonyProposal>,
+    label: Option<String>,
+) -> CmdResult<crate::midi_cmds::SentToPlayer> {
+    if !(0.0..=1.0).contains(&params.adventure)
+        || !(0.0..=1.0).contains(&params.tension)
+        || !(0.1..=10.0).contains(&params.min_rest_s)
+    {
+        return Err(err(
+            "invalid_argument",
+            "countermelody parameters out of range",
+        ));
+    }
+    let mut s = state.lock();
+    if s.mode_busy() {
+        return Err(err("busy", "Stop recording or playback first"));
+    }
+    let Some(analysis) = analyze_for(&s, &intent)? else {
+        return Err(err("no_notes", "Analyse the take first"));
+    };
+    let melody = crate::analysis_cmds::current_notes(&s)?;
+    if melody.is_empty() {
+        return Err(err("no_notes", "There are no notes to answer"));
+    }
+    let spans: Vec<ToneSpan> = proposal
+        .as_ref()
+        .map(|p| {
+            p.chords
+                .iter()
+                .map(|c| ToneSpan {
+                    start: c.start,
+                    end: c.end,
+                    tones: c
+                        .tones
+                        .iter()
+                        .map(|t| (t.midi.rem_euclid(12) as u8, t.cents))
+                        .collect(),
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    let scale = s.project.as_ref().and_then(|p| p.manifest().scale.clone());
+    let answer = generate_countermelody(
+        &melody,
+        &analysis.phrases,
+        &spans,
+        scale.as_ref(),
+        &CounterParams {
+            register: params.register,
+            adventure: params.adventure,
+            tension: params.tension,
+            min_rest_s: params.min_rest_s,
+            seed: params.seed,
+        },
+    );
+    if answer.is_empty() {
+        return Err(err(
+            "no_rests",
+            "No rests long enough for an answer (lower the minimum rest)",
+        ));
+    }
+    crate::midi_cmds::notes_to_take(&mut s, &answer, label.as_deref())
 }

@@ -217,6 +217,15 @@ pub async fn send_notes_to_player(
     if notes.is_empty() {
         return Err(err("no_notes", "There are no notes to send"));
     }
+    notes_to_take(&mut s, &notes, label.as_deref())
+}
+
+/// Write `notes` as a derived MIDI take of the loaded take (SMF + rendered audio).
+pub fn notes_to_take(
+    s: &mut Inner,
+    notes: &[Note],
+    label: Option<&str>,
+) -> CmdResult<SentToPlayer> {
     let parent = s
         .loaded
         .as_ref()
@@ -240,9 +249,9 @@ pub async fn send_notes_to_player(
             .map(|t| (t.numerator as u8, t.unit as u8)),
         ..music_core::SmfOptions::default()
     };
-    let bytes = music_core::write_smf(&notes, &opts);
+    let bytes = music_core::write_smf(notes, &opts);
     let rendered = render_notes(
-        &synth_notes(&notes),
+        &synth_notes(notes),
         &SynthConfig {
             a4_hz: a4,
             ..SynthConfig::new(RENDER_SAMPLE_RATE)
@@ -254,7 +263,7 @@ pub async fn send_notes_to_player(
         .ok_or_else(|| err("no_project", "No project is open"))?;
     let take = p.create_derived_midi(
         &parent,
-        label.as_deref(),
+        label,
         (
             rendered.sample_rate,
             rendered.channels,
@@ -264,7 +273,7 @@ pub async fn send_notes_to_player(
     )?;
     s.health.insert(take.id.clone(), project::TakeHealth::Ok);
     Ok(SentToPlayer {
-        project: project_view(&s)?,
+        project: project_view(s)?,
         take_id: take.id,
     })
 }

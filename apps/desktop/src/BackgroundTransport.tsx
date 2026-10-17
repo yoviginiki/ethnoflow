@@ -29,29 +29,35 @@ export function BackgroundTransport({ compact = false }: Props) {
   const canDrone = droneRoot(dronePrefs, scale, profile) !== null;
   const canPad = padRoot(padPrefs, dronePrefs, scale, profile) !== null;
   const canAmbient = (useStore((s) => s.ambient?.layers.length) ?? 0) > 0;
-  const on = layers.drone || layers.pad || layers.ambient;
-  const canPlay = canDrone || canPad || canAmbient;
+  const timing = project?.timing;
+  const canRhythm = !!timing && timing.bpm !== null && timing.numerator !== null && timing.unit !== null && (scale !== null || canDrone);
+  const on = layers.drone || layers.pad || layers.ambient || layers.rhythm;
+  const canPlay = canDrone || canPad || canAmbient || canRhythm;
 
   const play = () => {
     const want = {
-      drone: (lastLayers.drone || (!lastLayers.pad && !lastLayers.ambient)) && canDrone,
+      drone: (lastLayers.drone || (!lastLayers.pad && !lastLayers.ambient && !lastLayers.rhythm)) && canDrone,
       pad: lastLayers.pad && canPad,
       ambient: lastLayers.ambient && canAmbient,
+      rhythm: lastLayers.rhythm && canRhythm,
     };
-    if (!want.drone && !want.pad && !want.ambient) {
+    if (!want.drone && !want.pad && !want.ambient && !want.rhythm) {
       if (canDrone) want.drone = true;
       else if (canPad) want.pad = true;
       else if (canAmbient) want.ambient = true;
+      else if (canRhythm) want.rhythm = true;
     }
     setLayer("drone", want.drone);
     setLayer("pad", want.pad);
     setLayer("ambient", want.ambient);
+    setLayer("rhythm", want.rhythm);
   };
   const stop = () => {
     setLastLayers({ ...layers });
     setLayer("drone", false);
     setLayer("pad", false);
     setLayer("ambient", false);
+    setLayer("rhythm", false);
   };
 
   return (
@@ -76,6 +82,10 @@ export function BackgroundTransport({ compact = false }: Props) {
       <label className="inline">
         <input type="checkbox" checked={layers.ambient} disabled={!canAmbient} onChange={(e) => setLayer("ambient", e.target.checked)} />
         {compact ? t.ambientShort : t.areaAmbient}
+      </label>
+      <label className="inline">
+        <input type="checkbox" checked={layers.rhythm} disabled={!canRhythm} onChange={(e) => setLayer("rhythm", e.target.checked)} />
+        {compact ? t.rhythmShort : t.rhythmTitle}
       </label>
       <label className="inline" title={t.backgroundLevel}>
         🔊

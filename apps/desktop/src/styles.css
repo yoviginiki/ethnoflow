@@ -376,3 +376,8 @@ button.small { font-size: 12px; padding: 3px 7px; }
 .sample-lab .meta-grid label.wide { grid-column: 1 / -1; }
 .sample-lab .meta-grid textarea { resize: vertical; font: inherit; }
 .take-search { width: 100%; margin-bottom: 6px; }
+
+/* Rhythm section (Phase 4) */
+.rhythm .part-head { border-top: 1px solid var(--axis); padding-top: 6px; }
+.rhythm button.on { background: var(--accent); color: #111; border-color: var(--accent); }
+.counter { gap: 6px; }
