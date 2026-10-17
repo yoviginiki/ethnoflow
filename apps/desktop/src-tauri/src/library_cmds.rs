@@ -310,6 +310,48 @@ pub async fn library_update(
     Ok(LibrarySummary::from(&e))
 }
 
+/// Rename / retag an entry (shared with the Instrument Forge).
+pub fn update_in(
+    dir: &Path,
+    id: &str,
+    name: &str,
+    tags: &[String],
+    notes: &str,
+) -> CmdResult<LibraryEntry> {
+    let mut e = get_in(dir, id)?;
+    let name = clean(name, 120);
+    if name.is_empty() {
+        return Err(err("invalid_argument", "The name is empty"));
+    }
+    e.name = name;
+    e.tags = clean_tags(tags);
+    e.notes = clean(notes, 4000);
+    e.updated_ms = project::now_ms_pub();
+    write_entry(dir, &e)?;
+    Ok(e)
+}
+
+/// Replace an entry's payload (shared with the Instrument Forge).
+pub fn replace_payload_in(
+    dir: &Path,
+    id: &str,
+    payload: serde_json::Value,
+) -> CmdResult<LibraryEntry> {
+    let mut e = get_in(dir, id)?;
+    e.payload = payload;
+    e.updated_ms = project::now_ms_pub();
+    write_entry(dir, &e)?;
+    Ok(e)
+}
+
+pub fn delete_in(dir: &Path, id: &str) -> CmdResult<()> {
+    let path = entry_path(dir, id)?;
+    if path.exists() {
+        std::fs::remove_file(&path).map_err(|x| err("io", x.to_string()))?;
+    }
+    Ok(())
+}
+
 /// Replace the payload of an existing entry with the current settings ("overwrite").
 #[tauri::command]
 pub async fn library_replace_payload(

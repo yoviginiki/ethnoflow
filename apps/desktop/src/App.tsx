@@ -14,6 +14,7 @@ import { ProjectPicker } from "./ProjectPicker";
 import { RhythmScreen } from "./RhythmScreen";
 import { Soundscapes } from "./Soundscapes";
 import { Start } from "./Start";
+import { InstrumentDesigner } from "./InstrumentDesigner";
 import { Studio } from "./Studio";
 import { messages, type Lang, type StringMessageKey } from "./i18n";
 import { useStore, type Screen } from "./store";
@@ -27,6 +28,7 @@ const SCREEN_TITLE: Record<Exclude<Screen, "home">, StringMessageKey> = {
   rhythm: "areaRhythm",
   library: "areaLibrary",
   soundscapes: "areaSoundscapes",
+  instrument: "areaForge",
   start: "areaStart",
   help: "areaHelp",
 };
@@ -99,6 +101,7 @@ export default function App() {
       {screen === "soundscapes" && (project ? <Soundscapes /> : <ProjectPicker />)}
       {screen === "start" && (project ? <Start /> : <ProjectPicker />)}
       {screen === "help" && <Help />}
+      {screen === "instrument" && (project ? <InstrumentDesigner /> : <ProjectPicker />)}
       {(layers.drone || layers.pad || layers.ambient || layers.rhythm) && (
         <div className="layers-badge small" role="status">
           <BackgroundTransport compact />

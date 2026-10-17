@@ -1,0 +1,36 @@
+id,label_bg,tooltip_bg,type,min,max,default,unit,audio_target,smoothing,automation,persistence,test_id
+forge.browser.category,Категория,Филтър по барабани / бас / синт,chips,,,all,,none,,no,ui state,UI-F-01
+forge.browser.search,Търсене,Търси по име и тагове,text,,,,,none,,no,ui state,UI-F-01
+forge.audition,Прослушай / Спри,Свири модел през звука на темпото на проекта,button,,,off,,graph slot 3 source,,no,no,SHELL render_voice + manual
+forge.undo,Отмени,Връща последната промяна на копче,button,,,,,params,,no,no,UI-F-02
+forge.save_as,Запази като,Нов потребителски пресет с родител,button+text,,,,,library kind instrument,,no,library,SHELL instrument_save
+forge.update,Обнови,Презаписва потребителски пресет,button,,,,,library,,no,library,SHELL instrument_update
+forge.render,WAV,Офлайн рендер на модела през гласа,button,,,,,offline graph,,no,file,SHELL render_voice
+forge.use_in,Ползвай в,Задава пресета на част от ритъма,select,,,,,prefs.rhythm.instruments,,no,session.json,VITEST session
+bass.voice,Глас,суб / щипка / Reese,select,0,2,0,,BassParams.voice,atomic,no,preset,bass::tests
+bass.wobble_div,Wobble,Деления на такта за люлеенето на филтъра,select,0,16,0,1/n,BassParams.wobble_div,atomic,no,preset,bass::tests
+bass.attack_s,Атака,Време до пълна сила,knob(log),0.0005,2,0.004,s,BassParams.attack_s,SmoothedParam,later,preset,designer_tests::attack_time_is_audible_and_measured
+bass.decay_s,Спад,Спад към задържането,knob(log),0.01,4,0.2,s,BassParams.decay_s,SmoothedParam,later,preset,designer_tests::decay_and_sustain_shape_the_held_note
+bass.sustain,Задържане,Ниво докато нотата трае,knob,0,1,1,ratio,BassParams.sustain,SmoothedParam,later,preset,designer_tests::decay_and_sustain_shape_the_held_note
+bass.release_s,Отпускане,Опашка след нотата,knob(log),0.01,2,0.08,s,BassParams.release_s,SmoothedParam,later,preset,bass::tests
+bass.pitch_env_st,Скок на височината,Начален скок в полутонове,knob,-24,24,0,st,BassParams.pitch_env_st,SmoothedParam,later,preset,designer_tests::pitch_envelope_sweeps_down_into_the_note
+bass.pitch_env_s,Време на скока,Връщане към нотата,knob(log),0.005,1,0.05,s,BassParams.pitch_env_s,SmoothedParam,later,preset,designer_tests::pitch_envelope_sweeps_down_into_the_note
+bass.microvar,Микровариация,Строй и дължина леко различни на всяка нота (seed),knob,0,1,0,ratio,BassParams.microvar,SmoothedParam,later,preset,designer_tests::microvariation_makes_consecutive_notes_differ_but_stays_deterministic
+bass.cutoff_hz,Срез на филтъра,Над тази честота затъмнява,knob(log),60,8000,400,Hz,BassParams.cutoff_hz,SmoothedParam,later,preset,bass::tests
+bass.resonance,Резонанс,Подчертава среза,knob,0,0.95,0.2,ratio,BassParams.resonance,SmoothedParam,later,preset,bass::tests
+bass.filter_env,Филтърна обвивка,Отваряне на филтъра с всяка нота,knob,0,1,0,ratio,BassParams.filter_env,SmoothedParam,later,preset,designer_tests::filter_envelope_brightens_the_attack
+bass.wobble_depth,Дълбочина на wobble,Колко се люлее филтърът,knob,0,1,0.5,ratio,BassParams.wobble_depth,SmoothedParam,later,preset,bass::tests
+bass.drive,Сатурация,Хармоници и плътност,knob,0,1,0.3,ratio,BassParams.drive,SmoothedParam,later,preset,bass::tests
+bass.warmth,Топлина,Триъгълник към суб баса,knob,0,1,0.5,ratio,BassParams.warmth,SmoothedParam,later,preset,bass::tests
+bass.glide_s,Плъзгане,Portamento между свързани ноти,knob,0,1,0.08,s,BassParams.glide_s,SmoothedParam,later,preset,bass::tests
+bass.sidechain,Сайдчейн,Отстъпва при кика,knob,0,1,0.6,ratio,BassParams.sidechain,SmoothedParam,later,preset,bass::tests
+drums.kick_hz,Основа на кика,Честота на кика,knob,35,90,50,Hz,DrumParams.kick_hz,SmoothedParam,later,preset,rhythm::tests
+drums.decay,Затихване,Къси ↔ дълги удари,knob,0,1,0.5,ratio,DrumParams.decay,SmoothedParam,later,preset,rhythm::tests
+drums.brightness,Яркост,Шум на снер/хетове,knob,0,1,0.5,ratio,DrumParams.brightness,SmoothedParam,later,preset,rhythm::tests
+drums.levels_db[0..5],Нива по барабан,Ниво на всеки барабан,knob×6,-60,6,"0,0,-8,0,0,0",dB,DrumParams.level_db[k],SmoothedParam,later,preset,forge_cmds::tests::every_factory_preset_renders_audibly_and_presets_differ
+synth.timbre,Тембър,синус / триъгълник / флейта,select,0,2,2,,PatternParams.timbre,atomic,no,preset,patsynth::tests
+synth.attack_s,Атака,Време до пълна сила,knob(log),0.001,2,0.01,s,PatternParams.attack_s,SmoothedParam,later,preset,patsynth::tests
+synth.release_s,Отпускане,Опашка след нотата,knob(log),0.01,4,0.15,s,PatternParams.release_s,SmoothedParam,later,preset,patsynth::tests
+synth.tone_hz,Тон,Нискочестотен срез,knob(log),200,20000,6000,Hz,PatternParams.tone_hz,SmoothedParam,later,preset,patsynth::tests
+synth.dynamics,Динамика,Velocity → сила,knob,0,1,0.6,ratio,PatternParams.dynamics,SmoothedParam,later,preset,patsynth::tests
+rhythm.part.instrument,🎛 инструмент,Кой пресет свири частта,select,,,own sound,,RhythmSettings.instruments,per sync,no,session.json,rhythm_cmds::render_tests

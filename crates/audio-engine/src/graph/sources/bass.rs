@@ -5,7 +5,7 @@
 use std::sync::atomic::{AtomicU32, AtomicU8, Ordering};
 use std::sync::Arc;
 
-use super::gen::{soft, Svf};
+use super::gen::{soft, Rng, Svf};
 use super::rhythm::{BeatClock, Cursor, DrumParams, PatternInbox};
 use crate::graph::params::{ramp_samples, undenormal, Ramp, SmoothedParam};
 use crate::graph::Source;
@@ -61,6 +61,18 @@ impl BassPatternData {
 
 pub struct BassParams {
     pub voice: AtomicU8,
+    /// Amplitude envelope: attack / decay to `sustain` while the note is held, release after.
+    pub attack_s: SmoothedParam,
+    pub decay_s: SmoothedParam,
+    pub sustain: SmoothedParam,
+    /// How much the per-note envelope opens the filter (0 = the voice's own behaviour).
+    pub filter_env: SmoothedParam,
+    /// Pitch sweep at note start: semitones, decaying over `pitch_env_s`.
+    pub pitch_env_st: SmoothedParam,
+    pub pitch_env_s: SmoothedParam,
+    /// Deterministic per-note variation of tuning (±30 cents at 1) and decay (±30 %).
+    pub microvar: SmoothedParam,
+    pub seed: AtomicU32,
     pub cutoff_hz: SmoothedParam,
     pub resonance: SmoothedParam,
     /// 0..1 saturation.
@@ -82,6 +94,14 @@ impl Default for BassParams {
     fn default() -> Self {
         Self {
             voice: AtomicU8::new(0),
+            attack_s: SmoothedParam::new(0.004, 0.0005, 2.0),
+            decay_s: SmoothedParam::new(0.2, 0.01, 4.0),
+            sustain: SmoothedParam::new(1.0, 0.0, 1.0),
+            filter_env: SmoothedParam::new(0.0, 0.0, 1.0),
+            pitch_env_st: SmoothedParam::new(0.0, -24.0, 24.0),
+            pitch_env_s: SmoothedParam::new(0.05, 0.005, 1.0),
+            microvar: SmoothedParam::new(0.0, 0.0, 1.0),
+            seed: AtomicU32::new(1),
             cutoff_hz: SmoothedParam::new(400.0, 60.0, 8000.0),
             resonance: SmoothedParam::new(0.2, 0.0, 0.95),
             drive: SmoothedParam::new(0.3, 0.0, 1.0),
@@ -109,6 +129,12 @@ pub struct BassSource {
     phase2: f32,
     env: f32,
     filt_env: f32,
+    /// 0 attack, 1 decay/sustain, 2 release.
+    stage: u8,
+    pitch_env: f32,
+    note_cents: f32,
+    decay_scale: f32,
+    rng: Rng,
     gate_until_beat: f64,
     gate: bool,
     vel: f32,
@@ -136,6 +162,7 @@ impl BassSource {
         pattern: Arc<BassPatternData>,
         drums: Option<Arc<DrumParams>>,
     ) -> Self {
+        let seed = params.seed.load(Ordering::Relaxed);
         Self {
             cutoff: Ramp::new(params.cutoff_hz.target()),
             resonance: Ramp::new(params.resonance.target()),
@@ -155,6 +182,11 @@ impl BassSource {
             phase2: 0.0,
             env: 0.0,
             filt_env: 0.0,
+            stage: 2,
+            pitch_env: 0.0,
+            note_cents: 0.0,
+            decay_scale: 1.0,
+            rng: Rng::new(seed.wrapping_mul(2_246_822_519).wrapping_add(3)),
             gate_until_beat: -1.0,
             gate: false,
             vel: 0.0,
@@ -190,10 +222,16 @@ impl Source for BassSource {
         self.warmth.begin(p.warmth.target(), ramp);
         let voice = BassVoice::from_u8(p.voice.load(Ordering::Relaxed));
         let glide_s = p.glide_s.target();
-        let release = p.release_s.target();
+        let release = p.release_s.target() * self.decay_scale;
         let k_rel = (-6.9078 / (release * sr)).exp();
-        let k_att = 1.0 - (-1.0 / (0.004 * sr)).exp();
+        let k_att = 1.0 - (-1.0 / (p.attack_s.target().max(0.0005) * sr)).exp();
+        let k_dec = (-6.9078 / (p.decay_s.target() * self.decay_scale * sr)).exp();
+        let sustain = p.sustain.target();
         let k_filt = (-6.9078 / (0.14 * sr)).exp();
+        let k_pitch = (-6.9078 / (p.pitch_env_s.target() * sr)).exp();
+        let pitch_st = p.pitch_env_st.target();
+        let filter_env = p.filter_env.target();
+        let microvar = p.microvar.target();
         let beat0 = self.clock.beat_at(frame, sample_rate);
         let bpf = self.clock.beats_per_frame(sample_rate);
         let generation = self.clock.generation.load(Ordering::Relaxed);
@@ -250,8 +288,13 @@ impl Source for BassSource {
                     self.gate_until_beat =
                         e.beat + loops * self.pattern.length_beats + e.length_beats;
                     self.gate = true;
+                    self.stage = 0;
                     self.vel = e.velocity.clamp(0.05, 1.0);
                     self.filt_env = 1.0;
+                    self.pitch_env = 1.0;
+                    // Microvariation: a deterministic, per-note nudge of tuning and length.
+                    self.note_cents = self.rng.bipolar() * microvar * 30.0;
+                    self.decay_scale = 1.0 + self.rng.bipolar() * microvar * 0.3;
                     if self.env < 0.001 {
                         self.phase = 0.0;
                         self.phase2 = 0.0;
@@ -268,14 +311,24 @@ impl Source for BassSource {
             let warmth = self.warmth.next(p.warmth.target());
             // Glide towards the target pitch (exponential in Hz is close enough here).
             self.hz += (self.target_hz - self.hz) * self.glide_coeff;
-            // Envelope: fast attack while gated, release after.
+            // Envelope: attack, then decay towards sustain while gated, release after.
             if self.gate {
-                self.env += (1.0 - self.env) * k_att;
+                if self.stage == 0 {
+                    self.env += (1.0 - self.env) * k_att;
+                    if self.env >= 0.995 {
+                        self.stage = 1;
+                    }
+                } else {
+                    self.env = sustain + (self.env - sustain) * k_dec;
+                }
             } else {
+                self.stage = 2;
                 self.env *= k_rel;
             }
             self.filt_env *= k_filt;
-            let inc = self.hz / sr;
+            self.pitch_env *= k_pitch;
+            let semis = pitch_st * self.pitch_env + self.note_cents / 100.0;
+            let inc = self.hz * 2f32.powf(semis / 12.0) / sr;
             self.phase += inc;
             if self.phase >= 1.0 {
                 self.phase -= 1.0;
@@ -300,7 +353,7 @@ impl Source for BassSource {
                 BassVoice::Sub => (cutoff * 2.0).max(200.0),
                 BassVoice::Pluck => cutoff * (1.0 + 3.0 * self.filt_env),
                 BassVoice::Reese => cutoff * 2f32.powf(wobble * depth * 1.5),
-            };
+            } * 2f32.powf(filter_env * 3.0 * self.filt_env);
             if i % 16 == 0 {
                 self.filter.set(fc.clamp(40.0, 12_000.0), q, sr);
             }
@@ -316,8 +369,153 @@ impl Source for BassSource {
     fn reset(&mut self) {
         self.cursor = Cursor::new();
         self.env = 0.0;
+        self.stage = 2;
         self.gate = false;
         self.frame = 0;
+    }
+}
+
+#[cfg(test)]
+mod designer_tests {
+    use super::*;
+    use crate::buffer::AudioBuffer;
+    use crate::graph::{Graph, GraphParams};
+
+    /// One note (110 Hz) held 4 beats at 120 BPM, then another 4 beats later; 8 s render.
+    fn render_notes(set: impl Fn(&BassParams)) -> AudioBuffer {
+        let p = Arc::new(BassParams::default());
+        p.voice.store(1, Ordering::Relaxed); // pluck: saw through the filter
+        p.cutoff_hz.set(1200.0);
+        set(&p);
+        let clock = Arc::new(BeatClock::new(120.0));
+        clock.start(0, 0.0);
+        let pat = Arc::new(BassPatternData::new(
+            vec![
+                BassNoteEvent {
+                    beat: 0.0,
+                    length_beats: 4.0,
+                    hz: 110.0,
+                    velocity: 1.0,
+                    glide: false,
+                },
+                BassNoteEvent {
+                    beat: 8.0,
+                    length_beats: 4.0,
+                    hz: 110.0,
+                    velocity: 1.0,
+                    glide: false,
+                },
+            ],
+            16.0,
+        ));
+        let gp = Arc::new(GraphParams::default());
+        gp.master.gain_db.set(0.0);
+        gp.layers[0].gain_db.set(0.0);
+        let mut g = Graph::new(gp, 48_000);
+        g.set_source(0, Box::new(BassSource::new(p, clock, pat, None)));
+        g.render_offline(8.0, 1)
+    }
+
+    fn rms(b: &AudioBuffer, from_s: f64, to_s: f64) -> f32 {
+        b.slice_frames((from_s * 48_000.0) as usize, (to_s * 48_000.0) as usize)
+            .rms()
+    }
+
+    /// Share of high-frequency energy: RMS of the first difference over the RMS.
+    fn brightness(b: &AudioBuffer, from_s: f64, to_s: f64) -> f32 {
+        let a = (from_s * 48_000.0) as usize;
+        let z = (to_s * 48_000.0) as usize;
+        let x = &b.samples[a..z];
+        let d: f32 = x.windows(2).map(|w| (w[1] - w[0]).powi(2)).sum::<f32>();
+        let e: f32 = x.iter().map(|v| v * v).sum::<f32>();
+        (d / e.max(1e-9)).sqrt()
+    }
+
+    fn crossings_per_s(b: &AudioBuffer, from_s: f64, to_s: f64) -> f64 {
+        let a = (from_s * 48_000.0) as usize;
+        let z = (to_s * 48_000.0) as usize;
+        let n = b.samples[a..z]
+            .windows(2)
+            .filter(|w| (w[0] < 0.0) != (w[1] < 0.0))
+            .count();
+        n as f64 / (to_s - from_s)
+    }
+
+    #[test]
+    fn attack_time_is_audible_and_measured() {
+        let fast = render_notes(|p| p.attack_s.set(0.001));
+        let slow = render_notes(|p| p.attack_s.set(0.4));
+        let (f, s) = (rms(&fast, 0.12, 0.16), rms(&slow, 0.12, 0.16));
+        assert!(f > s * 2.0, "fast attack is louder early: {f} vs {s}");
+        assert!(
+            (rms(&fast, 1.5, 1.9) - rms(&slow, 1.5, 1.9)).abs() < 0.05,
+            "same level once risen"
+        );
+    }
+
+    #[test]
+    fn decay_and_sustain_shape_the_held_note() {
+        let full = render_notes(|p| p.sustain.set(1.0));
+        let plucky = render_notes(|p| {
+            p.decay_s.set(0.15);
+            p.sustain.set(0.0);
+        });
+        assert!(
+            rms(&plucky, 5.0, 5.5) < rms(&full, 5.0, 5.5) * 0.2,
+            "sustain 0 dies away while held"
+        );
+        assert!(
+            rms(&plucky, 4.02, 4.05) > 0.01,
+            "but it sounds at the start"
+        );
+    }
+
+    #[test]
+    fn pitch_envelope_sweeps_down_into_the_note() {
+        let flat = render_notes(|p| p.pitch_env_st.set(0.0));
+        let swept = render_notes(|p| {
+            p.pitch_env_st.set(24.0);
+            p.pitch_env_s.set(0.5);
+        });
+        let early = crossings_per_s(&swept, 4.02, 4.1) / crossings_per_s(&flat, 4.02, 4.1);
+        let late = crossings_per_s(&swept, 5.5, 5.9) / crossings_per_s(&flat, 5.5, 5.9);
+        assert!(early > 1.4, "higher at the start: {early}");
+        assert!((late - 1.0).abs() < 0.1, "settles on the note: {late}");
+    }
+
+    #[test]
+    fn filter_envelope_brightens_the_attack() {
+        let dull = render_notes(|p| {
+            p.voice.store(2, Ordering::Relaxed);
+            p.cutoff_hz.set(300.0);
+            p.filter_env.set(0.0);
+        });
+        let bright = render_notes(|p| {
+            p.voice.store(2, Ordering::Relaxed);
+            p.cutoff_hz.set(300.0);
+            p.filter_env.set(1.0);
+        });
+        // More high-frequency energy at the start → more zero crossings.
+        let d = brightness(&dull, 4.0, 4.06);
+        let b = brightness(&bright, 4.0, 4.06);
+        assert!(b > d * 1.2, "filter env opens the attack: {b} vs {d}");
+    }
+
+    #[test]
+    fn microvariation_makes_consecutive_notes_differ_but_stays_deterministic() {
+        let a = render_notes(|p| p.microvar.set(1.0));
+        let b = render_notes(|p| p.microvar.set(1.0));
+        assert_eq!(a.samples, b.samples, "same seed → same variation");
+        let n1 = crossings_per_s(&a, 0.5, 1.5);
+        let n2 = crossings_per_s(&a, 4.5, 5.5);
+        assert!(
+            (n1 - n2).abs() > 1.0,
+            "two notes are tuned differently: {n1} vs {n2}"
+        );
+        let none = render_notes(|p| p.microvar.set(0.0));
+        let m1 = crossings_per_s(&none, 0.5, 1.5);
+        let m2 = crossings_per_s(&none, 4.5, 5.5);
+        assert!((m1 - m2).abs() < 0.5, "without it they match: {m1} vs {m2}");
     }
 }
 

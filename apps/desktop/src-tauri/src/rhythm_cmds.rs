@@ -23,9 +23,11 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 
 use crate::commands::{err, CmdResult};
+use crate::forge_cmds::{apply_voice, resolve_voice, AuditionParams};
 use crate::graph_cmds::{ensure_graph, note_hz, Intonation};
 use crate::pad_cmds::PadNote;
 use crate::state::{AppState, Inner};
+use project::InstrumentVoice;
 
 pub const DRUMS_SLOT: usize = 12;
 pub const BASS_SLOT: usize = 13;
@@ -125,6 +127,9 @@ pub struct RhythmSettings {
     /// Chord the tonal parts follow (an armed proposal), else the mode's triad.
     #[serde(default)]
     pub chord: Option<Vec<PadNote>>,
+    /// Instrument presets per part (Instrument Forge); None = the part's own fields.
+    #[serde(default)]
+    pub instruments: InstrumentRefs,
     /// Root when the project has no scale (the drone's root).
     #[serde(default)]
     pub root_midi: Option<u8>,
@@ -151,8 +156,33 @@ pub struct RhythmStatus {
     pub chord_pcs: Vec<u8>,
 }
 
+/// Instrument preset ids per part (empty string / None = legacy fields).
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct InstrumentRefs {
+    #[serde(default)]
+    pub drums: Option<String>,
+    #[serde(default)]
+    pub bass: Option<String>,
+    #[serde(default)]
+    pub ostinato: Option<String>,
+    #[serde(default)]
+    pub arp: Option<String>,
+}
+
+/// Resolved voices per part (drums, bass, ostinato, arp), None = legacy fields.
+pub fn resolve_voices(s: &Inner, refs: &InstrumentRefs) -> [Option<InstrumentVoice>; 4] {
+    [
+        resolve_voice(s, refs.drums.as_deref()),
+        resolve_voice(s, refs.bass.as_deref()),
+        resolve_voice(s, refs.ostinato.as_deref()),
+        resolve_voice(s, refs.arp.as_deref()),
+    ]
+}
+
 pub struct RhythmLive {
     pub clock: Arc<BeatClock>,
+    /// Instrument voices per part when a preset is referenced.
+    pub voices: [Option<InstrumentVoice>; 4],
     pub drums: Option<Arc<DrumParams>>,
     pub bass: Option<Arc<BassParams>>,
     pub ostinato: Option<Arc<PatternParams>>,
@@ -495,13 +525,26 @@ pub fn reapply(s: &Inner) {
 fn apply_params(layers: &[audio_engine::LayerParams], live: &RhythmLive, lvl: &dyn Fn(f32) -> f32) {
     let set = &live.settings;
     let layer = |slot: usize| &layers[slot];
-    if let Some(p) = live.drums.as_ref() {
+    // Parts that reference an instrument preset take their voice from it.
+    if let (Some(v), Some(p)) = (live.voices[0].as_ref(), live.drums.as_ref()) {
+        apply_voice(v, &AuditionParams::Drums(Arc::clone(p)));
+    }
+    if let (Some(v), Some(p)) = (live.voices[1].as_ref(), live.bass.as_ref()) {
+        apply_voice(v, &AuditionParams::Bass(Arc::clone(p)));
+    }
+    if let (Some(v), Some(p)) = (live.voices[2].as_ref(), live.ostinato.as_ref()) {
+        apply_voice(v, &AuditionParams::Synth(Arc::clone(p)));
+    }
+    if let (Some(v), Some(p)) = (live.voices[3].as_ref(), live.arp.as_ref()) {
+        apply_voice(v, &AuditionParams::Synth(Arc::clone(p)));
+    }
+    if let (None, Some(p)) = (live.voices[0].as_ref(), live.drums.as_ref()) {
         p.kick_hz.set(set.drums.kick_hz);
         p.decay.set(set.drums.decay);
         p.brightness.set(set.drums.brightness);
         layer(DRUMS_SLOT).gain_db.set(lvl(set.drums.level_db));
     }
-    if let Some(p) = live.bass.as_ref() {
+    if let (None, Some(p)) = (live.voices[1].as_ref(), live.bass.as_ref()) {
         let b = &set.bass;
         p.voice.store(b.voice.min(2), Ordering::Relaxed);
         p.cutoff_hz.set(b.cutoff_hz);
@@ -514,13 +557,13 @@ fn apply_params(layers: &[audio_engine::LayerParams], live: &RhythmLive, lvl: &d
         p.warmth.set(b.warmth);
         layer(BASS_SLOT).gain_db.set(lvl(b.level_db));
     }
-    if let Some(p) = live.ostinato.as_ref() {
+    if let (None, Some(p)) = (live.voices[2].as_ref(), live.ostinato.as_ref()) {
         p.timbre
             .store(set.ostinato.timbre.min(2), Ordering::Relaxed);
         p.release_s.set(set.ostinato.release_s);
         layer(OSTINATO_SLOT).gain_db.set(lvl(set.ostinato.level_db));
     }
-    if let Some(p) = live.arp.as_ref() {
+    if let (None, Some(p)) = (live.voices[3].as_ref(), live.arp.as_ref()) {
         p.timbre.store(set.arp.timbre.min(2), Ordering::Relaxed);
         p.release_s.set(set.arp.release_s);
         layer(ARP_SLOT).gain_db.set(lvl(set.arp.level_db));
@@ -579,8 +622,10 @@ fn sync(s: &mut Inner, set: RhythmSettings) -> CmdResult<()> {
         arp_swap,
         ..
     } = live_prev;
+    let voices = resolve_voices(s, &set.instruments);
     let mut live = RhythmLive {
         clock: Arc::clone(&clock),
+        voices,
         drums: live_prev.drums.clone(),
         bass: live_prev.bass.clone(),
         ostinato: live_prev.ostinato.clone(),
@@ -840,6 +885,7 @@ pub async fn start_rhythm(
         clock.start(frame, 0.0);
         s.rhythm = Some(RhythmLive {
             clock,
+            voices: [None, None, None, None],
             drums: None,
             bass: None,
             ostinato: None,
@@ -967,6 +1013,7 @@ pub fn render_section(
     let clock = Arc::new(BeatClock::new(bpm as f32));
     let mut live = RhythmLive {
         clock: Arc::clone(&clock),
+        voices: resolve_voices(s, &settings.instruments),
         drums: None,
         bass: None,
         ostinato: None,

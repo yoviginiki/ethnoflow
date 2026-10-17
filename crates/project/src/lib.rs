@@ -10,6 +10,7 @@ pub mod ambient_presets;
 pub mod arrangement;
 pub mod db;
 pub mod error;
+pub mod forge;
 pub mod instrument;
 pub mod licensing;
 pub mod manifest;
@@ -23,6 +24,10 @@ pub use arrangement::{
 };
 pub use db::{Take, TakeMeta, TakeSource, TakeState};
 pub use error::{ProjectError, Result};
+pub use forge::{
+    factory_instruments, legacy_bass, InstrumentPreset, InstrumentVoice,
+    CATEGORIES as INSTRUMENT_CATEGORIES, INSTRUMENT_SCHEMA_VERSION,
+};
 pub use instrument::{
     InstrumentProfile, InstrumentType, ProfileDiagnosis, ProfileNote, ProfileStore, ProfileSummary,
 };

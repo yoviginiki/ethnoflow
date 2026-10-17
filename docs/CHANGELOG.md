@@ -202,6 +202,16 @@
   import in Atmosphere**: "Import samples…" (multi-file) or drag-and-drop from
   Explorer / a sample manager such as Soundly — each file becomes a take in the
   project (named after the file) and a looped layer.
+- **Program P1, R1 + R2 PoC (2026-10-18, night)**: instruments as presets with identity
+  (`crates/project/src/forge.rs`: schema v1, validation, migration, fork lineage, 14
+  curated factory presets that differ measurably); user presets in the library (kind
+  `instrument`); rhythm parts reference presets (`instruments` in the rhythm settings,
+  voices applied live and offline, legacy fields kept); **Instrument Designer** screen
+  with real knobs on the engine voices, live audition on graph slot 3 (knobs heard at once),
+  Save As / Update / delete, "use in rhythm", WAV render of the audition pattern; the bass
+  engine gained attack/decay/sustain/release, filter envelope, pitch sweep and seeded
+  microvariation with five measured tests; shell tests: every factory preset renders
+  audibly and presets of one category render differently.
 - **Program P1, R0 (2026-10-18)**: offline render of the rhythm section ("WAV + stems"
   in the panel, `rhythm_render` command and bridge op): same generators, same sources on
   an offline clock, deterministic per seed; test proves determinism, audibility, stems

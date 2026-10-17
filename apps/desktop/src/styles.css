@@ -491,3 +491,16 @@ button.ghost.on { border-color: var(--accent); color: var(--accent); }
 .bg-strip .hmeter { width: 100%; flex: none; }
 .bg-strip-knobs { display: flex; flex-wrap: wrap; gap: 4px 6px; justify-content: center; max-width: 240px; }
 .bg-strip.master { min-width: 180px; border-color: var(--accent); }
+
+/* Instrument Forge */
+.forge { display: flex; flex-direction: column; gap: 10px; }
+.forge-layout { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 12px; align-items: start; }
+@media (max-width: 980px) { .forge-layout { grid-template-columns: 1fr; } }
+.forge-browser { display: flex; flex-direction: column; gap: 8px; }
+.forge-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; max-height: 70vh; overflow: auto; }
+.forge-list li { display: flex; gap: 4px; align-items: center; }
+.forge-list button.grow { text-align: left; }
+.forge-main { display: flex; flex-direction: column; gap: 10px; }
+.forge-group h4 { margin: 6px 0; }
+.forge-name { font-size: 20px; font-weight: 600; min-width: 240px; }
+.forge-notes textarea { width: 100%; box-sizing: border-box; }

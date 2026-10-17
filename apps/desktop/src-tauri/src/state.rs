@@ -68,6 +68,8 @@ pub struct Inner {
     pub assistant_dir: Option<std::path::PathBuf>,
     /// Background mixer buses (drone, pad, atmosphere, rhythm): trim/pan/filters/fade.
     pub bus: [crate::bus_cmds::BusState; 4],
+    /// Instrument Forge audition on slot 3 while a designer plays a voice.
+    pub audition: Option<crate::forge_cmds::AuditionLive>,
     /// Result of the last checksum verification, by take id.
     pub health: HashMap<String, TakeHealth>,
     pub recording: Option<ActiveRecording>,
@@ -151,6 +153,7 @@ impl Inner {
             && self.clips.is_none()
             && !self.ambient_on
             && self.rhythm.is_none()
+            && self.audition.is_none()
     }
 
     pub fn stop_graph(&mut self) {

@@ -714,6 +714,13 @@ export interface ArpSettings {
   release_s: number;
   locked: boolean;
 }
+/** Instrument preset ids per part (Instrument Forge); missing = the part's own fields. */
+export interface InstrumentRefs {
+  drums?: string;
+  bass?: string;
+  ostinato?: string;
+  arp?: string;
+}
 /** What the user edits (persisted in prefs); chord/root/intonation are added at send time. */
 export interface RhythmPrefs {
   drums: DrumsSettings;
@@ -721,6 +728,55 @@ export interface RhythmPrefs {
   ostinato: OstinatoSettings;
   arp: ArpSettings;
   bars: number;
+  instruments?: InstrumentRefs;
+}
+
+// ---------- Instrument Forge (project forge.rs, shell forge_cmds.rs) ----------
+export type InstrumentVoice =
+  | { engine: "drums"; kick_hz: number; decay: number; brightness: number; levels_db: number[] }
+  | {
+      engine: "bass";
+      voice: number;
+      cutoff_hz: number;
+      resonance: number;
+      drive: number;
+      glide_s: number;
+      sidechain: number;
+      wobble_div: number;
+      wobble_depth: number;
+      warmth: number;
+      attack_s: number;
+      decay_s: number;
+      sustain: number;
+      release_s: number;
+      filter_env: number;
+      pitch_env_st: number;
+      pitch_env_s: number;
+      microvar: number;
+    }
+  | { engine: "synth"; timbre: number; attack_s: number; release_s: number; tone_hz: number; dynamics: number };
+export interface InstrumentPreset {
+  schema_version: number;
+  id: string;
+  name: string;
+  category: string;
+  tags: string[];
+  author: string;
+  parent_id: string | null;
+  factory: boolean;
+  notes: string;
+  created_ms: number;
+  updated_ms: number;
+  voice: InstrumentVoice;
+}
+export interface InstrumentSummary {
+  id: string;
+  name: string;
+  category: string;
+  tags: string[];
+  factory: boolean;
+  parent_id: string | null;
+  updated_ms: number;
 }
 export interface RhythmSettings extends RhythmPrefs {
   chord: PadNote[] | null;
@@ -1070,7 +1126,7 @@ export interface BusStrip {
 }
 
 // ---------- Preset library (shell library_cmds.rs) ----------
-export const LIBRARY_KINDS = ["session", "module", "drone", "pad", "rhythm", "harmony", "intent", "ambient", "background"] as const;
+export const LIBRARY_KINDS = ["session", "module", "instrument", "drone", "pad", "rhythm", "harmony", "intent", "ambient", "background"] as const;
 export type LibraryKind = (typeof LIBRARY_KINDS)[number];
 export type LibrarySortBy = "date_desc" | "date_asc" | "name" | "kind";
 export interface LibrarySummary {
@@ -1254,6 +1310,18 @@ export const api = {
   libraryReplacePayload: (id: string, payload: unknown) => invoke<LibrarySummary>("library_replace_payload", { id, payload }),
   libraryDelete: (id: string) => invoke<void>("library_delete", { id }),
   libraryFacets: () => invoke<LibraryFacets>("library_facets"),
+  // Instrument Forge
+  instrumentList: (category: string | null, query: string | null) => invoke<InstrumentSummary[]>("instrument_list", { category, query }),
+  instrumentGet: (id: string) => invoke<InstrumentPreset>("instrument_get", { id }),
+  instrumentSave: (preset: InstrumentPreset) => invoke<InstrumentPreset>("instrument_save", { preset }),
+  instrumentUpdate: (preset: InstrumentPreset) => invoke<InstrumentPreset>("instrument_update", { preset }),
+  instrumentDelete: (id: string) => invoke<void>("instrument_delete", { id }),
+  instrumentAuditionStart: (voice: InstrumentVoice, device: string | null, midi: number | null, levelDb: number | null) =>
+    invoke<void>("instrument_audition_start", { voice, device, midi, levelDb }),
+  instrumentAuditionSet: (voice: InstrumentVoice) => invoke<boolean>("instrument_audition_set", { voice }),
+  instrumentAuditionStop: () => invoke<void>("instrument_audition_stop"),
+  instrumentRender: (path: string, voice: InstrumentVoice, seconds: number | null, midi: number | null) =>
+    invoke<{ path: string; seconds: number; peak: number }>("instrument_render", { path, voice, seconds, midi }),
   // Background mixer buses (bus_cmds.rs)
   busGet: () => invoke<BusStrip[]>("bus_get"),
   busSet: (name: string, strip: BusStrip) => invoke<void>("bus_set", { name, strip }),

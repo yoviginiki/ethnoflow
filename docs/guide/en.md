@@ -62,6 +62,15 @@ The same layers as Atmosphere, one at a time, with big knobs:
 - **Module presets** (💾/📚) with tags and notes, in the shared Library.
 - On the right: a mini mixer and the macros as knobs. Whatever you do here shows in Atmosphere too.
 
+## Instruments (designer)
+
+- From Home → **Instruments** or from ✎ next to each part in the rhythm section. Left: factory and your presets by category (drums, bass, synth) with search. Right: the chosen instrument with knobs.
+- **Audition** plays a short pattern through exactly this sound at the project tempo; knobs are heard at once. **WAV** renders the same pattern to a file for comparison.
+- The knobs are real sound parameters: for the bass voice (sub/pluck/Reese), attack/decay/sustain/release, pitch sweep, microvariation, cutoff/resonance/filter envelope, wobble, drive, warmth, glide, sidechain; for the drums kick fundamental, decay, brightness and a level per drum; for the synth timbre, attack, release, tone, dynamics. Every knob has a tooltip saying what it changes in the sound.
+- **Save as…** makes your preset (factory ones never change; the copy remembers its parent). **Update** overwrites your preset. 🗑 deletes yours.
+- **Use in** sends the preset to the rhythm section; each part there has a 🎛 picker ("own sound" = the part's fields). The choice is kept in the project's session.
+- Why it matters: the four parts are no longer the same instruments in every project. Two kits or two basses must sound different, not just be named differently.
+
 ## Rhythm section
 
 - Four instruments on one shared clock: **drums** (liquid, halftime, ethno), **bass** (sub, pluck, Reese with wobble and sidechain), **ostinato** (a step motif, lockable), **arpeggio**.

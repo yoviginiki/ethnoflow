@@ -105,6 +105,10 @@ export async function applyLibraryPayload(kind: LibraryKind, payload: unknown): 
     case "session":
       await applySession(payload, true);
       return "compose";
+    case "instrument": {
+      // Library entry id == instrument id: open it in the designer.
+      return "instrument";
+    }
     case "module": {
       // A module preset becomes a new layer of the rack (Soundscapes applies it onto the selected one).
       if (!s.project || !s.ambient) throw new Error("no project");

@@ -36,7 +36,8 @@ rhythm_status, ambient_status }`
   `a4_hz`, `timing` (bpm, numerator, unit, grouping), `markers`, `instrument`, `takes`
   (id, number, label, duration, source, …). Analysis files of a take (contour, notes)
   live under `<root>/analysis/<take>.*.json` and can be read directly.
-- `prefs`: `drone`, `pad`, `intent`, `harmony`, `rhythm`, `masterDb`, `stripControl`.
+- `prefs`: `drone`, `pad`, `intent`, `harmony`, `rhythm` (incl. `instruments`: preset ids per
+  part, e.g. `"factory:bass.reese"` or a library entry id), `masterDb`, `stripControl`, `mixer`.
   Shapes = the TypeScript interfaces in `apps/desktop/src/store.ts`
   (`DronePrefs`, `PadPrefs`, `RhythmPrefs`, `HarmonyPrefs`, `IntentSettings`).
 - `layers`: which background layers play (`drone`, `pad`, `ambient`, `rhythm`).

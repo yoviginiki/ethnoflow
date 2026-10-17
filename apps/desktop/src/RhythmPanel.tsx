@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { save } from "@tauri-apps/plugin-dialog";
-import { api, describeError, type ArpDirection, type GrooveStyle, type RhythmPrefs } from "./api";
+import { api, describeError, type ArpDirection, type GrooveStyle, type InstrumentSummary, type RhythmPrefs } from "./api";
+import { instrumentName } from "./InstrumentDesigner";
 import { formatDb, linearToDb, meterFraction, noteParts } from "./format";
 import { Knob } from "./Knob";
 import { messages, type StringMessageKey } from "./i18n";
@@ -59,6 +60,21 @@ export function RhythmPanel() {
   const hasRoot = project.scale !== null || (s.prefs.drone?.rootMidi ?? null) !== null;
   const canPlay = hasTiming && hasRoot;
   const [openPart, setOpenPart] = useState<"drums" | "bass" | "ostinato" | "arp" | null>("drums");
+  const [instruments, setInstruments] = useState<InstrumentSummary[]>([]);
+  useEffect(() => {
+    api
+      .instrumentList(null, null)
+      .then(setInstruments)
+      .catch(() => setInstruments([]));
+  }, []);
+  const instrumentsFor = (part: "drums" | "bass" | "ostinato" | "arp") => instruments.filter((i) => i.category === (part === "drums" ? "drums" : part === "bass" ? "bass" : "synth"));
+  const defaultInstrument = (part: "drums" | "bass" | "ostinato" | "arp") => (part === "drums" ? "factory:drums.liquid" : part === "bass" ? "factory:bass.sub" : "factory:synth.breath");
+  const setInstrument = (part: "drums" | "bass" | "ostinato" | "arp", id: string) => {
+    const inst = { ...(r.instruments ?? {}) };
+    if (id) inst[part] = id;
+    else delete inst[part];
+    set({ instruments: inst });
+  };
   const set = (patch: Partial<RhythmPrefs>) => s.setPref("rhythm", { ...r, ...patch });
   const setPart = <K extends "drums" | "bass" | "ostinato" | "arp">(part: K, patch: Partial<RhythmPrefs[K]>) => set({ [part]: { ...r[part], ...patch } } as Partial<RhythmPrefs>);
   const reroll = (part: "drums" | "bass" | "ostinato" | "arp") => setPart(part, { seed: 1 + Math.floor(Math.random() * 1_000_000), ...(part === "ostinato" ? { motif: null } : {}) } as never);
@@ -108,6 +124,28 @@ export function RhythmPanel() {
         </button>
         <button className="ghost small" title={t.rerollSeed} onClick={() => reroll(part)} disabled={p.locked}>
           🎲 {p.seed}
+        </button>
+        <label className="inline small" title={t.igPickHint}>
+          🎛
+          <select value={r.instruments?.[part] ?? ""} onChange={(e) => setInstrument(part, e.target.value)}>
+            <option value="">{t.igOwnSound}</option>
+            {instrumentsFor(part).map((i) => (
+              <option key={i.id} value={i.id}>
+                {instrumentName(i, t)}
+                {i.factory ? "" : " ★"}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          className="ghost small"
+          title={t.igOpenDesigner}
+          onClick={() => {
+            s.setDesignerId(r.instruments?.[part] ?? defaultInstrument(part));
+            s.setScreen("instrument");
+          }}
+        >
+          ✎
         </button>
       </div>
     );

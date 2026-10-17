@@ -16,6 +16,7 @@ export const LIB_KIND_LABEL: Record<LibraryKind, StringMessageKey> = {
   background: "libBackground",
   session: "libSession",
   module: "libModule",
+  instrument: "libInstrument",
 };
 
 /**
@@ -63,6 +64,7 @@ export function Library() {
     setBusy(true);
     try {
       const full = await api.libraryGet(e.id);
+      if (e.kind === "instrument") useStore.getState().setDesignerId(e.id);
       const screen = await applyLibraryPayload(e.kind as LibraryKind, full.payload);
       useStore.getState().setMessage(`${t.presetLoaded}: ${e.name}`);
       s.setScreen(screen);

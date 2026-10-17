@@ -135,6 +135,29 @@ audio graph — the clips, the drone and the pad share one transport, one master
 one limiter — together with an explicit background play/stop in every screen
 (0.2.9). Phase 1A and Phase 4 follow as before; F5.2–F5.4 stay in Phase 5.
 
+## Owner's consolidated backlog (sent back 2026-10-18 with "these too, don't forget")
+
+| # | Item | Status / where |
+|---|---|---|
+| 1 | Cloud (granular pad from a take) | done 2026-10-17 (F1B.2) |
+| 2 | Shimmer (transposed reverb) | next Soundscapes slice |
+| 3 | Resonator (bells, bowls, strings from the mode) | after Shimmer |
+| 4 | Sound Designer for the rhythm section | **P1 R2 done as the Instrument Designer (bass/drums/synth presets)** |
+| 5 | New rhythm instruments (pad synth, keys, percussion: tapan, darbuka, daire; lead) | P1 R3 (InstrumentRack) |
+| 6 | Sample folder browser (Soundly Audio etc.), search, audition, "+ to Atmosphere" | pending (after Shimmer) |
+| 7 | Choir drone (vowel), Bloom (generative melody) | pending |
+| 8 | Tape loop with live mic, Spaces (convolution) | need live input / FFT (FFT approved via ADR for P2) |
+| 9 | Genre recipes in the guide (ambient, liquid DnB, ambient DnB step by step) | pending, grows with each module |
+| 10 | Track mixer (level, pan, solo, sends) | partial: background buses done; track strips pending (F5.2) |
+| 11 | Phrase & Vocal Chopper | pending (F5.3) |
+| 12 | DAW export (stems, MIDI, tempo map in one package) | P2 F / F5.4 |
+| 13 | Take fade in/out; shared transport across screens; kaval fingerings (owner's table); trainer to the end | transport = P3 Phase 1; others pending |
+| 14 | Academy | Phase 6 |
+| 15 | Intelligent melody variations | Phase 7 / P2 D |
+| 16 | Live accompanist following the playing | Phase 8 / P3 6 |
+| 17 | CLAP host | needs owner yes (C++ toolchain, deps) |
+| 18 | Release 0.5.0 (installer, clean machine, owner's manual tests) | pending |
+
 ## Programs received 2026-10-18 (owner specifications; gated, audits first)
 
 Three master specifications arrived from the owner on 2026-10-18, each with its own

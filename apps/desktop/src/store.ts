@@ -35,7 +35,7 @@ import type { BusStrip } from "./api";
 import type { Lang } from "./i18n";
 
 export type Mode = "idle" | "recording" | "playing";
-export type Screen = "home" | "play" | "compose" | "studio" | "ambient" | "rhythm" | "library" | "soundscapes" | "start" | "help";
+export type Screen = "home" | "play" | "compose" | "studio" | "ambient" | "rhythm" | "library" | "soundscapes" | "start" | "help" | "instrument";
 export type LayerName = "drone" | "pad" | "ambient" | "rhythm";
 
 /** Background mixer strip per layer: the bus (trim, pan, cuts) plus fade times in seconds. */
@@ -95,6 +95,7 @@ export const DEFAULT_RHYTHM: RhythmPrefs = {
   ostinato: { on: false, steps: 8, step_beats: 0.5, density: 0.6, probability: 1, variation_every_bars: 4, swing: 0, seed: 1, level_db: -16, register_low: 55, register_high: 79, timbre: 2, release_s: 0.15, locked: false, motif: null },
   arp: { on: false, direction: "up", octaves: 1, step_beats: 0.25, gate: 0.6, density: 1, swing: 0, seed: 1, level_db: -18, register_low: 60, timbre: 0, release_s: 0.12, locked: false },
   bars: 4,
+  instruments: {},
 };
 
 export interface HarmonyPrefs {
@@ -234,6 +235,9 @@ interface Store {
   setPref: <K extends keyof Prefs>(k: K, v: Prefs[K]) => void;
 
   screen: Screen;
+  /** Instrument Forge: the preset the designer shows. */
+  designerId: string | null;
+  setDesignerId: (id: string | null) => void;
   setScreen: (s: Screen) => void;
 
   inputDevices: DeviceInfo[];
@@ -364,6 +368,8 @@ export const useStore = create<Store>((set, get) => ({
 
   screen: "home",
   setScreen: (screen) => set({ screen }),
+  designerId: null,
+  setDesignerId: (designerId) => set({ designerId }),
 
   layers: { drone: false, pad: false, ambient: false, rhythm: false },
   setLayer: (name, on) => set({ layers: { ...get().layers, [name]: on } }),

@@ -4,6 +4,7 @@ mod arrangement_cmds;
 mod assistant_cmds;
 mod bus_cmds;
 mod commands;
+mod forge_cmds;
 mod graph_cmds;
 mod harmony_cmds;
 mod instrument_cmds;
@@ -178,6 +179,15 @@ pub fn run() {
             bus_cmds::bus_fade,
             bus_cmds::bus_status,
             rhythm_cmds::rhythm_render,
+            forge_cmds::instrument_list,
+            forge_cmds::instrument_get,
+            forge_cmds::instrument_save,
+            forge_cmds::instrument_update,
+            forge_cmds::instrument_delete,
+            forge_cmds::instrument_audition_start,
+            forge_cmds::instrument_audition_set,
+            forge_cmds::instrument_audition_stop,
+            forge_cmds::instrument_render,
         ])
         .build(tauri::generate_context!())
         .expect("error while building EthnoFlow Studio")
