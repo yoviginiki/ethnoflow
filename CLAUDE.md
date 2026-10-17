@@ -8,8 +8,15 @@ is the operational layer on top of it.
 
 Windows-first (cross-platform core) desktop app: music academy + live instrument lab +
 mini DAW + rule-based accompanist for ethno melodies. Tauri 2 shell, React/TS UI, Rust
-audio engine. **Phase 0 is complete; Phase 1 starts only after the owner's approval.**
+audio engine. **Phases 0–1 are implemented (0.1.0); Phase 2 is in progress (0.2.x).**
 Current phase and definition of done: `docs/ROADMAP.md`.
+**What to build, feature by feature, with steps and acceptance criteria:
+`docs/FEATURE_SPEC.md`** — read it at the start of every phase; work through its
+F-numbered items in order and stop at each phase exit. Its "Статус спрямо репото"
+table says which items already exist and where the code actually lives when it differs
+from the spec. The concept docs (`INSTRUMENT_MACHINE_CONCEPT.md`,
+`MIDI_PLAYER_TRAINER_SPEC.md`, `ACADEMY_INSPIRATION.md` when present) explain *why*;
+FEATURE_SPEC says *what*.
 
 ## Repository layout
 
