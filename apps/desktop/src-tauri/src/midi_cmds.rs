@@ -43,7 +43,7 @@ pub fn render_clip(clip: &MidiClip, r: &MidiRender, a4: f64) -> AudioBuffer {
         .map(|n| SynthNote {
             start: n.start * f,
             end: n.end * f,
-            midi: n.pitch as i32,
+            midi: (n.pitch as i32 + r.transpose).clamp(0, 127),
             cents: 0.0,
             velocity: n.velocity as f64 / 127.0,
             bend: Vec::new(),
@@ -66,7 +66,7 @@ pub fn clip_notes(clip: &MidiClip, r: &MidiRender) -> Vec<Note> {
         .map(|n| Note {
             start: n.start * f,
             end: n.end * f,
-            midi: n.pitch as i32,
+            midi: (n.pitch as i32 + r.transpose).clamp(0, 127),
             cents: 0.0,
             confidence: 1.0,
             velocity: n.velocity as f64 / 127.0,

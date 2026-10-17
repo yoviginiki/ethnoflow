@@ -12,6 +12,7 @@ import {
   midiToHz,
   noteParts,
   parseGrouping,
+  snapToBars,
   takeName,
 } from "./format";
 
@@ -52,6 +53,16 @@ describe("pitch helpers", () => {
     expect(Math.abs(centsFromScale(dDorian, 61))).toBe(100);
     // C♯ + 40 cents is 60 cents below D (the nearest degree), not 40 above C♯.
     expect(centsFromScale(dDorian, 73.4)).toBeCloseTo(-60, 9);
+  });
+});
+
+describe("snapToBars", () => {
+  it("snaps both edges, keeps at least one bar and stays inside the take", () => {
+    expect(snapToBars([0.9, 3.2], 2, 10)).toEqual([0, 4]);
+    expect(snapToBars([1.2, 3.2], 2, 10)).toEqual([2, 4]);
+    expect(snapToBars([1.9, 2.1], 2, 10)).toEqual([2, 4]);
+    expect(snapToBars([8.9, 9.9], 2, 9)).toEqual([8, 10]);
+    expect(snapToBars([0, 1], 0, 10)).toEqual([0, 1]);
   });
 });
 

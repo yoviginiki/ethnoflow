@@ -37,6 +37,8 @@ export interface Prefs {
   notesView: "roll" | "falling";
   keyNames: boolean;
   voice: Voice;
+  /** Snap the selection (loop) to bar boundaries on MIDI takes with a known meter. */
+  snapBar: boolean;
 }
 
 const PREFS_KEY = "ethnoflow.prefs.v1";
@@ -55,6 +57,7 @@ export const DEFAULT_PREFS: Prefs = {
   notesView: "roll",
   keyNames: true,
   voice: "flute",
+  snapBar: true,
 };
 
 function loadPrefs(): Prefs {

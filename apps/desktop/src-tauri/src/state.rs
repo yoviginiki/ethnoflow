@@ -39,6 +39,9 @@ pub struct MidiRender {
     pub tempo_factor: f64,
     pub muted_tracks: Vec<u16>,
     pub voice: audio_engine::Voice,
+    /// Semitones added to every note (±24); the file is never changed.
+    #[serde(default)]
+    pub transpose: i32,
 }
 
 impl Default for MidiRender {
@@ -47,6 +50,7 @@ impl Default for MidiRender {
             tempo_factor: 1.0,
             muted_tracks: Vec::new(),
             voice: audio_engine::Voice::Flute,
+            transpose: 0,
         }
     }
 }

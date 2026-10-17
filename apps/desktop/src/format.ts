@@ -96,6 +96,16 @@ export function centsFromScale(scale: { tonic_pc: number; degrees_cents: number[
   return best;
 }
 
+/** Snap a [start, end) selection to bar boundaries; at least one bar, within duration. */
+export function snapToBars(sel: [number, number], barSeconds: number, duration: number): [number, number] {
+  if (barSeconds <= 0) return sel;
+  const a = Math.round(sel[0] / barSeconds) * barSeconds;
+  let b = Math.round(sel[1] / barSeconds) * barSeconds;
+  if (b <= a) b = a + barSeconds;
+  const end = duration > 0 ? Math.min(b, Math.ceil(duration / barSeconds) * barSeconds) : b;
+  return [Math.max(0, a), Math.max(end, a + barSeconds)];
+}
+
 export function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`;
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;

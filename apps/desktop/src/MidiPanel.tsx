@@ -53,6 +53,19 @@ export function MidiPanel({ onRerendered }: Props) {
         />
       </label>
       <label className="inline">
+        {t.transposeLabel}
+        <input
+          type="number"
+          min={-24}
+          max={24}
+          step={1}
+          value={midi.render.transpose}
+          disabled={busy}
+          onChange={(e) => void apply({ transpose: Math.max(-24, Math.min(24, Number(e.target.value) || 0)) })}
+          style={{ width: 56 }}
+        />
+      </label>
+      <label className="inline">
         {t.voice}
         <select value={midi.render.voice} disabled={busy} onChange={(e) => void apply({ voice: e.target.value as Voice })}>
           {VOICES.map((v) => (

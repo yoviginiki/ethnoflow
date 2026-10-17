@@ -5,7 +5,7 @@ import { AnalysisPanel } from "./AnalysisPanel";
 import { FallingNotes } from "./FallingNotes";
 import { InstrumentPanel } from "./InstrumentPanel";
 import { MidiPanel } from "./MidiPanel";
-import { formatBytes, formatDb, formatTime, isTypingTarget, linearToDb, meterFraction, takeName } from "./format";
+import { formatBytes, formatDb, formatTime, isTypingTarget, linearToDb, meterFraction, snapToBars, takeName } from "./format";
 import { messages } from "./i18n";
 import { NEW_NOTE_S, PianoRoll } from "./PianoRoll";
 import { TakeList } from "./TakeList";
@@ -569,6 +569,11 @@ export function Studio() {
   // ---------- render ----------
 
   const [trainerTarget, setTrainerTarget] = useState<{ index: number; wrong: boolean } | null>(null);
+  // Bar length in playback seconds for a MIDI take with a known tempo and meter.
+  const barSeconds =
+    s.midi && s.midi.time_signature && s.midi.bpm > 0
+      ? ((s.midi.time_signature[0] * (4 / s.midi.time_signature[1]) * 60) / s.midi.bpm) / s.midi.render.tempo_factor
+      : null;
   const busy = s.mode !== "idle" || s.pending !== null;
   const hasTrim = loadedTake != null && (loadedTake.trim_in_seconds > 0 || loadedTake.trim_out_seconds != null);
   const chLabel = (n: number) => (n === 1 ? t.mono : n === 2 ? t.stereo : `${n}`);
@@ -706,7 +711,7 @@ export function Studio() {
               s.setCursor(sec);
               if (s.mode === "playing") void onPlay(sec);
             }}
-            onSelect={(sel) => s.setSelection(sel)}
+            onSelect={(sel) => s.setSelection(sel && barSeconds && s.prefs.snapBar ? snapToBars(sel, barSeconds, s.loaded?.duration_seconds ?? 0) : sel)}
             emptyText={t.noTakes}
             label={loadedTake ? takeName(loadedTake, t.take) : t.noTakes}
           />
@@ -844,6 +849,12 @@ export function Studio() {
               <input type="checkbox" checked={s.prefs.loop} onChange={(e) => s.setPref("loop", e.target.checked)} />
               {t.loop}
             </label>
+            {barSeconds && (
+              <label className="inline">
+                <input type="checkbox" checked={s.prefs.snapBar} onChange={(e) => s.setPref("snapBar", e.target.checked)} />
+                {t.snapToBar}
+              </label>
+            )}
             <span className="mono-num time">
               {s.mode === "recording" && rec
                 ? formatTime(rec.seconds_captured)

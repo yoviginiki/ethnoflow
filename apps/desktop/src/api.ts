@@ -271,6 +271,7 @@ export interface MidiRender {
   tempo_factor: number;
   muted_tracks: number[];
   voice: Voice;
+  transpose: number;
 }
 
 export interface TrackInfo {
