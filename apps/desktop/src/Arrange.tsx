@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as RPointerEvent, type WheelEvent as RWheelEvent } from "react";
-import { save } from "@tauri-apps/plugin-dialog";
-import { api, describeError, type Arrangement, type ArrangeStatus, type Clip, type RecordingStatus, type TakeView, type Track, type WaveformPeaks, SECTION_NAMES } from "./api";
+import { open, save } from "@tauri-apps/plugin-dialog";
+import { api, describeError, IMPORT_EXTENSIONS, type Arrangement, type ArrangeStatus, type Clip, type RecordingStatus, type TakeView, type Track, type WaveformPeaks, SECTION_NAMES } from "./api";
 import { BackgroundTransport } from "./BackgroundTransport";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { formatBytes, formatDb, formatTime, isTypingTarget, linearToDb, meterFraction, takeName } from "./format";
@@ -1096,7 +1096,36 @@ export function Arrange() {
 
       <div className="arrange-bottom">
         <section className="panel takes-palette">
-          <h3>{t.takesPalette}</h3>
+          <div className="panel-head">
+            <h3>{t.takesPalette}</h3>
+            <button
+              className="ghost small"
+              disabled={!arr || recording || busy}
+              title={t.importAudioHint}
+              onClick={() =>
+                void (async () => {
+                  const path = await open({ title: t.importAudio, multiple: false, directory: false, filters: [{ name: t.audioFiles, extensions: IMPORT_EXTENSIONS }] });
+                  if (!path || Array.isArray(path)) return;
+                  const st = useStore.getState();
+                  try {
+                    st.setError(null);
+                    st.setPending(t.importing);
+                    const pv = await api.importAudio(path);
+                    st.setProject(pv);
+                    const created = pv.takes.reduce((best, tk) => (tk.number > best.number ? tk : best), pv.takes[0]);
+                    if (created) addTake(created);
+                    st.setMessage(`${t.importedOk}: ${path}`);
+                  } catch (e) {
+                    fail(e);
+                  } finally {
+                    useStore.getState().setPending(null);
+                  }
+                })()
+              }
+            >
+              ⤓ {t.importAudio}
+            </button>
+          </div>
           {takes.length === 0 && <div className="muted small">{t.noTakes}</div>}
           <ul>
             {takes.map((tk) => (
