@@ -6,6 +6,7 @@ import { create } from "zustand";
 import type {
   AnalysisView,
   DeviceInfo,
+  Intonation,
   LoadedTakeInfo,
   MidiEvent,
   MidiTakeView,
@@ -42,7 +43,39 @@ export interface Prefs {
   snapBar: boolean;
   /** MIDI input port name, or null for none. */
   midiInput: string | null;
+  /** Drone settings (F3.2); `rootMidi` null until the user picks one (no assumed key). */
+  drone: DronePrefs;
 }
+
+export interface DronePrefs {
+  rootMidi: number | null;
+  rootCents: number;
+  fifth: number;
+  octave: number;
+  sub: number;
+  warmth: number;
+  movement: number;
+  breath: number;
+  detuneCents: number;
+  cutoffHz: number;
+  levelDb: number;
+  intonation: Intonation;
+}
+
+export const DEFAULT_DRONE: DronePrefs = {
+  rootMidi: null,
+  rootCents: 0,
+  fifth: 0.6,
+  octave: 0.3,
+  sub: 0,
+  warmth: 0.4,
+  movement: 0.2,
+  breath: 0.3,
+  detuneCents: 6,
+  cutoffHz: 2500,
+  levelDb: -12,
+  intonation: "profile",
+};
 
 const PREFS_KEY = "ethnoflow.prefs.v1";
 
@@ -62,6 +95,7 @@ export const DEFAULT_PREFS: Prefs = {
   voice: "flute",
   snapBar: true,
   midiInput: null,
+  drone: DEFAULT_DRONE,
 };
 
 function loadPrefs(): Prefs {

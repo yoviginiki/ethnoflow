@@ -1,5 +1,6 @@
 mod analysis_cmds;
 mod commands;
+mod graph_cmds;
 mod instrument_cmds;
 mod midi_cmds;
 mod midi_in_cmds;
@@ -92,6 +93,10 @@ pub fn run() {
             midi_in_cmds::close_midi_input,
             midi_in_cmds::poll_midi_events,
             project_cmds::export_wav,
+            graph_cmds::start_drone,
+            graph_cmds::set_drone,
+            graph_cmds::stop_drone,
+            graph_cmds::drone_status,
         ])
         .build(tauri::generate_context!())
         .expect("error while building EthnoFlow Studio")

@@ -7,7 +7,9 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use audio_engine::{AudioBuffer, InputMonitor, LiveSynth, Metronome, Player, Recorder};
+use audio_engine::{
+    AudioBuffer, DroneParams, GraphPlayer, InputMonitor, LiveSynth, Metronome, Player, Recorder,
+};
 use project::{Project, TakeHealth};
 
 pub struct ActiveRecording {
@@ -74,6 +76,11 @@ pub struct Inner {
     pub midi_input: Option<crate::midi_in_cmds::MidiInput>,
     /// Live synth driven by the computer keyboard / MIDI input.
     pub live_synth: Option<LiveSynth>,
+    /// The audio graph's output stream (F1.6); started on demand by the drone/pad.
+    pub graph: Option<GraphPlayer>,
+    /// Parameters of the drone source in graph slot 0 while it plays.
+    pub drone: Option<Arc<DroneParams>>,
+    pub drone_settings: Option<crate::graph_cmds::DroneSettings>,
     pub loaded: Option<LoadedTake>,
 }
 
@@ -108,6 +115,19 @@ impl Inner {
         if let Some(s) = self.live_synth.take() {
             s.stop();
         }
+    }
+
+    pub fn stop_graph(&mut self) {
+        // Fade the layer first so stopping the stream does not click.
+        if let Some(g) = self.graph.as_ref() {
+            g.params().layers[0].gain_db.set(-60.0);
+            std::thread::sleep(std::time::Duration::from_millis(30));
+        }
+        if let Some(g) = self.graph.take() {
+            g.stop();
+        }
+        self.drone = None;
+        self.drone_settings = None;
     }
 }
 

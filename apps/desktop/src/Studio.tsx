@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { api, describeError, IMPORT_EXTENSIONS, type Note, type WavFormat } from "./api";
 import { AnalysisPanel } from "./AnalysisPanel";
+import { DronePanel } from "./DronePanel";
 import { FallingNotes } from "./FallingNotes";
 import { InstrumentPanel } from "./InstrumentPanel";
 import { KeyboardPiano } from "./KeyboardPiano";
@@ -742,6 +743,7 @@ export function Studio() {
           )}
           <InstrumentPanel />
           <KeyboardPiano scale={project.scale} />
+          <DronePanel scale={project.scale} profile={project.instrument} />
 
           <section className="meter-row" aria-label={t.level}>
             <span className="muted small">{t.level}</span>

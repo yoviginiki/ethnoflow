@@ -181,6 +181,35 @@ export interface InstrumentProfile {
   updated_at_ms: number;
 }
 
+export type Intonation = "profile" | "tempered";
+
+export interface DroneSettings {
+  root_midi: number;
+  root_cents: number;
+  fifth: number;
+  octave: number;
+  sub: number;
+  warmth: number;
+  movement: number;
+  breath: number;
+  detune_cents: number;
+  cutoff_hz: number;
+  level_db: number;
+  intonation: Intonation;
+}
+
+export interface DroneStatus {
+  sample_rate: number;
+  root_hz: number;
+  root_cents_applied: number;
+  fifth_cents_applied: number;
+  intonation_used: Intonation;
+  layer_peak: number;
+  master_peak: number;
+  limiter_gain: number;
+  stream_errors: number;
+}
+
 export interface ProfileDiagnosis {
   notes: number;
   mean_offset_cents: number;
@@ -489,6 +518,10 @@ export const api = {
   stopLiveSynth: () => invoke<void>("stop_live_synth"),
   synthNote: (midi: number, on: boolean, velocity: number | null) => invoke<void>("synth_note", { midi, on, velocity }),
   synthAllOff: () => invoke<void>("synth_all_off"),
+  startDrone: (device: string | null, settings: DroneSettings) => invoke<DroneStatus>("start_drone", { device, settings }),
+  setDrone: (settings: DroneSettings) => invoke<DroneStatus>("set_drone", { settings }),
+  stopDrone: () => invoke<void>("stop_drone"),
+  droneStatus: () => invoke<DroneStatus | null>("drone_status"),
   evaluatePerformance: (expected: Note[], played: Note[], level: Level, latencyMs: number) =>
     invoke<TrainerReport>("evaluate_performance", { expected, played, level, latencyMs }),
   listProfiles: () => invoke<ProfileSummary[]>("list_profiles"),

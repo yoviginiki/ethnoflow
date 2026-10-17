@@ -198,3 +198,24 @@ button.small { font-size: 12px; padding: 3px 7px; }
   .studio-body { grid-template-columns: 1fr; }
   .studio .devices { grid-template-columns: 1fr 1fr; }
 }
+
+/* drone (F3.2) */
+.drone-sliders {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 6px 16px;
+  margin: 6px 0;
+}
+.drone-slider {
+  display: grid;
+  grid-template-columns: 5.5em 1fr 3.5em;
+  align-items: center;
+  gap: 6px;
+}
+.drone-slider input[type="range"] {
+  width: 100%;
+  margin: 0;
+}
+.drone .meter {
+  width: 120px;
+}
