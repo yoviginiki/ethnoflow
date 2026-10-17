@@ -6,6 +6,7 @@ mod graph_cmds;
 mod harmony_cmds;
 mod instrument_cmds;
 mod intent_cmds;
+mod library_cmds;
 mod midi_cmds;
 mod midi_in_cmds;
 mod pad_cmds;
@@ -156,6 +157,13 @@ pub fn run() {
             rhythm_cmds::estimate_take_tempo,
             rhythm_cmds::rhythm_to_takes,
             harmony_cmds::countermelody_to_take,
+            library_cmds::library_list,
+            library_cmds::library_save,
+            library_cmds::library_get,
+            library_cmds::library_update,
+            library_cmds::library_replace_payload,
+            library_cmds::library_delete,
+            library_cmds::library_facets,
         ])
         .build(tauri::generate_context!())
         .expect("error while building EthnoFlow Studio")
