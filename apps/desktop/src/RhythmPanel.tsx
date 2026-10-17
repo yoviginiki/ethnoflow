@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { api, describeError, type ArpDirection, type GrooveStyle, type RhythmPrefs } from "./api";
 import { formatDb, linearToDb, meterFraction, noteParts } from "./format";
+import { Knob } from "./Knob";
 import { messages, type StringMessageKey } from "./i18n";
 import { DEFAULT_RHYTHM, useStore } from "./store";
 
@@ -89,11 +90,7 @@ export function RhythmPanel() {
         <button className="ghost small" onClick={() => setOpenPart(openPart === part ? null : part)} aria-expanded={openPart === part}>
           {openPart === part ? "▾" : "▸"}
         </button>
-        <label className="inline small" title={t.levelLabel}>
-          🔊
-          <input type="range" min={-40} max={6} step={1} value={p.level_db} onChange={(e) => setPart(part, { level_db: Number(e.target.value) } as never)} style={{ width: 90 }} />
-          <span className="mono-num">{formatDb(p.level_db)}</span>
-        </label>
+        <Knob value={p.level_db} min={-40} max={6} step={1} reset={-12} label={`${t.levelLabel}: ${title}`} text={p.level_db <= -39.5 ? "off" : formatDb(p.level_db)} size={40} onChange={(v) => setPart(part, { level_db: v } as never)} />
         {meter(index)}
         <button className={`ghost small ${p.locked ? "on" : ""}`} title={t.lockPart} aria-pressed={p.locked} onClick={() => setPart(part, { locked: !p.locked } as never)}>
           {p.locked ? "🔒" : "🔓"}

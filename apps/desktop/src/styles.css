@@ -393,3 +393,16 @@ button.small { font-size: 12px; padding: 3px 7px; }
 
 /* Status badges keep their place when inactive, so rows never jump. */
 .invisible { visibility: hidden; }
+
+/* Rotary knob */
+.knob { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; user-select: none; }
+.knob svg { cursor: ns-resize; touch-action: none; outline: none; border-radius: 50%; }
+.knob svg:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
+.knob.disabled svg { cursor: default; opacity: 0.5; }
+.knob-track { fill: none; stroke: var(--axis); stroke-width: 4; stroke-linecap: round; }
+.knob-arc { fill: none; stroke: var(--accent); stroke-width: 4; stroke-linecap: round; }
+.knob-body { fill: var(--panel); stroke: var(--axis); stroke-width: 1; }
+.knob-dot { fill: var(--text); }
+.knob-text { line-height: 1; }
+.strip-fader { height: auto; align-items: center; }
+.vmeter { height: 70px; }

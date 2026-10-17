@@ -5,6 +5,7 @@ import { randomizeRack } from "./ambientRandom";
 import { LaneEditor, ProgramPanel } from "./AmbientProgram";
 import { BackgroundTransport } from "./BackgroundTransport";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { Knob } from "./Knob";
 import { formatDb, linearToDb, meterFraction, noteParts, takeName } from "./format";
 import { fadeOutBackground } from "./layers";
 import { messages, type StringMessageKey } from "./i18n";
@@ -540,13 +541,12 @@ export function Ambient() {
                     </button>
                   )}
                   <span className="muted small">{t[KIND_LABEL[l.source.kind]]}</span>
-                  <div className="strip-fader">
+                  <div className="strip-fader" onClick={(e) => e.stopPropagation()}>
                     <div className="vmeter" aria-hidden="true">
                       <div className={`vmeter-fill ${peakDb > -3 ? "hot" : peakDb > -12 ? "warm" : ""}`} style={{ height: `${meterFraction(peakDb) * 100}%` }} />
                     </div>
-                    <input type="range" className="vslider" min={-60} max={12} step={0.5} value={l.gain_db} aria-label={t.levelLabel} onChange={(e) => patchLayer(l.id, { gain_db: Number(e.target.value) })} onDoubleClick={() => patchLayer(l.id, { gain_db: -18 })} />
+                    <Knob value={l.gain_db} min={-60} max={12} step={0.5} reset={-18} label={`${t.levelLabel}: ${l.name}`} text={l.gain_db <= -59.5 ? "off" : formatDb(l.gain_db)} size={56} onChange={(v) => patchLayer(l.id, { gain_db: v })} />
                   </div>
-                  <span className="mono-num small">{formatDb(l.gain_db)}</span>
                   <label className="strip-pan" title={t.panLabel}>
                     <input type="range" min={-1} max={1} step={0.05} value={l.pan} aria-label={t.panLabel} onChange={(e) => patchLayer(l.id, { pan: Number(e.target.value) })} onDoubleClick={() => patchLayer(l.id, { pan: 0 })} />
                   </label>

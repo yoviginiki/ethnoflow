@@ -286,7 +286,8 @@ export function useBackgroundLayers() {
   const rhythmStarted = useStore((s) => s.rhythmStatus !== null);
   useEffect(() => {
     if (!droneStarted && !padStarted && !ambientStarted && !rhythmStarted) return;
-    api.setGraphMaster(masterDb).catch(fail);
+    // The master slider's floor (−40) is silence.
+    api.setGraphMaster(masterDb <= -39.5 ? -120 : masterDb).catch(fail);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [masterDb, droneStarted, padStarted, ambientStarted, rhythmStarted]);
 

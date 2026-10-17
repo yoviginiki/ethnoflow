@@ -272,7 +272,13 @@ fn apply_layer_strip(
     } else {
         -gravity
     };
-    let gain = (l.gain_db + intensity_db + gravity_db).clamp(-120.0, 12.0);
+    // The slider's floor (−60) and intensity 0 mean "off": the graph then skips the
+    // layer entirely instead of leaving it faintly audible.
+    let gain = if l.gain_db <= -59.5 || m.intensity <= 0.001 {
+        -120.0
+    } else {
+        (l.gain_db + intensity_db + gravity_db).clamp(-120.0, 12.0)
+    };
     layer.gain_db.set(gain as f32);
     layer.pan.set((l.pan * m.width) as f32);
     // Brightness: shifts the low-pass by ±2 octaves around the layer's own setting.

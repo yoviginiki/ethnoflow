@@ -286,8 +286,8 @@ pub async fn drone_status(state: State<'_, AppState>) -> CmdResult<Option<DroneS
 /// Master level of the background (drone + pad), in dB; remembered for the next start.
 #[tauri::command]
 pub async fn set_graph_master(state: State<'_, AppState>, db: f32) -> CmdResult<()> {
-    if !(-60.0..=6.0).contains(&db) {
-        return Err(err("invalid_argument", "master outside -60..6 dB"));
+    if !(-120.0..=6.0).contains(&db) {
+        return Err(err("invalid_argument", "master outside -120..6 dB"));
     }
     let mut s = state.lock();
     s.master_db = Some(db);

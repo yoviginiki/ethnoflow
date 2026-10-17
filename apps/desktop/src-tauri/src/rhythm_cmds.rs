@@ -486,11 +486,13 @@ fn apply_live(s: &Inner, live: &RhythmLive) {
     let Some(g) = s.graph.as_ref() else { return };
     let set = &live.settings;
     let layer = |slot: usize| &g.params().layers[slot];
+    // The slider's floor (−40) is silence.
+    let lvl = |db: f32| if db <= -39.5 { -120.0 } else { db };
     if let Some(p) = live.drums.as_ref() {
         p.kick_hz.set(set.drums.kick_hz);
         p.decay.set(set.drums.decay);
         p.brightness.set(set.drums.brightness);
-        layer(DRUMS_SLOT).gain_db.set(set.drums.level_db);
+        layer(DRUMS_SLOT).gain_db.set(lvl(set.drums.level_db));
     }
     if let Some(p) = live.bass.as_ref() {
         let b = &set.bass;
@@ -503,18 +505,18 @@ fn apply_live(s: &Inner, live: &RhythmLive) {
         p.wobble_div.store(b.wobble_div, Ordering::Relaxed);
         p.wobble_depth.set(b.wobble_depth);
         p.warmth.set(b.warmth);
-        layer(BASS_SLOT).gain_db.set(b.level_db);
+        layer(BASS_SLOT).gain_db.set(lvl(b.level_db));
     }
     if let Some(p) = live.ostinato.as_ref() {
         p.timbre
             .store(set.ostinato.timbre.min(2), Ordering::Relaxed);
         p.release_s.set(set.ostinato.release_s);
-        layer(OSTINATO_SLOT).gain_db.set(set.ostinato.level_db);
+        layer(OSTINATO_SLOT).gain_db.set(lvl(set.ostinato.level_db));
     }
     if let Some(p) = live.arp.as_ref() {
         p.timbre.store(set.arp.timbre.min(2), Ordering::Relaxed);
         p.release_s.set(set.arp.release_s);
-        layer(ARP_SLOT).gain_db.set(set.arp.level_db);
+        layer(ARP_SLOT).gain_db.set(lvl(set.arp.level_db));
     }
 }
 
