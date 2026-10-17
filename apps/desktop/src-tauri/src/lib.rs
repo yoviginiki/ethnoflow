@@ -16,6 +16,7 @@ mod pad_cmds;
 mod preset_cmds;
 mod project_cmds;
 mod rhythm_cmds;
+mod samples_cmds;
 mod settings;
 mod state;
 mod synth_cmds;
@@ -189,6 +190,10 @@ pub fn run() {
             forge_cmds::instrument_audition_set,
             forge_cmds::instrument_audition_stop,
             forge_cmds::instrument_render,
+            samples_cmds::samples_scan,
+            samples_cmds::samples_default_folders,
+            samples_cmds::sample_preview,
+            samples_cmds::sample_preview_stop,
         ])
         .build(tauri::generate_context!())
         .expect("error while building EthnoFlow Studio")

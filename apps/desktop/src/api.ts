@@ -734,6 +734,19 @@ export interface RhythmPrefs {
   instruments?: InstrumentRefs;
 }
 
+// ---------- Sample browser ----------
+export interface SampleEntry {
+  path: string;
+  name: string;
+  folder: string;
+  ext: string;
+  bytes: number;
+  modified_ms: number;
+  duration_s: number | null;
+  sample_rate: number | null;
+  channels: number | null;
+}
+
 // ---------- Instrument Forge (project forge.rs, shell forge_cmds.rs) ----------
 export type InstrumentVoice =
   | { engine: "drums"; kick_hz: number; decay: number; brightness: number; levels_db: number[] }
@@ -1348,6 +1361,11 @@ export const api = {
   libraryReplacePayload: (id: string, payload: unknown) => invoke<LibrarySummary>("library_replace_payload", { id, payload }),
   libraryDelete: (id: string) => invoke<void>("library_delete", { id }),
   libraryFacets: () => invoke<LibraryFacets>("library_facets"),
+  // Sample browser (samples_cmds.rs)
+  samplesScan: (folders: string[], max: number | null) => invoke<{ entries: SampleEntry[]; folders_scanned: number; truncated: boolean }>("samples_scan", { folders, max }),
+  samplesDefaultFolders: () => invoke<string[]>("samples_default_folders"),
+  samplePreview: (path: string, device: string | null) => invoke<number>("sample_preview", { path, device }),
+  samplePreviewStop: () => invoke<void>("sample_preview_stop"),
   // Instrument Forge
   instrumentList: (category: string | null, query: string | null) => invoke<InstrumentSummary[]>("instrument_list", { category, query }),
   instrumentGet: (id: string) => invoke<InstrumentPreset>("instrument_get", { id }),

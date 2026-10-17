@@ -202,6 +202,9 @@
   import in Atmosphere**: "Import samples…" (multi-file) or drag-and-drop from
   Explorer / a sample manager such as Soundly — each file becomes a take in the
   project (named after the file) and a looped layer.
+- **Sample browser (backlog #6, 2026-10-18, night)**: screen "Моите семпли": folders
+  (Soundly Audio suggested), recursive scan with WAV facts, search/sort, preview through
+  the graph's audition slot (auto-stop), import as take / looped layer / cloud; scan test.
 - **Resonator (F1B.4, 2026-10-18, night)**: modal resonator layer (6 voices × 4 two-pole
   partials, harmonic ↔ bell ratios, noise-burst exciter with hardness, brightness tilt and
   damping, fundamental decay), tuned to the pitch set like the bells, automatable

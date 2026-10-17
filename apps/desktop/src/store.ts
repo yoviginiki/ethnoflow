@@ -35,7 +35,7 @@ import type { BusStrip } from "./api";
 import type { Lang } from "./i18n";
 
 export type Mode = "idle" | "recording" | "playing";
-export type Screen = "home" | "play" | "compose" | "studio" | "ambient" | "rhythm" | "library" | "soundscapes" | "start" | "help" | "instrument" | "songmap";
+export type Screen = "home" | "play" | "compose" | "studio" | "ambient" | "rhythm" | "library" | "soundscapes" | "start" | "help" | "instrument" | "songmap" | "samples";
 export type LayerName = "drone" | "pad" | "ambient" | "rhythm";
 
 /** Background mixer strip per layer: the bus (trim, pan, cuts) plus fade times in seconds. */
@@ -87,6 +87,8 @@ export interface Prefs {
   assistantBridge: boolean;
   /** Background mixer: one strip per layer (bus_cmds.rs) with fade in/out times. */
   mixer: MixerPrefs;
+  /** Sample browser folders (e.g. Soundly's download folder). */
+  sampleFolders: string[];
 }
 
 export const DEFAULT_RHYTHM: RhythmPrefs = {
@@ -210,6 +212,7 @@ export const DEFAULT_PREFS: Prefs = {
   stripControl: "slider",
   assistantBridge: true,
   mixer: DEFAULT_MIXER,
+  sampleFolders: [],
 };
 
 function loadPrefs(): Prefs {

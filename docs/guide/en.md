@@ -51,6 +51,13 @@ The pad and the textures always sit **below** the melody (about two octaves unde
 - **Samples**: "Import samples…" or drag files onto the window (e.g. from Soundly). Each file becomes a take and a looped layer.
 - A slider at its minimum means the layer is off (silence), not "very quiet".
 
+## My samples
+
+- From Home → **My samples**. Add folders ("Soundly Audio" is offered on first open if it exists): the app scans them recursively for WAV, MP3, FLAC, OGG without copying anything.
+- Search by name and path, sort by name, date or length; ▶ plays the file through the shared output (stops by itself, or with ■).
+- "+ Take" imports it into the project; "+ Loop" and "+ Cloud" import it and immediately make a layer in the atmosphere. From there it is a take like any other.
+- Soundly workflow: pick and download sounds in Soundly → "Rescan" here → listen → "+".
+
 ## Soundscapes
 
 The same layers as Atmosphere, one at a time, with big knobs:

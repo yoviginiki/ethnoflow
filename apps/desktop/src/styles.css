@@ -522,3 +522,12 @@ button.ghost.on { border-color: var(--accent); color: var(--accent); }
 .songmap-head { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--accent); pointer-events: none; }
 .songmap-inspector input[type="text"], .songmap-inspector input:not([type]) { width: 160px; }
 .songmap-screen { display: flex; flex-direction: column; gap: 10px; }
+
+/* Sample browser */
+.samples { display: flex; flex-direction: column; gap: 10px; }
+.samples-folders { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.samples-folders li { display: flex; gap: 8px; align-items: center; }
+.samples-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; max-height: 60vh; overflow: auto; }
+.samples-list li { display: flex; gap: 6px; align-items: center; padding: 2px 4px; border-radius: 6px; }
+.samples-list li.playing { outline: 1px solid var(--accent); }
+.samples-list .path { display: block; }

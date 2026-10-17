@@ -70,6 +70,9 @@ pub struct Inner {
     pub bus: [crate::bus_cmds::BusState; 4],
     /// Instrument Forge audition on slot 3 while a designer plays a voice.
     pub audition: Option<crate::forge_cmds::AuditionLive>,
+    /// Sample browser preview on slot 3 (token tells a late stop which preview it was).
+    pub previewing: bool,
+    pub preview_token: u64,
     /// Result of the last checksum verification, by take id.
     pub health: HashMap<String, TakeHealth>,
     pub recording: Option<ActiveRecording>,
@@ -154,6 +157,7 @@ impl Inner {
             && !self.ambient_on
             && self.rhythm.is_none()
             && self.audition.is_none()
+            && !self.previewing
     }
 
     pub fn stop_graph(&mut self) {

@@ -11,7 +11,8 @@ use std::sync::Arc;
 use audio_engine::{
     write_wav, AudioBuffer, BellParams, BellSource, GrainParams, GrainSource, Graph, GraphCmd,
     GraphParams, LoopParams, LoopSource, NoiseParams, NoiseSource, PluckParams, PluckSource,
-    TextureParams, TextureSource, WavFormat, WindParams, WindSource, MAX_PITCHES,
+    ResonatorParams, ResonatorSource, TextureParams, TextureSource, WavFormat, WindParams,
+    WindSource, MAX_PITCHES,
 };
 use project::{
     effective_rack, is_animated, Ambient, AmbientLayer, LayerSource, Macros, MAX_AMBIENT_LAYERS,
@@ -35,6 +36,7 @@ pub enum LiveParams {
     Pluck(Arc<PluckParams>),
     Loop(Arc<LoopParams>),
     Cloud(Arc<GrainParams>),
+    Resonator(Arc<ResonatorParams>),
 }
 
 pub struct LiveLayer {
@@ -391,6 +393,26 @@ fn apply_source(s: &Inner, live: &LiveParams, l: &AmbientLayer, m: &Macros) {
             p.seed.store(l.seed, Ordering::Relaxed);
         }
         (
+            LayerSource::Resonator {
+                density,
+                decay_s,
+                structure,
+                brightness,
+                strike,
+                tonal,
+                register,
+            },
+            LiveParams::Resonator(p),
+        ) => {
+            p.pitches.set(&pitch_set(s, *tonal, *register, l.seed));
+            p.density.set((*density * motion) as f32);
+            p.decay_s.set(*decay_s as f32);
+            p.structure.set(*structure as f32);
+            p.brightness.set(*brightness as f32);
+            p.strike.set(*strike as f32);
+            p.seed.store(l.seed, Ordering::Relaxed);
+        }
+        (
             LayerSource::Pluck {
                 density,
                 damping,
@@ -525,6 +547,14 @@ fn build_layer(s: &mut Inner, i: usize) -> CmdResult<()> {
             (
                 LiveParams::Bells(Arc::clone(&p)),
                 Box::new(BellSource::new(p)),
+            )
+        }
+        LayerSource::Resonator { .. } => {
+            let p = Arc::new(ResonatorParams::default());
+            p.seed.store(l.seed, Ordering::Relaxed);
+            (
+                LiveParams::Resonator(Arc::clone(&p)),
+                Box::new(ResonatorSource::new(p)),
             )
         }
         LayerSource::Pluck { .. } => {
@@ -669,6 +699,9 @@ fn status(s: &mut Inner) -> CmdResult<AmbientStatus> {
                 tonal, register, ..
             }
             | LayerSource::Pluck {
+                tonal, register, ..
+            }
+            | LayerSource::Resonator {
                 tonal, register, ..
             } => pitch_set(s, *tonal, *register, l.seed),
             _ => Vec::new(),
@@ -869,6 +902,14 @@ fn offline_sources(
                     Box::new(BellSource::new(p)),
                 )
             }
+            LayerSource::Resonator { .. } => {
+                let p = Arc::new(ResonatorParams::default());
+                p.seed.store(l.seed, Ordering::Relaxed);
+                (
+                    LiveParams::Resonator(Arc::clone(&p)),
+                    Box::new(ResonatorSource::new(p)),
+                )
+            }
             LayerSource::Pluck { .. } => {
                 let p = Arc::new(PluckParams::default());
                 p.seed.store(l.seed, Ordering::Relaxed);
@@ -939,6 +980,9 @@ pub async fn export_ambient(
                 }
                 | LayerSource::Pluck {
                     tonal, register, ..
+                }
+                | LayerSource::Resonator {
+                    tonal, register, ..
                 } => pitch_set(&s, *tonal, *register, l.seed),
                 _ => Vec::new(),
             })
@@ -990,6 +1034,7 @@ pub async fn export_ambient(
                     LiveParams::Texture(x) => x.pitches.set(&pitch_sets[i]),
                     LiveParams::Bells(x) => x.pitches.set(&pitch_sets[i]),
                     LiveParams::Pluck(x) => x.pitches.set(&pitch_sets[i]),
+                    LiveParams::Resonator(x) => x.pitches.set(&pitch_sets[i]),
                     LiveParams::Loop(x) => {
                         // apply_source used 48 kHz for the frame math; redo at `rate`.
                         if let LayerSource::Loop {
