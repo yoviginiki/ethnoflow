@@ -176,9 +176,23 @@ choice, original audio and raw contour untouched) — master plan §5.2/§5.3,
   note precision/recall on synthetic melodies, numbers on the kaval take.
 - No key, tempo or meter assumed anywhere; all tests and clippy green.
 
-### User decisions needed during Phase 2
-1. Default tuning reference 440 Hz (changeable per project)?
-2. Which scale families to show first for kaval material (suggest: diatonic modes,
-   hijaz/phrygian dominant, harmonic minor, double harmonic, pentatonic)?
-3. Is a kaval a transposing instrument in your practice (display in concert or written
-   pitch)?
+### 2.7 MIDI player & instrument profiles (added 2026-10-17 at the owner's request)
+- **Instrument profile** per project: which instrument the user plays (shakuhachi 1.8 /
+  D, kaval in D, voice, piano / MIDI keyboard, other) with sounding range and
+  transposition; shown next to the tuner; the Academy will use it. Nothing is assumed
+  until chosen.
+- **Note player**: play the extracted/edited notes with a built-in simple voice
+  (sine/triangle with envelope, pitch bend honoured) from the engine — the first
+  "musical translator" (concept §2.5).
+- **MIDI file player** in the style of midiano / latouchemusicale: open a `.mid`,
+  falling-notes view with a piano keyboard, play/pause/seek, tempo from the file.
+  Needs a minimal SMF *reader* in music-core (we already have the writer).
+- Tests: SMF reader roundtrips the writer's output and parses a reference file; synth
+  renders the right frequencies and durations; player timing matches the file.
+
+### User decisions during Phase 2 (owner delegated, 2026-10-17)
+1. A4 = 440 Hz by default; per-project override stays.
+2. All 13 scale kinds stay; ranking by probability is enough for now.
+3. Everything shows **sounding (concert) pitch**; transposed names come with the
+   instrument profile (2.7). The owner's shakuhachi is 54 cm ≈ 1.8 shaku → key of D
+   (lowest note ≈ D4); the kaval is in D.
