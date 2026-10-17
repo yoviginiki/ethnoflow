@@ -16,6 +16,7 @@ interface Area {
 // disabled — never as buttons that pretend to do something.
 const AREAS: Area[] = [
   { title: "areaAmbient", desc: "areaAmbientDesc", phase: null, screen: "ambient" },
+  { title: "areaSoundscapes", desc: "areaSoundscapesDesc", phase: null, screen: "soundscapes" },
   { title: "areaPlay", desc: "areaPlayDesc", phase: null, screen: "play" },
   { title: "areaAccomp", desc: "areaAccompDesc", phase: null, screen: "compose" },
   { title: "areaRhythm", desc: "areaRhythmDesc", phase: null, screen: "rhythm" },

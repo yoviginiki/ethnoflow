@@ -105,6 +105,19 @@ export async function applyLibraryPayload(kind: LibraryKind, payload: unknown): 
     case "session":
       await applySession(payload, true);
       return "compose";
+    case "module": {
+      // A module preset becomes a new layer of the rack (Soundscapes applies it onto the selected one).
+      if (!s.project || !s.ambient) throw new Error("no project");
+      const m = payload as { name?: string; source: AmbientRack["layers"][number]["source"]; gain_db?: number; pan?: number; lowpass_hz?: number; highpass_hz?: number };
+      if (!m || typeof m !== "object" || !m.source) throw new Error("not a module");
+      const src = m.source;
+      if (src.kind === "loop" && !s.project.takes.some((x) => x.id === src.take_id)) throw new Error("take missing");
+      if (s.ambient.layers.length >= 8) throw new Error("rack full");
+      const layer = { ...s.ambient.layers[0], id: `l${Date.now().toString(36)}`, name: m.name ?? m.source.kind, source: m.source, gain_db: m.gain_db ?? -18, pan: m.pan ?? 0, lowpass_hz: m.lowpass_hz ?? 20_000, highpass_hz: m.highpass_hz ?? 10, mute: false, solo: false, locked: false };
+      const v = await api.setAmbient({ ...s.ambient, layers: [...s.ambient.layers, layer] });
+      useStore.getState().setAmbient(v.ambient);
+      return "soundscapes";
+    }
     default:
       return "home";
   }

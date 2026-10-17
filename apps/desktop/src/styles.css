@@ -439,3 +439,22 @@ button.small { font-size: 12px; padding: 3px 7px; }
 .library-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .library-notes { white-space: pre-wrap; }
 button.ghost.on { border-color: var(--accent); color: var(--accent); }
+
+/* Soundscapes (F1B.1) */
+.soundscapes { display: flex; flex-direction: column; gap: 10px; }
+.ss-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 12px; align-items: start; }
+@media (max-width: 980px) { .ss-layout { grid-template-columns: 1fr; } }
+.ss-title { margin: 0; font-size: 22px; cursor: text; }
+.ss-howto { border-left: 3px solid var(--accent); padding: 8px 10px; margin: 6px 0 10px; color: var(--text); line-height: 1.45; }
+.ss-knobs { display: flex; flex-wrap: wrap; gap: 14px 18px; align-items: flex-start; }
+.ss-knob { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 92px; text-align: center; }
+.ss-knob.narrow { width: 72px; }
+.ss-knob > span.small { line-height: 1.2; }
+.ss-mix-row { display: flex; gap: 8px; align-items: center; padding: 4px 6px; border-radius: 6px; cursor: pointer; }
+.ss-mix-row.selected { outline: 1px solid var(--accent); }
+.ss-mix-row.dim { opacity: 0.55; }
+.hmeter { flex: 1; min-width: 40px; height: 6px; background: var(--axis); border-radius: 3px; overflow: hidden; }
+.ss-knob .hmeter { width: 100%; flex: none; }
+.hmeter-fill { height: 100%; background: var(--accent); }
+.hmeter-fill.warm { background: #d9a441; }
+.hmeter-fill.hot { background: #e05a4f; }

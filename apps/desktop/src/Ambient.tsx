@@ -4,6 +4,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { AMBIENT_TAGS, api, describeError, IMPORT_EXTENSIONS, type Ambient as AmbientRack, type AmbientLayer, type AmbientTag, type LayerKind, type LayerSource, type Macros, type PresetSummary } from "./api";
 import { DEFAULT_MACROS, KIND_LABEL, MAX_AMBIENT_LAYERS, defaultSource, makeLayer } from "./ambientPresets";
 import { randomizeRack } from "./ambientRandom";
+import { MACRO_SLIDERS, REGISTER, SOURCE_SLIDERS, hasTonal, pct } from "./ambientSpecs";
 import { LaneEditor, ProgramPanel } from "./AmbientProgram";
 import { BackgroundTransport } from "./BackgroundTransport";
 import { ConfirmDialog } from "./ConfirmDialog";
@@ -52,63 +53,7 @@ interface Snapshot {
 }
 const POLL_MS = 150;
 const COMMIT_MS = 80;
-const REGISTER = Array.from({ length: 73 }, (_, i) => 36 + i); // C2 … C8
 
-interface SliderSpec {
-  key: string;
-  label: StringMessageKey;
-  min: number;
-  max: number;
-  step: number;
-  /** How the value reads next to the slider. */
-  fmt: (v: number) => string;
-}
-const pct = (v: number) => `${Math.round(v * 100)}%`;
-const SOURCE_SLIDERS: Record<LayerKind, SliderSpec[]> = {
-  noise: [{ key: "color", label: "colorLabel", min: 0, max: 1, step: 0.01, fmt: pct }],
-  wind: [
-    { key: "gust", label: "gustLabel", min: 0, max: 1, step: 0.01, fmt: pct },
-    { key: "speed", label: "speedLabel", min: 0, max: 1, step: 0.01, fmt: pct },
-    { key: "center_hz", label: "centerLabel", min: 80, max: 6000, step: 10, fmt: (v) => `${Math.round(v)} Hz` },
-    { key: "resonance", label: "resonanceLabel", min: 0, max: 1, step: 0.01, fmt: pct },
-  ],
-  texture: [
-    { key: "brightness", label: "brightnessLabel", min: 0, max: 1, step: 0.01, fmt: pct },
-    { key: "motion", label: "motionLabel", min: 0, max: 1, step: 0.01, fmt: pct },
-    { key: "resonance", label: "resonanceLabel", min: 0, max: 1, step: 0.01, fmt: pct },
-  ],
-  bells: [
-    { key: "density", label: "densityLabel", min: 0, max: 60, step: 0.5, fmt: (v) => v.toFixed(1) },
-    { key: "decay_s", label: "decayLabel", min: 0.2, max: 30, step: 0.1, fmt: (v) => `${v.toFixed(1)} s` },
-    { key: "brightness", label: "brightnessLabel", min: 0, max: 1, step: 0.01, fmt: pct },
-    { key: "velocity_spread", label: "spreadLabel", min: 0, max: 1, step: 0.01, fmt: pct },
-  ],
-  pluck: [
-    { key: "density", label: "densityLabel", min: 0, max: 120, step: 0.5, fmt: (v) => v.toFixed(1) },
-    { key: "damping", label: "dampingLabel", min: 0, max: 1, step: 0.01, fmt: pct },
-    { key: "brightness", label: "brightnessLabel", min: 0, max: 1, step: 0.01, fmt: pct },
-    { key: "velocity_spread", label: "spreadLabel", min: 0, max: 1, step: 0.01, fmt: pct },
-  ],
-  loop: [
-    { key: "start", label: "loopStart", min: 0, max: 600, step: 0.01, fmt: (v) => `${v.toFixed(2)} s` },
-    { key: "end", label: "loopEnd", min: 0, max: 600, step: 0.01, fmt: (v) => (v === 0 ? "—" : `${v.toFixed(2)} s`) },
-    { key: "crossfade", label: "crossfadeLabel", min: 0, max: 5, step: 0.01, fmt: (v) => `${v.toFixed(2)} s` },
-    { key: "rate", label: "rateLabel", min: 0.25, max: 4, step: 0.01, fmt: (v) => `×${v.toFixed(2)}` },
-  ],
-};
-const MACRO_SLIDERS: { key: keyof Macros; label: StringMessageKey }[] = [
-  { key: "intensity", label: "macroIntensity" },
-  { key: "brightness", label: "macroBrightness" },
-  { key: "motion", label: "macroMotion" },
-  { key: "space", label: "macroSpace" },
-  { key: "space_size", label: "macroSpaceSize" },
-  { key: "tonal_gravity", label: "macroGravity" },
-  { key: "width", label: "macroWidth" },
-];
-
-function hasTonal(src: LayerSource): src is Extract<LayerSource, { tonal: boolean }> {
-  return "tonal" in src;
-}
 
 /**
  * Atmosphere / Ambient Playground (F1A.1, F1A.2): up to eight layers of synthesized

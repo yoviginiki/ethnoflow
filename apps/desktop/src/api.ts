@@ -1061,7 +1061,7 @@ export function describeError(e: unknown): string {
 export const IMPORT_EXTENSIONS = ["wav", "mp3", "flac", "ogg", "mid"];
 
 // ---------- Preset library (shell library_cmds.rs) ----------
-export const LIBRARY_KINDS = ["session", "drone", "pad", "rhythm", "harmony", "intent", "ambient", "background"] as const;
+export const LIBRARY_KINDS = ["session", "module", "drone", "pad", "rhythm", "harmony", "intent", "ambient", "background"] as const;
 export type LibraryKind = (typeof LIBRARY_KINDS)[number];
 export type LibrarySortBy = "date_desc" | "date_asc" | "name" | "kind";
 export interface LibrarySummary {

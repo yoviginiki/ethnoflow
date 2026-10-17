@@ -15,6 +15,7 @@ export const LIB_KIND_LABEL: Record<LibraryKind, StringMessageKey> = {
   ambient: "areaAmbient",
   background: "libBackground",
   session: "libSession",
+  module: "libModule",
 };
 
 /**
