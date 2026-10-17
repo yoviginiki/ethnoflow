@@ -38,10 +38,13 @@ pub use devices::{
 pub use error::{AudioError, Result};
 pub use graph::player::{GraphCmd, GraphPlayer, GraphStatus};
 pub use graph::sources::{
-    root_hz as drone_root_hz, BellParams, BellSource, ClipData, ClipSource, ClipsParams,
-    DroneParams, DroneSource, Emotion, LoopParams, LoopSource, NoiseParams, NoiseSource, PadMacro,
-    PadParams, PadSource, PitchSet, PluckParams, PluckSource, TextureParams, TextureSource,
-    TrackParams, Transport, WindParams, WindSource, MAX_CLIP_TRACKS, MAX_PITCHES, PAD_VOICES,
+    root_hz as drone_root_hz, BassNoteEvent, BassParams, BassPatternData, BassSource, BassVoice,
+    BeatClock, BellParams, BellSource, ClipData, ClipSource, ClipsParams, DroneParams, DroneSource,
+    DrumEvent, DrumKind, DrumParams, DrumPatternData, DrumSource, Emotion, LoopParams, LoopSource,
+    NoiseParams, NoiseSource, NotePatternData, PadMacro, PadParams, PadSource, PatternNote,
+    PatternParams, PatternSynthSource, PitchSet, PluckParams, PluckSource, TextureParams,
+    TextureSource, TrackParams, Transport, WindParams, WindSource, DRUM_KINDS, MAX_CLIP_TRACKS,
+    MAX_PITCHES, PAD_VOICES,
 };
 pub use graph::{
     Graph, GraphMeters, GraphParams, LayerParams, MasterParams, SineSource, Source, MAX_LAYERS,

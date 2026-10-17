@@ -9,7 +9,7 @@ pub mod params;
 pub mod player;
 pub mod sources;
 
-use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
@@ -27,6 +27,11 @@ pub const BLOCK: usize = 64;
 /// Runs in the audio callback: no allocation, no locks, no I/O.
 pub trait Source: Send {
     fn render(&mut self, out: &mut [f32], sample_rate: u32);
+    /// Like `render`, told the graph frame the block starts at. Rhythmic sources use
+    /// it to derive a shared beat position; the default ignores it.
+    fn render_at(&mut self, out: &mut [f32], sample_rate: u32, _frame: u64) {
+        self.render(out, sample_rate);
+    }
     /// Called when the graph (re)starts, e.g. to reset phases.
     fn reset(&mut self) {}
 }
@@ -110,6 +115,8 @@ impl MasterParams {
 pub struct GraphParams {
     pub layers: [LayerParams; MAX_LAYERS],
     pub master: MasterParams,
+    /// Frames rendered so far (written by the graph), for beat clocks.
+    pub frame: AtomicU64,
 }
 
 impl Default for GraphParams {
@@ -117,6 +124,7 @@ impl Default for GraphParams {
         Self {
             layers: std::array::from_fn(|_| LayerParams::default()),
             master: MasterParams::default(),
+            frame: AtomicU64::new(0),
         }
     }
 }
@@ -168,6 +176,8 @@ pub struct Graph {
     reverb_tail: u32,
     limiter: Limiter,
     ramp: f32,
+    /// Frames rendered so far.
+    frame: u64,
 }
 
 impl Graph {
@@ -198,6 +208,7 @@ impl Graph {
             reverb_tail: 0,
             limiter: Limiter::new(sample_rate, db_to_gain(-0.3), 0.08),
             ramp: ramp_samples(sample_rate),
+            frame: 0,
             params,
             layers,
             sample_rate,
@@ -206,6 +217,16 @@ impl Graph {
 
     pub fn sample_rate(&self) -> u32 {
         self.sample_rate
+    }
+
+    /// Frames rendered so far (the beat clocks anchor to this).
+    pub fn frame(&self) -> u64 {
+        self.frame
+    }
+
+    #[cfg(test)]
+    pub(crate) fn params_for_test(&self) -> &Arc<GraphParams> {
+        &self.params
     }
 
     /// Put a source into a slot (call before the graph is handed to the callback, or
@@ -295,7 +316,9 @@ impl Graph {
                 layer.lp.begin(p.lowpass_hz.target(), self.ramp);
                 layer.hp.begin(p.highpass_hz.target(), self.ramp);
                 let mono = &mut layer.mono[..n];
-                layer.source.render(mono, self.sample_rate);
+                layer
+                    .source
+                    .render_at(mono, self.sample_rate, self.frame + done as u64);
                 let mut peak = 0.0f32;
                 let stem = stems
                     .as_deref_mut()
@@ -402,6 +425,8 @@ impl Graph {
                 .store(self.limiter.gain_reduction().to_bits(), Ordering::Relaxed);
             done += n;
         }
+        self.frame += frames as u64;
+        self.params.frame.store(self.frame, Ordering::Relaxed);
     }
 
     /// Offline render of `seconds` (F1.6.3): same code path as the live callback.
