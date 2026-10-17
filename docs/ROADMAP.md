@@ -176,19 +176,18 @@ choice, original audio and raw contour untouched) — master plan §5.2/§5.3,
   note precision/recall on synthetic melodies, numbers on the kaval take.
 - No key, tempo or meter assumed anywhere; all tests and clippy green.
 
-### 2.7 MIDI player & instrument profiles (added 2026-10-17 at the owner's request)
-- **Instrument profile** per project: which instrument the user plays (shakuhachi 1.8 /
-  D, kaval in D, voice, piano / MIDI keyboard, other) with sounding range and
-  transposition; shown next to the tuner; the Academy will use it. Nothing is assumed
-  until chosen.
-- **Note player**: play the extracted/edited notes with a built-in simple voice
-  (sine/triangle with envelope, pitch bend honoured) from the engine — the first
-  "musical translator" (concept §2.5).
-- **MIDI file player** in the style of midiano / latouchemusicale: open a `.mid`,
-  falling-notes view with a piano keyboard, play/pause/seek, tempo from the file.
-  Needs a minimal SMF *reader* in music-core (we already have the writer).
-- Tests: SMF reader roundtrips the writer's output and parses a reference file; synth
-  renders the right frequencies and durations; player timing matches the file.
+### 2.7 "Свири по ноти" — MIDI player & trainer, instrument profiles (added 2026-10-17)
+Full spec: `docs/MIDI_PLAYER_TRAINER_SPEC.md` (§7 has the phasing and decisions).
+- **2.7a** (now): `.mid` import (midly, ADR-0019) → `NoteEvent` + tempo map in
+  music-core; a MIDI file is a take in the project (source `midi_file`) rendered by a
+  built-in simple synth so playback/loop/export work unchanged; falling-notes view with
+  a piano keyboard + the existing piano roll; tempo 25–200 %, mute/solo per track;
+  "Play the notes" for notes extracted from audio (first "musical translator").
+- **2.7b**: SF2 synth + soundfont, MIDI keyboard input (midir), Wait and Rhythm trainer
+  modes with MIDI **and microphone** (kaval) input, timing report.
+- **2.7c**: notation view spike (VexFlow), left/right hand, transposition.
+- **Instrument profile** per project (shakuhachi 1.8/D, kaval D, voice, piano/MIDI
+  keyboard, other): range, transposition, shown next to the tuner; the Academy uses it.
 
 ### User decisions during Phase 2 (owner delegated, 2026-10-17)
 1. A4 = 440 Hz by default; per-project override stays.

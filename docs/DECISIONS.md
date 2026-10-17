@@ -155,6 +155,19 @@ Behaviour: corrupt packets are skipped and logged; a mid-stream format change is
 The owner's `re.mp3` decodes (48 kHz stereo, 59.45 s); it is used only by a local test
 that skips when the file is absent and is never committed or uploaded.
 
+## ADR-0019 midly 0.5 for reading Standard MIDI Files (Unlicense)
+
+Context: Phase 2.7 imports `.mid` files from anywhere (DAWs, the web, the Academy's
+lessons): format 0/1, running status, SysEx, meta events, tempo maps. Our own SMF
+*writer* stays (tiny, tested); a robust *reader* is not worth re-implementing.
+Decision: `midly` 0.5.3 (public domain / Unlicense), `default-features = false,
+features = ["std"]` so `rayon` is not pulled in. Pure Rust, no_std-capable, builds on
+MSVC. Parsing happens on the command thread; the UI gets `NoteEvent` lists in
+seconds (tempo map applied), never raw bytes.
+Consequences: malformed files are errors, not panics (midly is lenient by default;
+we treat decode errors as import failures). Supply chain: crates.io, pinned in
+Cargo.lock, a single small crate with no dependencies in this configuration.
+
 ## ADR-0018 (proposed) CLAP as the internal instrument ABI; instruments in Rust or C++
 
 Status: **Proposed, not accepted.** No code, crate or dependency until the owner
