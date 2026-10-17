@@ -273,21 +273,19 @@ mod tests {
     fn latency_is_subtracted_and_levels_differ() {
         let played = vec![n(0.06, 62, 15.0)];
         let exp = vec![n(0.0, 62, 0.0)];
-        // 60 ms late at face value; with 60 ms input latency it is on time.
+        // 60 ms late at face value (intermediate allows 50); with 60 ms input latency
+        // it is on time. Pitch is judged first: 15 cents is too much for advanced (10).
         assert!(matches!(
-            evaluate(&exp, &played, &Tolerance::advanced(), 0.0).per_note[0].verdict,
+            evaluate(&exp, &played, &Tolerance::intermediate(), 0.0).per_note[0].verdict,
             Verdict::Late { .. }
         ));
-        assert!(
-            matches!(
-                evaluate(&exp, &played, &Tolerance::advanced(), 60.0).per_note[0].verdict,
-                Verdict::WrongPitch { .. }
-            ),
-            "15 cents is too much for advanced (10)"
-        );
         assert!(matches!(
-            evaluate(&exp, &played, &Tolerance::beginner(), 60.0).per_note[0].verdict,
+            evaluate(&exp, &played, &Tolerance::intermediate(), 60.0).per_note[0].verdict,
             Verdict::Hit { .. }
+        ));
+        assert!(matches!(
+            evaluate(&exp, &played, &Tolerance::advanced(), 60.0).per_note[0].verdict,
+            Verdict::WrongPitch { .. }
         ));
         assert!(Tolerance::beginner().window_ms() >= 250.0);
     }
