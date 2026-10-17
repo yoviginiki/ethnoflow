@@ -5,6 +5,7 @@ import { Compose } from "./Compose";
 import { Home } from "./Home";
 import { useBackgroundLayers } from "./layers";
 import { ProjectPicker } from "./ProjectPicker";
+import { RhythmScreen } from "./RhythmScreen";
 import { Studio } from "./Studio";
 import { messages, type Lang, type StringMessageKey } from "./i18n";
 import { useStore, type Screen } from "./store";
@@ -15,6 +16,7 @@ const SCREEN_TITLE: Record<Exclude<Screen, "home">, StringMessageKey> = {
   compose: "areaAccomp",
   studio: "areaStudio",
   ambient: "areaAmbient",
+  rhythm: "areaRhythm",
 };
 
 export default function App() {
@@ -69,7 +71,8 @@ export default function App() {
       {screen === "compose" && (project ? <Compose /> : <ProjectPicker />)}
       {screen === "studio" && (project ? <Arrange /> : <ProjectPicker />)}
       {screen === "ambient" && (project ? <Ambient /> : <ProjectPicker />)}
-      {(layers.drone || layers.pad || layers.ambient) && (
+      {screen === "rhythm" && (project ? <RhythmScreen /> : <ProjectPicker />)}
+      {(layers.drone || layers.pad || layers.ambient || layers.rhythm) && (
         <div className="layers-badge small" role="status">
           <BackgroundTransport compact />
           <button className="ghost small" disabled={mode !== "idle"} onClick={() => setScreen(screen === "compose" ? "play" : "compose")}>
@@ -83,6 +86,11 @@ export default function App() {
           {screen !== "ambient" && (
             <button className="ghost small" disabled={mode !== "idle"} onClick={() => setScreen("ambient")}>
               {t.areaAmbient}
+            </button>
+          )}
+          {screen !== "rhythm" && (
+            <button className="ghost small" disabled={mode !== "idle"} onClick={() => setScreen("rhythm")}>
+              {t.rhythmShort}
             </button>
           )}
         </div>
