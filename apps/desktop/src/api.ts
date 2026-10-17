@@ -134,6 +134,82 @@ export interface Scale {
   kind: ScaleKind | null;
 }
 
+export type InstrumentType =
+  | "kaval"
+  | "shakuhachi"
+  | "flute"
+  | "recorder"
+  | "gaida"
+  | "voice"
+  | "monochord"
+  | "piano"
+  | "midi_keyboard"
+  | "other";
+export const INSTRUMENT_TYPES: InstrumentType[] = [
+  "kaval",
+  "shakuhachi",
+  "flute",
+  "recorder",
+  "gaida",
+  "voice",
+  "monochord",
+  "piano",
+  "midi_keyboard",
+  "other",
+];
+
+export interface ProfileNote {
+  midi: number;
+  measured_hz: number;
+  cents_offset: number;
+  stability_cents: number;
+  sample: string | null;
+  measured_at_ms: number;
+}
+
+export interface InstrumentProfile {
+  schema_version: number;
+  id: string;
+  version: number;
+  instrument: InstrumentType;
+  name: string;
+  tuning: string;
+  transpose_semitones: number;
+  a4_hz: number;
+  notes: ProfileNote[];
+  created_at_ms: number;
+  updated_at_ms: number;
+}
+
+export interface ProfileDiagnosis {
+  notes: number;
+  mean_offset_cents: number;
+  spread_cents: number;
+  mean_stability_cents: number;
+}
+
+export interface ProfileView extends InstrumentProfile {
+  diagnosis: ProfileDiagnosis | null;
+  range: { midi: number; measured: boolean }[];
+}
+
+export interface ProfileSummary {
+  id: string;
+  version: number;
+  instrument: InstrumentType;
+  name: string;
+  tuning: string;
+  notes: number;
+}
+
+export interface CalibrationResult {
+  note: ProfileNote;
+  detected_midi: number;
+  detected_cents: number;
+  held_seconds: number;
+  profile: ProfileView;
+}
+
 export interface ProjectView {
   name: string;
   root: string;
@@ -142,6 +218,7 @@ export interface ProjectView {
   loaded_take: string | null;
   scale: Scale | null;
   a4_hz: number;
+  instrument: InstrumentProfile | null;
 }
 
 export interface Note {
@@ -363,6 +440,17 @@ export const api = {
   stopNotes: () => invoke<void>("stop_notes"),
   sendNotesToPlayer: (label: string | null) =>
     invoke<{ project: ProjectView; take_id: string }>("send_notes_to_player", { label }),
+  listProfiles: () => invoke<ProfileSummary[]>("list_profiles"),
+  getProfile: (id: string) => invoke<ProfileView>("get_profile", { id }),
+  createProfile: (req: { instrument: InstrumentType; name: string; tuning: string; transpose_semitones: number; a4_hz: number | null }) =>
+    invoke<ProfileView>("create_profile", { req }),
+  deleteProfile: (id: string) => invoke<ProfileSummary[]>("delete_profile", { id }),
+  setProjectInstrument: (id: string | null) => invoke<ProjectView>("set_project_instrument", { id }),
+  calibrateNote: (id: string, midi: number, device: string | null, sampleRate: number | null) =>
+    invoke<CalibrationResult>("calibrate_note", { id, midi, device, sampleRate }),
+  removeProfileNote: (id: string, midi: number) => invoke<ProfileView>("remove_profile_note", { id, midi }),
+  playProfileNote: (id: string, midi: number, device: string | null, exact: boolean) =>
+    invoke<void>("play_profile_note", { id, midi, device, exact }),
   startMonitor: (device: string | null, sampleRate: number | null) =>
     invoke<void>("start_monitor", { device, sampleRate }),
   stopMonitor: () => invoke<void>("stop_monitor"),

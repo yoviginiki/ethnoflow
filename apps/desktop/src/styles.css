@@ -152,6 +152,16 @@ button.small { font-size: 12px; padding: 3px 7px; }
 .needle-centre { position: absolute; left: 50%; top: -2px; width: 2px; height: 12px; background: var(--muted); }
 .needle { position: absolute; top: -3px; width: 4px; height: 14px; margin-left: -2px; background: var(--playhead); border-radius: 2px; transition: left 60ms linear; }
 .practice { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.needle.profile-mark { background: var(--accent); opacity: 0.7; height: 10px; top: -1px; }
+.calibrate { max-width: 720px; }
+.cal-notes { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0; }
+.cal-note { padding: 3px 7px; font-size: 12px; opacity: 0.6; }
+.cal-note.measured { opacity: 1; border-color: var(--accent); }
+.cal-note.current { outline: 2px solid var(--playhead); opacity: 1; }
+.cal-current { display: flex; flex-direction: column; gap: 8px; margin: 8px 0; }
+.cal-target { display: flex; gap: 12px; align-items: baseline; }
+.cal-actions { justify-content: flex-start; flex-wrap: wrap; }
+.cal-diag { margin-top: 6px; }
 .hold { display: flex; flex-direction: column; gap: 2px; width: 220px; }
 .hold-strip { width: 220px; height: 44px; display: block; background: var(--bg); border: 1px solid var(--axis); border-radius: 4px; }
 .badge.ok { background: var(--accent); color: #111; }

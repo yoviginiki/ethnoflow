@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { Scale } from "./api";
+import type { InstrumentProfile, Scale } from "./api";
 import { centsFromScale, hzToMidi, noteParts } from "./format";
 import { messages } from "./i18n";
 import { useStore } from "./store";
@@ -11,6 +11,8 @@ interface Props {
   scale: Scale | null;
   /** Null = tuner off (shows a hint instead of a reading). */
   active: boolean;
+  /** The project's instrument profile: adds the profile mark and the written name. */
+  profile: InstrumentProfile | null;
 }
 
 const IN_SCALE_TOLERANCE_CENTS = 25;
@@ -75,7 +77,7 @@ function HoldStrip({ samples, now }: { samples: HoldSample[]; now: number }) {
  * Live tuner: note name, cents needle, Hz, confidence, in-scale indicator when the
  * project has a chosen scale. Includes the first practice: hold a target note.
  */
-export function Tuner({ hz, confidence, a4, scale, active }: Props) {
+export function Tuner({ hz, confidence, a4, scale, active, profile }: Props) {
   const t = messages[useStore((s) => s.prefs.lang)];
   const [targetMidi, setTargetMidi] = useState(69);
   const [hit, setHit] = useState(false);
@@ -132,6 +134,17 @@ export function Tuner({ hz, confidence, a4, scale, active }: Props) {
   }, [midiFrac, targetMidi]);
 
   const needle = parts ? Math.max(-50, Math.min(50, parts.cents)) : 0;
+  // Profile mark: nearest calibrated note (by its measured pitch) and the distance to it.
+  const profileMark = (() => {
+    if (!profile || midiFrac === null || profile.notes.length === 0) return null;
+    let best: { midi: number; off: number } | null = null;
+    for (const n of profile.notes) {
+      const off = (midiFrac - (n.midi + n.cents_offset / 100)) * 100;
+      if (!best || Math.abs(off) < Math.abs(best.off)) best = { midi: n.midi, off };
+    }
+    return best;
+  })();
+  const written = parts && profile && profile.transpose_semitones !== 0 ? noteParts(parts.midi + profile.transpose_semitones) : null;
   const scaleClass = scaleOff === null ? "" : Math.abs(scaleOff) <= IN_SCALE_TOLERANCE_CENTS ? "in" : "out";
 
   return (
@@ -157,10 +170,32 @@ export function Tuner({ hz, confidence, a4, scale, active }: Props) {
         </div>
         <div className="needle-track" role="meter" aria-valuemin={-50} aria-valuemax={50} aria-valuenow={Math.round(needle)} aria-label={t.tuner}>
           <div className="needle-centre" />
+          {profileMark && parts && (
+            <div
+              className="needle profile-mark"
+              style={{ left: `${50 + Math.max(-50, Math.min(50, needle - profileMark.off))}%` }}
+              title={t.profileMark}
+            />
+          )}
           {parts && <div className="needle" style={{ left: `${50 + needle}%` }} />}
         </div>
         <div className="small muted">
           {scale === null ? t.noScaleChosen : scaleOff === null ? "" : scaleClass === "in" ? `✓ ${t.inScale}` : `△ ${t.outOfScale} (${scaleOff > 0 ? "+" : ""}${scaleOff.toFixed(0)} c)`}
+          {profileMark && parts && (
+            <>
+              {" "}
+              · {t.profileMark}: {t.noteNames[noteParts(profileMark.midi).pc]}
+              {noteParts(profileMark.midi).octave} {profileMark.off >= 0 ? "+" : ""}
+              {profileMark.off.toFixed(0)} c
+            </>
+          )}
+          {written && (
+            <>
+              {" "}
+              · {t.writtenNote}: {t.noteNames[written.pc]}
+              {written.octave}
+            </>
+          )}
         </div>
       </div>
 

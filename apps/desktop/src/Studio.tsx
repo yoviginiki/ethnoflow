@@ -3,6 +3,7 @@ import { open, save } from "@tauri-apps/plugin-dialog";
 import { api, describeError, IMPORT_EXTENSIONS, type Note, type WavFormat } from "./api";
 import { AnalysisPanel } from "./AnalysisPanel";
 import { FallingNotes } from "./FallingNotes";
+import { InstrumentPanel } from "./InstrumentPanel";
 import { MidiPanel } from "./MidiPanel";
 import { formatBytes, formatDb, formatTime, isTypingTarget, linearToDb, meterFraction, takeName } from "./format";
 import { messages } from "./i18n";
@@ -674,8 +675,10 @@ export function Studio() {
               confidence={s.mode === "recording" ? (rec?.pitch_confidence ?? 0) : (s.monitor?.pitch_confidence ?? 0)}
               a4={project.a4_hz}
               scale={project.scale}
+              profile={project.instrument}
             />
           )}
+          <InstrumentPanel />
 
           <section className="meter-row" aria-label={t.level}>
             <span className="muted small">{t.level}</span>

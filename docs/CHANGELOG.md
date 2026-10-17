@@ -29,6 +29,17 @@
   file; **falling-notes view** with a piano keyboard, key names and in-scale colouring;
   **"Play the notes"** renders the current notes (extracted, edited or MIDI) with the
   synth — the first musical translator. Spec: `docs/MIDI_PLAYER_TRAINER_SPEC.md`.
+- **"To the player"** (0.2.2): the current notes become a MIDI take of the project in
+  one click (no export/import) and open in the falling-notes view.
+- **F2.1 rest / F2.3 / F2.4 rest** (0.2.3): intervals, chord detection, transposition,
+  grid quantisation in music-core; tuner "Hold the tone" (drift strip, seconds in
+  tolerance); piano roll drag (move / resize), Alt+click to add, undo/redo;
+  `docs/BENCHMARKS.md`.
+- **F2.5 instrument profiles** (0.2.3): global profiles (`instruments/<id>/profile.json`
+  + note samples), "Meet my instrument" wizard measuring each note from a held tone
+  (≥ 1.5 s steady, median Hz, offset, stability), diagnosis (systematic vs random),
+  sample playback with pitch shift, project attaches a profile; tuner shows the
+  profile mark and the written note for transposing instruments.
 
 ### Measurements (owner's laptop, release build, YIN hop 10 ms, window 1024)
 | material | pitch time | voiced | f0 p05 / median / p95 | confidence p10 / median | octave-sized jumps |
