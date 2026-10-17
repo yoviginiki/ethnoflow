@@ -9,9 +9,9 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 
 use audio_engine::{
-    write_wav, AudioBuffer, BellParams, BellSource, Graph, GraphCmd, GraphParams, LoopParams,
-    LoopSource, NoiseParams, NoiseSource, PluckParams, PluckSource, TextureParams, TextureSource,
-    WavFormat, WindParams, WindSource, MAX_PITCHES,
+    write_wav, AudioBuffer, BellParams, BellSource, GrainParams, GrainSource, Graph, GraphCmd,
+    GraphParams, LoopParams, LoopSource, NoiseParams, NoiseSource, PluckParams, PluckSource,
+    TextureParams, TextureSource, WavFormat, WindParams, WindSource, MAX_PITCHES,
 };
 use project::{
     effective_rack, is_animated, Ambient, AmbientLayer, LayerSource, Macros, MAX_AMBIENT_LAYERS,
@@ -34,6 +34,7 @@ pub enum LiveParams {
     Bells(Arc<BellParams>),
     Pluck(Arc<PluckParams>),
     Loop(Arc<LoopParams>),
+    Cloud(Arc<GrainParams>),
 }
 
 pub struct LiveLayer {
@@ -248,6 +249,7 @@ fn build_key(l: &AmbientLayer, rate: u32) -> String {
             reverse,
             ..
         } => format!("loop:{take_id}:{start}:{end}:{reverse}:{rate}"),
+        LayerSource::Cloud { take_id, .. } => format!("cloud:{take_id}:{rate}:{}", l.seed),
         other => format!("{}:{}", other.kind(), l.seed),
     }
 }
@@ -370,6 +372,32 @@ fn apply_source(s: &Inner, live: &LiveParams, l: &AmbientLayer, m: &Macros) {
             p.seed.store(l.seed, Ordering::Relaxed);
         }
         (
+            LayerSource::Cloud {
+                grain_ms,
+                density,
+                position,
+                spray,
+                scan,
+                pitch,
+                jitter,
+                reverse_p,
+                octave_p,
+                ..
+            },
+            LiveParams::Cloud(p),
+        ) => {
+            p.grain_ms.set(*grain_ms as f32);
+            p.density.set((*density * motion) as f32);
+            p.position.set(*position as f32);
+            p.spray.set(*spray as f32);
+            p.scan.set(*scan as f32);
+            p.pitch.set(*pitch as f32);
+            p.jitter.set(*jitter as f32);
+            p.reverse.set(*reverse_p as f32);
+            p.octave.set(*octave_p as f32);
+            p.seed.store(l.seed, Ordering::Relaxed);
+        }
+        (
             LayerSource::Loop {
                 start,
                 end,
@@ -468,6 +496,15 @@ fn build_layer(s: &mut Inner, i: usize) -> CmdResult<()> {
             (
                 LiveParams::Pluck(Arc::clone(&p)),
                 Box::new(PluckSource::new(p, rate)),
+            )
+        }
+        LayerSource::Cloud { take_id, .. } => {
+            let buf = loop_buffer(s, take_id, false, rate)?;
+            let p = Arc::new(GrainParams::default());
+            p.seed.store(l.seed, Ordering::Relaxed);
+            (
+                LiveParams::Cloud(Arc::clone(&p)),
+                Box::new(GrainSource::new(p, buf)),
             )
         }
         LayerSource::Loop {
@@ -641,8 +678,7 @@ fn status(s: &mut Inner) -> CmdResult<AmbientStatus> {
 pub fn forget_take(s: &mut Inner, take_id: &str) {
     let Ok(a) = ambient_mut(s) else { return };
     let before = a.layers.len();
-    a.layers
-        .retain(|l| !matches!(&l.source, LayerSource::Loop { take_id: t, .. } if t == take_id));
+    a.layers.retain(|l| l.source.take_id() != Some(take_id));
     if a.layers.len() != before {
         if let Ok(root) = project_root(s) {
             if let Some(a) = s.ambient.as_ref() {
@@ -673,7 +709,7 @@ pub async fn set_ambient(state: State<'_, AppState>, ambient: Ambient) -> CmdRes
     let mut s = state.lock();
     let root = project_root(&s)?;
     for l in &ambient.layers {
-        if let LayerSource::Loop { take_id, .. } = &l.source {
+        if let Some(take_id) = l.source.take_id() {
             let p = s.project.as_ref().expect("project checked");
             p.take(take_id)
                 .map_err(|_| err("missing", format!("Unknown take {take_id}")))?;
@@ -799,6 +835,15 @@ fn offline_sources(
                 (
                     LiveParams::Pluck(Arc::clone(&p)),
                     Box::new(PluckSource::new(p, rate)),
+                )
+            }
+            LayerSource::Cloud { take_id, .. } => {
+                let buf = loop_buffer(s, take_id, false, rate)?;
+                let p = Arc::new(GrainParams::default());
+                p.seed.store(l.seed, Ordering::Relaxed);
+                (
+                    LiveParams::Cloud(Arc::clone(&p)),
+                    Box::new(GrainSource::new(p, buf)),
                 )
             }
             LayerSource::Loop {

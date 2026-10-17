@@ -46,6 +46,17 @@ export const SOURCE_SLIDERS: Record<LayerKind, SliderSpec[]> = {
     { key: "crossfade", label: "crossfadeLabel", min: 0, max: 5, step: 0.01, fmt: (v) => `${v.toFixed(2)} s` },
     { key: "rate", label: "rateLabel", min: 0.25, max: 4, step: 0.01, fmt: (v) => `×${v.toFixed(2)}` },
   ],
+  cloud: [
+    { key: "grain_ms", label: "grainLabel", min: 10, max: 500, step: 1, fmt: (v) => `${Math.round(v)} ms` },
+    { key: "density", label: "densityLabel", min: 0.5, max: 80, step: 0.5, fmt: (v) => `${v.toFixed(1)}/s` },
+    { key: "position", label: "positionLabel", min: 0, max: 1, step: 0.005, fmt: pct },
+    { key: "spray", label: "sprayLabel", min: 0, max: 1, step: 0.01, fmt: pct },
+    { key: "scan", label: "scanLabel", min: 0, max: 2, step: 0.01, fmt: (v) => (v === 0 ? "❄" : `×${v.toFixed(2)}`) },
+    { key: "pitch", label: "pitchLabel", min: -24, max: 24, step: 1, fmt: (v) => `${v > 0 ? "+" : ""}${Math.round(v)} st` },
+    { key: "jitter", label: "jitterLabel", min: 0, max: 100, step: 1, fmt: (v) => `${Math.round(v)} c` },
+    { key: "reverse_p", label: "reverseProbLabel", min: 0, max: 1, step: 0.01, fmt: pct },
+    { key: "octave_p", label: "octaveProbLabel", min: 0, max: 1, step: 0.01, fmt: pct },
+  ],
 };
 
 export const MACRO_SLIDERS: { key: keyof Macros; label: StringMessageKey }[] = [

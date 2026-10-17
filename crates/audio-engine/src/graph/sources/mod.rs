@@ -6,6 +6,7 @@ pub mod bells;
 pub mod clips;
 pub mod drone;
 pub mod gen;
+pub mod grain;
 pub mod loop_player;
 pub mod noise;
 pub mod pad;
@@ -23,6 +24,7 @@ pub use clips::{
 };
 pub use drone::{root_hz, DroneParams, DroneSource};
 pub use gen::{PitchSet, Rng, Trigger, MAX_PITCHES};
+pub use grain::{GrainParams, GrainSource, MAX_GRAINS};
 pub use loop_player::{LoopParams, LoopSource};
 pub use noise::{NoiseParams, NoiseSource};
 pub use pad::{Emotion, PadMacro, PadParams, PadSource, PAD_VOICES};

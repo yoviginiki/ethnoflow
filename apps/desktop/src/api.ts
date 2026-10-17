@@ -517,7 +517,8 @@ export type LayerSource =
   | { kind: "texture"; brightness: number; motion: number; resonance: number; tonal: boolean; register: [number, number] }
   | { kind: "bells"; density: number; decay_s: number; brightness: number; velocity_spread: number; tonal: boolean; register: [number, number] }
   | { kind: "pluck"; density: number; damping: number; brightness: number; velocity_spread: number; tonal: boolean; register: [number, number] }
-  | { kind: "loop"; take_id: string; start: number; end: number; crossfade: number; rate: number; reverse: boolean };
+  | { kind: "loop"; take_id: string; start: number; end: number; crossfade: number; rate: number; reverse: boolean }
+  | { kind: "cloud"; take_id: string; grain_ms: number; density: number; position: number; spray: number; scan: number; pitch: number; jitter: number; reverse_p: number; octave_p: number };
 export type LayerKind = LayerSource["kind"];
 
 export interface AmbientLayer {

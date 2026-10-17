@@ -150,7 +150,7 @@ fn prune_cache(s: &mut Inner) {
     let mut used = used;
     if let Some(a) = s.ambient.as_ref() {
         for l in &a.layers {
-            if let project::LayerSource::Loop { take_id, .. } = &l.source {
+            if let Some(take_id) = l.source.take_id() {
                 used.push(format!("{take_id}:"));
             }
         }

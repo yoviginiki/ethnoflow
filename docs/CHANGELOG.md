@@ -202,6 +202,11 @@
   import in Atmosphere**: "Import samples…" (multi-file) or drag-and-drop from
   Explorer / a sample manager such as Soundly — each file becomes a take in the
   project (named after the file) and a looped layer.
+- **Cloud module (F1B.2, 2026-10-17, night)**: granular cloud of a take (grain, density,
+  position, spray, scan/freeze, pitch, jitter, reverse and octave probabilities) as a new
+  atmosphere layer kind, automatable, with engine tests (continuity, octave = 2× frequency,
+  density vs gaps, block-size independence); "Cloud from a take…" in Atmosphere, module +
+  how-to in Soundscapes; loop/cloud layers share the take guards (delete, relink, presets).
 - **Start from a melody, Help, user guide (2026-10-17, night)**: Home opens with "Start
   from a melody": import/record/pick a take → Analyse (on request only) → key, tempo
   and register proposals → five complete starters (quiet ambient, dark drone, liquid

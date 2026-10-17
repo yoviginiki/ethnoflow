@@ -30,6 +30,7 @@ describe("session", () => {
       layers: [
         { id: "a", source: { kind: "loop", take_id: "t1" } },
         { id: "b", source: { kind: "loop", take_id: "missing" } },
+        { id: "d", source: { kind: "cloud", take_id: "missing" } },
         { id: "c", source: { kind: "wind" } },
       ],
       automation: [

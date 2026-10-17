@@ -111,7 +111,7 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
       if (r.layers.length >= MAX_AMBIENT_LAYERS) throw new Error(`rack full (${MAX_AMBIENT_LAYERS} layers)`);
       const kind = String(cmd.kind) as LayerKind;
       const takeId = String(cmd.take_id ?? "");
-      if (kind === "loop" && !p.takes.some((t) => t.id === takeId)) throw new Error("loop needs a take_id of this project");
+      if ((kind === "loop" || kind === "cloud") && !p.takes.some((t) => t.id === takeId)) throw new Error(`${kind} needs a take_id of this project`);
       const source = { ...defaultSource(kind, takeId), ...((cmd.source as object) ?? {}) } as LayerSource;
       const layer = makeLayer(String(cmd.name ?? kind), source, (cmd.patch ?? {}) as Partial<AmbientLayer>);
       await setRack({ ...r, layers: [...r.layers, layer] });

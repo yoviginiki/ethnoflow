@@ -22,10 +22,20 @@ function sourceParams(src: LayerSource): string[] {
       return ["density", "damping", "brightness", "velocity_spread"];
     case "loop":
       return ["rate", "crossfade"];
+    case "cloud":
+      return ["grain_ms", "density", "position", "spray", "scan", "pitch", "jitter", "reverse_p", "octave_p"];
   }
 }
 const PARAM_LABEL: Record<string, StringMessageKey> = {
   gain_db: "levelLabel",
+  grain_ms: "grainLabel",
+  position: "positionLabel",
+  spray: "sprayLabel",
+  scan: "scanLabel",
+  pitch: "pitchLabel",
+  jitter: "jitterLabel",
+  reverse_p: "reverseProbLabel",
+  octave_p: "octaveProbLabel",
   pan: "panLabel",
   lowpass_hz: "lowpassLabel",
   highpass_hz: "highpassLabel",

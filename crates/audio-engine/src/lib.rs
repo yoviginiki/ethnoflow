@@ -41,10 +41,11 @@ pub use graph::sources::{
     pattern_channel, root_hz as drone_root_hz, BassNoteEvent, BassParams, BassPatternData,
     BassSource, BassVoice, BeatClock, BellParams, BellSource, ClipData, ClipSource, ClipsParams,
     DroneParams, DroneSource, DrumEvent, DrumKind, DrumParams, DrumPatternData, DrumSource,
-    Emotion, LoopParams, LoopSource, NoiseParams, NoiseSource, NotePatternData, PadMacro,
-    PadParams, PadSource, PatternNote, PatternParams, PatternSwap, PatternSynthSource, PitchSet,
-    PluckParams, PluckSource, TextureParams, TextureSource, TrackParams, Transport, WindParams,
-    WindSource, DRUM_KINDS, MAX_CLIP_TRACKS, MAX_PITCHES, PAD_VOICES,
+    Emotion, GrainParams, GrainSource, LoopParams, LoopSource, NoiseParams, NoiseSource,
+    NotePatternData, PadMacro, PadParams, PadSource, PatternNote, PatternParams, PatternSwap,
+    PatternSynthSource, PitchSet, PluckParams, PluckSource, TextureParams, TextureSource,
+    TrackParams, Transport, WindParams, WindSource, DRUM_KINDS, MAX_CLIP_TRACKS, MAX_PITCHES,
+    PAD_VOICES,
 };
 pub use graph::{
     Graph, GraphMeters, GraphParams, LayerParams, MasterParams, SineSource, Source, MAX_LAYERS,

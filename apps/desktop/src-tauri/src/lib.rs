@@ -1,7 +1,7 @@
 mod ambient_cmds;
-mod assistant_cmds;
 mod analysis_cmds;
 mod arrangement_cmds;
+mod assistant_cmds;
 mod commands;
 mod graph_cmds;
 mod harmony_cmds;

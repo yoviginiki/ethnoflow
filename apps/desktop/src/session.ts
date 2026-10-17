@@ -50,7 +50,7 @@ export function isSessionPayload(p: unknown): p is SessionPayload {
 
 /** Pure: a rack with the loop layers whose take is not in this project removed. */
 export function rackForProject(rack: AmbientRack, takeIds: Set<string>): AmbientRack {
-  const layers = rack.layers.filter((l) => l.source.kind !== "loop" || takeIds.has(l.source.take_id));
+  const layers = rack.layers.filter((l) => !("take_id" in l.source) || takeIds.has(l.source.take_id));
   const ids = new Set(layers.map((l) => l.id));
   return { ...rack, layers, automation: rack.automation.filter((a) => a.target.layer === null || ids.has(a.target.layer)) };
 }

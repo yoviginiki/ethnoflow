@@ -60,9 +60,38 @@ pub enum LayerSource {
         rate: f64,
         reverse: bool,
     },
+    /// Granular cloud of a take (F1B.2): grains around a read position, transposed.
+    Cloud {
+        take_id: String,
+        /// Grain length, ms (10..500).
+        grain_ms: f64,
+        /// Grains per second (0.5..80).
+        density: f64,
+        /// Read position 0..1 of the take; `spray` spreads the grain starts around it.
+        position: f64,
+        spray: f64,
+        /// Drift of the position through the take, × real time (0 = frozen).
+        scan: f64,
+        /// Transposition in semitones (−24..24) and random detune per grain in cents.
+        pitch: f64,
+        jitter: f64,
+        /// Probabilities 0..1: a grain plays backwards / an octave up.
+        reverse_p: f64,
+        octave_p: f64,
+    },
 }
 
 impl LayerSource {
+    /// The take a layer reads, if it reads one (loop, cloud).
+    pub fn take_id(&self) -> Option<&str> {
+        match self {
+            LayerSource::Loop { take_id, .. } | LayerSource::Cloud { take_id, .. } => {
+                Some(take_id.as_str())
+            }
+            _ => None,
+        }
+    }
+
     pub fn kind(&self) -> &'static str {
         match self {
             LayerSource::Noise { .. } => "noise",
@@ -71,6 +100,7 @@ impl LayerSource {
             LayerSource::Bells { .. } => "bells",
             LayerSource::Pluck { .. } => "pluck",
             LayerSource::Loop { .. } => "loop",
+            LayerSource::Cloud { .. } => "cloud",
         }
     }
 
@@ -192,6 +222,32 @@ impl LayerSource {
                 unit(*brightness, "brightness")?;
                 unit(*velocity_spread, "velocity_spread")?;
                 register(*r)
+            }
+            LayerSource::Cloud {
+                take_id,
+                grain_ms,
+                density,
+                position,
+                spray,
+                scan,
+                pitch,
+                jitter,
+                reverse_p,
+                octave_p,
+            } => {
+                if take_id.is_empty()
+                    || !(10.0..=500.0).contains(grain_ms)
+                    || !(0.5..=80.0).contains(density)
+                    || !(0.0..=2.0).contains(scan)
+                    || !(-24.0..=24.0).contains(pitch)
+                    || !(0.0..=100.0).contains(jitter)
+                {
+                    return Err(ProjectError::InvalidState("cloud parameters".into()));
+                }
+                unit(*position, "position")?;
+                unit(*spray, "spray")?;
+                unit(*reverse_p, "reverse_p")?;
+                unit(*octave_p, "octave_p")
             }
             LayerSource::Loop {
                 take_id,

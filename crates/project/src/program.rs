@@ -84,6 +84,11 @@ pub fn param_range(param: &str) -> Option<(f64, f64)> {
         "decay_s" => (0.2, 30.0),
         "rate" => (0.25, 4.0),
         "crossfade" => (0.0, 5.0),
+        "grain_ms" => (10.0, 500.0),
+        "position" | "spray" | "reverse_p" | "octave_p" => (0.0, 1.0),
+        "scan" => (0.0, 2.0),
+        "pitch" => (-24.0, 24.0),
+        "jitter" => (0.0, 100.0),
         // macros
         "intensity" | "space" | "space_size" | "tonal_gravity" | "width" => (0.0, 1.0),
         _ => return None,
@@ -99,6 +104,17 @@ pub fn source_params(src: &LayerSource) -> &'static [&'static str] {
         LayerSource::Bells { .. } => &["density", "decay_s", "brightness", "velocity_spread"],
         LayerSource::Pluck { .. } => &["density", "damping", "brightness", "velocity_spread"],
         LayerSource::Loop { .. } => &["rate", "crossfade"],
+        LayerSource::Cloud { .. } => &[
+            "grain_ms",
+            "density",
+            "position",
+            "spray",
+            "scan",
+            "pitch",
+            "jitter",
+            "reverse_p",
+            "octave_p",
+        ],
     }
 }
 pub const STRIP_PARAMS: [&str; 4] = ["gain_db", "pan", "lowpass_hz", "highpass_hz"];
@@ -153,6 +169,15 @@ fn source_param(s: &LayerSource, param: &str) -> Option<f64> {
         ) => *velocity_spread,
         (LayerSource::Loop { rate, .. }, "rate") => *rate,
         (LayerSource::Loop { crossfade, .. }, "crossfade") => *crossfade,
+        (LayerSource::Cloud { grain_ms, .. }, "grain_ms") => *grain_ms,
+        (LayerSource::Cloud { density, .. }, "density") => *density,
+        (LayerSource::Cloud { position, .. }, "position") => *position,
+        (LayerSource::Cloud { spray, .. }, "spray") => *spray,
+        (LayerSource::Cloud { scan, .. }, "scan") => *scan,
+        (LayerSource::Cloud { pitch, .. }, "pitch") => *pitch,
+        (LayerSource::Cloud { jitter, .. }, "jitter") => *jitter,
+        (LayerSource::Cloud { reverse_p, .. }, "reverse_p") => *reverse_p,
+        (LayerSource::Cloud { octave_p, .. }, "octave_p") => *octave_p,
         _ => return None,
     })
 }
@@ -203,6 +228,15 @@ fn set_source_param(s: &mut LayerSource, param: &str, v: f64) -> bool {
         ) => *velocity_spread = v,
         (LayerSource::Loop { rate, .. }, "rate") => *rate = v,
         (LayerSource::Loop { crossfade, .. }, "crossfade") => *crossfade = v,
+        (LayerSource::Cloud { grain_ms, .. }, "grain_ms") => *grain_ms = v,
+        (LayerSource::Cloud { density, .. }, "density") => *density = v,
+        (LayerSource::Cloud { position, .. }, "position") => *position = v,
+        (LayerSource::Cloud { spray, .. }, "spray") => *spray = v,
+        (LayerSource::Cloud { scan, .. }, "scan") => *scan = v,
+        (LayerSource::Cloud { pitch, .. }, "pitch") => *pitch = v,
+        (LayerSource::Cloud { jitter, .. }, "jitter") => *jitter = v,
+        (LayerSource::Cloud { reverse_p, .. }, "reverse_p") => *reverse_p = v,
+        (LayerSource::Cloud { octave_p, .. }, "octave_p") => *octave_p = v,
         _ => return false,
     }
     true

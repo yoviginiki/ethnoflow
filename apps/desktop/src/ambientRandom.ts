@@ -59,6 +59,18 @@ function randomizeSource(rnd: () => number, s: LayerSource): LayerSource {
     case "loop":
       // A loop keeps its region (the user chose it); only the rate breathes a little.
       return { ...s, rate: clamp(s.rate * Math.pow(2, (rnd() * 2 - 1) * 0.17), 0.25, 4) };
+    case "cloud":
+      // The take and the pitch stay (the user chose them); the grain texture breathes.
+      return {
+        ...s,
+        grain_ms: clamp(s.grain_ms * Math.pow(2, (rnd() * 2 - 1) * 0.6), 10, 500),
+        density: clamp(s.density * Math.pow(2, (rnd() * 2 - 1) * 0.6), 0.5, 80),
+        position: nudge(rnd, s.position, 0.2, 0, 1),
+        spray: nudge(rnd, s.spray, 0.2, 0, 1),
+        jitter: nudge(rnd, s.jitter, 10, 0, 100),
+        reverse_p: nudge(rnd, s.reverse_p, 0.2, 0, 1),
+        octave_p: nudge(rnd, s.octave_p, 0.15, 0, 1),
+      };
   }
 }
 

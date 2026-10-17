@@ -111,7 +111,10 @@ pub async fn assistant_reply(
         let s = state.lock();
         dir(&s)?
     };
-    write_json(&d.join("outbox").join(format!("{}.json", safe_name(&name))), &reply)
+    write_json(
+        &d.join("outbox").join(format!("{}.json", safe_name(&name))),
+        &reply,
+    )
 }
 
 /// Replace the state snapshot.
@@ -138,7 +141,8 @@ mod tests {
         let p = dir.path().join("r.json");
         write_json(&p, &serde_json::json!({ "ok": true })).unwrap();
         assert!(!dir.path().join("r.json.tmp").exists());
-        let v: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(&p).unwrap()).unwrap();
+        let v: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&p).unwrap()).unwrap();
         assert_eq!(v["ok"], true);
     }
 }

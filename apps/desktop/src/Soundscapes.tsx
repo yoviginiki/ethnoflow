@@ -13,9 +13,10 @@ import { commitRack, flushRack } from "./rack";
 import { useStore } from "./store";
 
 /** Module kinds in the order of the "new module" menu. */
-const KINDS: LayerKind[] = ["wind", "texture", "bells", "pluck", "noise", "loop"];
+const KINDS: LayerKind[] = ["cloud", "wind", "texture", "bells", "pluck", "noise", "loop"];
 /** How to use each module (the teaching text under the title). */
-const HOW_TO: Record<LayerKind, StringMessageKey> = { noise: "howNoise", wind: "howWind", texture: "howTexture", bells: "howBells", pluck: "howPluck", loop: "howLoop" };
+const HOW_TO: Record<LayerKind, StringMessageKey> = { noise: "howNoise", wind: "howWind", texture: "howTexture", bells: "howBells", pluck: "howPluck", loop: "howLoop", cloud: "howCloud" };
+const NEEDS_TAKE = (k: LayerKind) => k === "loop" || k === "cloud";
 const POLL_MS = 150;
 
 /** Log-scaled knob position (0..1) ↔ Hz for the layer filters. */
@@ -91,9 +92,9 @@ export function Soundscapes() {
   };
   const addModule = () => {
     if (!rack || layers.length >= MAX_AMBIENT_LAYERS) return;
-    if (newKind === "loop" && !newTake) return;
+    if (NEEDS_TAKE(newKind) && !newTake) return;
     const take = project.takes.find((x) => x.id === newTake);
-    const name = newKind === "loop" && take ? takeName(take, t.take) : t[KIND_LABEL[newKind]];
+    const name = NEEDS_TAKE(newKind) && take ? `${t[KIND_LABEL[newKind]]}: ${takeName(take, t.take)}` : t[KIND_LABEL[newKind]];
     const layer = makeLayer(name, defaultSource(newKind, newTake), { gain_db: newKind === "noise" ? -24 : -18, pan: ((layers.length % 3) - 1) * 0.3 });
     commit({ ...rack, layers: [...rack.layers, layer] });
     setSelected(layer.id);
@@ -115,8 +116,8 @@ export function Soundscapes() {
     const m = p as ModulePreset;
     const src = m.source;
     // A loop preset from another project points at a take we do not have: keep ours.
-    if (src.kind === "loop" && !project.takes.some((x) => x.id === src.take_id)) {
-      if (sel.source.kind === "loop") src.take_id = sel.source.take_id;
+    if ("take_id" in src && !project.takes.some((x) => x.id === src.take_id)) {
+      if ("take_id" in sel.source) src.take_id = sel.source.take_id;
       else return;
     }
     patchLayer(sel.id, { source: src, gain_db: m.gain_db ?? sel.gain_db, pan: m.pan ?? sel.pan, lowpass_hz: m.lowpass_hz ?? sel.lowpass_hz, highpass_hz: m.highpass_hz ?? sel.highpass_hz });
@@ -153,7 +154,7 @@ export function Soundscapes() {
             ))}
           </select>
         </label>
-        {newKind === "loop" && (
+        {NEEDS_TAKE(newKind) && (
           <select value={newTake} onChange={(e) => setNewTake(e.target.value)} aria-label={t.take}>
             <option value="">…</option>
             {project.takes.map((tk) => (
@@ -163,7 +164,7 @@ export function Soundscapes() {
             ))}
           </select>
         )}
-        <button onClick={addModule} disabled={!rack || layers.length >= MAX_AMBIENT_LAYERS || (newKind === "loop" && !newTake)}>
+        <button onClick={addModule} disabled={!rack || layers.length >= MAX_AMBIENT_LAYERS || (NEEDS_TAKE(newKind) && !newTake)}>
           + {t.addModule}
         </button>
         {layers.length >= MAX_AMBIENT_LAYERS && <span className="muted small">{t.maxLayers}</span>}
@@ -248,10 +249,10 @@ export function Soundscapes() {
                   <span className="small">LP</span>
                 </div>
               </div>
-              {sel.source.kind === "loop" && (
+              {"take_id" in sel.source && (
                 <div className="analysis-row">
                   <label className="inline">
-                    {t.kindLoop}
+                    {t.take}
                     <select value={sel.source.take_id} onChange={(e) => patchSource(sel.id, { take_id: e.target.value })}>
                       {project.takes.map((tk) => (
                         <option key={tk.id} value={tk.id}>
@@ -260,10 +261,12 @@ export function Soundscapes() {
                       ))}
                     </select>
                   </label>
-                  <label className="inline">
-                    <input type="checkbox" checked={sel.source.reverse} onChange={(e) => patchSource(sel.id, { reverse: e.target.checked })} />
-                    {t.reverseLabel}
-                  </label>
+                  {sel.source.kind === "loop" && (
+                    <label className="inline">
+                      <input type="checkbox" checked={sel.source.reverse} onChange={(e) => patchSource(sel.id, { reverse: e.target.checked })} />
+                      {t.reverseLabel}
+                    </label>
+                  )}
                 </div>
               )}
               {hasTonal(sel.source) && (

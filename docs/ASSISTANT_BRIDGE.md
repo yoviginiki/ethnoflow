@@ -41,7 +41,8 @@ rhythm_status, ambient_status }`
   (`DronePrefs`, `PadPrefs`, `RhythmPrefs`, `HarmonyPrefs`, `IntentSettings`).
 - `layers`: which background layers play (`drone`, `pad`, `ambient`, `rhythm`).
 - `ambient`: the atmosphere rack (`Ambient` in `api.ts`: layers with `source.kind`
-  noise/wind/texture/bells/pluck/loop, macros, automation, program).
+  noise/wind/texture/bells/pluck/loop/cloud, macros, automation, program). A `cloud`
+  (granular) or `loop` layer needs `take_id` of a take in the project.
 
 ## Commands (`inbox`)
 

@@ -49,6 +49,7 @@ The pad and the textures always sit **below** the melody (about two octaves unde
 The same layers as Atmosphere, one at a time, with big knobs:
 
 - Pick a **Module** (layer) at the top or add a new one by kind. Under the title is "How to use it" for that module.
+- **Cloud** (granular): pick a take (kaval, voice, rain) and it becomes an endless pad of small grains. Position = where in the take, Scan 0 = freezes the moment, Grain and Density go from whisper to choir, Pitch transposes (−12 = an octave down), Reverse and Octave up are per-grain probabilities. The strongest ambient module for your own recordings.
 - Knobs: level with a meter, pan, the module's parameters, HP/LP. Drag up/down; Shift = fine; double-click = default; the wheel works too.
 - **Shuffle** gives new values to this module only (the level stays); 🔒 protects it from "Surprise me".
 - **Module presets** (💾/📚) with tags and notes, in the shared Library.

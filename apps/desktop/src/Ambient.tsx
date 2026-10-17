@@ -149,7 +149,7 @@ export function Ambient() {
   const sel = layers.find((l) => l.id === selected) ?? null;
   const selIndex = sel ? layers.indexOf(sel) : -1;
   const kindNames = useMemo(
-    () => ({ noise: t.kindNoise, wind: t.kindWind, texture: t.kindTexture, bells: t.kindBells, pluck: t.kindPluck, loop: t.kindLoop }),
+    () => ({ noise: t.kindNoise, wind: t.kindWind, texture: t.kindTexture, bells: t.kindBells, pluck: t.kindPluck, loop: t.kindLoop, cloud: t.kindCloud }),
     [t],
   );
 
@@ -554,6 +554,17 @@ export function Ambient() {
               ))}
             </select>
           </label>
+          <label>
+            {t.cloudFromTake}
+            <select value="" disabled={layers.length >= MAX_AMBIENT_LAYERS || project.takes.length === 0} onChange={(e) => e.target.value && addLayer("cloud", e.target.value)}>
+              <option value="">…</option>
+              {project.takes.map((tk) => (
+                <option key={tk.id} value={tk.id}>
+                  {takeName(tk, t.take)}
+                </option>
+              ))}
+            </select>
+          </label>
           <div className={`dropzone ${dropping ? "active" : ""}`}>
             <button className="ghost" disabled={importing !== null || layers.length >= MAX_AMBIENT_LAYERS} onClick={() => pickSamples().catch(fail)}>
               {importing ?? t.importSamples}
@@ -672,10 +683,10 @@ export function Ambient() {
                   </label>
                 );
               })}
-              {sel.source.kind === "loop" && (
+              {"take_id" in sel.source && (
                 <>
                   <label className="inline">
-                    {t.kindLoop}
+                    {t.take}
                     <select value={sel.source.take_id} onChange={(e) => patchSource(sel.id, { take_id: e.target.value })}>
                       {project.takes.map((tk) => (
                         <option key={tk.id} value={tk.id}>
@@ -684,10 +695,12 @@ export function Ambient() {
                       ))}
                     </select>
                   </label>
-                  <label className="inline">
-                    <input type="checkbox" checked={sel.source.reverse} onChange={(e) => patchSource(sel.id, { reverse: e.target.checked })} />
-                    {t.reverseLabel}
-                  </label>
+                  {sel.source.kind === "loop" && (
+                    <label className="inline">
+                      <input type="checkbox" checked={sel.source.reverse} onChange={(e) => patchSource(sel.id, { reverse: e.target.checked })} />
+                      {t.reverseLabel}
+                    </label>
+                  )}
                 </>
               )}
               {hasTonal(sel.source) && (
