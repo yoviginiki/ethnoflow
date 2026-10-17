@@ -1222,6 +1222,8 @@ export const api = {
   rhythmRestart: () => invoke<RhythmStatus>("rhythm_restart"),
   rhythmRegenerate: (settings: RhythmSettings) => invoke<RhythmSettings>("rhythm_regenerate", { settings }),
   rhythmToTakes: (settings: RhythmSettings) => invoke<{ project: ProjectView; created: string[] }>("rhythm_to_takes", { settings }),
+  rhythmRender: (path: string, settings: RhythmSettings, bars: number | null, stems: boolean) =>
+    invoke<{ path: string; stems: string[]; seconds: number; bars: number; bpm: number; sample_rate: number; peak: number }>("rhythm_render", { path, settings, bars, stems }),
   setMarkers: (markers: Marker[]) => invoke<ProjectView>("set_markers", { markers }),
   estimateTakeTempo: (bpmLow: number | null, bpmHigh: number | null) => invoke<TempoCandidate[]>("estimate_take_tempo", { bpmLow, bpmHigh }),
   countermelodyToTake: (intent: IntentSettings, params: CounterUiParams, proposal: HarmonyProposal | null, label: string | null) =>

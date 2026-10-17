@@ -177,6 +177,7 @@ pub fn run() {
             bus_cmds::bus_set,
             bus_cmds::bus_fade,
             bus_cmds::bus_status,
+            rhythm_cmds::rhythm_render,
         ])
         .build(tauri::generate_context!())
         .expect("error while building EthnoFlow Studio")

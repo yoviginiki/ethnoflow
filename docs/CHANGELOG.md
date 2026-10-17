@@ -202,6 +202,11 @@
   import in Atmosphere**: "Import samples…" (multi-file) or drag-and-drop from
   Explorer / a sample manager such as Soundly — each file becomes a take in the
   project (named after the file) and a looped layer.
+- **Program P1, R0 (2026-10-18)**: offline render of the rhythm section ("WAV + stems"
+  in the panel, `rhythm_render` command and bridge op): same generators, same sources on
+  an offline clock, deterministic per seed; test proves determinism, audibility, stems
+  summing to the mix and seed sensitivity. `apply_live` split into `apply_params` (shared
+  by live and offline). Owner approved the three program plans ("da").
 - **Background mixer (2026-10-18)**: the on/off switches of the background became fades.
   Four buses (drone, pad, atmosphere, rhythm) in the shell (`bus_cmds.rs`), folded into
   every member slot: trim (−40..+12 dB), pan, low/high cut, fade in/out in seconds; the

@@ -67,7 +67,7 @@ The same layers as Atmosphere, one at a time, with big knobs:
 - Four instruments on one shared clock: **drums** (liquid, halftime, ethno), **bass** (sub, pluck, Reese with wobble and sidechain), **ostinato** (a step motif, lockable), **arpeggio**.
 - Tempo and meter are the project's ("Tempo & meter"). "Suggest tempo from the take" measures a take's pulse; you accept it.
 - Bass and ostinato follow the project's mode and the pad's chord. Moving a slider never interrupts the rhythm.
-- "→ MIDI takes" writes the parts as MIDI into the project (drums on channel 10). Sections (intro, verse…) are markers in My studio.
+- "→ MIDI takes" writes the parts as MIDI into the project (drums on channel 10). "WAV + stems" renders the section offline exactly as it plays: a mix plus a folder with a stem per part. Sections (intro, verse…) are markers in My studio.
 - Level at the minimum = the part is off.
 
 ## My studio (tracks)

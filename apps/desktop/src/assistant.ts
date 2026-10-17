@@ -151,6 +151,12 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
     case "session":
       await applySession(cmd.payload, cmd.restore_layers !== false);
       return {};
+    case "rhythm_render": {
+      project();
+      const r = s.prefs.rhythm;
+      const res = await api.rhythmRender(String(cmd.path), { ...r, chord: s.padChord, root_midi: s.prefs.drone?.rootMidi ?? null, intonation: s.prefs.drone?.intonation ?? "profile" }, typeof cmd.bars === "number" ? cmd.bars : null, cmd.stems !== false);
+      return res;
+    }
     case "set_scale": {
       project();
       const pv = await api.setScale((cmd.scale as Scale | null) ?? null);

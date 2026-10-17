@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { save } from "@tauri-apps/plugin-dialog";
 import { api, describeError, type ArpDirection, type GrooveStyle, type RhythmPrefs } from "./api";
 import { formatDb, linearToDb, meterFraction, noteParts } from "./format";
 import { Knob } from "./Knob";
@@ -152,6 +153,28 @@ export function RhythmPanel() {
           }
         >
           ♩ {t.rhythmToTakes}
+        </button>
+        <button
+          className="ghost"
+          disabled={!canPlay || s.pending !== null}
+          title={t.rhythmRenderHint}
+          onClick={() =>
+            void (async () => {
+              const path = await save({ title: t.rhythmRender, defaultPath: `${s.project?.name ?? "rhythm"}-rhythm.wav`, filters: [{ name: "WAV", extensions: ["wav"] }] });
+              if (!path) return;
+              try {
+                s.setPending(t.exporting);
+                const res = await api.rhythmRender(path, { ...r, chord: s.padChord, root_midi: s.prefs.drone?.rootMidi ?? null, intonation: s.prefs.drone?.intonation ?? "profile" }, null, true);
+                s.setMessage(`${t.exported}: ${res.path} (${res.bars} ${t.barsWord}, ${res.stems.length} ${t.stemsWord})`);
+              } catch (e) {
+                s.setError(describeError(e));
+              } finally {
+                useStore.getState().setPending(null);
+              }
+            })()
+          }
+        >
+          ⬇ {t.rhythmRender}
         </button>
         <label className="inline small">
           {t.viewLabel}

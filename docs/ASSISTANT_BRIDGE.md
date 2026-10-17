@@ -63,6 +63,7 @@ rhythm_status, ambient_status }`
 | `list_presets` | `kind?`, `project?`, `query?` | entries (search covers name, tags, notes) |
 | `load_preset` | `id`, `go?` (default true: open its screen) | applies it |
 | `session` | `payload` (a session payload), `restore_layers?` | applies all settings at once |
+| `rhythm_render` | `path`, `bars?`, `stems?` (default true) | offline WAV + stems of the current rhythm settings (audio evidence) |
 | `set_scale` | `scale` or null | project tonic/mode |
 | `set_timing` | `timing` | project tempo/meter |
 

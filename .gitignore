@@ -6,3 +6,4 @@ dist
 /apps/desktop/src-tauri/gen
 /apps/desktop/src-tauri/target
 /qa/output
+/qa/renders

@@ -155,6 +155,10 @@ P3). The Soundscapes modules still pending (Shimmer, Resonator, Choir drone, Blo
 loop, Spaces) continue as small slices between the gates, because they do not depend on
 the programs' architecture decisions.
 
+**Owner approval 2026-10-18 ("da")** of the three plans and their decisions (P1 R1→R2 with
+the bass PoC, synthesis + own samples; P2 Rust analysis with an FFT crate via ADR, SongMap
+in ticks; P3 Phase 1 = shared SongMap + song transport, visual/soft-click cues first).
+
 **Recorded order after the owner's messages of 2026-10-18:** background mixer (done) →
 audits for P1/P2/P3 (this commit) → owner approval → P1 R1/R2 PoC → P2 B/C → P3 1/2 …,
 interleaved as the owner decides at each gate.

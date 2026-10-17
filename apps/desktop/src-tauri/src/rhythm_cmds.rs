@@ -9,9 +9,10 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
 use audio_engine::{
-    pattern_channel, BassNoteEvent, BassParams, BassPatternData, BassSource, BeatClock, DrumEvent,
-    DrumKind, DrumParams, DrumPatternData, DrumSource, GraphCmd, NotePatternData, PatternNote,
-    PatternParams, PatternSwap, PatternSynthSource,
+    pattern_channel, write_wav, AudioBuffer, BassNoteEvent, BassParams, BassPatternData,
+    BassSource, BeatClock, DrumEvent, DrumKind, DrumParams, DrumPatternData, DrumSource, Graph,
+    GraphCmd, GraphParams, NotePatternData, PatternNote, PatternParams, PatternSwap,
+    PatternSynthSource, WavFormat,
 };
 use music_core::{
     generate_arpeggio, generate_bass, generate_groove, generate_ostinato, static_spans,
@@ -489,25 +490,11 @@ pub fn reapply(s: &Inner) {
     }
 }
 
-fn apply_live(s: &Inner, live: &RhythmLive) {
-    let Some(g) = s.graph.as_ref() else { return };
+/// Push the parts' continuous parameters and levels into a set of slot params.
+/// `lvl` maps a part's own level (dB) to the slot gain (floor, bus trim, mute).
+fn apply_params(layers: &[audio_engine::LayerParams], live: &RhythmLive, lvl: &dyn Fn(f32) -> f32) {
     let set = &live.settings;
-    let layer = |slot: usize| &g.params().layers[slot];
-    // The slider's floor (−40) is silence; the bus trim and its mute come on top.
-    let lvl = |db: f32| {
-        let own = if db <= -39.5 { -120.0 } else { db };
-        crate::bus_cmds::bus_gain(s, crate::bus_cmds::BUS_RHYTHM, own)
-    };
-    for slot in [DRUMS_SLOT, BASS_SLOT, OSTINATO_SLOT, ARP_SLOT] {
-        crate::bus_cmds::apply_bus_strip(
-            s,
-            crate::bus_cmds::BUS_RHYTHM,
-            layer(slot),
-            0.0,
-            20_000.0,
-            10.0,
-        );
-    }
+    let layer = |slot: usize| &layers[slot];
     if let Some(p) = live.drums.as_ref() {
         p.kick_hz.set(set.drums.kick_hz);
         p.decay.set(set.drums.decay);
@@ -538,6 +525,26 @@ fn apply_live(s: &Inner, live: &RhythmLive) {
         p.release_s.set(set.arp.release_s);
         layer(ARP_SLOT).gain_db.set(lvl(set.arp.level_db));
     }
+}
+
+fn apply_live(s: &Inner, live: &RhythmLive) {
+    let Some(g) = s.graph.as_ref() else { return };
+    // The slider's floor (−40) is silence; the bus trim and its mute come on top.
+    let lvl = |db: f32| {
+        let own = if db <= -39.5 { -120.0 } else { db };
+        crate::bus_cmds::bus_gain(s, crate::bus_cmds::BUS_RHYTHM, own)
+    };
+    for slot in [DRUMS_SLOT, BASS_SLOT, OSTINATO_SLOT, ARP_SLOT] {
+        crate::bus_cmds::apply_bus_strip(
+            s,
+            crate::bus_cmds::BUS_RHYTHM,
+            &g.params().layers[slot],
+            0.0,
+            20_000.0,
+            10.0,
+        );
+    }
+    apply_params(&g.params().layers, live, &lvl);
 }
 
 fn clear(s: &mut Inner, slot: usize) {
@@ -917,6 +924,246 @@ pub async fn rhythm_regenerate(settings: RhythmSettings) -> CmdResult<RhythmSett
 
 /// Tempo candidates from the loaded take's notes (F4.3: align a free phrase to the
 /// grid by a tempo map and an offset, never by moving the notes).
+/// Names of the four parts, in slot order (stems are written under these names).
+pub const PART_NAMES: [&str; 4] = ["drums", "bass", "ostinato", "arp"];
+
+/// What an offline render of the section returns: the mix and, when asked, one stem per
+/// part that was on (post-fader, pre-master), all the same length.
+pub struct RhythmOffline {
+    pub mix: AudioBuffer,
+    pub stems: Vec<(&'static str, AudioBuffer)>,
+    pub seconds: f64,
+}
+
+/// Render the section exactly as it would play: the same generators, the same sources on
+/// the same kind of clock, `bars` bars at `rate`. Deterministic per seed (no humanize
+/// drift at render time), so it serves as audio evidence and as a test oracle
+/// (Program P1, R0). `s` supplies the project's scale / intonation for pitches; with no
+/// project the pitches are tempered.
+pub struct SectionContext<'a> {
+    pub bpm: f64,
+    pub meter: &'a Meter,
+    pub root: u8,
+    pub pcs: &'a [(u8, f64)],
+}
+
+pub fn render_section(
+    s: &Inner,
+    settings: &RhythmSettings,
+    ctx: &SectionContext,
+    bars: u32,
+    rate: u32,
+    want_stems: bool,
+) -> CmdResult<RhythmOffline> {
+    let (bpm, meter, root, pcs) = (ctx.bpm, ctx.meter, ctx.root, ctx.pcs);
+    validate(settings)?;
+    if !(8_000..=192_000).contains(&rate) {
+        return Err(err("invalid_argument", "sample rate outside 8..192 kHz"));
+    }
+    let bars = bars.clamp(1, 256);
+    let seconds = bars as f64 * meter.bar_beats() * 60.0 / bpm;
+    let gp = Arc::new(GraphParams::default());
+    gp.master.gain_db.set(0.0);
+    let clock = Arc::new(BeatClock::new(bpm as f32));
+    let mut live = RhythmLive {
+        clock: Arc::clone(&clock),
+        drums: None,
+        bass: None,
+        ostinato: None,
+        arp: None,
+        settings: settings.clone(),
+        keys: Default::default(),
+        motif: None,
+        drum_swap: None,
+        bass_swap: None,
+        ost_swap: None,
+        arp_swap: None,
+    };
+    let mut sources: Vec<(usize, Box<dyn audio_engine::Source>)> = Vec::new();
+    if settings.drums.on {
+        let p = Arc::new(DrumParams::default());
+        let pat = build_drums(settings, meter);
+        sources.push((
+            DRUMS_SLOT,
+            Box::new(DrumSource::new(Arc::clone(&p), Arc::clone(&clock), pat)),
+        ));
+        live.drums = Some(p);
+    }
+    if settings.bass.on {
+        let p = Arc::new(BassParams::default());
+        let pat = build_bass(s, settings, meter, root, pcs);
+        sources.push((
+            BASS_SLOT,
+            Box::new(BassSource::new(
+                Arc::clone(&p),
+                Arc::clone(&clock),
+                pat,
+                live.drums.clone(),
+            )),
+        ));
+        live.bass = Some(p);
+    }
+    if settings.ostinato.on {
+        let p = Arc::new(PatternParams::default());
+        let (pat, _motif) = build_ostinato(s, settings, meter, pcs);
+        sources.push((
+            OSTINATO_SLOT,
+            Box::new(PatternSynthSource::new(
+                Arc::clone(&p),
+                Arc::clone(&clock),
+                pat,
+            )),
+        ));
+        live.ostinato = Some(p);
+    }
+    if settings.arp.on {
+        let p = Arc::new(PatternParams::default());
+        let pat = build_arp(s, settings, meter, pcs);
+        sources.push((
+            ARP_SLOT,
+            Box::new(PatternSynthSource::new(
+                Arc::clone(&p),
+                Arc::clone(&clock),
+                pat,
+            )),
+        ));
+        live.arp = Some(p);
+    }
+    // Levels and voices first, so the graph starts at its settled state (no ramp-in).
+    let floor = |db: f32| if db <= -39.5 { -120.0 } else { db };
+    apply_params(&gp.layers, &live, &floor);
+    let mut g = Graph::new(Arc::clone(&gp), rate);
+    for (slot, src) in sources {
+        g.set_source(slot, src);
+    }
+    clock.start(0, 0.0);
+    let ch = 2usize;
+    let frames = (seconds * rate as f64).round() as usize;
+    let mut out = vec![0.0f32; frames * ch];
+    let mut stem_bufs: Vec<Vec<f32>> = if want_stems {
+        (0..audio_engine::MAX_LAYERS)
+            .map(|_| vec![0.0f32; frames * ch])
+            .collect()
+    } else {
+        Vec::new()
+    };
+    let mut done = 0;
+    while done < frames {
+        let n = (frames - done).min(512);
+        let slice = &mut out[done * ch..(done + n) * ch];
+        if want_stems {
+            let mut parts: Vec<Vec<f32>> = (0..audio_engine::MAX_LAYERS)
+                .map(|_| vec![0.0f32; n * ch])
+                .collect();
+            g.render_with_stems(slice, ch, &mut parts);
+            for (sb, part) in stem_bufs.iter_mut().zip(parts.iter()) {
+                sb[done * ch..(done + n) * ch].copy_from_slice(part);
+            }
+        } else {
+            g.render(slice, ch);
+        }
+        done += n;
+    }
+    let mix = AudioBuffer::new(rate, ch as u16, out);
+    let mut stems = Vec::new();
+    if want_stems {
+        let on = [
+            settings.drums.on,
+            settings.bass.on,
+            settings.ostinato.on,
+            settings.arp.on,
+        ];
+        for (i, slot) in [DRUMS_SLOT, BASS_SLOT, OSTINATO_SLOT, ARP_SLOT]
+            .into_iter()
+            .enumerate()
+        {
+            if on[i] {
+                stems.push((
+                    PART_NAMES[i],
+                    AudioBuffer::new(rate, ch as u16, std::mem::take(&mut stem_bufs[slot])),
+                ));
+            }
+        }
+    }
+    Ok(RhythmOffline {
+        mix,
+        stems,
+        seconds,
+    })
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct RhythmRenderResult {
+    pub path: String,
+    pub stems: Vec<String>,
+    pub seconds: f64,
+    pub bars: u32,
+    pub bpm: f64,
+    pub sample_rate: u32,
+    pub peak: f32,
+}
+
+/// Write the section as a WAV (and stems in a folder next to it): the project's tempo and
+/// meter, the given settings, `bars` bars (default: the pattern length).
+#[tauri::command]
+pub async fn rhythm_render(
+    state: State<'_, AppState>,
+    path: String,
+    settings: RhythmSettings,
+    bars: Option<u32>,
+    sample_rate: Option<u32>,
+    stems: Option<bool>,
+    format: Option<WavFormat>,
+) -> CmdResult<RhythmRenderResult> {
+    let rate = sample_rate.unwrap_or(48_000);
+    let bars = bars.unwrap_or(settings.bars).clamp(1, 256);
+    let (bpm, r) = {
+        let s = state.lock();
+        let (bpm, meter) = timing(&s)?;
+        let (root, pcs) = chord_pcs(&s, &settings)?;
+        (
+            bpm,
+            render_section(
+                &s,
+                &settings,
+                bpm,
+                &meter,
+                root,
+                &pcs,
+                bars,
+                rate,
+                stems.unwrap_or(true),
+            )?,
+        )
+    };
+    let mut p = std::path::PathBuf::from(&path);
+    if p.extension().is_none_or(|e| !e.eq_ignore_ascii_case("wav")) {
+        p.set_extension("wav");
+    }
+    let format = format.unwrap_or_default();
+    write_wav(&p, &r.mix, format)?;
+    let mut stem_paths = Vec::new();
+    if !r.stems.is_empty() {
+        let dir = p.with_extension("");
+        std::fs::create_dir_all(&dir).map_err(|e| err("io", e.to_string()))?;
+        for (name, buf) in &r.stems {
+            let sp = dir.join(format!("{name}.wav"));
+            write_wav(&sp, buf, format)?;
+            stem_paths.push(sp.display().to_string());
+        }
+    }
+    let peak = r.mix.samples.iter().fold(0.0f32, |m, x| m.max(x.abs()));
+    Ok(RhythmRenderResult {
+        path: p.display().to_string(),
+        stems: stem_paths,
+        seconds: r.seconds,
+        bars,
+        bpm,
+        sample_rate: rate,
+        peak,
+    })
+}
+
 #[tauri::command]
 pub async fn estimate_take_tempo(
     state: State<'_, AppState>,
@@ -1114,4 +1361,94 @@ pub async fn rhythm_to_takes(
         project: crate::project_cmds::project_view(&s)?,
         created,
     })
+}
+
+#[cfg(test)]
+mod render_tests {
+    use super::*;
+
+    fn settings() -> RhythmSettings {
+        serde_json::from_value(serde_json::json!({
+            "drums": {"on": true, "style": "liquid", "complexity": 0.4, "humanize": 0.3, "swing": 0.0, "fill_every_bars": 4, "seed": 1, "level_db": -10.0, "kick_hz": 50.0, "decay": 0.5, "brightness": 0.5, "locked": false},
+            "bass": {"on": true, "voice": 0, "density": 0.4, "syncopation": 0.3, "passing": 0.3, "register_low": 31, "register_high": 43, "seed": 1, "level_db": -12.0, "cutoff_hz": 400.0, "resonance": 0.2, "drive": 0.3, "glide_s": 0.08, "sidechain": 0.6, "wobble_div": 0, "wobble_depth": 0.5, "warmth": 0.5, "locked": false},
+            "ostinato": {"on": true, "steps": 8, "step_beats": 0.5, "density": 0.6, "probability": 1.0, "variation_every_bars": 4, "swing": 0.0, "seed": 1, "level_db": -16.0, "register_low": 55, "register_high": 79, "timbre": 2, "release_s": 0.15, "locked": false, "motif": null},
+            "arp": {"on": false, "direction": "up", "octaves": 1, "step_beats": 0.25, "gate": 0.6, "density": 1.0, "swing": 0.0, "seed": 1, "level_db": -18.0, "register_low": 60, "timbre": 0, "release_s": 0.12, "locked": false},
+            "bars": 2, "chord": null, "root_midi": 50, "intonation": "tempered"
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn offline_render_is_deterministic_audible_and_stems_sum_to_the_mix() {
+        let s = Inner::default();
+        let set = settings();
+        let meter = Meter::new(4, 4);
+        let pcs = vec![(2u8, 0.0), (5u8, 0.0), (9u8, 0.0)];
+        let a = render_section(
+            &s,
+            &set,
+            &SectionContext {
+                bpm: 170.0,
+                meter: &meter,
+                root: 2,
+                pcs: &pcs,
+            },
+            2,
+            48_000,
+            true,
+        )
+        .unwrap();
+        let b = render_section(
+            &s,
+            &set,
+            &SectionContext {
+                bpm: 170.0,
+                meter: &meter,
+                root: 2,
+                pcs: &pcs,
+            },
+            2,
+            48_000,
+            true,
+        )
+        .unwrap();
+        assert_eq!(
+            a.mix.samples, b.mix.samples,
+            "same seed → identical samples"
+        );
+        assert!((a.seconds - 2.0 * 4.0 * 60.0 / 170.0).abs() < 1e-9);
+        let peak = a.mix.samples.iter().fold(0.0f32, |m, x| m.max(x.abs()));
+        assert!(peak > 0.05 && peak <= 1.0, "audible, not clipping: {peak}");
+        assert_eq!(
+            a.stems.iter().map(|(n, _)| *n).collect::<Vec<_>>(),
+            vec!["drums", "bass", "ostinato"]
+        );
+        // Stems are pre-master; with master at 0 dB and no reverb their sum is the mix
+        // (within the limiter's reach).
+        let n = a.mix.samples.len();
+        let mut max_diff = 0.0f32;
+        for i in (n / 2)..n {
+            let sum: f32 = a.stems.iter().map(|(_, b)| b.samples[i]).sum();
+            max_diff = max_diff.max((sum - a.mix.samples[i]).abs());
+        }
+        assert!(max_diff < 0.05, "stems sum to the mix: {max_diff}");
+        // A different seed changes the audio.
+        let mut set2 = set.clone();
+        set2.drums.seed = 7;
+        let c = render_section(
+            &s,
+            &set2,
+            &SectionContext {
+                bpm: 170.0,
+                meter: &meter,
+                root: 2,
+                pcs: &pcs,
+            },
+            2,
+            48_000,
+            false,
+        )
+        .unwrap();
+        assert_ne!(a.mix.samples, c.mix.samples);
+    }
 }

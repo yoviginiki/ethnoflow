@@ -30,7 +30,7 @@ requirement *groups*; each program phase adds its rows when it starts.
 
 | Req (spec) | Target component | Tests | Status |
 |---|---|---|---|
-| R0 audit + plan + baseline render | `docs/rhythm/*`, `rhythm_render` (offline WAV) | render determinism test | IMPLEMENTING (docs) |
+| R0 audit + plan + baseline render | `docs/rhythm/*`, `rhythm_render` (offline WAV + stems) | `render_tests` in `rhythm_cmds.rs` (determinism, audible, stems = mix, seed) | TESTED (owner listening of the baseline render pending) |
 | R1 instrument registry, browser, preset schema v1, migration | `crates/project/src/instrument.rs` (new), `library_cmds` kind `instrument`, `InstrumentBrowser.tsx` | schema round-trip, migration | DESIGNED |
 | R2 Instrument Designer MVP (one instrument, real DSP, Save As, in rhythm, save/reopen, WAV) | `InstrumentDesigner.tsx`, engine envelopes/filter on `BassSource`/`DrumSource`, audition path | envelope/filter measurement, round-trip, render | DESIGNED |
 | R3 sequencer (steps, velocity, swing, microtiming, probability, ratchets, polymeter, Euclid) | new `music-core/sequencer.rs`, engine `StepPatternData`, `StepGrid.tsx` | pattern tests odd meters/polymeter | NOT STARTED |
