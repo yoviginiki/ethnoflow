@@ -135,6 +135,17 @@ audio graph — the clips, the drone and the pad share one transport, one master
 one limiter — together with an explicit background play/stop in every screen
 (0.2.9). Phase 1A and Phase 4 follow as before; F5.2–F5.4 stay in Phase 5.
 
+## Proposed next: Phase 1B — Soundscapes & Sound Designer (2026-10-17, awaiting owner)
+
+The owner asked for modern soundscape modules ("like Native Instruments": a
+Soundscapes button, a dropdown of modules, knobs per module) and a sound designer for
+the rhythm instruments with the ability to add more. Analysis and proposal:
+`docs/SOUNDSCAPES_CONCEPT.md`; items F1B.1–F1B.8 and F4.8–F4.9 in `FEATURE_SPEC.md`.
+Proposed order: screen + module framework → Cloud → Shimmer → Resonator → Sound
+Designer → new instruments → Choir drone → Bloom → Tape loop (live input, decision)
+→ Spaces (FFT dependency, ADR). The preset library UI (all panels with sliders) and
+the sample folder browser go first because the modules' presets depend on them.
+
 ## Phase 4 — Liquid DnB machine (0.4.0, 2026-10-17) — phase report
 
 **Implemented.** A rhythm section in "Prepare background": synthesized drums (liquid
