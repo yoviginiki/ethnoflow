@@ -122,9 +122,10 @@ sources). Order:
    Reaper re-import) proceed in parallel.
 2. **F1.6 audio graph** (layers, parameter smoothing, master limiter, offline render).
 3. **Phase 3**: F3.1 explanations and fixtures → F3.2 drone → F3.3 pad → F3.5 Compose
-   First ("Подготви фон": tonic, mode, drone + pad in under a minute) → F3.4 harmony
-   proposals from a recorded melody (3 styles, A/B) → F3.6 controls with tooltips,
-   seed, locks.
+   First ("Подготви фон": tonic, mode, drone + pad in under a minute) → **F2.9–F2.11
+   error-tolerant performance intelligence** (phrases, tonal tracker with hysteresis,
+   note classifier, Stable/Assisted/Creative with an on/off switch and a visible badge)
+   → F3.4 harmony proposals consuming IntentEstimate (3 styles, A/B) → F3.6 controls.
 4. Phase 1A Ambient Playground on the same graph, then Phase 4.
 
 ## Phase 2 — Pitch, notation & practice (plan, approved 2026-10-16)
