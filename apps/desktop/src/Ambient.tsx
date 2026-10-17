@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AMBIENT_TAGS, api, describeError, type Ambient as AmbientRack, type AmbientLayer, type AmbientTag, type LayerKind, type LayerSource, type Macros, type PresetSummary } from "./api";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
+import { open } from "@tauri-apps/plugin-dialog";
+import { AMBIENT_TAGS, api, describeError, IMPORT_EXTENSIONS, type Ambient as AmbientRack, type AmbientLayer, type AmbientTag, type LayerKind, type LayerSource, type Macros, type PresetSummary } from "./api";
 import { DEFAULT_MACROS, KIND_LABEL, MAX_AMBIENT_LAYERS, defaultSource, makeLayer } from "./ambientPresets";
 import { randomizeRack } from "./ambientRandom";
 import { LaneEditor, ProgramPanel } from "./AmbientProgram";
@@ -12,6 +14,9 @@ import { messages, type StringMessageKey } from "./i18n";
 import { useStore } from "./store";
 
 const KINDS: LayerKind[] = ["noise", "wind", "texture", "bells", "pluck"];
+/** Audio files that can become loop layers (MIDI is not a sample). */
+const SAMPLE_EXTENSIONS = IMPORT_EXTENSIONS.filter((e) => e !== "mid");
+const fileStem = (path: string) => (path.split(/[\\/]/).pop() ?? "").replace(/\.[^.]+$/, "");
 const HISTORY_MAX = 20;
 /** Factory preset ids → their names in the UI language (user presets show their file name). */
 const PRESET_NAME: Record<string, StringMessageKey> = {
@@ -129,6 +134,8 @@ export function Ambient() {
   const [showRight, setShowRight] = useState(true);
   const [fadeSeconds, setFadeSeconds] = useState(15);
   const [editingName, setEditingName] = useState<string | null>(null);
+  const [dropping, setDropping] = useState(false);
+  const [importing, setImporting] = useState<string | null>(null);
   const fail = useCallback((e: unknown) => useStore.getState().setError(describeError(e)), []);
   const pendingRef = useRef<AmbientRack | null>(null);
   const timerRef = useRef<number | null>(null);
@@ -290,6 +297,80 @@ export function Ambient() {
     commit({ ...rack, layers: [...rack.layers, layer] });
     setSelected(layer.id);
   };
+  /**
+   * Import sample files (from a dialog or a drop from Explorer / a sample manager such as
+   * Soundly) as takes of the project and add one loop layer per file.
+   */
+  const importSamples = async (paths: string[]) => {
+    const files = paths.filter((p) => SAMPLE_EXTENSIONS.includes(p.split(".").pop()?.toLowerCase() ?? ""));
+    if (files.length === 0 || importing) return;
+    const added: AmbientLayer[] = [];
+    let skipped = 0;
+    try {
+      for (const path of files) {
+        const cur = useStore.getState().ambient;
+        if (!cur) break;
+        const n = cur.layers.length + added.length;
+        if (n >= MAX_AMBIENT_LAYERS) {
+          skipped++;
+          continue;
+        }
+        const stem = fileStem(path);
+        setImporting(`${t.importing} ${stem}`);
+        let pv = await api.importAudio(path);
+        const id = pv.loaded_take;
+        if (!id) continue;
+        const tk = pv.takes.find((x) => x.id === id);
+        if (tk && !tk.label && stem) pv = await api.renameTake(id, stem);
+        useStore.getState().setProject(pv);
+        added.push(makeLayer(stem || kindNames.loop, defaultSource("loop", id), { gain_db: -18, pan: ((n % 3) - 1) * 0.3 }));
+      }
+      const cur = useStore.getState().ambient;
+      if (cur && added.length > 0) {
+        commit({ ...cur, layers: [...cur.layers, ...added] });
+        setSelected(added[added.length - 1].id);
+      }
+      useStore.getState().setMessage(`${t.samplesImported}: ${added.length}${skipped > 0 ? ` · ${t.maxLayers}` : ""}`);
+    } catch (e) {
+      fail(e);
+    } finally {
+      setImporting(null);
+    }
+  };
+  const importRef = useRef(importSamples);
+  importRef.current = importSamples;
+  const pickSamples = async () => {
+    const r = await open({ title: t.importSamples, multiple: true, directory: false, filters: [{ name: t.audioFiles, extensions: SAMPLE_EXTENSIONS }] });
+    if (!r) return;
+    await importSamples(Array.isArray(r) ? r : [r]);
+  };
+  // Files dragged from Explorer or a sample manager onto the window become loop layers.
+  useEffect(() => {
+    let alive = true;
+    let unlisten: (() => void) | null = null;
+    try {
+      getCurrentWebview()
+        .onDragDropEvent((ev) => {
+          if (ev.payload.type === "enter") setDropping(true);
+          else if (ev.payload.type === "leave") setDropping(false);
+          else if (ev.payload.type === "drop") {
+            setDropping(false);
+            void importRef.current(ev.payload.paths);
+          }
+        })
+        .then((u) => {
+          if (alive) unlisten = u;
+          else u();
+        })
+        .catch(() => {});
+    } catch {
+      // Not running inside Tauri (tests): no native drop.
+    }
+    return () => {
+      alive = false;
+      unlisten?.();
+    };
+  }, []);
   const removeLayer = (id: string) => {
     if (!rack) return;
     commit({ ...rack, layers: rack.layers.filter((l) => l.id !== id), automation: rack.automation.filter((l) => l.target.layer !== id) });
@@ -516,6 +597,12 @@ export function Ambient() {
               ))}
             </select>
           </label>
+          <div className={`dropzone ${dropping ? "active" : ""}`}>
+            <button className="ghost" disabled={importing !== null || layers.length >= MAX_AMBIENT_LAYERS} onClick={() => pickSamples().catch(fail)}>
+              {importing ?? t.importSamples}
+            </button>
+            <div className="muted small">{t.dropSamplesHint}</div>
+          </div>
           {layers.length >= MAX_AMBIENT_LAYERS && <div className="muted small">{t.maxLayers}</div>}
           <div className="muted small">{t.safeStartHint}</div>
             </>
