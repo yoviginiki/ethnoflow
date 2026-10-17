@@ -13,6 +13,8 @@ interface Props {
   showNames: boolean;
   label: string;
   onSeek?: (seconds: number) => void;
+  /** Trainer: index of the note being waited for, drawn lit (red when wrong). */
+  target?: { index: number; wrong: boolean } | null;
 }
 
 const KEYBOARD_PX = 56;
@@ -22,7 +24,7 @@ const BLACK = new Set([1, 3, 6, 8, 10]);
  * Synthesia/midiano-style view: notes fall towards a piano keyboard; a note reaches
  * the keys exactly at its start time. Keys light up while their note sounds.
  */
-export function FallingNotes({ notes, position, lookahead, scale, noteNames, showNames, label, onSeek }: Props) {
+export function FallingNotes({ notes, position, lookahead, scale, noteNames, showNames, label, onSeek, target }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
 
@@ -72,22 +74,24 @@ export function FallingNotes({ notes, position, lookahead, scale, noteNames, sho
 
       // Falling notes (only the visible window).
       const sounding = new Set<number>();
-      for (const n of notes) {
-        if (n.end < position - 0.05 || n.start > position + lookahead) continue;
+      notes.forEach((n, i) => {
+        if (n.end < position - 0.05 || n.start > position + lookahead) return;
         if (n.start <= position && n.end > position) sounding.add(n.midi);
+        const isTarget = target != null && target.index === i;
         const yTop = Math.max(0, yOfTime(n.end));
         const yBot = Math.min(keyTop, yOfTime(n.start));
-        if (yBot <= yTop) continue;
+        if (yBot <= yTop) return;
         const x = xOfMidi(n.midi);
         const wid = widthOfMidi(n.midi) - 2;
         const out = scale ? Math.abs(centsFromScale(scale, n.midi)) > 1 : false;
-        ctx.fillStyle = out ? colOut : colWave;
-        ctx.globalAlpha = n.start <= position ? 1 : 0.75;
+        ctx.fillStyle = isTarget ? (target.wrong ? colOut : colHead) : out ? colOut : colWave;
+        ctx.globalAlpha = n.start <= position || isTarget ? 1 : 0.75;
         ctx.beginPath();
         ctx.roundRect(x + 1, yTop, wid, yBot - yTop, 3);
         ctx.fill();
         ctx.globalAlpha = 1;
-      }
+        if (isTarget) sounding.add(n.midi);
+      });
       // Hit line.
       ctx.strokeStyle = colHead;
       ctx.lineWidth = 2;
@@ -130,7 +134,7 @@ export function FallingNotes({ notes, position, lookahead, scale, noteNames, sho
     const ro = new ResizeObserver(draw);
     ro.observe(wrap);
     return () => ro.disconnect();
-  }, [notes, position, lookahead, scale, noteNames, showNames, lo, hi, whites]);
+  }, [notes, position, lookahead, scale, noteNames, showNames, lo, hi, whites, target]);
 
   const onClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!onSeek) return;

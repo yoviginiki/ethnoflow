@@ -40,6 +40,10 @@
   (≥ 1.5 s steady, median Hz, offset, stability), diagnosis (systematic vs random),
   sample playback with pitch shift, project attaches a profile; tuner shows the
   profile mark and the written note for transposing instruments.
+- **F2.8 trainer** (0.2.4): `evaluate` in music-core (per-note verdicts, level
+  tolerances, latency); "Trainer" panel driven by the microphone pitch — Listen, Wait
+  (the lit note advances when held, wrong notes flash red, no timing), Rhythm (play
+  along with the synth, per-note report at the end).
 
 ### Measurements (owner's laptop, release build, YIN hop 10 ms, window 1024)
 | material | pitch time | voiced | f0 p05 / median / p95 | confidence p10 / median | octave-sized jumps |

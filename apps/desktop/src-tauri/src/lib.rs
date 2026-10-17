@@ -5,6 +5,7 @@ mod midi_cmds;
 mod project_cmds;
 mod settings;
 mod state;
+mod trainer_cmds;
 
 use state::AppState;
 use tauri::Manager;
@@ -78,6 +79,7 @@ pub fn run() {
             instrument_cmds::calibrate_note,
             instrument_cmds::remove_profile_note,
             instrument_cmds::play_profile_note,
+            trainer_cmds::evaluate_performance,
             project_cmds::export_wav,
         ])
         .build(tauri::generate_context!())

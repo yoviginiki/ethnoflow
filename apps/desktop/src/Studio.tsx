@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { api, describeError, IMPORT_EXTENSIONS, type Note, type WavFormat } from "./api";
 import { AnalysisPanel } from "./AnalysisPanel";
@@ -10,6 +10,7 @@ import { messages } from "./i18n";
 import { NEW_NOTE_S, PianoRoll } from "./PianoRoll";
 import { TakeList } from "./TakeList";
 import { TimingPanel } from "./TimingPanel";
+import { TrainerPanel } from "./TrainerPanel";
 import { Tuner } from "./Tuner";
 import { useStore } from "./store";
 import { Waveform } from "./Waveform";
@@ -567,6 +568,7 @@ export function Studio() {
 
   // ---------- render ----------
 
+  const [trainerTarget, setTrainerTarget] = useState<{ index: number; wrong: boolean } | null>(null);
   const busy = s.mode !== "idle" || s.pending !== null;
   const hasTrim = loadedTake != null && (loadedTake.trim_in_seconds > 0 || loadedTake.trim_out_seconds != null);
   const chLabel = (n: number) => (n === 1 ? t.mono : n === 2 ? t.stereo : `${n}`);
@@ -798,8 +800,23 @@ export function Studio() {
                     s.setCursor(sec);
                     if (s.mode === "playing") void onPlay(sec);
                   }}
+                  target={trainerTarget}
                 />
               )}
+              <TrainerPanel
+                notes={s.analysis.notes}
+                hz={s.monitor?.pitch_hz ?? null}
+                confidence={s.monitor?.pitch_confidence ?? 0}
+                a4={project.a4_hz}
+                notesPosition={s.notesPlayer ? s.notesPlayer.position_seconds : null}
+                onPlayNotes={onPlayNotes}
+                onStopNotes={onStopNotes}
+                onPosition={(sec) => {
+                  s.setPref("notesView", "falling");
+                  s.setCursor(sec);
+                }}
+                onTarget={(index, wrong) => setTrainerTarget(index === null ? null : { index, wrong })}
+              />
             </>
           )}
           {s.loaded && <AnalysisPanel withPending={withPending} selectTake={selectTake} />}

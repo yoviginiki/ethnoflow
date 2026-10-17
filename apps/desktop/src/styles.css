@@ -152,6 +152,9 @@ button.small { font-size: 12px; padding: 3px 7px; }
 .needle-centre { position: absolute; left: 50%; top: -2px; width: 2px; height: 12px; background: var(--muted); }
 .needle { position: absolute; top: -3px; width: 4px; height: 14px; margin-left: -2px; background: var(--playhead); border-radius: 2px; transition: left 60ms linear; }
 .practice { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.trainer-report ul { margin: 4px 0; padding-left: 18px; max-height: 180px; overflow-y: auto; }
+.trainer-report li.ok { color: var(--accent); }
+.trainer-report li.bad { color: var(--rec); }
 .needle.profile-mark { background: var(--accent); opacity: 0.7; height: 10px; top: -1px; }
 .calibrate { max-width: 720px; }
 .cal-notes { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0; }

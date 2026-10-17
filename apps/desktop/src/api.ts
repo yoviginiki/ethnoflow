@@ -290,6 +290,40 @@ export interface MidiTakeView {
   duration_seconds: number;
 }
 
+export type Level = "beginner" | "intermediate" | "advanced";
+export const LEVELS: Level[] = ["beginner", "intermediate", "advanced"];
+
+export type Verdict =
+  | { kind: "hit"; cents: number; ms: number }
+  | { kind: "wrong_pitch"; cents: number; ms: number }
+  | { kind: "early"; cents: number; ms: number }
+  | { kind: "late"; cents: number; ms: number }
+  | { kind: "missed" };
+
+export interface NoteResult {
+  index: number;
+  played: number | null;
+  verdict: Verdict;
+}
+
+export interface TrainerSummary {
+  expected: number;
+  hits: number;
+  wrong_pitch: number;
+  early: number;
+  late: number;
+  missed: number;
+  extra: number;
+  mean_abs_cents: number;
+  mean_abs_ms: number;
+}
+
+export interface TrainerReport {
+  per_note: NoteResult[];
+  extra_played: number[];
+  summary: TrainerSummary;
+}
+
 export interface MidiExportResult {
   path: string;
   bytes: number;
@@ -440,6 +474,8 @@ export const api = {
   stopNotes: () => invoke<void>("stop_notes"),
   sendNotesToPlayer: (label: string | null) =>
     invoke<{ project: ProjectView; take_id: string }>("send_notes_to_player", { label }),
+  evaluatePerformance: (expected: Note[], played: Note[], level: Level, latencyMs: number) =>
+    invoke<TrainerReport>("evaluate_performance", { expected, played, level, latencyMs }),
   listProfiles: () => invoke<ProfileSummary[]>("list_profiles"),
   getProfile: (id: string) => invoke<ProfileView>("get_profile", { id }),
   createProfile: (req: { instrument: InstrumentType; name: string; tuning: string; transpose_semitones: number; a4_hz: number | null }) =>
