@@ -124,6 +124,11 @@ fn load_annotations(s: &Inner, take_id: &str) -> CmdResult<Vec<Annotation>> {
         .unwrap_or_default())
 }
 
+/// The F2.11 analysis for other commands (harmony).
+pub fn analyze_for(s: &Inner, settings: &IntentSettings) -> CmdResult<Option<PerformanceAnalysis>> {
+    analyze(s, settings)
+}
+
 fn analyze(s: &Inner, settings: &IntentSettings) -> CmdResult<Option<PerformanceAnalysis>> {
     let Some(loaded) = s.loaded.as_ref() else {
         return Ok(None);

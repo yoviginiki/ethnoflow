@@ -358,6 +358,101 @@ export interface Annotation {
   class: NoteClass;
 }
 
+// ---------- harmonic strategies (F3.4) ----------
+
+export type Strategy = "drone_only" | "modal_pads" | "liquid_chords";
+export type ChordShape = "open5" | "triad" | "seventh" | "add9" | "sus2" | "sus4" | "quartal";
+export type ChordKind =
+  | "major"
+  | "minor"
+  | "diminished"
+  | "augmented"
+  | "sus2"
+  | "sus4"
+  | "power"
+  | "major7"
+  | "minor7"
+  | "dominant7"
+  | "minor_major7"
+  | "half_diminished7"
+  | "diminished7";
+
+export interface ChordTone {
+  midi: number;
+  cents: number;
+}
+
+export type HarmonyReason =
+  | { kind: "tonic" }
+  | { kind: "covers_melody"; tones: number[]; share: number }
+  | { kind: "smooth_voice_leading"; semitones: number }
+  | { kind: "kept_low_confidence"; confidence: number }
+  | { kind: "kept_chord_lock" }
+  | { kind: "kept_hold"; phrases_left: number }
+  | { kind: "changed_for_clash"; share: number }
+  | { kind: "tension_target"; tension: number }
+  | { kind: "avoids_clash"; pc: number }
+  | { kind: "first_chord" };
+
+export interface ChordEvent {
+  phrase: number;
+  start: number;
+  end: number;
+  root_pc: number;
+  kind: ChordKind | null;
+  shape: ChordShape;
+  tones: ChordTone[];
+  tension: number;
+  melody_share: number;
+  why: HarmonyReason[];
+}
+
+export interface BassEvent {
+  phrase: number;
+  start: number;
+  end: number;
+  midi: number;
+}
+
+export interface ScoreBreakdown {
+  melodic_compatibility: number;
+  modal_fidelity: number;
+  voice_leading: number;
+  tension_fit: number;
+  rhythmic_fit: number;
+  register_separation: number;
+  variety: number;
+  total: number;
+}
+
+export interface HarmonyProposal {
+  strategy: Strategy;
+  seed: number;
+  tonic_pc: number;
+  kind: ScaleKind;
+  drone: ChordTone[];
+  chords: ChordEvent[];
+  bass: BassEvent[];
+  score: ScoreBreakdown;
+  confidence: number;
+}
+
+export interface HarmonyUiParams {
+  tension: number;
+  movement: number;
+  richness: number;
+  seed: number;
+  locks: Locks;
+  register_low: number;
+  register_high: number;
+}
+
+export interface HarmonyExportResult {
+  path: string;
+  chords: number;
+  bass_notes: number;
+}
+
 export interface ProfileDiagnosis {
   notes: number;
   mean_offset_cents: number;
@@ -702,6 +797,8 @@ export const api = {
   annotateNote: (settings: IntentSettings, index: number, cls: NoteClass | null) =>
     invoke<PerformanceAnalysis | null>("annotate_note", { settings, index, class: cls }),
   intentAnnotations: () => invoke<Annotation[]>("intent_annotations"),
+  harmonyProposals: (intent: IntentSettings, params: HarmonyUiParams) => invoke<HarmonyProposal[]>("harmony_proposals", { intent, params }),
+  exportHarmonyMidi: (proposal: HarmonyProposal, path: string) => invoke<HarmonyExportResult>("export_harmony_midi", { proposal, path }),
   evaluatePerformance: (expected: Note[], played: Note[], level: Level, latencyMs: number) =>
     invoke<TrainerReport>("evaluate_performance", { expected, played, level, latencyMs }),
   listProfiles: () => invoke<ProfileSummary[]>("list_profiles"),

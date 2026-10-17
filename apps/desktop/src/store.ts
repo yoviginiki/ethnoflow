@@ -8,8 +8,10 @@ import type {
   DeviceInfo,
   DroneStatus,
   Emotion,
+  HarmonyProposal,
   IntentSettings,
   Intonation,
+  PadNote,
   PadStatus,
   PerformanceAnalysis,
   LoadedTakeInfo,
@@ -54,7 +56,27 @@ export interface Prefs {
   pad: PadPrefs;
   /** Error-tolerant performance intelligence (F2.11): switch, mode, sliders, locks. */
   intent: IntentSettings;
+  /** Harmony proposal sliders (F3.4); locks are shared with `intent`. */
+  harmony: HarmonyPrefs;
 }
+
+export interface HarmonyPrefs {
+  tension: number;
+  movement: number;
+  richness: number;
+  seed: number;
+  registerLow: number;
+  registerHigh: number;
+}
+
+export const DEFAULT_HARMONY: HarmonyPrefs = {
+  tension: 0.3,
+  movement: 0.5,
+  richness: 0.5,
+  seed: 1,
+  registerLow: 48,
+  registerHigh: 72,
+};
 
 export const DEFAULT_INTENT: IntentSettings = {
   enabled: true,
@@ -142,6 +164,7 @@ export const DEFAULT_PREFS: Prefs = {
   drone: DEFAULT_DRONE,
   pad: DEFAULT_PAD,
   intent: DEFAULT_INTENT,
+  harmony: DEFAULT_HARMONY,
 };
 
 function loadPrefs(): Prefs {
@@ -253,6 +276,17 @@ interface Store {
   /** F2.11 analysis of the loaded take's notes under the current intent settings. */
   performance: PerformanceAnalysis | null;
   setPerformance: (p: PerformanceAnalysis | null) => void;
+  /** F3.4 proposals for the loaded take (three strategies), or null. */
+  harmony: HarmonyProposal[] | null;
+  setHarmony: (h: HarmonyProposal[] | null) => void;
+  /** A/B slots: index into `harmony` armed on each side, and which side plays. */
+  armed: { a: number | null; b: number | null; side: "a" | "b" };
+  setArmed: (a: { a: number | null; b: number | null; side: "a" | "b" }) => void;
+  /** While an armed proposal follows playback: the chord the pad should play and the
+   *  drone root — overrides the pad voicing / drone root prefs. */
+  padChord: PadNote[] | null;
+  droneRootOverride: number | null;
+  setFollow: (chord: PadNote[] | null, droneRoot: number | null) => void;
 
   message: string | null;
   error: string | null;
@@ -281,6 +315,13 @@ export const useStore = create<Store>((set, get) => ({
   setPendingRecord: (pendingRecord) => set({ pendingRecord }),
   performance: null,
   setPerformance: (performance) => set({ performance }),
+  harmony: null,
+  setHarmony: (harmony) => set({ harmony }),
+  armed: { a: null, b: null, side: "a" },
+  setArmed: (armed) => set({ armed }),
+  padChord: null,
+  droneRootOverride: null,
+  setFollow: (padChord, droneRootOverride) => set({ padChord, droneRootOverride }),
 
   inputDevices: [],
   outputDevices: [],

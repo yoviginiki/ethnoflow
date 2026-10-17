@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { api, describeError, IMPORT_EXTENSIONS, type Note, type NoteClass, type WavFormat } from "./api";
+import { HarmonyPanel, useHarmonyFollow, useHarmonyProposals } from "./HarmonyPanel";
 import { IntentPanel, usePerformanceAnalysis } from "./IntentPanel";
 import { AnalysisPanel } from "./AnalysisPanel";
 import { DronePanel } from "./DronePanel";
@@ -36,6 +37,8 @@ export function Studio() {
   const modeRef = useRef(s.mode);
   modeRef.current = s.mode;
   usePerformanceAnalysis();
+  useHarmonyProposals();
+  useHarmonyFollow(s.notesPlayer ? s.notesPlayer.position_seconds : s.mode === "playing" && s.player ? s.player.position_seconds : s.cursor);
   const noteClasses = useMemo(() => {
     const perf = s.performance;
     if (!perf || !s.analysis) return undefined;
@@ -889,6 +892,7 @@ export function Studio() {
                 />
               )}
               <IntentPanel />
+              <HarmonyPanel />
               <TrainerPanel
                 notes={s.analysis.notes}
                 hz={s.monitor?.pitch_hz ?? null}

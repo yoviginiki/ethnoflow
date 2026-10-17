@@ -1,6 +1,7 @@
 mod analysis_cmds;
 mod commands;
 mod graph_cmds;
+mod harmony_cmds;
 mod instrument_cmds;
 mod intent_cmds;
 mod midi_cmds;
@@ -107,6 +108,8 @@ pub fn run() {
             intent_cmds::performance_analysis,
             intent_cmds::annotate_note,
             intent_cmds::intent_annotations,
+            harmony_cmds::harmony_proposals,
+            harmony_cmds::export_harmony_midi,
         ])
         .build(tauri::generate_context!())
         .expect("error while building EthnoFlow Studio")

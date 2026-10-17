@@ -79,9 +79,12 @@ export function useBackgroundLayers() {
   const profile = project?.instrument ?? null;
   const profileKey = profile ? `${profile.id}:${profile.version}` : "";
   const a4 = project?.a4_hz ?? null;
-  const dRoot = droneRoot(dronePrefs, scale, profile);
+  const padChord = useStore((s) => s.padChord);
+  const droneOverride = useStore((s) => s.droneRootOverride);
+  // An armed harmony proposal (F3.4) overrides the root and the chord while it follows.
+  const dRoot = droneOverride ?? droneRoot(dronePrefs, scale, profile);
   const pRoot = padRoot(padPrefs, dronePrefs, scale, profile);
-  const padNotes = pRoot === null ? null : voicingNotes(padPrefs.voicing, pRoot, scale);
+  const padNotes = padChord ?? (pRoot === null ? null : voicingNotes(padPrefs.voicing, pRoot, scale));
   const fail = (e: unknown) => useStore.getState().setError(describeError(e));
 
   // Closing the project stops everything (the backend does too).
