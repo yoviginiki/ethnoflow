@@ -11,7 +11,7 @@ this file tracks status and the concrete Phase 1 plan.
 | 2 | Pitch, notation & practice | **approved 2026-10-16; 2.1–2.5 implemented the same day; DoD (2.6) needs the owner's kaval test and a DAW re-import** |
 | 3 | Harmony / drone MVP | not started |
 | 4 | Liquid DnB engine | not started |
-| 5 | Mini DAW + export | not started |
+| 5 | Mini DAW + export | **F5.1 pulled forward (0.2.9)**: tracks/clips editor on the audio graph, after the owner's feedback that the pieces were not connected; F5.2–F5.4 not started |
 | 6 | Beginner Academy v1 | not started |
 | 7 | Intelligent variations | not started |
 | 8 | Live accompanist R&D | not started |
@@ -127,6 +127,13 @@ sources). Order:
    note classifier, Stable/Assisted/Creative with an on/off switch and a visible badge)
    → F3.4 harmony proposals consuming IntentEstimate (3 styles, A/B) → F3.6 controls.
 4. Phase 1A Ambient Playground on the same graph, then Phase 4.
+
+**Adjustment after the owner's first hands-on test (2026-10-17, 0.2.7/0.2.8):** the
+owner asked where the tracks are, how to hear two things at once, and for play/stop
+on the background. F5.1 (tracks and clips) was therefore pulled forward onto the
+audio graph — the clips, the drone and the pad share one transport, one master and
+one limiter — together with an explicit background play/stop in every screen
+(0.2.9). Phase 1A and Phase 4 follow as before; F5.2–F5.4 stay in Phase 5.
 
 ## Phase 2 — Pitch, notation & practice (plan, approved 2026-10-16)
 

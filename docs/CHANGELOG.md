@@ -137,6 +137,27 @@
   screen and in Compose First; the bar also switches drone/pad on and off and jumps
   between the accompanist and the studio; master default raised from −6 to 0 dB and
   layer levels up to +6 dB.
+- **"My studio" — tracks and clips (F5.1, 0.2.9)**, pulled forward after the owner's
+  next questions ("how do I hear two things at once", "where are the tracks", "no
+  play/stop for the background"): `arrangement.json` next to `project.json` (tracks →
+  clips, a clip = {start, offset, length, gain, fades, mute} window into an immutable
+  take, up to 8 tracks, validated, saved atomically); `ClipSource` on graph slot 2 with
+  a shared lock-free transport (play/seek/loop/end), smoothed track gain/mute/solo, no
+  allocation in the callback — so the clips, the drone and the pad sound together
+  through one master level and one limiter; per-take mono cache at the stream rate;
+  offline mix bounce through the same graph code. The screen: ruler in seconds and
+  bars (when the project has tempo and meter), up to 8 tracks (name, level, M/S),
+  clips with waveforms, move / trim edges / split (S) / duplicate (Ctrl+D) / delete,
+  fades and clip gain, snap to grid and edges, loop region dragged in the ruler, zoom
+  (Ctrl+wheel) and scroll, undo/redo (Ctrl+Z/Y), **Record** adds a new take at the
+  cursor onto the selected (or a new) track while the clips and the background play,
+  export mix (WAV, studio format). Deleting a take removes its clips. **Background
+  transport**: an explicit "Play background / Stop background" with drone/pad switches
+  and level in Compose First, the studio transport, the floating bar and the track
+  editor; "Play background" brings back whichever layers were on last. Not yet: track
+  pan (stored, not audible — the clip source is mono per slot), MIDI clips as editable
+  notes (a MIDI take is a rendered clip), automation, recording-latency compensation
+  (F1.4), the background inside the exported mix (stems, F5.4).
 
 ### Measurements (owner's laptop, release build, YIN hop 10 ms, window 1024)
 | material | pitch time | voiced | f0 p05 / median / p95 | confidence p10 / median | octave-sized jumps |
