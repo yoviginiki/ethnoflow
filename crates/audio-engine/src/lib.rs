@@ -38,7 +38,8 @@ pub use metronome::{
 pub use monitor::{InputMonitor, MonitorStatus};
 pub use peaks::{compute_peaks, LivePeaks, WaveformPeaks};
 pub use pitch::{
-    contour, estimate as estimate_pitch, ContourPoint, PitchConfig, PitchEstimate, PitchTracker,
+    contour, estimate as estimate_pitch, held_tone, ContourPoint, HeldTone, PitchConfig,
+    PitchEstimate, PitchTracker,
 };
 pub use player::{adapt_for_device, PlayOptions, Player, PlayerStatus};
 pub use recorder::{RecordedTake, Recorder, RecorderStatus};

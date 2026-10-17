@@ -232,9 +232,117 @@ pub fn contour(buffer: &AudioBuffer, cfg: &PitchConfig, hop_seconds: f64) -> Vec
     out
 }
 
+/// A held tone found in a contour (instrument calibration, F2.5).
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct HeldTone {
+    pub start: f64,
+    pub end: f64,
+    pub median_hz: f64,
+    /// Standard deviation of the pitch around the median, in cents.
+    pub stability_cents: f64,
+    pub mean_confidence: f64,
+}
+
+/// Longest run of voiced, confident frames whose pitch stays within
+/// `max_deviation_cents` of its running median, if at least `min_seconds` long.
+/// Breath attacks are skipped by the deviation rule; a note change ends the run.
+pub fn held_tone(
+    points: &[ContourPoint],
+    min_seconds: f64,
+    max_deviation_cents: f64,
+) -> Option<HeldTone> {
+    let mut best: Option<HeldTone> = None;
+    let mut run: Vec<&ContourPoint> = Vec::new();
+    let flush = |run: &mut Vec<&ContourPoint>, best: &mut Option<HeldTone>| {
+        if run.len() >= 2 {
+            let start = run[0].t;
+            let end = run[run.len() - 1].t;
+            if end - start >= min_seconds {
+                let mut hzs: Vec<f64> = run.iter().filter_map(|p| p.hz).collect();
+                hzs.sort_by(|a, b| a.partial_cmp(b).unwrap());
+                let median = hzs[hzs.len() / 2];
+                let var = hzs
+                    .iter()
+                    .map(|h| (1200.0 * (h / median).log2()).powi(2))
+                    .sum::<f64>()
+                    / hzs.len() as f64;
+                let tone = HeldTone {
+                    start,
+                    end,
+                    median_hz: median,
+                    stability_cents: var.sqrt(),
+                    mean_confidence: run.iter().map(|p| p.confidence).sum::<f64>()
+                        / run.len() as f64,
+                };
+                if best.is_none_or(|b| tone.end - tone.start > b.end - b.start) {
+                    *best = Some(tone);
+                }
+            }
+        }
+        run.clear();
+    };
+    for p in points {
+        let Some(hz) = p.hz.filter(|_| p.confidence >= 0.7) else {
+            flush(&mut run, &mut best);
+            continue;
+        };
+        if !run.is_empty() {
+            // Median of the run so far (cheap: runs are short lists of frames).
+            let mut hzs: Vec<f64> = run.iter().filter_map(|q| q.hz).collect();
+            hzs.sort_by(|a, b| a.partial_cmp(b).unwrap());
+            let med = hzs[hzs.len() / 2];
+            if (1200.0 * (hz / med).log2()).abs() > max_deviation_cents {
+                flush(&mut run, &mut best);
+            }
+        }
+        run.push(p);
+    }
+    flush(&mut run, &mut best);
+    best
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn held_tone_picks_the_longest_stable_run_and_reports_stability() {
+        let sr = 48_000u32;
+        // 0.4 s of A4, 0.1 s silence, 2 s of D5 with slight vibrato, then a jump to E5.
+        let mut samples = Vec::new();
+        samples.extend(AudioBuffer::sine(sr, 440.0, 0.4, 0.5).samples);
+        samples.extend(vec![0.0f32; sr as usize / 10]);
+        let n = sr as usize * 2;
+        let mut phase = 0.0f64;
+        for i in 0..n {
+            let t = i as f64 / sr as f64;
+            let hz = 587.33 * 2f64.powf(0.08 / 12.0 * (std::f64::consts::TAU * 5.0 * t).sin());
+            phase += std::f64::consts::TAU * hz / sr as f64;
+            samples.push((0.5 * phase.sin()) as f32);
+        }
+        samples.extend(AudioBuffer::sine(sr, 659.26, 0.5, 0.5).samples);
+        let buf = AudioBuffer::new(sr, 1, samples);
+        let c = contour(&buf, &PitchConfig::new(sr), 0.01);
+        let tone = held_tone(&c, 1.5, 50.0).expect("a held tone");
+        assert!(
+            (1200.0 * (tone.median_hz / 587.33).log2()).abs() < 5.0,
+            "{tone:?}"
+        );
+        assert!(tone.start > 0.4 && tone.start < 0.7, "{tone:?}");
+        assert!(tone.end > 2.3 && tone.end < 2.65, "{tone:?}");
+        assert!(
+            tone.stability_cents > 2.0 && tone.stability_cents < 12.0,
+            "{tone:?}"
+        );
+        assert!(tone.mean_confidence > 0.9);
+        // Nothing long enough: a 0.4 s tone alone.
+        let short = contour(
+            &AudioBuffer::sine(sr, 440.0, 0.4, 0.5),
+            &PitchConfig::new(sr),
+            0.01,
+        );
+        assert!(held_tone(&short, 1.5, 50.0).is_none());
+    }
 
     fn cfg(sr: u32) -> PitchConfig {
         PitchConfig {
