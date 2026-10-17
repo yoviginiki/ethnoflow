@@ -213,6 +213,8 @@ export function Ambient() {
   const loadPreset = async (p: PresetSummary) => {
     try {
       const r = await api.ambientPresetLoad(p.id);
+      // Factory layers are named in English in the catalogue: show them in the UI language.
+      if (p.factory) r.layers = r.layers.map((l) => ({ ...l, name: t.layerNames[l.name] ?? l.name }));
       snapshot(`${t.historyBeforePreset} ${presetName(p)}`);
       commit(r);
       setSelected(null);
@@ -548,7 +550,7 @@ export function Ambient() {
                       {l.name}
                     </button>
                   )}
-                  <span className="muted small">{t[KIND_LABEL[l.source.kind]]}</span>
+                  {t[KIND_LABEL[l.source.kind]] !== l.name && <span className="muted small">{t[KIND_LABEL[l.source.kind]]}</span>}
                   <div className="strip-fader" onClick={(e) => e.stopPropagation()}>
                     <div className="vmeter" aria-hidden="true">
                       <div className={`vmeter-fill ${peakDb > -3 ? "hot" : peakDb > -12 ? "warm" : ""}`} style={{ height: `${meterFraction(peakDb) * 100}%` }} />

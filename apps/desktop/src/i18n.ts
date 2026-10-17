@@ -759,6 +759,8 @@ const bg = {
   minimizePanel: "Свий панела",
   metronome: "Метроном",
   viewLabel: "Изглед",
+  /** Factory preset layer names → Bulgarian (English stays in the EN catalogue). */
+  layerNames: { Wind: "Вятър", Mist: "Мъгла", Texture: "Текстура", Bells: "Камбани", Strings: "Струни", Leaves: "Листа", Breeze: "Полъх", Warmth: "Топлина", Water: "Вода", Current: "Течение", Eddies: "Въртопи", Stones: "Камъни", Deep: "Дълбина", Fog: "Мъгла", Ground: "Основа", Air: "Въздух", Embers: "Жарава", Crackle: "Пукот", Glass: "Стъкло", Drops: "Капки", Shimmer: "Трептене", Flow: "Поток", Floor: "Под", Depth: "Дълбочина", Draught: "Течение", Drips: "Капки", Stone: "Камък" } as Record<string, string>,
   viewSliders: "плъзгачи",
   viewKnobs: "копчета",
   areaRhythm: "Ритъм секция",
@@ -1563,6 +1565,7 @@ const en: typeof bg = {
   minimizePanel: "Collapse panel",
   metronome: "Metronome",
   viewLabel: "View",
+  layerNames: { Wind: "Wind", Mist: "Mist", Texture: "Texture", Bells: "Bells", Strings: "Strings", Leaves: "Leaves", Breeze: "Breeze", Warmth: "Warmth", Water: "Water", Current: "Current", Eddies: "Eddies", Stones: "Stones", Deep: "Deep", Fog: "Fog", Ground: "Ground", Air: "Air", Embers: "Embers", Crackle: "Crackle", Glass: "Glass", Drops: "Drops", Shimmer: "Shimmer", Flow: "Flow", Floor: "Floor", Depth: "Depth", Draught: "Draught", Drips: "Drips", Stone: "Stone" } as Record<string, string>,
   viewSliders: "sliders",
   viewKnobs: "knobs",
   areaRhythm: "Rhythm section",
