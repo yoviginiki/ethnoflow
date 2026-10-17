@@ -4,6 +4,7 @@ import { BackgroundTransport } from "./BackgroundTransport";
 import { Compose } from "./Compose";
 import { Home } from "./Home";
 import { useBackgroundLayers } from "./layers";
+import { ProjectMenu } from "./ProjectMenu";
 import { ProjectPicker } from "./ProjectPicker";
 import { RhythmScreen } from "./RhythmScreen";
 import { Studio } from "./Studio";
@@ -57,13 +58,16 @@ export default function App() {
             </div>
           </div>
         </div>
-        <label className="inline">
-          {t.language}
-          <select value={lang} onChange={(e) => setPref("lang", e.target.value as Lang)}>
-            <option value="bg">BG</option>
-            <option value="en">EN</option>
-          </select>
-        </label>
+        <div className="topbar-right">
+          <ProjectMenu />
+          <label className="inline">
+            {t.language}
+            <select value={lang} onChange={(e) => setPref("lang", e.target.value as Lang)}>
+              <option value="bg">BG</option>
+              <option value="en">EN</option>
+            </select>
+          </label>
+        </div>
       </header>
 
       {screen === "home" && <Home />}

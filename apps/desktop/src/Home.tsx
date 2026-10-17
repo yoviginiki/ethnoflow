@@ -1,4 +1,5 @@
 import { messages, type StringMessageKey } from "./i18n";
+import { ProjectPicker } from "./ProjectPicker";
 import { useStore, type Screen } from "./store";
 
 interface Area {
@@ -28,7 +29,21 @@ const AREAS: Area[] = [
 export function Home() {
   const t = messages[useStore((s) => s.prefs.lang)];
   const setScreen = useStore((s) => s.setScreen);
+  const project = useStore((s) => s.project);
   return (
+    <>
+      {project ? (
+        <div className="home-project">
+          📁 <strong>{project.name}</strong>
+          <span className="muted small path">{project.root}</span>
+          <span className="muted small">{t.switchProjectHint}</span>
+        </div>
+      ) : (
+        <>
+          <h2>{t.pickProjectFirst}</h2>
+          <ProjectPicker />
+        </>
+      )}
     <nav className="home-grid" aria-label={t.appTitle}>
       {AREAS.map((a) =>
         a.phase === null ? (
@@ -47,5 +62,6 @@ export function Home() {
         ),
       )}
     </nav>
+    </>
   );
 }

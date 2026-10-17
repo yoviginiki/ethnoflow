@@ -413,3 +413,13 @@ button.small { font-size: 12px; padding: 3px 7px; }
 /* Sample drop zone (Atmosphere) */
 .dropzone { border: 1px dashed var(--axis); border-radius: 8px; padding: 8px; margin: 8px 0; display: flex; flex-direction: column; gap: 6px; }
 .dropzone.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
+
+/* Project menu (top bar) */
+.project-menu { position: relative; }
+.project-menu-btn { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.project-menu-pop { position: absolute; right: 0; top: calc(100% + 4px); z-index: 50; min-width: 300px; max-width: 420px; display: flex; flex-direction: column; gap: 4px; padding: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.35); }
+.project-menu-pop button { text-align: left; justify-content: flex-start; }
+.project-menu-sep { border-top: 1px solid var(--axis); margin: 4px 0; }
+.project-menu-new { display: flex; gap: 6px; }
+.project-menu-new input { flex: 1; }
+.home-project { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; margin: 0 0 12px; }
