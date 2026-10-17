@@ -4,6 +4,7 @@ import { api, describeError, IMPORT_EXTENSIONS, type Note, type NoteClass, type 
 import { HarmonyPanel, useHarmonyFollow, useHarmonyProposals } from "./HarmonyPanel";
 import { IntentPanel, usePerformanceAnalysis } from "./IntentPanel";
 import { AnalysisPanel } from "./AnalysisPanel";
+import { BackgroundTransport } from "./BackgroundTransport";
 import { DronePanel } from "./DronePanel";
 import { FallingNotes } from "./FallingNotes";
 import { InstrumentPanel } from "./InstrumentPanel";
@@ -934,6 +935,9 @@ export function Studio() {
               <input type="checkbox" checked={s.prefs.loop} onChange={(e) => s.setPref("loop", e.target.checked)} />
               {t.loop}
             </label>
+            <span className="bg-inline">
+              <BackgroundTransport compact />
+            </span>
             {barSeconds && (
               <label className="inline">
                 <input type="checkbox" checked={s.prefs.snapBar} onChange={(e) => s.setPref("snapBar", e.target.checked)} />

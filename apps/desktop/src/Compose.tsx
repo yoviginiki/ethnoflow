@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { api, describeError, SCALE_KINDS, type Scale, type ScaleKind } from "./api";
+import { BackgroundTransport } from "./BackgroundTransport";
 import { scaleFromKind } from "./AnalysisPanel";
 import { DRONE_PRESETS, DronePanel } from "./DronePanel";
 import { messages, type StringMessageKey } from "./i18n";
@@ -149,18 +150,20 @@ export function Compose() {
         </div>
       </section>
 
-      <section className="panel analysis-row">
-        <label className="inline">
-          {t.backgroundLevel}
-          <input type="range" min={-40} max={6} step={1} value={s.prefs.masterDb ?? 0} onChange={(e) => s.setPref("masterDb", Number(e.target.value))} />
-          <span className="mono-num">{(s.prefs.masterDb ?? 0) > 0 ? "+" : ""}{s.prefs.masterDb ?? 0} dB</span>
-        </label>
+      <section className="panel">
+        <h3>{t.backgroundTransport}</h3>
+        <div className="analysis-row">
+          <BackgroundTransport />
+        </div>
         <span className="muted small">{t.backgroundLevelHint}</span>
       </section>
 
       <section className="panel analysis-row">
         <button className="ghost" onClick={() => s.setScreen("play")}>
           {t.toStudio}
+        </button>
+        <button className="ghost" onClick={() => s.setScreen("studio")}>
+          {t.areaStudio}
         </button>
         <button className="primary" onClick={playAndRecord} disabled={busy || (!s.layers.drone && !s.layers.pad && (dronePrefs.rootMidi ?? scale) === null)}>
           {t.playAndRecord}

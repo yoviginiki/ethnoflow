@@ -1,3 +1,5 @@
+import { Arrange } from "./Arrange";
+import { BackgroundTransport } from "./BackgroundTransport";
 import { Compose } from "./Compose";
 import { Home } from "./Home";
 import { useBackgroundLayers } from "./layers";
@@ -14,8 +16,6 @@ export default function App() {
   const project = useStore((s) => s.project);
   const mode = useStore((s) => s.mode);
   const layers = useStore((s) => s.layers);
-  const masterDb = useStore((s) => s.prefs.masterDb ?? 0);
-  const setLayer = useStore((s) => s.setLayer);
   const t = messages[lang];
   useBackgroundLayers();
 
@@ -50,33 +50,18 @@ export default function App() {
       {screen === "home" && <Home />}
       {screen === "play" && (project ? <Studio /> : <ProjectPicker />)}
       {screen === "compose" && (project ? <Compose /> : <ProjectPicker />)}
+      {screen === "studio" && (project ? <Arrange /> : <ProjectPicker />)}
       {(layers.drone || layers.pad) && (
         <div className="layers-badge small" role="status">
-          <label className="inline">
-            <input type="checkbox" checked={layers.drone} onChange={(e) => setLayer("drone", e.target.checked)} />
-            {t.drone}
-          </label>
-          <label className="inline">
-            <input type="checkbox" checked={layers.pad} onChange={(e) => setLayer("pad", e.target.checked)} />
-            {t.pad}
-          </label>
-          <label className="inline" title={t.backgroundLevel}>
-            🔊
-            <input type="range" min={-40} max={6} step={1} value={masterDb} onChange={(e) => setPref("masterDb", Number(e.target.value))} style={{ width: 90 }} />
-            <span className="mono-num">{masterDb > 0 ? "+" : ""}{masterDb} dB</span>
-          </label>
-          <button className="ghost small" onClick={() => setScreen(screen === "compose" ? "play" : "compose")}>
+          <BackgroundTransport compact />
+          <button className="ghost small" disabled={mode !== "idle"} onClick={() => setScreen(screen === "compose" ? "play" : "compose")}>
             {screen === "compose" ? t.toStudio : t.areaAccomp}
           </button>
-          <button
-            className="ghost small"
-            onClick={() => {
-              setLayer("drone", false);
-              setLayer("pad", false);
-            }}
-          >
-            {t.stopLayers}
-          </button>
+          {screen !== "studio" && (
+            <button className="ghost small" disabled={mode !== "idle"} onClick={() => setScreen("studio")}>
+              {t.areaStudio}
+            </button>
+          )}
         </div>
       )}
     </div>

@@ -723,6 +723,55 @@ export function isCmdError(e: unknown): e is CmdError {
   return typeof e === "object" && e !== null && "code" in e && "message" in e;
 }
 
+// ---------- arrangement (F5.1) ----------
+
+export interface Clip {
+  id: string;
+  take_id: string;
+  /** Timeline position of the clip's first sample, seconds. */
+  start: number;
+  /** Seconds into the take's (trimmed) audio where the clip begins. */
+  offset: number;
+  length: number;
+  gain_db: number;
+  fade_in: number;
+  fade_out: number;
+  mute: boolean;
+}
+
+export interface Track {
+  id: string;
+  name: string;
+  gain_db: number;
+  pan: number;
+  mute: boolean;
+  solo: boolean;
+  clips: Clip[];
+}
+
+export interface Arrangement {
+  schema_version: number;
+  tracks: Track[];
+  loop_region: [number, number] | null;
+}
+
+export interface ArrangementView {
+  arrangement: Arrangement;
+  duration_seconds: number;
+}
+
+export interface ArrangeStatus {
+  playing: boolean;
+  position_seconds: number;
+  duration_seconds: number;
+  finished: boolean;
+  sample_rate: number;
+  layer_peak: number;
+  master_peak: number;
+  limiter_gain: number;
+  stream_errors: number;
+}
+
 export function describeError(e: unknown): string {
   if (isCmdError(e)) return `${e.code}: ${e.message}`;
   if (e instanceof Error) return e.message;
@@ -830,4 +879,16 @@ export const api = {
     invoke<void>("set_playback_loop", { loopSeconds }),
   setPlaybackClick: (on: boolean) => invoke<void>("set_playback_click", { on }),
   stopPlayback: () => invoke<void>("stop_playback"),
+
+  arrangementGet: () => invoke<ArrangementView>("arrangement_get"),
+  setArrangement: (arrangement: Arrangement) => invoke<ArrangementView>("set_arrangement", { arrangement }),
+  arrangementPlay: (device: string | null, fromSeconds: number | null) =>
+    invoke<ArrangeStatus>("arrangement_play", { device, fromSeconds }),
+  arrangementPause: () => invoke<ArrangeStatus | null>("arrangement_pause"),
+  arrangementSeek: (seconds: number) => invoke<ArrangeStatus | null>("arrangement_seek", { seconds }),
+  arrangementRelease: () => invoke<void>("arrangement_release"),
+  arrangementStatus: () => invoke<ArrangeStatus | null>("arrangement_status"),
+  takePeaks: (takeId: string, bins: number) => invoke<WaveformPeaks>("take_peaks", { takeId, bins }),
+  exportArrangementMix: (path: string, format: WavFormat | null, sampleRate: number | null) =>
+    invoke<ExportResult>("export_arrangement_mix", { path, format, sampleRate }),
 };

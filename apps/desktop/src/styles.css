@@ -292,3 +292,30 @@ button.small { font-size: 12px; padding: 3px 7px; }
 .score-bars { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; }
 .score-bar { display: grid; grid-template-columns: 6em 1fr; align-items: center; gap: 6px; }
 .score-bar .meter { height: 6px; }
+
+/* My studio: tracks and clips (F5.1) */
+.arrange { display: flex; flex-direction: column; gap: 10px; flex: 1; min-height: 0; }
+.arrange-title { margin: 0 8px 0 0; }
+.arrange-body { display: grid; grid-template-columns: 250px 1fr; gap: 0; flex: 1; min-height: 240px; border: 1px solid var(--axis); border-radius: 8px; overflow: hidden; background: var(--panel); }
+.track-heads { display: flex; flex-direction: column; border-right: 1px solid var(--axis); overflow-y: auto; }
+.ruler-spacer { height: 26px; padding: 5px 8px; border-bottom: 1px solid var(--axis); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.track-head { height: 76px; padding: 6px 8px; border-bottom: 1px solid var(--axis); border-left: 4px solid transparent; display: flex; flex-direction: column; gap: 4px; }
+.track-head.selected { background: rgba(127, 214, 194, 0.07); }
+.track-head.add { border-left-color: transparent; justify-content: center; align-items: flex-start; }
+.track-name { text-align: left; padding: 2px 4px; font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.track-ctl { display: flex; gap: 4px; align-items: center; }
+.track-ctl input[type="range"] { width: 80px; margin: 0; }
+.track-ctl button.on { background: var(--accent); color: #111; border-color: var(--accent); }
+.timeline-wrap { position: relative; overflow-y: auto; overflow-x: hidden; min-height: 0; }
+.timeline { width: 100%; display: block; cursor: crosshair; touch-action: none; }
+.arrange-bottom { display: grid; grid-template-columns: minmax(200px, 1fr) minmax(260px, 2fr) minmax(220px, 1fr); gap: 10px; }
+.takes-palette ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; max-height: 180px; overflow-y: auto; }
+.takes-palette li { display: flex; gap: 8px; align-items: center; }
+.takes-palette .take-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.arrange-side { gap: 8px; }
+.bg-transport { display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.bg-inline { display: inline-flex; align-items: center; padding-left: 8px; border-left: 1px solid var(--axis); }
+@media (max-width: 900px) {
+  .arrange-bottom { grid-template-columns: 1fr; }
+  .arrange-body { grid-template-columns: 180px 1fr; }
+}

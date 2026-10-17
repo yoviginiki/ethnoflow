@@ -1,4 +1,5 @@
 mod analysis_cmds;
+mod arrangement_cmds;
 mod commands;
 mod graph_cmds;
 mod harmony_cmds;
@@ -111,6 +112,15 @@ pub fn run() {
             intent_cmds::intent_annotations,
             harmony_cmds::harmony_proposals,
             harmony_cmds::export_harmony_midi,
+            arrangement_cmds::arrangement_get,
+            arrangement_cmds::set_arrangement,
+            arrangement_cmds::arrangement_play,
+            arrangement_cmds::arrangement_pause,
+            arrangement_cmds::arrangement_seek,
+            arrangement_cmds::arrangement_release,
+            arrangement_cmds::arrangement_status,
+            arrangement_cmds::take_peaks,
+            arrangement_cmds::export_arrangement_mix,
         ])
         .build(tauri::generate_context!())
         .expect("error while building EthnoFlow Studio")

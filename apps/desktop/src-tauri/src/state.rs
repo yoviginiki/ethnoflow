@@ -87,6 +87,12 @@ pub struct Inner {
     /// Master level of the background graph in dB (user setting), if set.
     pub master_db: Option<f32>,
     pub loaded: Option<LoadedTake>,
+    /// The project's arrangement (F5.1), loaded on first use.
+    pub arrangement: Option<project::Arrangement>,
+    /// Transport and track params of the clip source in graph slot 2 while it is on.
+    pub clips: Option<Arc<audio_engine::ClipsParams>>,
+    /// Takes' playable audio for clips (mono, at the stream rate), by take/trim/rate.
+    pub clip_cache: HashMap<String, Arc<AudioBuffer>>,
 }
 
 impl Inner {
@@ -137,6 +143,7 @@ impl Inner {
         self.drone_settings = None;
         self.pad = None;
         self.pad_settings = None;
+        self.clips = None;
     }
 }
 

@@ -9,15 +9,15 @@ interface Area {
   screen?: Screen;
 }
 
-// Master plan §9. "Play & record" (Phase 1) and the accompanist's Compose First
-// (Phase 3) exist; the rest are shown as planned, disabled — never as buttons that
-// pretend to do something.
+// Master plan §9. "Play & record" (Phase 1), the accompanist's Compose First
+// (Phase 3) and "My studio" (tracks, F5.1) exist; the rest are shown as planned,
+// disabled — never as buttons that pretend to do something.
 const AREAS: Area[] = [
   { title: "areaPlay", desc: "areaPlayDesc", phase: null, screen: "play" },
   { title: "areaAccomp", desc: "areaAccompDesc", phase: null, screen: "compose" },
   { title: "areaLearn", desc: "areaLearnDesc", phase: 6 },
   { title: "areaCreate", desc: "areaCreateDesc", phase: 5 },
-  { title: "areaStudio", desc: "areaStudioDesc", phase: 5 },
+  { title: "areaStudio", desc: "areaStudioDesc", phase: null, screen: "studio" },
   { title: "areaSamples", desc: "areaSamplesDesc", phase: 5 },
   { title: "areaHelp", desc: "areaHelpDesc", phase: 6 },
 ];

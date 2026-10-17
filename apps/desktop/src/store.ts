@@ -30,7 +30,7 @@ import type {
 import type { Lang } from "./i18n";
 
 export type Mode = "idle" | "recording" | "playing";
-export type Screen = "home" | "play" | "compose";
+export type Screen = "home" | "play" | "compose" | "studio";
 
 export interface Prefs {
   lang: Lang;
@@ -269,6 +269,9 @@ interface Store {
   /** Background layers on the audio graph (F3.2/F3.3); run by `useBackgroundLayers`. */
   layers: { drone: boolean; pad: boolean };
   setLayer: (name: "drone" | "pad", on: boolean) => void;
+  /** Which layers were on before "Stop background", so "Play background" brings them back. */
+  lastLayers: { drone: boolean; pad: boolean };
+  setLastLayers: (l: { drone: boolean; pad: boolean }) => void;
   droneStatus: DroneStatus | null;
   setDroneStatus: (s: DroneStatus | null) => void;
   padStatus: PadStatus | null;
@@ -310,6 +313,8 @@ export const useStore = create<Store>((set, get) => ({
 
   layers: { drone: false, pad: false },
   setLayer: (name, on) => set({ layers: { ...get().layers, [name]: on } }),
+  lastLayers: { drone: true, pad: false },
+  setLastLayers: (lastLayers) => set({ lastLayers }),
   droneStatus: null,
   setDroneStatus: (droneStatus) => set({ droneStatus }),
   padStatus: null,
