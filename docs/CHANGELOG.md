@@ -52,6 +52,24 @@
 - **F1.4.4 MIDI input** (0.2.6, ADR-0020 midir): choose a MIDI port in the device row;
   notes go to the live synth through a 2 ms forwarding thread and light the on-screen
   keys; the trainer takes a held MIDI key instead of the microphone when a port is open.
+- **F1.6 audio graph** (0.2.7): `audio_engine::graph` — 16 pre-allocated layer slots
+  with a `Source` trait, smoothed gain/pan/low-pass/high-pass (10 ms linear ramps,
+  kept linear across blocks), constant-power pan, mute/solo, master gain and a
+  look-ahead-free peak limiter (ceiling −0.3 dBFS), per-layer and master meters via
+  atomics, `render_offline` on the same code path. `GraphPlayer` puts the graph on an
+  output stream; sources are swapped through a lock-free ring and freed off the audio
+  thread. Tests: sum/mute/solo/pan, no sample jumps on a gain ramp, NaN-free and
+  deterministic offline render, limiter ceiling, and one hour of chunked rendering
+  with the exact sample count and sine phase (f64 phase accumulator in `SineSource`).
+- **F3.2 drone** (0.2.7): `DroneSource` — root/fifth/octave/sub voices of three
+  detuned oscillators each, warmth (harmonics), movement (slow filter LFO), breath
+  (slow swell), 100 ms root glide. The root is any frequency; the desktop "Drone"
+  panel intonates it to the project's instrument profile (root and fifth take the
+  measured cents of those notes) or to equal temperament at the project A4, and says
+  which one it actually used. Root suggestion: scale tonic, else lowest calibrated
+  note, else the user chooses (no built-in key). Presets Traditional / Deep Ethno /
+  Cinematic; parameter changes never restart the stream. Not yet: "Liquid Resonator"
+  (spectral freeze over a monochord), stereo motion, reverb ("space").
 
 ### Measurements (owner's laptop, release build, YIN hop 10 ms, window 1024)
 | material | pitch time | voiced | f0 p05 / median / p95 | confidence p10 / median | octave-sized jumps |

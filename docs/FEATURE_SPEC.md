@@ -44,7 +44,7 @@ Assisted / Creative“ в Trainer-а и в хармоничния екран; п
 | F1.3 | **частично** | `metronome.rs` (sample-accurate, групи 2+2+3…), count-in, loop и клик в `player.rs`. Няма общ `Transport`, tap tempo, punch-in. |
 | F1.4 | **частично** | sample rate/канали, noise floor, тест тон, device_lost → чисто спиране, **MIDI вход** (`midi_in.rs`, ADR-0020): порт, note on/off към живия синтезатор (~2 ms), клавиши, Trainer. Remaining: latency calibration (loopback), hot-plug relist. |
 | F1.5 | **частично** | symphonia (ADR-0017), trim in/out в проекта. Remaining: fade in/out. |
-| F1.6 | **не е започнато** | аудио граф с параметри и smoothing; offline render; метри. Следващото нещо (основа на Phase 3 и 1A). |
+| F1.6 | **готово (ядро)** (0.2.7) | `audio-engine/src/graph/{mod,params,limiter,player}.rs`: 16 слота, smoothing 10 ms, LP/HP, pan, mute/solo, master + limiter −0.3 dBFS, метри, `render_offline`, `GraphPlayer` (lock-free смяна на източници). Тестове: 1 час рендер без дрейф, без клик при рампа. Remaining: reverb/send, stereo width, latency/buffer size избор, UI за граф като цяло (идва с Phase 1A). |
 | F1A.1–F1A.8 | **не е започнато** | Ambient Playground; след Phase 3 по решение на собственика. F1A.8 (лицензи) може да върви по-рано, защото не зависи от код. |
 | F2.1 | **готово** | `crates/music-core`: pitch/note, 13 лада вкл. хиджаз и двоен хармоничен, custom cents, хипотези, NoteEvent + tempo map, SMF reader/writer, интервали, акорди, транспониране, квантизация. Имената на нотите са в UI i18n. |
 | F2.2 | **готово** | YIN в `audio-engine/src/pitch.rs`: live (`RecorderStatus`, `InputMonitor`), офлайн `contour`, ноти в `music-core/src/notes.rs`. Числа: `docs/BENCHMARKS.md`. Remaining: spectral-flux onset (сега RMS скок), измерена live latency. |
@@ -58,7 +58,8 @@ Assisted / Creative“ в Trainer-а и в хармоничния екран; п
 | F2.10 | **не е започнато** | tonal/modal tracker във времето с хистерезис и locks. Офлайн основата (`rank_hypotheses`) съществува. |
 | F2.11 | **не е започнато** | класификатор stable/ornament/transition/noise/probable_error, IntentEstimate, режими Stable/Assisted/Creative + **превключвател изкл./вкл. с видима значка**, маркиране от потребителя, benchmark набор. Ред: след F1.6, преди F3.4 (F3.4 консумира IntentEstimate). |
 | F3.1 | **частично** | `rank_hypotheses` (проценти, 13 лада) е готово и в UI. Remaining: обяснение („Ре се задържа 38 %…“), 10 фикстури с известен лад. |
-| F3.2–F3.6 | **не е започнато** | drone, pad, стратегии, Compose First, контроли. Приоритет след F1.6. |
+| F3.2 | **частично** (0.2.7) | `graph/sources/drone.rs` + панел „Дрон": root/квинта/октава/суб, warmth/movement/breath, detune, 3 пресета, интонация по профила (root и квинта по измерените центове) или темперирана, индикатор коя е ползвана, метър. Remaining: „Liquid Resonator" върху монохорд, stereo motion, space (reverb), тест „10 минути под реален кавал take" — чака Ники. |
+| F3.3–F3.6 | **не е започнато** | pad + X/Y, стратегии, Compose First, контроли. Следващо: F3.1 обяснения, F3.3. |
 | F4–F9 | **не са започнати** | |
 
 Липсващ документ: `ACADEMY_INSPIRATION.md` още не е в репото.
