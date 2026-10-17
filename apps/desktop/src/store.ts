@@ -8,8 +8,10 @@ import type {
   DeviceInfo,
   DroneStatus,
   Emotion,
+  IntentSettings,
   Intonation,
   PadStatus,
+  PerformanceAnalysis,
   LoadedTakeInfo,
   MidiEvent,
   MidiTakeView,
@@ -50,7 +52,17 @@ export interface Prefs {
   drone: DronePrefs;
   /** Pad settings (F3.3). */
   pad: PadPrefs;
+  /** Error-tolerant performance intelligence (F2.11): switch, mode, sliders, locks. */
+  intent: IntentSettings;
 }
+
+export const DEFAULT_INTENT: IntentSettings = {
+  enabled: true,
+  mode: "assisted",
+  tolerance: 0.5,
+  sensitivity: 0.5,
+  locks: { tonic: false, mode: false, chord: false, drone: false },
+};
 
 export type Voicing = "fifth" | "sus2" | "sus4" | "fifth9" | "scale_triad" | "scale_7th";
 export const VOICINGS: Voicing[] = ["fifth", "sus2", "sus4", "fifth9", "scale_triad", "scale_7th"];
@@ -129,6 +141,7 @@ export const DEFAULT_PREFS: Prefs = {
   midiInput: null,
   drone: DEFAULT_DRONE,
   pad: DEFAULT_PAD,
+  intent: DEFAULT_INTENT,
 };
 
 function loadPrefs(): Prefs {
@@ -237,6 +250,9 @@ interface Store {
   /** Compose First asked for a recording: the studio starts it on arrival. */
   pendingRecord: boolean;
   setPendingRecord: (p: boolean) => void;
+  /** F2.11 analysis of the loaded take's notes under the current intent settings. */
+  performance: PerformanceAnalysis | null;
+  setPerformance: (p: PerformanceAnalysis | null) => void;
 
   message: string | null;
   error: string | null;
@@ -263,6 +279,8 @@ export const useStore = create<Store>((set, get) => ({
   setPadStatus: (padStatus) => set({ padStatus }),
   pendingRecord: false,
   setPendingRecord: (pendingRecord) => set({ pendingRecord }),
+  performance: null,
+  setPerformance: (performance) => set({ performance }),
 
   inputDevices: [],
   outputDevices: [],

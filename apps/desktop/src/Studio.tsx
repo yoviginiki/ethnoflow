@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { open, save } from "@tauri-apps/plugin-dialog";
-import { api, describeError, IMPORT_EXTENSIONS, type Note, type WavFormat } from "./api";
+import { api, describeError, IMPORT_EXTENSIONS, type Note, type NoteClass, type WavFormat } from "./api";
+import { IntentPanel, usePerformanceAnalysis } from "./IntentPanel";
 import { AnalysisPanel } from "./AnalysisPanel";
 import { DronePanel } from "./DronePanel";
 import { FallingNotes } from "./FallingNotes";
@@ -34,6 +35,14 @@ export function Studio() {
   const loadedTake = project.takes.find((tk) => tk.id === s.loaded?.id) ?? null;
   const modeRef = useRef(s.mode);
   modeRef.current = s.mode;
+  usePerformanceAnalysis();
+  const noteClasses = useMemo(() => {
+    const perf = s.performance;
+    if (!perf || !s.analysis) return undefined;
+    const out: (NoteClass | undefined)[] = new Array(s.analysis.notes.length).fill(undefined);
+    for (const c of perf.classes) out[c.index] = c.class;
+    return out;
+  }, [s.performance, s.analysis]);
 
   const fail = useCallback((e: unknown) => useStore.getState().setError(describeError(e)), []);
 
@@ -850,6 +859,7 @@ export function Studio() {
                     onKey={onPianoKey}
                     onDrag={onDragNote}
                     onAdd={onAddNote}
+                    classes={noteClasses}
                   />
                   <div className="muted small">
                     {t.pianoRollHint} {t.addNoteHint}
@@ -875,8 +885,10 @@ export function Studio() {
                     if (s.mode === "playing") void onPlay(sec);
                   }}
                   target={trainerTarget}
+                  classes={noteClasses}
                 />
               )}
+              <IntentPanel />
               <TrainerPanel
                 notes={s.analysis.notes}
                 hz={s.monitor?.pitch_hz ?? null}

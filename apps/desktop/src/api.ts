@@ -248,6 +248,116 @@ export interface PadStatus {
   stream_errors: number;
 }
 
+// ---------- error-tolerant performance intelligence (F2.9–F2.11) ----------
+
+export type NoteClass = "stable" | "ornament" | "transition" | "noise" | "probable_error";
+export const NOTE_CLASSES: NoteClass[] = ["stable", "ornament", "transition", "noise", "probable_error"];
+export type IntentMode = "off" | "stable" | "assisted" | "creative";
+export type Reason =
+  | "short"
+  | "held"
+  | "next_to_held_tone"
+  | "in_scale"
+  | "out_of_scale"
+  | "low_confidence"
+  | "slide"
+  | "repeats_next_phrase"
+  | "off_profile"
+  | "matches_expected"
+  | "differs_from_expected"
+  | "isolated"
+  | "user_marked"
+  | "literal_mode";
+
+export interface Locks {
+  tonic: boolean;
+  mode: boolean;
+  chord: boolean;
+  drone: boolean;
+}
+
+export interface IntentSettings {
+  enabled: boolean;
+  mode: IntentMode;
+  tolerance: number;
+  sensitivity: number;
+  locks: Locks;
+}
+
+export interface StableTone {
+  midi: number;
+  cents: number;
+  weight: number;
+}
+
+export interface Phrase {
+  start: number;
+  end: number;
+  notes: number[];
+  stable_tones: StableTone[];
+  shape: "rising" | "falling" | "arch" | "valley" | "flat";
+  breath_before: boolean;
+  cause: "start" | "gap" | "long_tone_drop" | "leap" | "end";
+  confidence: number;
+}
+
+export interface Classified {
+  index: number;
+  phrase: number;
+  class: NoteClass;
+  confidence: number;
+  cents_from_scale: number | null;
+  cents_from_profile: number | null;
+  expected_midi: number | null;
+  cents_from_expected: number | null;
+  sustained: boolean;
+  reasons: Reason[];
+}
+
+export interface IntentEstimate {
+  phrase: number;
+  tones: StableTone[];
+  confidence: number;
+  stable_notes: number;
+  ornaments: number;
+  transitions: number;
+  noise: number;
+  probable_errors: number;
+}
+
+export interface ChangeEvidence {
+  tonic_pc: number;
+  kind: ScaleKind;
+  probability: number;
+  consecutive_phrases: number;
+  held_by_lock: boolean;
+}
+
+export interface TonalContext {
+  phrase_index: number;
+  tonic_pc: number;
+  kind: ScaleKind;
+  confidence: number;
+  alternatives: { tonic_pc: number; kind: ScaleKind; score: number; probability: number }[];
+  locked: Locks;
+  evidence_for_change: ChangeEvidence | null;
+  switched: boolean;
+}
+
+export interface PerformanceAnalysis {
+  mode: IntentMode;
+  phrases: Phrase[];
+  classes: Classified[];
+  intents: IntentEstimate[];
+  contexts: TonalContext[];
+  switches: number;
+}
+
+export interface Annotation {
+  index: number;
+  class: NoteClass;
+}
+
 export interface ProfileDiagnosis {
   notes: number;
   mean_offset_cents: number;
@@ -588,6 +698,10 @@ export const api = {
   setPad: (settings: PadSettings) => invoke<PadStatus>("set_pad", { settings }),
   stopPad: () => invoke<void>("stop_pad"),
   padStatus: () => invoke<PadStatus | null>("pad_status"),
+  performanceAnalysis: (settings: IntentSettings) => invoke<PerformanceAnalysis | null>("performance_analysis", { settings }),
+  annotateNote: (settings: IntentSettings, index: number, cls: NoteClass | null) =>
+    invoke<PerformanceAnalysis | null>("annotate_note", { settings, index, class: cls }),
+  intentAnnotations: () => invoke<Annotation[]>("intent_annotations"),
   evaluatePerformance: (expected: Note[], played: Note[], level: Level, latencyMs: number) =>
     invoke<TrainerReport>("evaluate_performance", { expected, played, level, latencyMs }),
   listProfiles: () => invoke<ProfileSummary[]>("list_profiles"),

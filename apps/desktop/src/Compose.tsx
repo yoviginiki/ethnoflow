@@ -3,6 +3,7 @@ import { api, describeError, SCALE_KINDS, type Scale, type ScaleKind } from "./a
 import { scaleFromKind } from "./AnalysisPanel";
 import { DRONE_PRESETS, DronePanel } from "./DronePanel";
 import { messages, type StringMessageKey } from "./i18n";
+import { IntentBadge } from "./IntentPanel";
 import { PadPanel } from "./PadPanel";
 import { DEFAULT_DRONE, DEFAULT_PAD, useStore, type DronePrefs, type PadPrefs } from "./store";
 import { TimingPanel } from "./TimingPanel";
@@ -127,6 +128,11 @@ export function Compose() {
           )}
         </div>
         <div className="muted small">{t.styleHint}</div>
+      </section>
+
+      <section className="panel analysis-row">
+        <IntentBadge onOpen={() => s.setScreen("play")} />
+        <span className="muted small">{t.intentComposeHint}</span>
       </section>
 
       <DronePanel scale={scale} profile={project.instrument} />

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import type { ContourView, Note, Scale } from "./api";
-import { centsFromScale } from "./format";
+import type { ContourView, Note, NoteClass, Scale } from "./api";
+import { centsFromScale, classColor } from "./format";
 
 interface Props {
   notes: Note[];
@@ -17,6 +17,8 @@ interface Props {
   onKey: (e: React.KeyboardEvent<HTMLCanvasElement>) => void;
   /** A note was dragged: new start/end in seconds (pitch unchanged). */
   onDrag?: (index: number, start: number, end: number) => void;
+  /** F2.11 note classes, index-aligned with `notes` (colour); optional. */
+  classes?: (NoteClass | undefined)[];
   /** Alt+click on empty space: add a note at this time and pitch. */
   onAdd?: (start: number, midi: number) => void;
 }
@@ -34,7 +36,7 @@ const NEW_NOTE_S = 0.25;
  * notes as bars (shifted by their cents), lanes tinted when they belong to the
  * chosen scale. Editing is driven by the parent through `onKey`.
  */
-export function PianoRoll({ notes, contour, duration, cursor, playhead, selected, scale, noteNames, label, onSelect, onSeek, onKey, onDrag, onAdd }: Props) {
+export function PianoRoll({ notes, contour, duration, cursor, playhead, selected, scale, noteNames, label, onSelect, onSeek, onKey, onDrag, onAdd, classes }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const drag = useRef<{ index: number; mode: "move" | "resize"; startX: number; origStart: number; origEnd: number; moved: boolean } | null>(null);
@@ -123,14 +125,17 @@ export function PianoRoll({ notes, contour, duration, cursor, playhead, selected
         const wid = Math.max(2, toX(pv ? pv.end : n.end) - x);
         const y = toY(n.midi + n.cents / 100) + 1;
         const out = scale ? Math.abs(centsFromScale(scale, n.midi)) > 1 : false;
-        ctx.fillStyle = i === selected ? colHead : colWave;
-        ctx.globalAlpha = 0.35 + 0.65 * Math.min(1, n.confidence);
+        const cls = classes?.[i];
+        ctx.fillStyle = i === selected ? colHead : cls ? classColor(cls, colWave) : colWave;
+        ctx.globalAlpha = (0.35 + 0.65 * Math.min(1, n.confidence)) * (cls === "noise" ? 0.5 : 1);
         ctx.fillRect(x, y, wid, LANE_PX - 2);
         ctx.globalAlpha = 1;
-        if (out) {
+        if (out || cls === "probable_error") {
           ctx.strokeStyle = colOut;
           ctx.lineWidth = 1;
+          if (cls === "probable_error") ctx.setLineDash([3, 2]);
           ctx.strokeRect(x + 0.5, y + 0.5, wid - 1, LANE_PX - 3);
+          ctx.setLineDash([]);
         }
       });
 
@@ -156,7 +161,7 @@ export function PianoRoll({ notes, contour, duration, cursor, playhead, selected
     const ro = new ResizeObserver(draw);
     ro.observe(wrap);
     return () => ro.disconnect();
-  }, [notes, contour, duration, cursor, playhead, selected, scale, noteNames, height, hi, lo, preview]);
+  }, [notes, contour, duration, cursor, playhead, selected, scale, noteNames, height, hi, lo, preview, classes]);
 
   const locate = (e: React.PointerEvent<HTMLCanvasElement> | React.MouseEvent<HTMLCanvasElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();

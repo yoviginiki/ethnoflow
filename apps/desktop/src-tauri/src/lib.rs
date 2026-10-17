@@ -2,6 +2,7 @@ mod analysis_cmds;
 mod commands;
 mod graph_cmds;
 mod instrument_cmds;
+mod intent_cmds;
 mod midi_cmds;
 mod midi_in_cmds;
 mod pad_cmds;
@@ -103,6 +104,9 @@ pub fn run() {
             pad_cmds::stop_pad,
             pad_cmds::pad_status,
             pad_cmds::pad_emotions,
+            intent_cmds::performance_analysis,
+            intent_cmds::annotate_note,
+            intent_cmds::intent_annotations,
         ])
         .build(tauri::generate_context!())
         .expect("error while building EthnoFlow Studio")

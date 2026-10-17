@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
-import type { Note, Scale } from "./api";
-import { centsFromScale } from "./format";
+import type { Note, NoteClass, Scale } from "./api";
+import { centsFromScale, classColor } from "./format";
 
 interface Props {
   notes: Note[];
@@ -15,6 +15,8 @@ interface Props {
   onSeek?: (seconds: number) => void;
   /** Trainer: index of the note being waited for, drawn lit (red when wrong). */
   target?: { index: number; wrong: boolean } | null;
+  /** F2.11 note classes, index-aligned with `notes` (colour); optional. */
+  classes?: (NoteClass | undefined)[];
 }
 
 const KEYBOARD_PX = 56;
@@ -24,7 +26,7 @@ const BLACK = new Set([1, 3, 6, 8, 10]);
  * Synthesia/midiano-style view: notes fall towards a piano keyboard; a note reaches
  * the keys exactly at its start time. Keys light up while their note sounds.
  */
-export function FallingNotes({ notes, position, lookahead, scale, noteNames, showNames, label, onSeek, target }: Props) {
+export function FallingNotes({ notes, position, lookahead, scale, noteNames, showNames, label, onSeek, target, classes }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
 
@@ -84,7 +86,8 @@ export function FallingNotes({ notes, position, lookahead, scale, noteNames, sho
         const x = xOfMidi(n.midi);
         const wid = widthOfMidi(n.midi) - 2;
         const out = scale ? Math.abs(centsFromScale(scale, n.midi)) > 1 : false;
-        ctx.fillStyle = isTarget ? (target.wrong ? colOut : colHead) : out ? colOut : colWave;
+        const cls = classes?.[i];
+        ctx.fillStyle = isTarget ? (target.wrong ? colOut : colHead) : cls ? classColor(cls, out ? colOut : colWave) : out ? colOut : colWave;
         ctx.globalAlpha = n.start <= position || isTarget ? 1 : 0.75;
         ctx.beginPath();
         ctx.roundRect(x + 1, yTop, wid, yBot - yTop, 3);
@@ -134,7 +137,7 @@ export function FallingNotes({ notes, position, lookahead, scale, noteNames, sho
     const ro = new ResizeObserver(draw);
     ro.observe(wrap);
     return () => ro.disconnect();
-  }, [notes, position, lookahead, scale, noteNames, showNames, lo, hi, whites, target]);
+  }, [notes, position, lookahead, scale, noteNames, showNames, lo, hi, whites, target, classes]);
 
   const onClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!onSeek) return;

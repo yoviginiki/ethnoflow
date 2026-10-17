@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { api, describeError, LEVELS, type Level, type Note, type TrainerReport } from "./api";
 import { hzToMidi, noteParts } from "./format";
 import { messages } from "./i18n";
+import { IntentBadge } from "./IntentPanel";
 import { useStore } from "./store";
 
 type Mode = "listen" | "wait" | "rhythm";
@@ -187,7 +188,7 @@ export function TrainerPanel({ notes, hz, confidence, a4, notesPosition, onPlayN
   return (
     <details className="panel trainer" open>
       <summary>
-        {t.trainer} · {midiInputOn ? t.inputMidi : t.inputMic}
+        {t.trainer} · {midiInputOn ? t.inputMidi : t.inputMic} · <IntentBadge />
       </summary>
       <div className="analysis-row">
         {(["listen", "wait", "rhythm"] as Mode[]).map((m) => (

@@ -1,3 +1,4 @@
+import type { NoteClass } from "./api";
 // Pure display helpers (unit-tested; no Tauri dependency).
 
 export function formatTime(seconds: number): string {
@@ -110,4 +111,20 @@ export function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`;
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
   return `${(n / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+/** Colour of an F2.11 note class in the note views; stable keeps the normal colour. */
+export function classColor(cls: NoteClass, normal: string): string {
+  switch (cls) {
+    case "stable":
+      return normal;
+    case "ornament":
+      return "#c9a7ff";
+    case "transition":
+      return "#8fb8ff";
+    case "noise":
+      return "#777";
+    case "probable_error":
+      return "#ff8c6b";
+  }
 }
