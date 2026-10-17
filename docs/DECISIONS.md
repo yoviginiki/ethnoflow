@@ -168,6 +168,18 @@ Consequences: malformed files are errors, not panics (midly is lenient by defaul
 we treat decode errors as import failures). Supply chain: crates.io, pinned in
 Cargo.lock, a single small crate with no dependencies in this configuration.
 
+## ADR-0020 midir 0.11 for MIDI input (MIT)
+
+Context: FEATURE_SPEC F1.4.4 / F2.7.3 — a MIDI keyboard plays the live synth and feeds
+the trainer. Web MIDI inside the WebView would tie us to the browser and add latency.
+Decision: `midir` 0.11.1 (MIT): WinMM on Windows (default features, no WinRT), CoreMIDI
+on macOS, ALSA on Linux. The port callback runs on a system thread and only pushes
+parsed note events into a lock-free ring; a small forwarding thread in the desktop
+shell drains it every ~2 ms into the live synth's command ring and into a second ring
+the UI polls (keyboard lights, trainer). No MIDI *output* yet. Hot-plug: the port list
+is re-read on demand; a vanished port surfaces as a stream error, not a panic.
+Supply chain: crates.io, pinned; small, maintained, widely used (Bevy, nih-plug).
+
 ## ADR-0018 (proposed) CLAP as the internal instrument ABI; instruments in Rust or C++
 
 Status: **Proposed, not accepted.** No code, crate or dependency until the owner

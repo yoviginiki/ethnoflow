@@ -15,6 +15,7 @@ pub mod devices;
 pub mod error;
 pub mod live_synth;
 pub mod metronome;
+pub mod midi_in;
 pub mod monitor;
 pub mod peaks;
 pub mod pitch;
@@ -36,6 +37,10 @@ pub use error::{AudioError, Result};
 pub use live_synth::{Cmd as SynthCmd, LiveEngine, LiveSynth, LiveSynthStatus};
 pub use metronome::{
     mix_click, ClickConfig, ClickKind, ClickSynth, GridPosition, Metronome, MetronomeStatus,
+};
+pub use midi_in::{
+    list_inputs as list_midi_inputs, parse_message as parse_midi_message, MidiEvent, MidiIn,
+    MidiPortInfo,
 };
 pub use monitor::{InputMonitor, MonitorStatus};
 pub use peaks::{compute_peaks, LivePeaks, WaveformPeaks};
