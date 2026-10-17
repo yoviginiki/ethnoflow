@@ -37,8 +37,8 @@ pub use devices::{
 pub use error::{AudioError, Result};
 pub use graph::player::{GraphCmd, GraphPlayer, GraphStatus};
 pub use graph::sources::{
-    root_hz as drone_root_hz, DroneParams, DroneSource, Emotion, PadMacro, PadParams, PadSource,
-    PAD_VOICES,
+    root_hz as drone_root_hz, ClipData, ClipSource, ClipsParams, DroneParams, DroneSource, Emotion,
+    PadMacro, PadParams, PadSource, TrackParams, Transport, MAX_CLIP_TRACKS, PAD_VOICES,
 };
 pub use graph::{
     Graph, GraphMeters, GraphParams, LayerParams, MasterParams, SineSource, Source, MAX_LAYERS,

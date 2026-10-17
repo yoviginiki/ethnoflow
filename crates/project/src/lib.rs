@@ -5,12 +5,16 @@
 //! settings, migrations) and `assets/originals/` (immutable recordings and imports).
 //! See docs/DECISIONS.md ADR-0015.
 
+pub mod arrangement;
 pub mod db;
 pub mod error;
 pub mod instrument;
 pub mod manifest;
 pub mod project;
 
+pub use arrangement::{
+    Arrangement, Clip, Track, ARRANGEMENT_FILE, MAX_TRACKS as MAX_ARRANGEMENT_TRACKS,
+};
 pub use db::{Take, TakeSource, TakeState};
 pub use error::{ProjectError, Result};
 pub use instrument::{
