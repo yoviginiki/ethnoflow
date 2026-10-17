@@ -6,6 +6,7 @@ import { create } from "zustand";
 import type {
   AnalysisView,
   DeviceInfo,
+  Emotion,
   Intonation,
   LoadedTakeInfo,
   MidiEvent,
@@ -45,7 +46,36 @@ export interface Prefs {
   midiInput: string | null;
   /** Drone settings (F3.2); `rootMidi` null until the user picks one (no assumed key). */
   drone: DronePrefs;
+  /** Pad settings (F3.3). */
+  pad: PadPrefs;
 }
+
+export type Voicing = "fifth" | "sus2" | "sus4" | "fifth9" | "scale_triad" | "scale_7th";
+export const VOICINGS: Voicing[] = ["fifth", "sus2", "sus4", "fifth9", "scale_triad", "scale_7th"];
+
+export interface PadPrefs {
+  rootMidi: number | null;
+  voicing: Voicing;
+  emotion: Emotion;
+  x: number;
+  y: number;
+  levelDb: number;
+  lfoHz: number;
+  seed: number;
+  intonation: Intonation;
+}
+
+export const DEFAULT_PAD: PadPrefs = {
+  rootMidi: null,
+  voicing: "fifth",
+  emotion: "calm",
+  x: 0.5,
+  y: 0.5,
+  levelDb: -14,
+  lfoHz: 0.08,
+  seed: 1,
+  intonation: "profile",
+};
 
 export interface DronePrefs {
   rootMidi: number | null;
@@ -96,6 +126,7 @@ export const DEFAULT_PREFS: Prefs = {
   snapBar: true,
   midiInput: null,
   drone: DEFAULT_DRONE,
+  pad: DEFAULT_PAD,
 };
 
 function loadPrefs(): Prefs {

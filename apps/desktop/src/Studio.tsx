@@ -9,6 +9,7 @@ import { KeyboardPiano } from "./KeyboardPiano";
 import { MidiPanel } from "./MidiPanel";
 import { formatBytes, formatDb, formatTime, isTypingTarget, linearToDb, meterFraction, snapToBars, takeName } from "./format";
 import { messages } from "./i18n";
+import { PadPanel } from "./PadPanel";
 import { NEW_NOTE_S, PianoRoll } from "./PianoRoll";
 import { TakeList } from "./TakeList";
 import { TimingPanel } from "./TimingPanel";
@@ -744,6 +745,7 @@ export function Studio() {
           <InstrumentPanel />
           <KeyboardPiano scale={project.scale} />
           <DronePanel scale={project.scale} profile={project.instrument} />
+          <PadPanel scale={project.scale} profile={project.instrument} />
 
           <section className="meter-row" aria-label={t.level}>
             <span className="muted small">{t.level}</span>

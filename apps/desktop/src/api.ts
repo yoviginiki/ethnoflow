@@ -210,6 +210,44 @@ export interface DroneStatus {
   stream_errors: number;
 }
 
+export type Emotion = "calm" | "melancholy" | "light" | "dark";
+export const EMOTIONS: Emotion[] = ["calm", "melancholy", "light", "dark"];
+
+export interface PadMacro {
+  brightness: number;
+  movement: number;
+  warmth: number;
+  space: number;
+  slowness: number;
+}
+
+export interface PadNote {
+  midi: number;
+  cents: number;
+}
+
+export interface PadSettings {
+  notes: PadNote[];
+  emotion: Emotion;
+  x: number;
+  y: number;
+  level_db: number;
+  lfo_hz: number;
+  seed: number;
+  intonation: Intonation;
+}
+
+export interface PadStatus {
+  sample_rate: number;
+  notes_hz: number[];
+  intonation_used: Intonation;
+  macro_applied: PadMacro;
+  layer_peak: number;
+  master_peak: number;
+  limiter_gain: number;
+  stream_errors: number;
+}
+
 export interface ProfileDiagnosis {
   notes: number;
   mean_offset_cents: number;
@@ -546,6 +584,10 @@ export const api = {
   setDrone: (settings: DroneSettings) => invoke<DroneStatus>("set_drone", { settings }),
   stopDrone: () => invoke<void>("stop_drone"),
   droneStatus: () => invoke<DroneStatus | null>("drone_status"),
+  startPad: (device: string | null, settings: PadSettings) => invoke<PadStatus>("start_pad", { device, settings }),
+  setPad: (settings: PadSettings) => invoke<PadStatus>("set_pad", { settings }),
+  stopPad: () => invoke<void>("stop_pad"),
+  padStatus: () => invoke<PadStatus | null>("pad_status"),
   evaluatePerformance: (expected: Note[], played: Note[], level: Level, latencyMs: number) =>
     invoke<TrainerReport>("evaluate_performance", { expected, played, level, latencyMs }),
   listProfiles: () => invoke<ProfileSummary[]>("list_profiles"),

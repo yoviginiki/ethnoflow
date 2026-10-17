@@ -1,7 +1,8 @@
 //! The audio graph in the app (F1.6) and the drone on it (F3.2). One output stream
-//! owns the graph; slot 0 is the drone. Parameters change through atomics (no
-//! restart, no click); the root is intonated to the project's instrument profile when
-//! the user asks for that, otherwise to equal temperament at the project's A4.
+//! owns the graph; slot 0 is the drone, slot 1 the pad (`pad_cmds.rs`). Parameters
+//! change through atomics (no restart, no click); notes are intonated to the
+//! project's instrument profile when the user asks for that, otherwise to equal
+//! temperament at the project's A4.
 
 use std::sync::Arc;
 
@@ -13,7 +14,8 @@ use crate::analysis_cmds::DEFAULT_A4_HZ;
 use crate::commands::{err, CmdResult};
 use crate::state::{AppState, Inner};
 
-const DRONE_SLOT: usize = 0;
+pub const DRONE_SLOT: usize = 0;
+pub const PAD_SLOT: usize = 1;
 /// Headphone-safe master level (the layer level is the user's control).
 const MASTER_DB: f32 = -6.0;
 
@@ -39,7 +41,7 @@ pub struct DroneSettings {
     pub breath: f32,
     pub detune_cents: f32,
     pub cutoff_hz: f32,
-    /// Layer level in dB (−40..0).
+    /// Layer level in dB (−60..0).
     pub level_db: f32,
     pub intonation: Intonation,
 }
@@ -60,6 +62,66 @@ pub struct DroneStatus {
     pub stream_errors: u64,
 }
 
+/// A note's frequency under the chosen intonation. Returns the Hz and whether the
+/// profile was actually used (it has a measurement for that note).
+pub fn note_hz(s: &Inner, midi: u8, cents: f64, intonation: Intonation) -> (f32, Intonation) {
+    let project_a4 = s
+        .project
+        .as_ref()
+        .and_then(|p| p.manifest().a4_hz)
+        .unwrap_or(DEFAULT_A4_HZ);
+    if intonation == Intonation::Profile {
+        if let Some(profile) = crate::instrument_cmds::project_profile(s) {
+            if let Some(n) = profile.note(midi) {
+                // The profile's offsets are relative to its own A4.
+                let hz =
+                    audio_engine::drone_root_hz(midi as f64, n.cents_offset + cents, profile.a4_hz);
+                return (hz, Intonation::Profile);
+            }
+        }
+    }
+    (
+        audio_engine::drone_root_hz(midi as f64, cents, project_a4),
+        Intonation::Tempered,
+    )
+}
+
+/// Start the output stream if nothing on the graph is playing yet.
+pub fn ensure_graph(s: &mut Inner, device: Option<&str>) -> CmdResult<()> {
+    if s.graph.is_none() {
+        let gp = Arc::new(GraphParams::default());
+        gp.master.gain_db.set(MASTER_DB);
+        for l in gp.layers.iter() {
+            l.gain_db.set(-60.0);
+        }
+        s.graph = Some(GraphPlayer::start(device, gp)?);
+    }
+    Ok(())
+}
+
+/// Fade a slot out, clear it, and stop the stream when no slot is in use any more.
+pub fn release_slot(s: &mut Inner, slot: usize) {
+    if let Some(g) = s.graph.as_mut() {
+        g.params().layers[slot].gain_db.set(-60.0);
+        std::thread::sleep(std::time::Duration::from_millis(30));
+        g.send(GraphCmd::Clear { slot });
+    }
+    match slot {
+        DRONE_SLOT => {
+            s.drone = None;
+            s.drone_settings = None;
+        }
+        PAD_SLOT => {
+            s.pad = None;
+            s.pad_settings = None;
+        }
+        _ => {}
+    }
+    if s.drone.is_none() && s.pad.is_none() {
+        s.stop_graph();
+    }
+}
+
 struct Resolved {
     root_hz: f32,
     root_cents: f64,
@@ -67,44 +129,29 @@ struct Resolved {
     used: Intonation,
 }
 
-/// Root and fifth frequencies for the settings, from the profile when asked and
-/// available. Nothing here assumes a key: the root is whatever the user chose.
+/// Root and fifth frequencies for the settings. Nothing here assumes a key: the root
+/// is whatever the user chose.
 fn resolve(s: &Inner, set: &DroneSettings) -> Resolved {
-    let project_a4 = s
-        .project
-        .as_ref()
-        .and_then(|p| p.manifest().a4_hz)
-        .unwrap_or(DEFAULT_A4_HZ);
-    let tempered =
-        |cents: f64| audio_engine::drone_root_hz(set.root_midi as f64, cents, project_a4);
-    if set.intonation == Intonation::Profile {
-        if let Some(profile) = crate::instrument_cmds::project_profile(s) {
-            if let Some(root) = profile.note(set.root_midi) {
-                // The profile's offsets are relative to its own A4.
-                let hz = audio_engine::drone_root_hz(
-                    set.root_midi as f64,
-                    root.cents_offset + set.root_cents,
-                    profile.a4_hz,
-                );
-                let root_cents = 1200.0 * (hz as f64 / tempered(0.0) as f64).log2();
-                let fifth_cents = profile
-                    .note(set.root_midi.saturating_add(7))
-                    .map(|n| (n.cents_offset - root.cents_offset) as f32)
-                    .unwrap_or(0.0);
-                return Resolved {
-                    root_hz: hz,
-                    root_cents,
-                    fifth_cents,
-                    used: Intonation::Profile,
-                };
-            }
+    let (root_hz, used) = note_hz(s, set.root_midi, set.root_cents, set.intonation);
+    let (tempered, _) = note_hz(s, set.root_midi, 0.0, Intonation::Tempered);
+    let root_cents = 1200.0 * (root_hz as f64 / tempered as f64).log2();
+    let fifth_cents = if used == Intonation::Profile {
+        let (fifth_hz, fifth_used) =
+            note_hz(s, set.root_midi.saturating_add(7), 0.0, Intonation::Profile);
+        if fifth_used == Intonation::Profile {
+            let ratio = fifth_hz as f64 / root_hz as f64;
+            (1200.0 * ratio.log2() - 700.0) as f32 + (set.root_cents as f32)
+        } else {
+            0.0
         }
-    }
+    } else {
+        0.0
+    };
     Resolved {
-        root_hz: tempered(set.root_cents),
-        root_cents: set.root_cents,
-        fifth_cents: 0.0,
-        used: Intonation::Tempered,
+        root_hz,
+        root_cents,
+        fifth_cents,
+        used,
     }
 }
 
@@ -133,14 +180,14 @@ fn status(s: &mut Inner, r: &Resolved) -> CmdResult<DroneStatus> {
         .as_mut()
         .ok_or_else(|| err("no_drone", "The drone is not running"))?;
     let st = graph.status();
-    let m = graph.params().meters(1);
+    let m = graph.params().meters(2);
     Ok(DroneStatus {
         sample_rate: st.sample_rate,
         root_hz: r.root_hz,
         root_cents_applied: r.root_cents,
         fifth_cents_applied: r.fifth_cents,
         intonation_used: r.used,
-        layer_peak: m.layers.first().copied().unwrap_or(0.0),
+        layer_peak: m.layers.get(DRONE_SLOT).copied().unwrap_or(0.0),
         master_peak: m.master_peak,
         limiter_gain: m.limiter_gain,
         stream_errors: st.stream_errors,
@@ -179,15 +226,9 @@ pub async fn start_drone(
     let mut s = state.lock();
     let r = resolve(&s, &settings);
     let params = Arc::new(DroneParams::default());
-    if s.graph.is_none() {
-        let gp = Arc::new(GraphParams::default());
-        gp.master.gain_db.set(MASTER_DB);
-        let player = GraphPlayer::start(device.as_deref(), gp)?;
-        s.graph = Some(player);
-    }
+    ensure_graph(&mut s, device.as_deref())?;
     let graph = s.graph.as_mut().expect("graph just started");
     // Start silent and ramp to the level: no click on start.
-    graph.params().layers[DRONE_SLOT].gain_db.set(-60.0);
     apply(&params, &graph.params().layers[DRONE_SLOT], &settings, &r);
     graph.params().layers[DRONE_SLOT].gain_db.set(-60.0);
     let ok = graph.send(GraphCmd::SetSource {
@@ -223,7 +264,7 @@ pub async fn set_drone(
 
 #[tauri::command]
 pub async fn stop_drone(state: State<'_, AppState>) -> CmdResult<()> {
-    state.lock().stop_graph();
+    release_slot(&mut state.lock(), DRONE_SLOT);
     Ok(())
 }
 

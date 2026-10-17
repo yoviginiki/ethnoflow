@@ -220,3 +220,32 @@ button.small { font-size: 12px; padding: 3px 7px; }
 .drone .meter {
   width: 120px;
 }
+
+/* pad (F3.3) */
+.pad-body { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; margin: 6px 0; }
+.pad-sliders { flex: 1; min-width: 220px; grid-template-columns: 1fr; }
+.xy-pad {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  flex: none;
+  border: 1px solid var(--axis);
+  border-radius: 6px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.12), transparent), linear-gradient(to right, transparent, rgba(255, 255, 255, 0.08));
+  cursor: crosshair;
+  touch-action: none;
+  user-select: none;
+}
+.xy-dot {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+}
+.xy-label { position: absolute; pointer-events: none; }
+.xy-label.x { right: 6px; bottom: 2px; }
+.xy-label.y { left: 2px; top: 4px; writing-mode: vertical-rl; transform: rotate(180deg); }

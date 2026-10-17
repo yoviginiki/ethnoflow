@@ -4,6 +4,7 @@ mod graph_cmds;
 mod instrument_cmds;
 mod midi_cmds;
 mod midi_in_cmds;
+mod pad_cmds;
 mod project_cmds;
 mod settings;
 mod state;
@@ -97,6 +98,11 @@ pub fn run() {
             graph_cmds::set_drone,
             graph_cmds::stop_drone,
             graph_cmds::drone_status,
+            pad_cmds::start_pad,
+            pad_cmds::set_pad,
+            pad_cmds::stop_pad,
+            pad_cmds::pad_status,
+            pad_cmds::pad_emotions,
         ])
         .build(tauri::generate_context!())
         .expect("error while building EthnoFlow Studio")

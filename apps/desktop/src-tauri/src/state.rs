@@ -81,6 +81,9 @@ pub struct Inner {
     /// Parameters of the drone source in graph slot 0 while it plays.
     pub drone: Option<Arc<DroneParams>>,
     pub drone_settings: Option<crate::graph_cmds::DroneSettings>,
+    /// Parameters of the pad source in graph slot 1 while it plays.
+    pub pad: Option<Arc<audio_engine::PadParams>>,
+    pub pad_settings: Option<crate::pad_cmds::PadSettings>,
     pub loaded: Option<LoadedTake>,
 }
 
@@ -120,7 +123,9 @@ impl Inner {
     pub fn stop_graph(&mut self) {
         // Fade the layer first so stopping the stream does not click.
         if let Some(g) = self.graph.as_ref() {
-            g.params().layers[0].gain_db.set(-60.0);
+            for l in g.params().layers.iter() {
+                l.gain_db.set(-60.0);
+            }
             std::thread::sleep(std::time::Duration::from_millis(30));
         }
         if let Some(g) = self.graph.take() {
@@ -128,6 +133,8 @@ impl Inner {
         }
         self.drone = None;
         self.drone_settings = None;
+        self.pad = None;
+        self.pad_settings = None;
     }
 }
 
