@@ -305,6 +305,7 @@ export function Ambient() {
   const setMacro = (key: keyof Macros, v: number) => rack && commit({ ...rack, macros: { ...rack.macros, [key]: v } });
 
   const masterDb = s.prefs.masterDb ?? 0;
+  const stripControl = s.prefs.stripControl ?? "slider";
   const masterPeakDb = status ? linearToDb(status.master_peak) : -60;
   const sleepLeft = s.sleepAt === null ? null : Math.max(0, Math.round((s.sleepAt - Date.now()) / 60000));
   const canPlay = layers.length > 0;
@@ -365,6 +366,13 @@ export function Ambient() {
             <span className="mono-num">{formatDb(masterDb)}</span>
           </label>
           {masterDb > 0 && <span className="badge warn">{t.headphoneWarn}</span>}
+          <label className="inline small">
+            {t.viewLabel}
+            <select value={stripControl} onChange={(e) => s.setPref("stripControl", e.target.value as "slider" | "knob")}>
+              <option value="slider">{t.viewSliders}</option>
+              <option value="knob">{t.viewKnobs}</option>
+            </select>
+          </label>
           <div className="meter" style={{ width: 120 }} role="meter" aria-valuemin={-60} aria-valuemax={0} aria-valuenow={Math.round(masterPeakDb)} aria-label={t.mixTitle}>
             <div className={`meter-fill ${masterPeakDb > -3 ? "hot" : masterPeakDb > -12 ? "warm" : ""}`} style={{ width: `${meterFraction(masterPeakDb) * 100}%` }} />
           </div>
@@ -545,8 +553,13 @@ export function Ambient() {
                     <div className="vmeter" aria-hidden="true">
                       <div className={`vmeter-fill ${peakDb > -3 ? "hot" : peakDb > -12 ? "warm" : ""}`} style={{ height: `${meterFraction(peakDb) * 100}%` }} />
                     </div>
-                    <Knob value={l.gain_db} min={-60} max={12} step={0.5} reset={-18} label={`${t.levelLabel}: ${l.name}`} text={l.gain_db <= -59.5 ? "off" : formatDb(l.gain_db)} size={56} onChange={(v) => patchLayer(l.id, { gain_db: v })} />
+                    {stripControl === "knob" ? (
+                      <Knob value={l.gain_db} min={-60} max={12} step={0.5} reset={-18} label={`${t.levelLabel}: ${l.name}`} text={l.gain_db <= -59.5 ? "off" : formatDb(l.gain_db)} size={56} onChange={(v) => patchLayer(l.id, { gain_db: v })} />
+                    ) : (
+                      <input type="range" className="vslider" min={-60} max={12} step={0.5} value={l.gain_db} aria-label={`${t.levelLabel}: ${l.name}`} onChange={(e) => patchLayer(l.id, { gain_db: Number(e.target.value) })} onDoubleClick={() => patchLayer(l.id, { gain_db: -18 })} />
+                    )}
                   </div>
+                  {stripControl === "slider" && <span className="mono-num small">{l.gain_db <= -59.5 ? "off" : formatDb(l.gain_db)}</span>}
                   <label className="strip-pan" title={t.panLabel}>
                     <input type="range" min={-1} max={1} step={0.05} value={l.pan} aria-label={t.panLabel} onChange={(e) => patchLayer(l.id, { pan: Number(e.target.value) })} onDoubleClick={() => patchLayer(l.id, { pan: 0 })} />
                   </label>

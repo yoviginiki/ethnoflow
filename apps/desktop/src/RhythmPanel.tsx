@@ -52,6 +52,7 @@ export function RhythmPanel() {
   const r = s.prefs.rhythm ?? DEFAULT_RHYTHM;
   const on = s.layers.rhythm;
   const status = s.rhythmStatus;
+  const stripControl = s.prefs.stripControl ?? "slider";
   const hasTiming = project.timing.bpm !== null && project.timing.numerator !== null && project.timing.unit !== null;
   const hasRoot = project.scale !== null || (s.prefs.drone?.rootMidi ?? null) !== null;
   const canPlay = hasTiming && hasRoot;
@@ -90,7 +91,15 @@ export function RhythmPanel() {
         <button className="ghost small" onClick={() => setOpenPart(openPart === part ? null : part)} aria-expanded={openPart === part}>
           {openPart === part ? "▾" : "▸"}
         </button>
-        <Knob value={p.level_db} min={-40} max={6} step={1} reset={-12} label={`${t.levelLabel}: ${title}`} text={p.level_db <= -39.5 ? "off" : formatDb(p.level_db)} size={40} onChange={(v) => setPart(part, { level_db: v } as never)} />
+        {stripControl === "knob" ? (
+          <Knob value={p.level_db} min={-40} max={6} step={1} reset={-12} label={`${t.levelLabel}: ${title}`} text={p.level_db <= -39.5 ? "off" : formatDb(p.level_db)} size={40} onChange={(v) => setPart(part, { level_db: v } as never)} />
+        ) : (
+          <label className="inline small" title={t.levelLabel}>
+            🔊
+            <input type="range" min={-40} max={6} step={1} value={p.level_db} onChange={(e) => setPart(part, { level_db: Number(e.target.value) } as never)} onDoubleClick={() => setPart(part, { level_db: -12 } as never)} style={{ width: 90 }} />
+            <span className="mono-num">{p.level_db <= -39.5 ? "off" : formatDb(p.level_db)}</span>
+          </label>
+        )}
         {meter(index)}
         <button className={`ghost small ${p.locked ? "on" : ""}`} title={t.lockPart} aria-pressed={p.locked} onClick={() => setPart(part, { locked: !p.locked } as never)}>
           {p.locked ? "🔒" : "🔓"}
@@ -142,6 +151,13 @@ export function RhythmPanel() {
         >
           ♩ {t.rhythmToTakes}
         </button>
+        <label className="inline small">
+          {t.viewLabel}
+          <select value={stripControl} onChange={(e) => s.setPref("stripControl", e.target.value as "slider" | "knob")}>
+            <option value="slider">{t.viewSliders}</option>
+            <option value="knob">{t.viewKnobs}</option>
+          </select>
+        </label>
         <label className="inline small">
           {t.barsLabel}
           <select value={r.bars} onChange={(e) => set({ bars: Number(e.target.value) })}>

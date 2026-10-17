@@ -71,6 +71,8 @@ export interface Prefs {
   recentPresets: string[];
   /** Rhythm section settings (Phase 4). */
   rhythm: RhythmPrefs;
+  /** Level controls on channel strips: vertical sliders or rotary knobs. */
+  stripControl: "slider" | "knob";
 }
 
 export const DEFAULT_RHYTHM: RhythmPrefs = {
@@ -190,6 +192,7 @@ export const DEFAULT_PREFS: Prefs = {
   favPresets: [],
   recentPresets: [],
   rhythm: DEFAULT_RHYTHM,
+  stripControl: "slider",
 };
 
 function loadPrefs(): Prefs {

@@ -406,3 +406,6 @@ button.small { font-size: 12px; padding: 3px 7px; }
 .knob-text { line-height: 1; }
 .strip-fader { height: auto; align-items: center; }
 .vmeter { height: 70px; }
+
+.strip-fader .vslider { height: 150px; }
+.strip-fader:has(.vslider) .vmeter { height: 150px; }
