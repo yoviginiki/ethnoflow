@@ -947,6 +947,7 @@ version = "0.2.7"
 dependencies = [
  "midly",
  "serde",
+ "serde_json",
 ]
 
 [[package]]

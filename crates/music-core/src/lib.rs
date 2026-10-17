@@ -14,7 +14,9 @@ pub mod theory;
 pub mod trainer;
 
 pub use events::{parse_smf, tick_to_seconds, MidiClip, MidiError, NoteEvent, TrackInfo};
-pub use key::{rank_hypotheses, Hypothesis, PitchClassHistogram};
+pub use key::{
+    explain, rank_hypotheses, Decisive, Evidence, Hypothesis, PcShare, PitchClassHistogram,
+};
 pub use midi::{write_smf, SmfOptions, TECHNICAL_TEMPO_BPM};
 pub use notes::{extract_notes, Note, NoteParams, PitchSample};
 pub use pitch::{cents_between, pitch_class_name, Pitch, Reference, PITCH_CLASS_NAMES};
