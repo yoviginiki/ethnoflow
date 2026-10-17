@@ -1,5 +1,6 @@
 mod analysis_cmds;
 mod commands;
+mod instrument_cmds;
 mod midi_cmds;
 mod project_cmds;
 mod settings;
@@ -18,6 +19,11 @@ pub fn run() {
                 .build(),
         )
         .manage(AppState::default())
+        .setup(|app| {
+            let dir = app.path().app_config_dir()?.join("instruments");
+            app.state::<AppState>().lock().profiles_dir = Some(dir);
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             commands::audio_host,
             commands::list_input_devices,
@@ -64,6 +70,14 @@ pub fn run() {
             midi_cmds::notes_playback_status,
             midi_cmds::stop_notes,
             midi_cmds::send_notes_to_player,
+            instrument_cmds::list_profiles,
+            instrument_cmds::get_profile,
+            instrument_cmds::create_profile,
+            instrument_cmds::delete_profile,
+            instrument_cmds::set_project_instrument,
+            instrument_cmds::calibrate_note,
+            instrument_cmds::remove_profile_note,
+            instrument_cmds::play_profile_note,
             project_cmds::export_wav,
         ])
         .build(tauri::generate_context!())

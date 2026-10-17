@@ -75,6 +75,8 @@ pub struct ProjectView {
     pub scale: Option<music_core::Scale>,
     /// Tuning reference in effect (project value or the 440 Hz default).
     pub a4_hz: f64,
+    /// The project's instrument profile (from the global store), if attached.
+    pub instrument: Option<project::InstrumentProfile>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -130,6 +132,7 @@ fn view(s: &Inner) -> CmdResult<ProjectView> {
             .manifest()
             .a4_hz
             .unwrap_or(crate::analysis_cmds::DEFAULT_A4_HZ),
+        instrument: crate::instrument_cmds::project_profile(s),
     })
 }
 

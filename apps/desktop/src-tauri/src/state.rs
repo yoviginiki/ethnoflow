@@ -54,6 +54,8 @@ impl Default for MidiRender {
 #[derive(Default)]
 pub struct Inner {
     pub project: Option<Project>,
+    /// Global instrument-profile folder (set at startup from the app config dir).
+    pub profiles_dir: Option<std::path::PathBuf>,
     /// Result of the last checksum verification, by take id.
     pub health: HashMap<String, TakeHealth>,
     pub recording: Option<ActiveRecording>,
