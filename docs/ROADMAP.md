@@ -110,6 +110,23 @@ Estimated effort: 2–3 weeks of focused work.
 5. Hardware: Intel i5-12450H, 16 GB, RTX 4050 Laptop, Realtek HD Audio (SST) + Nahimic;
    microphone/headphones used for the manual tests still to be reported.
 
+## Order of work after Phase 2 (owner decision, 2026-10-17)
+
+The owner's priority is the **Intelligent Harmonic Accompaniment** (Phase 3). The
+updated `FEATURE_SPEC.md` also adds Phase 1A (Ambient Playground) and F1.6 (audio
+graph). Both Phase 3 and Phase 1A need the audio graph (drone and pad are live
+sources). Order:
+
+1. Phase 2 remainder that does not depend on the owner: Loop drill, latency
+   calibration — small; the owner-dependent checks (kaval profile, fingering data,
+   Reaper re-import) proceed in parallel.
+2. **F1.6 audio graph** (layers, parameter smoothing, master limiter, offline render).
+3. **Phase 3**: F3.1 explanations and fixtures → F3.2 drone → F3.3 pad → F3.5 Compose
+   First ("Подготви фон": tonic, mode, drone + pad in under a minute) → F3.4 harmony
+   proposals from a recorded melody (3 styles, A/B) → F3.6 controls with tooltips,
+   seed, locks.
+4. Phase 1A Ambient Playground on the same graph, then Phase 4.
+
 ## Phase 2 — Pitch, notation & practice (plan, approved 2026-10-16)
 
 Exit (master plan): the user records a melody, sees plausible notes, edits mistakes,

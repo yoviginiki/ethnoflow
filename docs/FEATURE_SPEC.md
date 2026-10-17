@@ -2,7 +2,8 @@
 
 Този файл е **единственият** работен документ за функциите след Phase 0. Той обединява и
 замества като източник на задачи: `INSTRUMENT_MACHINE_CONCEPT.md`,
-`MIDI_PLAYER_TRAINER_SPEC.md`, `ACADEMY_INSPIRATION.md` (те остават като обяснение „защо").
+`MIDI_PLAYER_TRAINER_SPEC.md`, `ACADEMY_INSPIRATION.md`, `AMBIENT_HARMONY_SPEC.md`,
+`HARMONIC_ACCOMPANIMENT_SPEC.md` (те остават като обяснение „защо").
 Мастър планът (`MASTER_PLAN.md`) и `CLAUDE.md` са с предимство при конфликт.
 
 Как се чете: всяка функция има ID, фаза, зависимости, какво точно се прави (стъпки),
@@ -19,28 +20,37 @@
 
 ---
 
-## Статус спрямо репото (вписано 17.10.2026, версия 0.2.2)
+## Статус спрямо репото (обновено 17.10.2026, версия 0.2.6)
 
-Спецификацията е получена, след като Phase 1 и голяма част от Phase 2 вече са
-реализирани. Където кодът живее другаде, отколкото спецификацията очаква, важи
-реалното място (с ADR). Таблицата се поддържа при всяка завършена функция.
+Спецификацията (v2, с Phase 1A и IHAE) е получена, след като Phase 1 и почти цялата
+Phase 2 вече са реализирани. Където кодът живее другаде, отколкото спецификацията
+очаква, важи реалното място (с ADR). Таблицата се поддържа при всяка завършена функция.
+
+**Ред на работа след Phase 2 (решение на собственика, 17.10.2026): хармониите са
+най-важни.** Затова: F1.6 (аудио граф, защото drone и pad са живи източници) → Phase 3
+(F3.1 → F3.2 → F3.3 → F3.5 Compose First → F3.4 → F3.6) → Phase 1A (Ambient Playground
+върху същия граф) → Phase 4. Подробности в `ROADMAP.md`.
 
 | F | статус | къде е реално / какво остава |
 |---|---|---|
-| F1.1 | **готово** (0.1.0) | `crates/audio-engine/src/{take_writer,recorder,peaks}.rs`; header checkpoint на всяка секунда, `repair_wav_header`, `LivePeaks`, команда `recording_waveform`. Remaining: тест „35 min под 50 MB RAM“ е покрит от 30-min симулация (`--ignored`), не с измерване на RAM. |
-| F1.2 | **готово** | `crates/project` (ADR-0015: вместо `packages/project-schema`), SQLite миграции v1→v2, checksums, trash, relink, recovery при отваряне; начален екран със седемте области. Autosave е на всяка промяна (транзакция), без 30 s таймер. Remaining: реален kill -9 тест от собственика (ROADMAP DoD). |
-| F1.3 | **частично** | `metronome.rs` (sample-accurate, групи 2+2+3…), count-in, loop и клик в `player.rs`. Няма общ `Transport` обект, tap tempo и punch-in; recorder/player не са закачени към обща позиция. |
-| F1.4 | **частично** | sample rate/канали (`choose_config`), noise floor, тест тон, device_lost → чисто спиране, **MIDI вход** (`midi_in.rs`, `midir`, ADR-0020): избор на порт, note on/off към живия синтезатор през препращаща нишка (~2 ms), светене на клавишите, вход за Trainer-а. Remaining: latency calibration (loopback), hot-plug relist (сега „Опресни“). |
-| F1.5 | **частично** | symphonia декодиране (ADR-0017), trim in/out в проекта. Remaining: fade in/out параметри. |
-| F2.1 | **готово** | `crates/music-core`: pitch/note, 13 лада вкл. хиджаз и двоен хармоничен, custom cents, хипотези, NoteEvent + tempo map (`events.rs`), SMF reader/writer, интервали, акорд detection, транспониране (`theory.rs`), квантизация към grid (`quantize.rs`). Имената на нотите (латиница/солфеж) са в UI i18n. |
-| F2.2 | **готово** | YIN в `audio-engine/src/pitch.rs` (не в `services/analysis`): live в `RecorderStatus` и `InputMonitor`, офлайн `contour`, ноти в `music-core/src/notes.rs` (сегментация, орнаменти като bend). Числа: `docs/BENCHMARKS.md`. Remaining: onset чрез spectral flux (сега onset по RMS скок), latency на live pitch измерена на лаптопа (в BENCHMARKS като „not measured“). |
-| F2.3 | **частично** | `Tuner.tsx`: нота, цента, Hz, увереност, в/извън скалата, „Уцели нотата“, режим „Дръж тона“ (лента с дрейфа за 10 s, секунди в ±15 цента). Remaining: транспонираща и профилна маркировка (с F2.5). |
-| F2.4 | **частично** | piano roll с редакция (↑/↓, Delete, split, merge, влачене на начало и дължина, Alt+клик добавя, undo/redo), падащи ноти (`FallingNotes.tsx`), SMF export/import. Remaining: нотен лист (spike VexFlow, решение в MIDI_PLAYER_TRAINER_SPEC §7). Критерият „Reaper показва същите ноти“ чака собственика. |
-| F2.5 | **реализирано, чака проверка** | `crates/project/src/instrument.rs` (профил, хранилище в `%APPDATA%\…\EthnoFlow Studio\instruments\<id>\`, диагностика), `audio_engine::held_tone`, desktop `instrument_cmds.rs`; UI: панел „Инструмент“ (избор/нов/откачи/изтрий), wizard „Запознай ме с инструмента“ (запис 3.5 s по нота → стабилен тон ≥ 1.5 s → семпъл + отклонение + стабилност, „чух друга нота“), пускане на семпъл (pitch shift по честота), тунерът показва профилната маркировка и написаната нота при транспозиция. Критерият „пълен профил на кавал за 2 минути“ чака Ники. |
-| F2.6 | **не е започнато** | апликатури (данни + диаграма + редактор). |
-| F2.7 | **частично** | `.mid` като запис, вграден синтезатор (без SF2), tempo ×0.25–2, mute по писта, глас, транспониране ±24, loop със snap към такт (при известни темпо и размер), „Пусни нотите“, „Към плейъра“, **жив синтезатор** (`live_synth.rs`, 8 гласа, lock-free команди) с компютърната клавиатура (два реда = две октави, ← → октава, Scale Lock). WAV render = обикновеният експорт на MIDI запис. Remaining: SF2 + soundfont (ADR), MIDI клавиатура (F1.4.4, `midir`), лява/дясна ръка. |
-| F2.8 | **частично** | `music-core/src/trainer.rs`: `evaluate` (hit / wrong pitch / early / late / missed / extra, толеранси по ниво, latency) с тестове; UI панел „Трениране“ с вход от микрофона: **Listen**, **Wait** (свети нотата, чака я ≥150 ms, грешна = червено, без време), **Rhythm** (нотите свирят, микрофонът се сегментира в изсвирени ноти, отчет по ноти). Remaining: Loop drill (нужен е tempo factor и за аудио записи или само за MIDI), MIDI клавиатура като вход (F1.4.4), латентност от калибрация (сега 0), запис в прогрес (F6.3). Критерият „Wait с кавал на народна мелодия“ чака Ники. |
-| F3–F9 | не са започнати | |
+| F1.1 | **готово** (0.1.0) | `crates/audio-engine/src/{take_writer,recorder,peaks}.rs`; header checkpoint на всяка секунда, `repair_wav_header`, `LivePeaks`, `recording_waveform`. 35-min RAM тест е покрит от 30-min симулация (`--ignored`), без измерване на RAM. |
+| F1.2 | **готово** | `crates/project` (ADR-0015, вместо `packages/project-schema`), SQLite миграции v1→v2, checksums, trash, relink, recovery при отваряне; начален екран. Autosave е на всяка промяна. Remaining: реален kill -9 тест от собственика. |
+| F1.3 | **частично** | `metronome.rs` (sample-accurate, групи 2+2+3…), count-in, loop и клик в `player.rs`. Няма общ `Transport`, tap tempo, punch-in. |
+| F1.4 | **частично** | sample rate/канали, noise floor, тест тон, device_lost → чисто спиране, **MIDI вход** (`midi_in.rs`, ADR-0020): порт, note on/off към живия синтезатор (~2 ms), клавиши, Trainer. Remaining: latency calibration (loopback), hot-plug relist. |
+| F1.5 | **частично** | symphonia (ADR-0017), trim in/out в проекта. Remaining: fade in/out. |
+| F1.6 | **не е започнато** | аудио граф с параметри и smoothing; offline render; метри. Следващото нещо (основа на Phase 3 и 1A). |
+| F1A.1–F1A.8 | **не е започнато** | Ambient Playground; след Phase 3 по решение на собственика. F1A.8 (лицензи) може да върви по-рано, защото не зависи от код. |
+| F2.1 | **готово** | `crates/music-core`: pitch/note, 13 лада вкл. хиджаз и двоен хармоничен, custom cents, хипотези, NoteEvent + tempo map, SMF reader/writer, интервали, акорди, транспониране, квантизация. Имената на нотите са в UI i18n. |
+| F2.2 | **готово** | YIN в `audio-engine/src/pitch.rs`: live (`RecorderStatus`, `InputMonitor`), офлайн `contour`, ноти в `music-core/src/notes.rs`. Числа: `docs/BENCHMARKS.md`. Remaining: spectral-flux onset (сега RMS скок), измерена live latency. |
+| F2.3 | **готово, чака проверка** | `Tuner.tsx`: нота, цента, Hz, увереност, в/извън скалата, профилна маркировка, написана нота при транспозиция, „Уцели нотата“, „Дръж тона“. |
+| F2.4 | **частично** | piano roll с редакция (↑/↓, Delete, split, merge, влачене, Alt+клик, undo/redo), падащи ноти, SMF export/import. Remaining: нотен лист (VexFlow spike, виж MIDI_PLAYER_TRAINER_SPEC §7). „Reaper показва същите ноти“ чака Ники. |
+| F2.5 | **готово, чака проверка** | `crates/project/src/instrument.rs`, `held_tone`, `instrument_cmds.rs`, панел „Инструмент“, wizard, семпли с pitch shift, диагностика. „Профил на кавал за 2 минути“ чака Ники. |
+| F2.6 | **не е започнато** | чака таблицата с апликатури за кавал в Ре от Ники; после данни + диаграма + редактор. |
+| F2.7 | **частично** | `.mid` като запис, вграден синтезатор, tempo, mute, глас, транспониране, loop по тактове, „Пусни нотите“, „Към плейъра“, **жив синтезатор** + компютърна клавиатура (Scale Lock) + MIDI клавиатура. Remaining: SF2 + soundfont (ADR), лява/дясна ръка. |
+| F2.8 | **частично** | `trainer.rs` `evaluate` с тестове; панел „Трениране“: Listen, Wait, Rhythm с микрофон или MIDI. Remaining: Loop drill, latency от калибрация, прогрес (F6.3). „Wait с кавал на народна мелодия“ чака Ники. |
+| F3.1 | **частично** | `rank_hypotheses` (проценти, 13 лада) е готово и в UI. Remaining: обяснение („Ре се задържа 38 %…“), 10 фикстури с известен лад. |
+| F3.2–F3.6 | **не е започнато** | drone, pad, стратегии, Compose First, контроли. Приоритет след F1.6. |
+| F4–F9 | **не са започнати** | |
 
 Липсващ документ: `ACADEMY_INSPIRATION.md` още не е в репото.
 
@@ -113,8 +123,111 @@ loop без прекъсване; UI: Space play/stop, R record, Esc stop.
 Код: `crates/audio-engine/src/decode.rs`.
 Готово когато: MP3 fixture декодира с точна дължина; trim се пази след reopen.
 
+### F1.6 Аудио граф и параметри (основа за всичко звучащо)
+Зависи от: F1.3.
+Стъпки:
+1. Граф в engine-а: `Source` → per-layer DSP (gain, pan, HP/LP филтър, width) → `Bus` →
+   master (limiter + meter) → device. Фиксиран брой слотове, предварително алокирани;
+   никакви алокации в callback. Оценка на `fundsp`/`dasp` срещу собствен код (ADR).
+2. Параметри: всеки `ParamId` с граници, default, единица; промяна през lock-free
+   команда; **smoothing** (линейни рампи 5–20 ms) срещу zipper noise; denormal защита.
+3. Offline render на същия граф (детерминистичен, без реално време) в WAV.
+4. Метри per layer и master (peak hold) към UI с 20 Hz.
+Код: `crates/audio-engine/src/graph/{mod,params,bus,limiter}.rs`, `render.rs`.
+Готово когато: тест sum/mute/solo/pan; NaN/denormal тест; рампа на gain от 0 до 1 за
+10 ms няма дискретни скокове > 1 dB; offline render == realtime render байт по байт при
+seed; 1 час playback без drift (тест със синтетичен clock).
+
 **Phase 1 exit:** реален кавал take ≥3 min → reopen без загуба; 30 min запис + playback
-без overrun; NSIS инсталатор, clean-machine smoke.
+без overrun; NSIS инсталатор, clean-machine smoke; аудио графът свири осцилатор през
+слоеве с плъзгачи без пукания.
+
+---
+
+## Phase 1A — Ambient Playground (първият звучащ продукт, AMBIENT_HARMONY_SPEC P1–P3)
+
+### F1A.1 Слоеве и източници
+Зависи от: F1.6.
+Стъпки:
+1. `Layer {id, source, gain_db, pan, pitch, filter, width, density, envelope, sends,
+   loop_region, reverse, crossfade, seed, mute, solo, license_ref}`; 8 слота,
+   разширяеми до 16.
+2. Източници за старт (всички синтезирани, оригинални): noise colors (white/pink/brown),
+   филтриран „вятър", sub drone (F3.2 lite: root + fifth, без хармония), harmonic pad
+   (прост 2-osc + filter), bells (FM/модал), soft pluck, filtered texture; плюс audio loop
+   източник (WAV с loop crossfade). Контроли по тип източник, не универсални копчета.
+3. Drag-and-drop пренареждане, mute/solo, per-layer метри.
+Код: `crates/audio-engine/src/sources/{noise,wind,drone_lite,pad_lite,bell,pluck,loop_player}.rs`,
+`apps/desktop/src/screens/Ambient.tsx`.
+Готово когато: 8 слоя свирят едновременно 10 минути без клик/дропаут; mute/solo
+коректни; всеки плъзгач променя чуваемо звука (тест: спектър/RMS се променя).
+
+### F1A.2 Глобални макроси и безопасност
+Зависи от: F1A.1.
+Стъпки: master level, scene intensity, warmth/brightness, motion, space (reverb send),
+tonal gravity (дял на хармоничните слоеве), stereo width, randomness, tempo/free-time,
+limiter, headphone safety (стартов gain −18 dB, предупреждение); **никога auto-play при
+старт**; fade out, таймер за сън, loop.
+Готово когато: limiter никога не пуска > −0.3 dBFS; старт без звук; fade out без клик.
+
+### F1A.3 Preset-и и Sound DNA
+Зависи от: F1A.1, F1.2.
+Стъпки: preset JSON (`SoundDNA`: слоеве, параметри, автоматизация, сцени, license refs,
+seed, schema_version); browser с тагове (Гора, Река, Нощ, Мъгла, Планина, Етно,
+Медитация, Тъмно, Топло, Liquid, Без тоналност), favorites, recent, A/B, „Изненадай ме"
+в музикално съвместими граници, „Запази каквото харесвам" (locks), undo на randomize,
+snapshot история; 8–12 фабрични preset-а с качество, не количество (слушане от Ники).
+Готово когато: save → reopen дава идентично състояние (snapshot тест); randomize с
+locks не пипа заключените; preset-ите са слушани и одобрени.
+
+### F1A.4 Автоматизация
+Зависи от: F1A.1.
+Стъпки: `AutomationLane {param, interpolation, keyframes[], generator?, seed}`; режими:
+static, slow random walk (bounded, seeded), LFO, keyframes, рисувана крива, morph A→B,
+MIDI learn (F1.4); range/period/depth/phase/humanize; детерминизъм: същият seed + време
+→ същата стойност.
+Готово когато: тест: стойност на параметър в t=37.25 s е идентична при 3 пускания и
+след reopen; morph интерполира без скокове.
+
+### F1A.5 Сцени и Програми, offline bounce
+Зависи от: F1A.4, F1.6.
+Стъпки: timeline от `Scene {name, start, duration, snapshot, transition}`; free-running и
+beat-synced clock; preview от произволна точка; loop на секции; Program = именувана
+последователност; **offline render** на 20-минутна програма за секунди, не в реално време
+(F1.6.3), stems per layer от 0:00.
+Готово когато: offline render съвпада с realtime референция (RMS по 1 s прозорци
+< 0.1 dB разлика); 20 min програма се рендва < 60 s на базов лаптоп.
+
+### F1A.6 Sample Lab (разширение на F1.1/F1.5)
+Зависи от: F1.1, F1.5, F1.2.
+Стъпки: trim/split/normalize с headroom/fade/DC removal/HP/silence detection/zero-cross
+cuts/loop crossfade като non-destructive „recipe" върху immutable оригинал; тагове
+(заглавие, категория, място като свободен текст, бележки, микрофон, лиценз);
+`AudioAsset {sha256, origin, creator, license, path, channels, sr, duration, tags}`;
+библиотека с търсене; семпъл → слой в Playground; path traversal защита при импорт.
+Готово когато: преместване на папката на проекта не губи assets (relative paths +
+hash relink); recipe се пази и прилага при reopen; оригиналът е байт-идентичен.
+
+### F1A.7 Генеративни музикални слоеве (lite)
+Зависи от: F2.1 (scale), F1A.1.
+Стъпки: sparse bells/plucks по избрана скала и тонален център с вероятностни gates и
+интервални ограничения; „без тоналност" режим; пази тишината (density ≤ 1 нота/4 s по
+default). Пълният harmony engine е Phase 3.
+Готово когато: 10 минути без две еднакви последователности при различен seed; при
+еднакъв seed идентично; нотите винаги в скалата.
+
+### F1A.8 Лицензи и атрибуция
+Зависи от: нищо.
+Стъпки: `docs/AUDIO-LICENSING.md` (правила: CC0 само с документиран произход, CC-BY с
+атрибуция, CC-BY-NC забранено, myNoise/Sonic Pi само като идеи), `assets/ATTRIBUTION.md`,
+`assets/asset-manifest.json` (машинно четим), тест, който проверява, че всеки asset в
+инсталатора има запис с лиценз; механизъм за премахване на съмнителен asset.
+Готово когато: CI тестът пада при asset без лиценз.
+
+**Phase 1A exit (= първи release, AMBIENT_HARMONY_SPEC §14):** на чиста Windows 11
+машина: инсталира, избира изход, Play → 8-слоен еволюиращ soundscape, плъзгачи без
+пукания, запазва Program, записва микрофон, добавя го като loop, експортира стерео WAV,
+отваря проекта офлайн. Звучи музикално убедително (слушане от Ники), не само тестове.
 
 ---
 
@@ -152,7 +265,7 @@ loop без прекъсване; UI: Space play/stop, R record, Esc stop.
 Зависи от: F2.2, F2.5.
 Стъпки:
 1. UI: голяма стрелка с скала −50…+50 cents, Hz, име на нотата, октава, цвят
-   (зелено/жълто/червено по толеранс), A4 референция настроявaема, транспониращ
+   (зелено/жълто/червено по толеранс), A4 референция настройваема, транспониращ
    инструмент (кавал в ре показва написана и звучаща нота).
 2. Втора маркировка: къде е тази нота в **профила на инструмента** (F2.5), ако има.
 3. Режим „Дръж тона": лента във времето с дрейфа на дълъг тон, брояч секунди в толеранс.
@@ -279,7 +392,37 @@ penalties, avoid notes като меки ограничения, обяснен�
 Готово когато: 3 реални записа с убедителни drone/pad подложки (слушане от Ники);
 обясненията са верни теоретично (тестове на правилата).
 
-**Phase 3 exit:** убедителни drone/pad подложки на поне три различни записа.
+### F3.5 Compose First / „Подготви фон" (HARMONIC_ACCOMPANIMENT_SPEC режим 1)
+Зависи от: F3.2, F3.3, F1A.3, F1.3.
+Стъпки: екран с ръчен избор на тонален център, лад (от F2.1, плюс „без тоналност"),
+темпо/свободно време, метрум (вкл. 5/8, 7/8, 9/8), настроение, стил (Traditional
+Drone / Emotional Liquid / Deep Ethno DnB / Cinematic Ambient / Ambient No Key);
+включване на Drone, Pad, Ostinato (F4.5, lite), Bass (F4.2 lite root/fifth) като слоеве
+в Playground; „Пусни и записвай" стартира фона и записва инструмента на отделна писта
+(F1.1); drone интонация към профила (F2.5).
+Готово когато: без запис на мелодия потребител получава звучащ drone + pad в избран
+лад за < 1 минута; MIDI нотите са в лада освен при включен tension; няма висящи ноти
+при смяна на лад (смяна на музикална граница или crossfade).
+
+### F3.6 Контроли, обяснения, seed и locks
+Зависи от: F3.4, F3.5.
+Стъпки: плъзгачи Drone Strength, Harmonic Richness, Complexity, Harmonic Movement,
+Tension/Dissonance, Density, Warmth, Register, Humanization, Space, Variation Rate;
+всеки с tooltip на български (≤2 изречения + „чуй пример" бутон), double-click reset,
+числова стойност, automation arm, MIDI learn, accessibility label; Lock Melody/Chords/
+Bass; Generate 3/10; Compare A/B при изравнена сила; Undo/Redo; Save Favorite; Seed
+видим и редактируем; „Защо работи" карта („Тук Ре остава опорен тон, а Ла е квинта")
+плюс предупреждение при несигурен анализ.
+Готово когато: UI тест: всеки плъзгач променя съответния параметър в engine-а (няма
+фиктивни); seed възпроизвежда байт по байт; обясненията минават проверка на правилата.
+
+Критерии за F3.4 (score), допълнени от спеца: melodic compatibility, modal fidelity,
+voice leading, tension target, rhythmic fit, register separation, variety; показват се
+**различни стилови решения**, не само най-високият score.
+
+**Phase 3 exit:** убедителни drone/pad подложки на поне три различни записа **и**
+Compose First работи без запис (MVP критерий на HARMONIC_ACCOMPANIMENT_SPEC, без stems,
+които идват с F5.4).
 
 ---
 
@@ -308,6 +451,29 @@ X/Y „Wobble & Glide" (Y топлина, X скорост на филтъра 1
 кавал фраза към grid **без** деструктивна квантизация (tempo map + offset, оригиналът
 остава); locks по писта (freeze melody/harmony/bass/drums); regenerate само unlocked.
 Готово когато: реален етно liquid DnB трак с редактируеми MIDI бас/барабани (exit).
+
+### F4.5 Ostinato
+Зависи от: F3.4, F1.3.
+Стъпки: повтаряеми фигури от акордовите/ладовите тонове; ритмични трансформации
+(ротация, добавяне/махане на удар), вероятност per step, вариации на N такта, диапазон,
+swing, phrase-aware регенерация, locked motifs, seed.
+Готово когато: ostinato остава в лада; при locked motif регенерацията не го променя;
+seed детерминизъм.
+
+### F4.6 Arpeggiator
+Зависи от: F3.4.
+Стъпки: посоки (up/down/updown/random seeded), octave span, swing, gate, density, sync
+към Transport или free; работи върху текущия акорд/drone тонове.
+Готово когато: тест за всички посоки; без висящи ноти при смяна на акорд.
+
+### F4.7 Countermelody
+Зависи от: F2.2 (фрази), F3.4.
+Стъпки: call-and-response (отговор в паузите на водещата мелодия), запълване на паузи,
+избягване на сблъсък (не свири по време на дълги тонове на мелодията в същия регистър,
+избягва секунди и тритони срещу текущата нота освен при tension), регистър под/над
+мелодията по избор, „Adventure Level".
+Готово когато: тест: 0 ноти на countermelody се припокриват с мелодия в радиус 1 полутон
+при tension=0; слушане от Ники на 3 записа.
 
 ### F4.4 CLAP инструментен host (spike, ADR-0018)
 Зависи от: F3.2.
@@ -390,8 +556,18 @@ score (voice leading, clashes, density, register), не естетика; Evolve
 възпроизвежда байт по байт.
 
 ## Phase 8 — Live accompanist (R&D)
-Live drone (стабилен MVP), beat follower с confidence, harmonic follower (при ниска
-увереност държи предишната хармония), predictive режим експериментален и обозначен.
+
+### F8.1 Live следене с хистерезис и fallback
+Зависи от: F2.2, F3.4, F1.4.
+Стъпки: RT pitch → analysis thread; тонален център се сменя само след N секунди
+стабилна евидентност (хистерезис), хармонията се сменя само на фразови граници, никога
+на всяка орнаментна нота; при confidence под праг → задържа предишната хармония или
+пада към „безопасен drone"; ръчни „Lock tonic", „Freeze harmony", emergency bypass;
+измерен latency budget и мониторинг (underrun/overrun брояч); WASAPI exclusive опция.
+Готово когато: тест с орнаментирана кавал фраза: 0 хармонични смени в рамките на една
+фраза; измерена latency документирана; dropout recovery без срив.
+
+Останало: live beat follower с confidence; predictive режим експериментален и обозначен;
 RØDECaster Smart Pads и NI NKS след лицензна проверка (ADR).
 
 ## Phase 9 — Release
@@ -403,6 +579,7 @@ RØDECaster Smart Pads и NI NKS след лицензна проверка (ADR
 ## Матрица на зависимостите (накратко)
 ```
 F1.1 → F1.2 → F1.5
+F1.3 → F1.6 → F1A.1 → F1A.2/F1A.3/F1A.4 → F1A.5; F1A.1 → F3.5
 F1.3 → F2.7, F3.2, F4.1
 F1.4 → F2.7 (MIDI in)
 F2.1 → F2.4, F2.6, F2.8, F3.1, F3.4
