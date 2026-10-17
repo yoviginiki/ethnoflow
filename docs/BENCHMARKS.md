@@ -50,3 +50,35 @@ reference; the owner reported the extracted notes as plausible on 2026-10-17).
 | A4 rendered with sine / triangle / flute, read back by YIN | < 2 cents; peak within (0.2, 1.0] |
 | −100 → 0 cent bend over 0.3 s | early frames ≈ 415 Hz (±40 c), late frames 440 Hz (±2 c) |
 | 5-note chord | peak ≤ 1.0 (soft limiter) |
+
+## Error-tolerant performance intelligence (F2.9–F2.11, synthetic scenarios)
+
+`cargo test -p ethnoflow-music-core --test performance_scenarios -- --nocapture`
+(2026-10-17, deterministic). Eight phrases of a D-dorian melody at 96 BPM (the mode is
+the fixture's choice, nothing is built in), damaged per scenario; "deliberate mode
+change" is four phrases of D dorian followed by four of A hijaz. Default sliders per
+mode. *switches* = context changes made by the tracker; *latency* = phrases after the
+real change until the tracker followed; *errors/ornaments/stable* = note classes.
+
+| scenario | Stable | Assisted | Creative | Off (literal) |
+|---|---|---|---|---|
+| 100 % correct | 0 switches | 0 | 0 | 5 |
+| 80 % correct (held wrong notes, 9 of 48) | 0 · 9 errors | 0 · 9 | 0 · 9 | 9 |
+| short random deviations | 0 · 16 ornaments | 0 · 16 | 0 · 16 | 3 |
+| deliberate ornaments | 0 · 18 ornaments, 0 errors | 0 · 18 | 0 · 18 | 8 |
+| poor intonation ±30 ¢ | 0 | 0 | 0 | 8 |
+| slides into long notes | 0 | 0 | 0 | 5 |
+| variable tempo 70→130 BPM | 0 | 0 | 0 | 15 |
+| pauses and breath noise | 0 | 0 | 0 | 16 |
+| deliberate mode change (expected 1) | 1, latency 4 | 1, latency 3 | 1, latency 2 | 4 |
+| new improvised phrase | 0 | 0 | 0 | 6 |
+| prepared melody, 20 % wrong | 0 · 10 errors | 0 · 10 | 0 · 10 | 9 |
+
+False switches: 0 in every intelligent mode. Missed switches: 0. The acceptance criterion
+of the spec (≈20 % deliberate inaccuracies, harmony stays musically stable) holds in all
+three modes. Before the intent fed *intended pitch classes* (not the measured cents) to
+the tracker, the ±30 ¢ scenario produced 1–2 false switches — that is why the tracker
+ignores intonation.
+
+Not measured yet: real kaval recordings (phrase boundaries ±150 ms, F2.9 "done when"),
+real-time latency (F8.1).

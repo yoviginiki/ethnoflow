@@ -97,6 +97,27 @@
   microphone take in the studio right away. Drone and pad are now driven by
   `useBackgroundLayers` at the app level: they keep playing across screens, with a
   floating badge and a "Stop background" button.
+- **F2.9–F2.11 error-tolerant performance intelligence** (0.2.7, offline on the loaded
+  take): `music_core::phrase` splits notes into phrases (breath gap, held tone + energy
+  drop, leap after a held tone, bar-line bonus; stable tones weighted by duration ×
+  contour stability × metric position); `music_core::tracker` keeps a (tonic, mode)
+  posterior over recent phrases with forgetting, hysteresis (consecutive phrases + margin)
+  and locks that keep measuring without acting; `music_core::intent` classifies every
+  note (stable / ornament / transition / noise / probable error, with confidence and
+  reasons — an out-of-scale note is an ornament when short next to a held tone, a mode-
+  change candidate when it comes back, a probable error only when single and held),
+  estimates the intent per phrase and feeds the tracker intended pitch classes only.
+  Modes: Off (literal), Stable, Assisted, Creative, with "tolerance to errors" and
+  "sensitivity to changes" sliders; prepared-melody input (deviation against the expected
+  note) and free improvisation. The desktop has the on/off switch with a visible mode
+  badge (studio, trainer, Compose First), class colours in the piano roll and falling
+  notes, a per-phrase "why the harmony stayed / moved" list, and marks on notes (correct /
+  ornament / error) saved with the take that calibrate the classifier per user. The
+  scenario benchmark (`crates/music-core/tests/performance_scenarios.rs`, numbers in
+  `BENCHMARKS.md`): 0 false context changes in every intelligent mode on 100 % correct,
+  80 % correct, blips, ornaments, ±30 ¢ intonation, slides, variable tempo, breath noise
+  and new phrases; a deliberate mode change is accepted after 2–4 phrases; literal mode
+  switches 3–16 times on the same material.
 
 ### Measurements (owner's laptop, release build, YIN hop 10 ms, window 1024)
 | material | pitch time | voiced | f0 p05 / median / p95 | confidence p10 / median | octave-sized jumps |
