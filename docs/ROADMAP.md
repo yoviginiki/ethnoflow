@@ -135,7 +135,22 @@ audio graph — the clips, the drone and the pad share one transport, one master
 one limiter — together with an explicit background play/stop in every screen
 (0.2.9). Phase 1A and Phase 4 follow as before; F5.2–F5.4 stay in Phase 5.
 
-## Proposed next: Phase 1B — Soundscapes & Sound Designer (2026-10-17, awaiting owner)
+## Phase 1B — Soundscapes & Sound Designer (approved 2026-10-17, in progress)
+
+**Owner decision (2026-10-17 evening):** "davai napred" on the proposal below, in the
+proposed order. Two additions from the owner: (1) **teach me** — each module and the
+genre workflows (ambient, liquid DnB, "ambient drum & bass" as a new style) must come
+with in-app guidance on how to use them to make good music, not only controls; so
+every F1B module ships with a short "how to use it" text in its panel (BG+EN) and
+`docs/GUIDE_SOUNDSCAPES.md` grows one recipe per module; (2) **presets everywhere,
+per project, and whole-screen "session" saves** — shipped the same evening (preset
+library in every panel, Session in the top bar, Library screen, per-project
+`session.json`). Order now: Soundscapes screen + module framework → Cloud → Shimmer
+→ Resonator → Sound Designer → new instruments → Choir drone → Bloom → Tape loop
+(live input) → Spaces (ADR for FFT). The sample folder browser ("Семпли") is slotted
+after the Soundscapes framework.
+
+Original proposal:
 
 The owner asked for modern soundscape modules ("like Native Instruments": a
 Soundscapes button, a dropdown of modules, knobs per module) and a sound designer for

@@ -201,8 +201,17 @@
   with a "View: sliders / knobs" switch; factory layer names localized; **sample
   import in Atmosphere**: "Import samples…" (multi-file) or drag-and-drop from
   Explorer / a sample manager such as Soundly — each file becomes a take in the
-  project (named after the file) and a looped layer. Preset library store in the
-  shell (`library_cmds.rs`: kinds, tags, notes, search, sort); its UI is next.
+  project (named after the file) and a looped layer.
+- **Preset library everywhere (2026-10-17, later)**: every panel with sliders (drone,
+  pad, rhythm section, harmony, intent, atmosphere) has "Save preset" (name, tags,
+  note) and "Presets" (search by name/tag/note, sort by date/name, this project
+  only, overwrite, edit, delete); a **"Session"** preset in the top bar saves all
+  screen settings + the rack + which layers play; the **Library** screen (Home)
+  lists everything across projects with kind/project/tag filters and loads an entry
+  into its screen. **Every project remembers its own session** (`session.json` in
+  the project folder, written 1 s after a change, restored on open; layers are
+  remembered but never auto-started). **"Project" menu** in the top bar on every
+  screen (new, open, recent, close; autosave note) and the project picker on Home.
 
 ### Measurements (owner's laptop, release build, YIN hop 10 ms, window 1024)
 | material | pitch time | voiced | f0 p05 / median / p95 | confidence p10 / median | octave-sized jumps |
