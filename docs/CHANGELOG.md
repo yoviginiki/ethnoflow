@@ -202,6 +202,13 @@
   import in Atmosphere**: "Import samples…" (multi-file) or drag-and-drop from
   Explorer / a sample manager such as Soundly — each file becomes a take in the
   project (named after the file) and a looped layer.
+- **Soundscapes screen (F1B.1) and assistant bridge (2026-10-17, night)**: the
+  atmosphere rack one module at a time with big knobs, a how-to text per module, module
+  presets, shuffle/lock, mini mixer and macro knobs; **assistant bridge**
+  (`docs/ASSISTANT_BRIDGE.md`): the app watches `%APPDATA%\eu.ensodo.ethnoflow\assistant`
+  — `state.json` snapshot, `inbox/` commands (set prefs, rack, layers, macros, presets,
+  scale, timing, screen), `outbox/` replies; helper `scripts/assistant/ef.mjs`; switch
+  in the Project menu.
 - **Preset library everywhere (2026-10-17, later)**: every panel with sliders (drone,
   pad, rhythm section, harmony, intent, atmosphere) has "Save preset" (name, tags,
   note) and "Presets" (search by name/tag/note, sort by date/name, this project

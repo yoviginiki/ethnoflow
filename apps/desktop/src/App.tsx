@@ -5,6 +5,7 @@ import { Compose } from "./Compose";
 import { Home } from "./Home";
 import { Library } from "./Library";
 import { PresetLibrary } from "./PresetLibrary";
+import { useAssistantBridge } from "./assistant";
 import { applySession, collectSession, useProjectSession } from "./session";
 import { useBackgroundLayers } from "./layers";
 import { ProjectMenu } from "./ProjectMenu";
@@ -37,6 +38,7 @@ export default function App() {
   const t = messages[lang];
   useBackgroundLayers();
   useProjectSession();
+  useAssistantBridge();
 
   return (
     <div className="app">

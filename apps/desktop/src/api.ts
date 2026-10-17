@@ -1243,6 +1243,11 @@ export const api = {
   libraryReplacePayload: (id: string, payload: unknown) => invoke<LibrarySummary>("library_replace_payload", { id, payload }),
   libraryDelete: (id: string) => invoke<void>("library_delete", { id }),
   libraryFacets: () => invoke<LibraryFacets>("library_facets"),
+  // Assistant bridge (docs/ASSISTANT_BRIDGE.md)
+  assistantDir: () => invoke<string>("assistant_dir"),
+  assistantPoll: () => invoke<{ name: string; body: unknown }[]>("assistant_poll"),
+  assistantReply: (name: string, reply: unknown) => invoke<void>("assistant_reply", { name, reply }),
+  assistantWriteState: (snapshot: unknown) => invoke<void>("assistant_write_state", { snapshot }),
   // Per-project remembered session (session.json in the project folder)
   sessionGet: () => invoke<unknown | null>("session_get"),
   sessionSet: (session: unknown) => invoke<void>("session_set", { session }),

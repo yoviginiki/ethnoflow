@@ -79,6 +79,16 @@ Never claim an installer exists unless that path is present.
 `cargo build --release` alone — the latter does not embed the frontend and the window shows
 "Could not connect to localhost".
 
+## Driving the running app (assistant bridge)
+
+The owner wants to play a melody, then ask Claude Code here for the starting presets
+of the song, and to learn from the explanations. The running app exposes every musical
+setting through a file bridge: `docs/ASSISTANT_BRIDGE.md` (vocabulary) and
+`scripts/assistant/ef.mjs` (helper: `state`, `send`, `send-file`). Read the state
+first (scale, tempo, takes), never assume a key or tempo, keep levels safe, save what
+you set as presets **with notes that explain why**, start sound only when asked, and
+answer in Bulgarian with what to turn to change the character.
+
 ## Hard rules for changes
 
 1. Audio callbacks (`build_input_stream` / `build_output_stream` closures) never allocate,

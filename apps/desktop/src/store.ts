@@ -73,6 +73,8 @@ export interface Prefs {
   rhythm: RhythmPrefs;
   /** Level controls on channel strips: vertical sliders or rotary knobs. */
   stripControl: "slider" | "knob";
+  /** Assistant bridge (docs/ASSISTANT_BRIDGE.md): the app watches its inbox folder. */
+  assistantBridge: boolean;
 }
 
 export const DEFAULT_RHYTHM: RhythmPrefs = {
@@ -193,6 +195,7 @@ export const DEFAULT_PREFS: Prefs = {
   recentPresets: [],
   rhythm: DEFAULT_RHYTHM,
   stripControl: "slider",
+  assistantBridge: true,
 };
 
 function loadPrefs(): Prefs {

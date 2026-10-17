@@ -1,4 +1,5 @@
 mod ambient_cmds;
+mod assistant_cmds;
 mod analysis_cmds;
 mod arrangement_cmds;
 mod commands;
@@ -37,6 +38,7 @@ pub fn run() {
             let mut s = state.lock();
             s.profiles_dir = Some(config.join("instruments"));
             s.presets_dir = Some(config.join("ambient-presets"));
+            s.assistant_dir = Some(config.join("assistant"));
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -166,6 +168,10 @@ pub fn run() {
             library_cmds::library_facets,
             project_cmds::session_get,
             project_cmds::session_set,
+            assistant_cmds::assistant_dir,
+            assistant_cmds::assistant_poll,
+            assistant_cmds::assistant_reply,
+            assistant_cmds::assistant_write_state,
         ])
         .build(tauri::generate_context!())
         .expect("error while building EthnoFlow Studio")

@@ -1,0 +1,214 @@
+import { useEffect, useRef } from "react";
+import { api, describeError, type Ambient as AmbientRack, type AmbientLayer, type LayerKind, type LayerSource, type LibraryKind, type Scale, type Timing } from "./api";
+import { defaultSource, makeLayer, MAX_AMBIENT_LAYERS } from "./ambientPresets";
+import { applyLibraryPayload, applySession, collectSession, mergeSessionPrefs, pickSessionPrefs, rackForProject, SESSION_PREF_KEYS } from "./session";
+import { useStore, type LayerName, type Screen } from "./store";
+
+/**
+ * Assistant bridge: commands dropped into `<config>/assistant/inbox/*.json` by a
+ * coding assistant in the terminal are applied here, replies go to `outbox/`, and a
+ * state snapshot is kept in `state.json`. The shell only moves the files
+ * (`assistant_cmds.rs`); the vocabulary lives in `runAssistantCommand`.
+ * Documented in docs/ASSISTANT_BRIDGE.md — keep the two in step.
+ */
+export const BRIDGE_SCHEMA = 1;
+const POLL_MS = 500;
+const STATE_MS = 1500;
+const LAYER_NAMES: LayerName[] = ["drone", "pad", "ambient", "rhythm"];
+
+export type AssistantCmd = Record<string, unknown> & { op?: string };
+
+/** What the assistant can read: everything musical, nothing heavy (no audio). */
+export function snapshot(): Record<string, unknown> {
+  const s = useStore.getState();
+  const p = s.project;
+  return {
+    schema: BRIDGE_SCHEMA,
+    at: Date.now(),
+    lang: s.prefs.lang,
+    screen: s.screen,
+    project: p
+      ? { name: p.name, root: p.root, scale: p.scale, a4_hz: p.a4_hz, timing: p.timing, markers: p.markers, instrument: p.instrument ?? null, takes: p.takes }
+      : null,
+    loaded_take: s.loaded?.id ?? null,
+    prefs: pickSessionPrefs(s.prefs),
+    layers: s.layers,
+    metronome: s.metronomeOn,
+    ambient: s.ambient,
+    rhythm_status: s.rhythmStatus,
+    ambient_status: s.ambientStatus ? { playing: s.ambientStatus.playing, master_peak: s.ambientStatus.master_peak, limiter_gain: s.ambientStatus.limiter_gain } : null,
+  };
+}
+
+function currentPayload(kind: LibraryKind): unknown {
+  const s = useStore.getState();
+  switch (kind) {
+    case "session":
+      return collectSession();
+    case "ambient":
+      return s.ambient;
+    case "drone":
+    case "pad":
+    case "rhythm":
+    case "harmony":
+    case "intent":
+      return s.prefs[kind];
+    default:
+      return null;
+  }
+}
+
+export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
+  const s = useStore.getState();
+  const project = () => {
+    if (!s.project) throw new Error("no project open");
+    return s.project;
+  };
+  const rack = () => {
+    project();
+    if (!s.ambient) throw new Error("no rack loaded yet");
+    return s.ambient;
+  };
+  const setRack = async (next: AmbientRack) => {
+    const v = await api.setAmbient(next);
+    useStore.getState().setAmbient(v.ambient);
+    return v.ambient;
+  };
+  switch (cmd.op) {
+    case "ping":
+      return { pong: true, schema: BRIDGE_SCHEMA };
+    case "state":
+      return snapshot();
+    case "message":
+      s.setMessage(String(cmd.text ?? ""));
+      return {};
+    case "screen":
+      s.setScreen(String(cmd.screen) as Screen);
+      return { screen: useStore.getState().screen };
+    case "set_prefs": {
+      const merged = mergeSessionPrefs(s.prefs, cmd.prefs);
+      for (const k of SESSION_PREF_KEYS) if (merged[k] !== s.prefs[k]) s.setPref(k, merged[k]);
+      return { prefs: pickSessionPrefs(useStore.getState().prefs) };
+    }
+    case "layers": {
+      for (const n of LAYER_NAMES) if (typeof cmd[n] === "boolean" && s.layers[n] !== cmd[n]) s.setLayer(n, cmd[n] as boolean);
+      if (typeof cmd.metronome === "boolean") s.setMetronomeOn(cmd.metronome);
+      return { layers: useStore.getState().layers, metronome: useStore.getState().metronomeOn };
+    }
+    case "set_ambient": {
+      const p = project();
+      const next = await setRack(rackForProject(cmd.ambient as AmbientRack, new Set(p.takes.map((t) => t.id))));
+      return { layers: next.layers.map((l) => ({ id: l.id, name: l.name, kind: l.source.kind })) };
+    }
+    case "set_macros": {
+      const r = rack();
+      const next = await setRack({ ...r, macros: { ...r.macros, ...((cmd.macros as object) ?? {}) } });
+      return { macros: next.macros };
+    }
+    case "add_layer": {
+      const p = project();
+      const r = rack();
+      if (r.layers.length >= MAX_AMBIENT_LAYERS) throw new Error(`rack full (${MAX_AMBIENT_LAYERS} layers)`);
+      const kind = String(cmd.kind) as LayerKind;
+      const takeId = String(cmd.take_id ?? "");
+      if (kind === "loop" && !p.takes.some((t) => t.id === takeId)) throw new Error("loop needs a take_id of this project");
+      const source = { ...defaultSource(kind, takeId), ...((cmd.source as object) ?? {}) } as LayerSource;
+      const layer = makeLayer(String(cmd.name ?? kind), source, (cmd.patch ?? {}) as Partial<AmbientLayer>);
+      await setRack({ ...r, layers: [...r.layers, layer] });
+      return { id: layer.id, name: layer.name };
+    }
+    case "patch_layer": {
+      const r = rack();
+      const target = r.layers.find((l) => l.id === cmd.id || l.name === cmd.name);
+      if (!target) throw new Error("layer not found (give id or name)");
+      const patch = (cmd.patch ?? {}) as Partial<AmbientLayer> & { source?: Record<string, unknown> };
+      const next = { ...target, ...patch, source: patch.source ? ({ ...target.source, ...patch.source } as LayerSource) : target.source } as AmbientLayer;
+      await setRack({ ...r, layers: r.layers.map((l) => (l.id === target.id ? next : l)) });
+      return { layer: next };
+    }
+    case "remove_layer": {
+      const r = rack();
+      const target = r.layers.find((l) => l.id === cmd.id || l.name === cmd.name);
+      if (!target) throw new Error("layer not found (give id or name)");
+      await setRack({ ...r, layers: r.layers.filter((l) => l.id !== target.id), automation: r.automation.filter((a) => a.target.layer !== target.id) });
+      return { removed: target.id };
+    }
+    case "save_preset": {
+      const kind = String(cmd.kind) as LibraryKind;
+      const payload = cmd.payload === undefined || cmd.payload === "current" ? currentPayload(kind) : cmd.payload;
+      if (payload === null || payload === undefined) throw new Error(`nothing to save for kind ${kind}`);
+      const e = await api.librarySave({ kind, name: String(cmd.name ?? "assistant"), tags: Array.isArray(cmd.tags) ? (cmd.tags as string[]) : [], notes: String(cmd.notes ?? ""), payload });
+      return { id: e.id, name: e.name };
+    }
+    case "list_presets":
+      return { entries: await api.libraryList((cmd.kind as LibraryKind) ?? null, (cmd.project as string) ?? null, (cmd.query as string) ?? null, "date_desc") };
+    case "load_preset": {
+      const full = await api.libraryGet(String(cmd.id));
+      const screen = await applyLibraryPayload(full.kind as LibraryKind, full.payload);
+      if (cmd.go !== false) useStore.getState().setScreen(screen);
+      return { screen, name: full.name };
+    }
+    case "session":
+      await applySession(cmd.payload, cmd.restore_layers !== false);
+      return {};
+    case "set_scale": {
+      project();
+      const pv = await api.setScale((cmd.scale as Scale | null) ?? null);
+      useStore.getState().setProject(pv);
+      return { scale: pv.scale };
+    }
+    case "set_timing": {
+      project();
+      const pv = await api.setTiming(cmd.timing as Timing);
+      useStore.getState().setProject(pv);
+      return { timing: pv.timing };
+    }
+    default:
+      throw new Error(`unknown op: ${String(cmd.op)}`);
+  }
+}
+
+/** Poll the inbox and keep `state.json` fresh while the bridge is on (Project menu). */
+export function useAssistantBridge() {
+  const enabled = useStore((s) => s.prefs.assistantBridge ?? true);
+  const last = useRef("");
+
+  useEffect(() => {
+    if (!enabled) return;
+    let busy = false;
+    const id = window.setInterval(async () => {
+      if (busy) return;
+      busy = true;
+      try {
+        const cmds = await api.assistantPoll();
+        for (const c of cmds) {
+          let reply: unknown;
+          try {
+            reply = { ok: true, result: await runAssistantCommand(c.body as AssistantCmd) };
+          } catch (e) {
+            reply = { ok: false, error: describeError(e) };
+          }
+          await api.assistantReply(c.name, reply).catch(() => undefined);
+        }
+        if (cmds.length > 0) last.current = "";
+      } catch {
+        // The shell is not ready yet (or the folder is unavailable): try again next tick.
+      } finally {
+        busy = false;
+      }
+    }, POLL_MS);
+    return () => window.clearInterval(id);
+  }, [enabled]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    const id = window.setInterval(() => {
+      const snap = snapshot();
+      const text = JSON.stringify(snap, (k, v) => (k === "at" ? undefined : v));
+      if (text === last.current) return;
+      last.current = text;
+      api.assistantWriteState(snap).catch(() => undefined);
+    }, STATE_MS);
+    return () => window.clearInterval(id);
+  }, [enabled]);
+}

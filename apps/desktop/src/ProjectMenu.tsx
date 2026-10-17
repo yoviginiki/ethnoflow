@@ -17,12 +17,15 @@ export function ProjectMenu() {
   const [naming, setNaming] = useState(false);
   const [name, setName] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  const [bridgeDir, setBridgeDir] = useState("");
+  const bridge = useStore((s) => s.prefs.assistantBridge ?? true);
   const ref = useRef<HTMLDivElement>(null);
   const st = () => useStore.getState();
 
   useEffect(() => {
     if (!show) return;
     api.recentProjects().then(setRecent).catch(() => setRecent([]));
+    api.assistantDir().then(setBridgeDir).catch(() => setBridgeDir(""));
     const onDoc = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) {
         setShow(false);
@@ -135,6 +138,12 @@ export function ProjectMenu() {
               {!r.exists && <span className="badge warn"> {t.projectMissing}</span>}
             </button>
           ))}
+          <div className="project-menu-sep" />
+          <label className="inline small" title={t.bridgeHint}>
+            <input type="checkbox" checked={bridge} onChange={(e) => st().setPref("assistantBridge", e.target.checked)} />
+            🤖 {t.bridgeLabel}
+          </label>
+          {bridge && bridgeDir && <div className="muted small path">{bridgeDir}</div>}
           {project && (
             <>
               <div className="project-menu-sep" />
