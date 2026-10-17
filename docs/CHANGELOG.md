@@ -21,6 +21,14 @@
   labelled technical 60 BPM with a README next to the file).
 - Device tests now wait up to 2 s for WASAPI streams to start (flaky under parallel
   stream opening).
+- **2.7a "Свири по ноти"** (0.2.1): `.mid` import via midly (ADR-0019) → `NoteEvent`
+  + tempo map (format 0/1, tempo changes, running status, open notes); a MIDI file is
+  a take (`midi_file`) rendered by the built-in synth (flute/sine/triangle voices,
+  envelope, pitch bend, soft limiter) so waveform, playback, loop and export work
+  unchanged; tempo ×0.25–2, mute per track, voice change re-render the take, never the
+  file; **falling-notes view** with a piano keyboard, key names and in-scale colouring;
+  **"Play the notes"** renders the current notes (extracted, edited or MIDI) with the
+  synth — the first musical translator. Spec: `docs/MIDI_PLAYER_TRAINER_SPEC.md`.
 
 ### Measurements (owner's laptop, release build, YIN hop 10 ms, window 1024)
 | material | pitch time | voiced | f0 p05 / median / p95 | confidence p10 / median | octave-sized jumps |
