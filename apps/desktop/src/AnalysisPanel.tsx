@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { save } from "@tauri-apps/plugin-dialog";
-import { api, describeError, type Scale } from "./api";
+import { api, describeError, type Hypothesis, type Scale } from "./api";
 import { formatBytes, noteParts, takeName } from "./format";
-import { messages } from "./i18n";
+import { messages, type Messages } from "./i18n";
 import { useStore } from "./store";
 
 interface Props {
@@ -155,6 +155,7 @@ export function AnalysisPanel({ withPending, selectTake }: Props) {
                   <button className="ghost small" onClick={() => chooseScale(scaleFromKind(sc))} disabled={busy || chosen}>
                     {t.choose}
                   </button>
+                  {h.evidence && <div className="hyp-why muted small">{explainEvidence(h, t)}</div>}
                 </li>
               );
             })}
@@ -172,6 +173,28 @@ export function AnalysisPanel({ withPending, selectTake }: Props) {
       )}
     </details>
   );
+}
+
+/** Word the facts behind a hypothesis (F3.1): tonic share, the decisive note, coverage. */
+export function explainEvidence(h: Hypothesis, t: Messages): string {
+  const e = h.evidence;
+  if (!e) return "";
+  const pct = (x: number) => Math.round(x * 100);
+  const parts: string[] = [t.explainTonic(t.noteNames[h.tonic_pc], pct(e.tonic_share))];
+  if (e.decisive) {
+    const d = e.decisive;
+    const rival = `${t.noteNames[d.rival_tonic_pc]} ${t.scaleKinds[d.rival_kind]}`;
+    if (d.share_against < 0.005) {
+      parts.push(t.explainDecisiveAbsent(t.noteNames[d.pc_for], t.noteNames[d.pc_against], rival));
+    } else if (d.share_for > d.share_against) {
+      parts.push(t.explainDecisive(t.noteNames[d.pc_for], pct(d.share_for / d.share_against - 1), t.noteNames[d.pc_against], rival));
+    }
+  }
+  parts.push(t.explainCoverage(pct(e.coverage)));
+  if (e.off_scale.length > 0) {
+    parts.push(t.explainOffScale(e.off_scale.map((p) => `${t.noteNames[p.pc]} ${pct(p.share)} %`).join(", ")));
+  }
+  return parts.join("; ");
 }
 
 /** Fill in the degree pattern for a tempered kind (mirrors music-core's tables). */

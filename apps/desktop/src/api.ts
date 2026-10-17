@@ -266,11 +266,35 @@ export interface ContourView {
   confidence: number;
 }
 
+export interface PcShare {
+  pc: number;
+  share: number;
+}
+
+export interface Decisive {
+  pc_for: number;
+  share_for: number;
+  pc_against: number;
+  share_against: number;
+  rival_tonic_pc: number;
+  rival_kind: ScaleKind;
+}
+
+/** Facts behind a hypothesis (F3.1); the UI words them. Shares are 0..1 of sounding time. */
+export interface Evidence {
+  tonic_share: number;
+  fifth_share: number;
+  coverage: number;
+  decisive: Decisive | null;
+  off_scale: PcShare[];
+}
+
 export interface Hypothesis {
   tonic_pc: number;
   kind: ScaleKind;
   score: number;
   probability: number;
+  evidence: Evidence | null;
 }
 
 export interface AnalysisView {

@@ -258,6 +258,13 @@ const bg = {
   droneMovement: "Движение",
   droneBreath: "Дъх",
   droneStreamErrors: "грешки в потока",
+
+  // scale explanations (F3.1) — facts, never a single "truth"
+  explainTonic: (note: string, pct: number) => `${note} се задържа ${pct} % от времето`,
+  explainDecisive: (noteFor: string, ratioPct: number, noteAgainst: string, rival: string) => `${noteFor} е ${ratioPct} % по-често от ${noteAgainst} (срещу ${rival})`,
+  explainDecisiveAbsent: (noteFor: string, noteAgainst: string, rival: string) => `има ${noteFor}, няма ${noteAgainst} (срещу ${rival})`,
+  explainCoverage: (pct: number) => `${pct} % от звученето е в лада`,
+  explainOffScale: (list: string) => `извън лада: ${list}`,
   scaleLock: "Само нотите от скалата",
   octave: "октава",
 
@@ -582,6 +589,12 @@ const en: typeof bg = {
   droneMovement: "Movement",
   droneBreath: "Breath",
   droneStreamErrors: "stream errors",
+
+  explainTonic: (note: string, pct: number) => `${note} holds ${pct} % of the time`,
+  explainDecisive: (noteFor: string, ratioPct: number, noteAgainst: string, rival: string) => `${noteFor} is ${ratioPct} % more frequent than ${noteAgainst} (vs ${rival})`,
+  explainDecisiveAbsent: (noteFor: string, noteAgainst: string, rival: string) => `${noteFor} occurs, ${noteAgainst} does not (vs ${rival})`,
+  explainCoverage: (pct: number) => `${pct} % of the sound is in the scale`,
+  explainOffScale: (list: string) => `outside the scale: ${list}`,
   scaleLock: "Scale notes only",
   octave: "octave",
 

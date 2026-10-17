@@ -11,8 +11,8 @@ use audio_engine::{
     contour, ContourPoint, InputMonitor, MonitorStatus, PitchConfig, StreamRequest,
 };
 use music_core::{
-    extract_notes, rank_hypotheses, write_smf, Hypothesis, Note, NoteParams, PitchClassHistogram,
-    PitchSample, Reference, Scale, ScaleKind, SmfOptions, TECHNICAL_TEMPO_BPM,
+    explain, extract_notes, rank_hypotheses, write_smf, Evidence, Hypothesis, Note, NoteParams,
+    PitchClassHistogram, PitchSample, Reference, Scale, ScaleKind, SmfOptions, TECHNICAL_TEMPO_BPM,
 };
 use serde::{Deserialize, Serialize};
 use tauri::State;
@@ -62,7 +62,27 @@ pub struct AnalysisView {
     pub notes: Vec<Note>,
     /// True when `notes` are the user's edited version.
     pub edited: bool,
-    pub hypotheses: Vec<Hypothesis>,
+    pub hypotheses: Vec<HypothesisView>,
+}
+
+/// A ranked hypothesis with the facts behind it (F3.1); the UI words the explanation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HypothesisView {
+    #[serde(flatten)]
+    pub hypothesis: Hypothesis,
+    pub evidence: Option<Evidence>,
+}
+
+fn rank_views(h: &PitchClassHistogram) -> Vec<HypothesisView> {
+    let ranked = rank_hypotheses(h, &ScaleKind::ALL);
+    ranked
+        .iter()
+        .take(MAX_HYPOTHESES)
+        .map(|hyp| HypothesisView {
+            hypothesis: hyp.clone(),
+            evidence: explain(h, hyp, &ranked),
+        })
+        .collect()
 }
 
 fn a4_of(s: &Inner) -> f64 {
@@ -93,14 +113,12 @@ fn to_view(doc: &ContourDoc, a4: f64) -> Vec<ContourView> {
         .collect()
 }
 
-fn hypotheses_of(doc: &ContourDoc, a4: f64) -> Vec<Hypothesis> {
+fn hypotheses_of(doc: &ContourDoc, a4: f64) -> Vec<HypothesisView> {
     let r = Reference::new(a4);
     let h = PitchClassHistogram::from_midi(doc.points.iter().filter_map(|p| {
         p.hz.map(|hz| (r.hz_to_midi(hz), doc.hop_seconds * p.confidence))
     }));
-    let mut v = rank_hypotheses(&h, &ScaleKind::ALL);
-    v.truncate(MAX_HYPOTHESES);
-    v
+    rank_views(&h)
 }
 
 fn notes_from_contour(doc: &ContourDoc, a4: f64) -> NotesDoc {
@@ -148,8 +166,7 @@ pub fn view_from_docs(s: &Inner) -> CmdResult<Option<AnalysisView>> {
         };
         let h =
             PitchClassHistogram::from_midi(notes.iter().map(|n| (n.midi as f64, n.end - n.start)));
-        let mut hypotheses = rank_hypotheses(&h, &ScaleKind::ALL);
-        hypotheses.truncate(MAX_HYPOTHESES);
+        let hypotheses = rank_views(&h);
         return Ok(Some(AnalysisView {
             take_id: id,
             a4_hz: a4,
