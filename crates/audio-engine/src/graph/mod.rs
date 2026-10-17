@@ -248,6 +248,21 @@ impl Graph {
 
     /// Render `out` (interleaved, `channels` per frame). Allocation-free.
     pub fn render(&mut self, out: &mut [f32], channels: usize) {
+        self.render_inner(out, channels, None);
+    }
+
+    /// Like `render`, and also writes each layer's post-fader, pre-master signal into
+    /// `stems[i]` (same interleaved layout and length as `out`). Offline use (stems).
+    pub fn render_with_stems(&mut self, out: &mut [f32], channels: usize, stems: &mut [Vec<f32>]) {
+        self.render_inner(out, channels, Some(stems));
+    }
+
+    fn render_inner(
+        &mut self,
+        out: &mut [f32],
+        channels: usize,
+        mut stems: Option<&mut [Vec<f32>]>,
+    ) {
         let channels = channels.max(1);
         let frames = out.len() / channels;
         let any_solo = self
@@ -282,6 +297,11 @@ impl Graph {
                 let mono = &mut layer.mono[..n];
                 layer.source.render(mono, self.sample_rate);
                 let mut peak = 0.0f32;
+                let stem = stems
+                    .as_deref_mut()
+                    .and_then(|s| s.get_mut(i))
+                    .map(|s| &mut s[done * channels..(done + n) * channels]);
+                let mut stem_frames = stem.map(|s| s.chunks_mut(channels));
                 for (k, frame) in block.chunks_mut(channels).enumerate() {
                     let g = layer.gain.next(target_gain);
                     let pan = layer.pan.next(p.pan.target());
@@ -301,13 +321,29 @@ impl Graph {
                     // Constant-power pan.
                     let theta = (pan + 1.0) * 0.25 * std::f32::consts::PI;
                     let (l, r) = (theta.cos(), theta.sin());
-                    if channels == 1 {
-                        frame[0] += y;
+                    let (yl, yr) = if channels == 1 {
+                        (y, y)
                     } else {
-                        frame[0] += y * l * std::f32::consts::SQRT_2;
-                        frame[1] += y * r * std::f32::consts::SQRT_2;
+                        (
+                            y * l * std::f32::consts::SQRT_2,
+                            y * r * std::f32::consts::SQRT_2,
+                        )
+                    };
+                    if channels == 1 {
+                        frame[0] += yl;
+                    } else {
+                        frame[0] += yl;
+                        frame[1] += yr;
                         for ch in frame.iter_mut().skip(2) {
                             *ch += y;
+                        }
+                    }
+                    if let Some(sf) = stem_frames.as_mut().and_then(|it| it.next()) {
+                        if channels == 1 {
+                            sf[0] += yl;
+                        } else {
+                            sf[0] += yl;
+                            sf[1] += yr;
                         }
                     }
                 }

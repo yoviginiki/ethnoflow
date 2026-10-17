@@ -101,6 +101,8 @@ pub struct Inner {
     pub ambient_on: bool,
     /// Live handles per rack layer while it plays (None = slot not built).
     pub ambient_live: Vec<Option<crate::ambient_cmds::LiveLayer>>,
+    /// Automation / program clock while the rack plays (F1A.4/F1A.5).
+    pub ambient_clock: Option<crate::ambient_cmds::Clock>,
 }
 
 impl Inner {
@@ -159,6 +161,9 @@ impl Inner {
         self.clips = None;
         self.ambient_on = false;
         self.ambient_live.clear();
+        if let Some(c) = self.ambient_clock.take() {
+            c.stop();
+        }
     }
 }
 

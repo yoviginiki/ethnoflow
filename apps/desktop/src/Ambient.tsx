@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AMBIENT_TAGS, api, describeError, type Ambient as AmbientRack, type AmbientLayer, type AmbientTag, type LayerKind, type LayerSource, type Macros, type PresetSummary } from "./api";
 import { DEFAULT_MACROS, KIND_LABEL, MAX_AMBIENT_LAYERS, defaultSource, makeLayer } from "./ambientPresets";
 import { randomizeRack } from "./ambientRandom";
+import { LaneEditor, ProgramPanel } from "./AmbientProgram";
 import { BackgroundTransport } from "./BackgroundTransport";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { formatDb, linearToDb, meterFraction, noteParts, takeName } from "./format";
@@ -286,7 +287,7 @@ export function Ambient() {
   };
   const removeLayer = (id: string) => {
     if (!rack) return;
-    commit({ ...rack, layers: rack.layers.filter((l) => l.id !== id) });
+    commit({ ...rack, layers: rack.layers.filter((l) => l.id !== id), automation: rack.automation.filter((l) => l.target.layer !== id) });
     if (selected === id) setSelected(null);
   };
   const moveLayer = (id: string, dir: -1 | 1) => {
@@ -576,6 +577,7 @@ export function Ambient() {
             ))}
           </div>
           <div className="muted small">{t.macroHint}</div>
+          {rack && <LaneEditor rack={rack} layerId={null} source={null} laneTime={status?.lane_time ?? 0} onChange={commit} />}
 
           <h3>{sel ? `${t.layerDetail}: ${sel.name}` : t.layerDetail}</h3>
           {!sel && <div className="muted small">{t.selectLayerHint}</div>}
@@ -664,10 +666,12 @@ export function Ambient() {
                 <input type="range" min={0} max={1} step={0.005} value={Math.log(sel.highpass_hz / 10) / Math.log(800)} onChange={(e) => patchLayer(sel.id, { highpass_hz: Math.round(10 * Math.pow(800, Number(e.target.value))) })} onDoubleClick={() => patchLayer(sel.id, { highpass_hz: 10 })} />
                 <span className="mono-num small">{sel.highpass_hz <= 10 ? "—" : `${sel.highpass_hz} Hz`}</span>
               </label>
+              {rack && <LaneEditor rack={rack} layerId={sel.id} source={sel.source} laneTime={status?.lane_time ?? 0} onChange={commit} />}
             </div>
           )}
         </aside>
       </div>
+      {rack && <ProgramPanel rack={rack} status={status} timing={project.timing} projectName={project.name} onChange={commit} />}
 
       {confirm?.kind === "remove" && (
         <ConfirmDialog

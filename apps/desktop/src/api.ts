@@ -518,12 +518,69 @@ export interface Macros {
   width: number;
 }
 
+// Automation (F1A.4) and scenes (F1A.5): project/src/program.rs
+export interface ParamTarget {
+  /** Layer id, or null for a macro. */
+  layer: string | null;
+  param: string;
+}
+export type AutomationMode =
+  | { mode: "static" }
+  | { mode: "lfo"; period_s: number; phase: number; shape: "sine" | "triangle" }
+  | { mode: "walk"; period_s: number }
+  | { mode: "keyframes"; points: [number, number][] };
+export interface AutomationLane {
+  id: string;
+  target: ParamTarget;
+  mode: AutomationMode;
+  depth: number;
+  humanize: number;
+  seed: number;
+  enabled: boolean;
+}
+export interface LayerSnap {
+  id: string;
+  gain_db: number;
+  pan: number;
+  lowpass_hz: number;
+  highpass_hz: number;
+  mute: boolean;
+  source: LayerSource;
+}
+export interface Snapshot {
+  layers: LayerSnap[];
+  macros: Macros;
+}
+export interface Scene {
+  id: string;
+  name: string;
+  start_s: number;
+  duration_s: number;
+  transition_s: number;
+  snapshot: Snapshot;
+}
+export interface Program {
+  scenes: Scene[];
+  loop_region: [number, number] | null;
+}
+
 export interface Ambient {
   schema_version: number;
   layers: AmbientLayer[];
   macros: Macros;
   preset: string | null;
   tags: string[];
+  automation: AutomationLane[];
+  program: Program;
+}
+
+export interface AmbientExportResult {
+  path: string;
+  bytes: number;
+  format: WavFormat;
+  seconds: number;
+  stems: string[];
+  render_ms: number;
 }
 
 export interface PresetSummary {
@@ -550,6 +607,10 @@ export interface AmbientStatus {
   limiter_gain: number;
   stream_errors: number;
   pitches_hz: number[][];
+  program_position: number;
+  program_playing: boolean;
+  program_end: number;
+  lane_time: number;
 }
 
 export interface ProjectView {
@@ -956,6 +1017,9 @@ export const api = {
   ambientStop: () => invoke<void>("ambient_stop"),
   ambientStatus: () => invoke<AmbientStatus>("ambient_status"),
   backgroundFadeOut: (seconds: number) => invoke<void>("background_fade_out", { seconds }),
+  ambientProgramSet: (playing: boolean | null, position: number | null) => invoke<AmbientStatus>("ambient_program_set", { playing, position }),
+  exportAmbient: (path: string, format: WavFormat | null, seconds: number | null, stems: boolean, sampleRate: number | null) =>
+    invoke<AmbientExportResult>("export_ambient", { path, format, seconds, stems, sampleRate }),
   ambientPresets: () => invoke<PresetSummary[]>("ambient_presets"),
   ambientPresetLoad: (id: string) => invoke<Ambient>("ambient_preset_load", { id }),
   ambientPresetSave: (name: string, tags: string[], rack: Ambient) => invoke<PresetSummary[]>("ambient_preset_save", { name, tags, rack }),

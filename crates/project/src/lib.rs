@@ -13,6 +13,7 @@ pub mod error;
 pub mod instrument;
 pub mod licensing;
 pub mod manifest;
+pub mod program;
 pub mod project;
 
 pub use ambient::{Ambient, AmbientLayer, LayerSource, Macros, AMBIENT_FILE, MAX_AMBIENT_LAYERS};
@@ -27,6 +28,10 @@ pub use instrument::{
 };
 pub use licensing::{AssetManifest, AssetRecord, AssetStatus};
 pub use manifest::{Manifest, Marker, TempoPoint, TimeSignaturePoint};
+pub use program::{
+    effective as effective_rack, is_animated, AutomationLane, AutomationMode, LfoShape,
+    ParamTarget, Program, Scene, Snapshot,
+};
 pub use project::{
     checksum_file, sanitize_name, OpenReport, Project, TakeCheck, TakeHealth, DERIVED_DIR,
     ORIGINALS_DIR, PROJECT_EXT,

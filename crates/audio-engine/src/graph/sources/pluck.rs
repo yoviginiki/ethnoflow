@@ -119,36 +119,9 @@ impl PluckSource {
     }
 }
 
-impl Source for PluckSource {
-    fn render(&mut self, out: &mut [f32], sample_rate: u32) {
-        let sr = sample_rate.max(1) as f32;
-        // One refcount bump per block: lets the strike/reseed paths borrow `self` mutably.
-        let p = Arc::clone(&self.params);
-        let seed = p.seed.load(Ordering::Relaxed);
-        if seed != self.seed_used {
-            self.trigger.reset(seed);
-            self.seed_used = seed;
-        }
-        let ramp = ramp_samples(sample_rate);
-        self.density.begin(p.density.target(), ramp);
-        self.damping.begin(p.damping.target(), ramp);
-        self.brightness.begin(p.brightness.target(), ramp);
-        self.spread.begin(p.velocity_spread.target(), ramp);
-        let n = out.len();
-        let density = if p.pitches.is_empty() {
-            0.0
-        } else {
-            self.density.current
-        };
-        if self.trigger.tick(n, density, sr).is_some() {
-            if let Some(hz) = p.pitches.pick(self.trigger.rng()) {
-                let (b, s) = (self.brightness.current, self.spread.current);
-                self.pluck(hz, b, s, sr);
-            }
-        }
-        // Loop loss per sample: damping 0 → ~0.9995, 1 → ~0.98.
-        let loss = 0.9996 - self.damping.current * 0.02;
-        out.fill(0.0);
+impl PluckSource {
+    #[inline]
+    fn render_span(&mut self, out: &mut [f32], p: &PluckParams, loss: f32) {
         for s in out.iter_mut() {
             let _ = self.density.next(p.density.target());
             let _ = self.damping.next(p.damping.target());
@@ -184,6 +157,43 @@ impl Source for PluckSource {
             }
             *s = acc;
         }
+    }
+}
+
+impl Source for PluckSource {
+    fn render(&mut self, out: &mut [f32], sample_rate: u32) {
+        let sr = sample_rate.max(1) as f32;
+        // One refcount bump per block: lets the strike/reseed paths borrow `self` mutably.
+        let p = Arc::clone(&self.params);
+        let seed = p.seed.load(Ordering::Relaxed);
+        if seed != self.seed_used {
+            self.trigger.reset(seed);
+            self.seed_used = seed;
+        }
+        let ramp = ramp_samples(sample_rate);
+        self.density.begin(p.density.target(), ramp);
+        self.damping.begin(p.damping.target(), ramp);
+        self.brightness.begin(p.brightness.target(), ramp);
+        self.spread.begin(p.velocity_spread.target(), ramp);
+        let n = out.len();
+        let density = if p.pitches.is_empty() {
+            0.0
+        } else {
+            self.density.current
+        };
+        let pluck_at = self.trigger.tick(n, density, sr);
+        // Loop loss per sample: damping 0 → ~0.9995, 1 → ~0.98.
+        let loss = 0.9996 - self.damping.current * 0.02;
+        let at = pluck_at.unwrap_or(n).min(n);
+        let (head, tail) = out.split_at_mut(at);
+        self.render_span(head, &p, loss);
+        if pluck_at.is_some() {
+            if let Some(hz) = p.pitches.pick(self.trigger.rng()) {
+                let (b, s) = (self.brightness.current, self.spread.current);
+                self.pluck(hz, b, s, sr);
+            }
+        }
+        self.render_span(tail, &p, loss);
     }
 
     fn reset(&mut self) {

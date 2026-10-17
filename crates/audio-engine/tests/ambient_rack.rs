@@ -194,3 +194,68 @@ fn sliders_change_the_sound_measurably() {
         "pluck damping: {ringing} vs {damped}"
     );
 }
+
+/// F1A.5: the offline path is the live path. Rendering in different callback sizes
+/// gives the same loudness per second (< 0.1 dB), and stems sum to the pre-master mix.
+#[test]
+fn offline_render_is_chunk_independent_and_stems_sum_to_the_mix() {
+    fn render_chunks(chunk: usize, seconds: f64) -> Vec<f32> {
+        let mut r = rack();
+        r.params.master.gain_db.set(0.0);
+        let total = (seconds * SR as f64) as usize;
+        let mut out = vec![0.0f32; total * 2];
+        let mut done = 0;
+        while done < total {
+            let n = (total - done).min(chunk);
+            r.graph.render(&mut out[done * 2..(done + n) * 2], 2);
+            done += n;
+        }
+        out
+    }
+    let a = render_chunks(512, 8.0);
+    let b = render_chunks(441, 8.0);
+    for (k, (wa, wb)) in a
+        .chunks(SR as usize * 2)
+        .zip(b.chunks(SR as usize * 2))
+        .enumerate()
+    {
+        let rms = |w: &[f32]| (w.iter().map(|x| x * x).sum::<f32>() / w.len() as f32).sqrt();
+        let (ra, rb) = (rms(wa), rms(wb));
+        let db = 20.0 * (ra / rb).log10();
+        assert!(db.abs() < 0.1, "second {k}: {ra} vs {rb} ({db:.3} dB)");
+    }
+    // Stems: with master at 0 dB, no reverb and the limiter idle, the sum of the
+    // stems equals the mix sample for sample.
+    let mut r = rack();
+    r.params.master.gain_db.set(0.0);
+    for l in r.params.layers.iter() {
+        l.gain_db.set(-30.0);
+    }
+    let frames = SR as usize * 2;
+    let mut out = vec![0.0f32; frames * 2];
+    let mut stems: Vec<Vec<f32>> = (0..8).map(|_| vec![0.0f32; frames * 2]).collect();
+    for start in (0..frames).step_by(512) {
+        let n = (frames - start).min(512);
+        let mut block = vec![0.0f32; n * 2];
+        let mut sblocks: Vec<Vec<f32>> = (0..8).map(|_| vec![0.0f32; n * 2]).collect();
+        r.graph.render_with_stems(&mut block, 2, &mut sblocks);
+        out[start * 2..(start + n) * 2].copy_from_slice(&block);
+        for (s, sb) in stems.iter_mut().zip(sblocks.iter()) {
+            s[start * 2..(start + n) * 2].copy_from_slice(sb);
+        }
+    }
+    // Skip the first 100 ms: the master gain ramps from its construction value.
+    let mut max_err = 0.0f32;
+    for i in (SR as usize / 10) * 2..frames * 2 {
+        let sum: f32 = stems.iter().map(|s| s[i]).sum();
+        max_err = max_err.max((sum - out[i]).abs());
+    }
+    assert!(
+        max_err < 1e-4,
+        "stems sum differs from the mix by {max_err}"
+    );
+    assert!(
+        stems.iter().all(|s| s.iter().any(|&x| x != 0.0)),
+        "every stem has signal"
+    );
+}

@@ -132,6 +132,8 @@ pub fn run() {
             ambient_cmds::ambient_stop,
             ambient_cmds::ambient_status,
             ambient_cmds::background_fade_out,
+            ambient_cmds::ambient_program_set,
+            ambient_cmds::export_ambient,
             preset_cmds::ambient_presets,
             preset_cmds::ambient_preset_load,
             preset_cmds::ambient_preset_save,

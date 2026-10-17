@@ -31,6 +31,8 @@ const rack: Ambient = {
   macros: { intensity: 1, brightness: 0.5, motion: 0.5, space: 0.3, space_size: 0.6, tonal_gravity: 0.5, width: 1 },
   preset: "mountain_mist",
   tags: [],
+  automation: [],
+  program: { scenes: [], loop_region: null },
 };
 
 describe("randomizeRack (F1A.3)", () => {

@@ -319,6 +319,12 @@ pub struct Ambient {
     /// Tags when saved as a preset (ids from `ambient_presets::TAGS`).
     #[serde(default)]
     pub tags: Vec<String>,
+    /// Automation lanes (F1A.4): functions of time on layer or macro parameters.
+    #[serde(default)]
+    pub automation: Vec<crate::program::AutomationLane>,
+    /// Scenes on a timeline (F1A.5).
+    #[serde(default)]
+    pub program: crate::program::Program,
 }
 
 impl Default for Ambient {
@@ -329,6 +335,8 @@ impl Default for Ambient {
             macros: Macros::default(),
             preset: None,
             tags: Vec::new(),
+            automation: Vec::new(),
+            program: crate::program::Program::default(),
         }
     }
 }
@@ -393,6 +401,14 @@ impl Ambient {
             }
             l.source.validate()?;
         }
+        let mut lane_ids = std::collections::HashSet::new();
+        for lane in &self.automation {
+            if lane.id.is_empty() || !lane_ids.insert(lane.id.as_str()) {
+                return Err(ProjectError::InvalidState("lane ids must be unique".into()));
+            }
+            lane.validate(&self.layers)?;
+        }
+        self.program.validate()?;
         self.macros.validate()
     }
 }

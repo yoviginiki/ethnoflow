@@ -101,42 +101,19 @@ impl BellSource {
     }
 }
 
-impl Source for BellSource {
-    fn render(&mut self, out: &mut [f32], sample_rate: u32) {
-        let sr = sample_rate.max(1) as f32;
-        // One refcount bump per block: lets the strike/reseed paths borrow `self` mutably.
-        let p = Arc::clone(&self.params);
-        let seed = p.seed.load(Ordering::Relaxed);
-        if seed != self.seed_used {
-            self.trigger.reset(seed);
-            self.seed_used = seed;
-        }
-        let ramp = ramp_samples(sample_rate);
-        self.density.begin(p.density.target(), ramp);
-        self.decay.begin(p.decay_s.target(), ramp);
-        self.brightness.begin(p.brightness.target(), ramp);
-        self.spread.begin(p.velocity_spread.target(), ramp);
-        let n = out.len();
-        let density = if p.pitches.is_empty() {
-            0.0
-        } else {
-            self.density.current
-        };
-        let strike_at = self.trigger.tick(n, density, sr);
-        if strike_at.is_some() {
-            let hz = p.pitches.pick(self.trigger.rng()).unwrap_or(0.0);
-            if hz > 0.0 {
-                let (b, s) = (self.brightness.current, self.spread.current);
-                self.strike(hz, b, s);
-            }
-        }
-        // Decay coefficients per block: env reaches 1e-3 after decay_s.
-        let decay = self.decay.current.max(0.05);
-        let k1 = (-6.9078 / (decay * sr)).exp();
-        let k2 = (-6.9078 / (decay * 0.35 * sr)).exp(); // the bright partial dies faster
-        let bright = self.brightness.current;
-        let mod_ratio = 1.4 + bright * 2.1; // 1.4 (soft) … 3.5 (metallic)
-        out.fill(0.0);
+impl BellSource {
+    #[allow(clippy::too_many_arguments)]
+    #[inline]
+    fn render_span(
+        &mut self,
+        out: &mut [f32],
+        p: &BellParams,
+        sr: f32,
+        k1: f32,
+        k2: f32,
+        bright: f32,
+        mod_ratio: f32,
+    ) {
         for s in out.iter_mut() {
             let _ = self.density.next(p.density.target());
             let _ = self.decay.next(p.decay_s.target());
@@ -171,6 +148,50 @@ impl Source for BellSource {
             }
             *s = acc;
         }
+    }
+}
+
+impl Source for BellSource {
+    fn render(&mut self, out: &mut [f32], sample_rate: u32) {
+        let sr = sample_rate.max(1) as f32;
+        // One refcount bump per block: lets the strike/reseed paths borrow `self` mutably.
+        let p = Arc::clone(&self.params);
+        let seed = p.seed.load(Ordering::Relaxed);
+        if seed != self.seed_used {
+            self.trigger.reset(seed);
+            self.seed_used = seed;
+        }
+        let ramp = ramp_samples(sample_rate);
+        self.density.begin(p.density.target(), ramp);
+        self.decay.begin(p.decay_s.target(), ramp);
+        self.brightness.begin(p.brightness.target(), ramp);
+        self.spread.begin(p.velocity_spread.target(), ramp);
+        let n = out.len();
+        let density = if p.pitches.is_empty() {
+            0.0
+        } else {
+            self.density.current
+        };
+        let strike_at = self.trigger.tick(n, density, sr);
+        // Decay coefficients per block: env reaches 1e-3 after decay_s.
+        let decay = self.decay.current.max(0.05);
+        let k1 = (-6.9078 / (decay * sr)).exp();
+        let k2 = (-6.9078 / (decay * 0.35 * sr)).exp(); // the bright partial dies faster
+        let bright = self.brightness.current;
+        let mod_ratio = 1.4 + bright * 2.1; // 1.4 (soft) … 3.5 (metallic)
+                                            // The strike lands on its exact sample, so the output does not depend on how
+                                            // the host chunks the audio (offline bounce == live).
+        let at = strike_at.unwrap_or(n).min(n);
+        let (head, tail) = out.split_at_mut(at);
+        self.render_span(head, &p, sr, k1, k2, bright, mod_ratio);
+        if strike_at.is_some() {
+            let hz = p.pitches.pick(self.trigger.rng()).unwrap_or(0.0);
+            if hz > 0.0 {
+                let (b, s) = (self.brightness.current, self.spread.current);
+                self.strike(hz, b, s);
+            }
+        }
+        self.render_span(tail, &p, sr, k1, k2, bright, mod_ratio);
     }
 
     fn reset(&mut self) {

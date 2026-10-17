@@ -5,15 +5,17 @@
 //! from the project's scale and instrument intonation; without a scale, or when the
 //! layer is set to "no key", they use an inharmonic set derived from the seed.
 
-use std::sync::atomic::Ordering;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 
 use audio_engine::{
-    AudioBuffer, BellParams, BellSource, GraphCmd, LoopParams, LoopSource, NoiseParams,
-    NoiseSource, PluckParams, PluckSource, TextureParams, TextureSource, WindParams, WindSource,
-    MAX_PITCHES,
+    write_wav, AudioBuffer, BellParams, BellSource, Graph, GraphCmd, GraphParams, LoopParams,
+    LoopSource, NoiseParams, NoiseSource, PluckParams, PluckSource, TextureParams, TextureSource,
+    WavFormat, WindParams, WindSource, MAX_PITCHES,
 };
-use project::{Ambient, AmbientLayer, LayerSource, Macros, MAX_AMBIENT_LAYERS};
+use project::{
+    effective_rack, is_animated, Ambient, AmbientLayer, LayerSource, Macros, MAX_AMBIENT_LAYERS,
+};
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
@@ -57,6 +59,111 @@ pub struct AmbientStatus {
     pub stream_errors: u64,
     /// Pitches each tonal layer actually plays (Hz), in rack order; empty for others.
     pub pitches_hz: Vec<Vec<f32>>,
+    /// Program timeline (F1A.5): position in seconds, whether it runs, its end.
+    pub program_position: f64,
+    pub program_playing: bool,
+    pub program_end: f64,
+    /// Seconds of automation time since the rack started.
+    pub lane_time: f64,
+}
+
+/// Shared clock state: written by the transport commands, read by the worker thread.
+pub struct Clock {
+    running: Arc<AtomicBool>,
+    /// Program position in microseconds (so the UI can seek while it runs).
+    program_us: Arc<AtomicU64>,
+    program_playing: Arc<AtomicBool>,
+    lane_us: Arc<AtomicU64>,
+}
+
+impl Clock {
+    pub fn stop(&self) {
+        self.running.store(false, Ordering::Relaxed);
+    }
+    pub fn program_position(&self) -> f64 {
+        self.program_us.load(Ordering::Relaxed) as f64 / 1e6
+    }
+    pub fn lane_time(&self) -> f64 {
+        self.lane_us.load(Ordering::Relaxed) as f64 / 1e6
+    }
+    pub fn program_playing(&self) -> bool {
+        self.program_playing.load(Ordering::Relaxed)
+    }
+}
+
+const CLOCK_TICK_MS: u64 = 25;
+
+/// Push one effective state (layers + macros) into the live graph params.
+fn push_effective(s: &Inner, layers: &[AmbientLayer], macros: &Macros) {
+    let Some(g) = s.graph.as_ref() else { return };
+    let any_solo = layers.iter().any(|l| l.solo);
+    for (i, l) in layers.iter().enumerate() {
+        if let Some(Some(live)) = s.ambient_live.get(i) {
+            apply_source(s, &live.params, l, macros);
+        }
+        if AMBIENT_SLOT0 + i < audio_engine::MAX_LAYERS {
+            apply_layer_strip(&g.params().layers[AMBIENT_SLOT0 + i], l, macros, any_solo);
+        }
+    }
+    g.params().master.space.set(macros.space as f32);
+    g.params().master.space_size.set(macros.space_size as f32);
+}
+
+/// Start the worker that advances the automation/program time and pushes the
+/// effective state every `CLOCK_TICK_MS`. Cheap when nothing is animated.
+fn start_clock(app: tauri::AppHandle, s: &mut Inner) {
+    if s.ambient_clock.is_some() {
+        return;
+    }
+    let clock = Clock {
+        running: Arc::new(AtomicBool::new(true)),
+        program_us: Arc::new(AtomicU64::new(0)),
+        program_playing: Arc::new(AtomicBool::new(false)),
+        lane_us: Arc::new(AtomicU64::new(0)),
+    };
+    let running = Arc::clone(&clock.running);
+    let program_us = Arc::clone(&clock.program_us);
+    let program_playing = Arc::clone(&clock.program_playing);
+    let lane_us = Arc::clone(&clock.lane_us);
+    s.ambient_clock = Some(clock);
+    std::thread::spawn(move || {
+        use tauri::Manager;
+        let mut last = std::time::Instant::now();
+        while running.load(Ordering::Relaxed) {
+            std::thread::sleep(std::time::Duration::from_millis(CLOCK_TICK_MS));
+            let now = std::time::Instant::now();
+            let dt_us = (now - last).as_micros() as u64;
+            last = now;
+            lane_us.fetch_add(dt_us, Ordering::Relaxed);
+            let st = app.state::<AppState>();
+            let s = st.lock();
+            if !s.ambient_on || s.graph.is_none() {
+                continue;
+            }
+            let Some(a) = s.ambient.as_ref() else {
+                continue;
+            };
+            let end = a.program.end();
+            let mut pos = program_us.load(Ordering::Relaxed) as f64 / 1e6;
+            if program_playing.load(Ordering::Relaxed) && end > 0.0 {
+                pos += dt_us as f64 / 1e6;
+                pos = a.program.wrap(pos);
+                if pos >= end && a.program.loop_region.is_none() {
+                    // Finale: hold the last state and stop the program clock.
+                    pos = end;
+                    program_playing.store(false, Ordering::Relaxed);
+                }
+                program_us.store((pos * 1e6) as u64, Ordering::Relaxed);
+            }
+            if !is_animated(a) {
+                continue;
+            }
+            let lane_t = lane_us.load(Ordering::Relaxed) as f64 / 1e6;
+            let program_t = if end > 0.0 { Some(pos) } else { None };
+            let (layers, macros) = effective_rack(a, program_t, lane_t);
+            push_effective(&s, &layers, &macros);
+        }
+    });
 }
 
 fn project_root(s: &Inner) -> CmdResult<std::path::PathBuf> {
@@ -457,6 +564,9 @@ pub fn release_all(s: &mut Inner) {
     }
     s.ambient_live.clear();
     s.ambient_on = false;
+    if let Some(c) = s.ambient_clock.take() {
+        c.stop();
+    }
     if s.graph_idle() {
         s.stop_graph();
     }
@@ -482,6 +592,11 @@ fn status(s: &mut Inner) -> CmdResult<AmbientStatus> {
         })
         .collect();
     let n = a.layers.len();
+    let program_end = a.program.end();
+    let (program_position, program_playing, lane_time) = match s.ambient_clock.as_ref() {
+        Some(c) => (c.program_position(), c.program_playing(), c.lane_time()),
+        None => (0.0, false, 0.0),
+    };
     let Some(graph) = s.graph.as_mut() else {
         return Ok(AmbientStatus {
             playing: false,
@@ -491,6 +606,10 @@ fn status(s: &mut Inner) -> CmdResult<AmbientStatus> {
             limiter_gain: 1.0,
             stream_errors: 0,
             pitches_hz,
+            program_position,
+            program_playing: false,
+            program_end,
+            lane_time,
         });
     };
     let st = graph.status();
@@ -505,6 +624,10 @@ fn status(s: &mut Inner) -> CmdResult<AmbientStatus> {
         limiter_gain: m.limiter_gain,
         stream_errors: st.stream_errors,
         pitches_hz,
+        program_position,
+        program_playing,
+        program_end,
+        lane_time,
     })
 }
 
@@ -565,6 +688,7 @@ pub async fn set_ambient(state: State<'_, AppState>, ambient: Ambient) -> CmdRes
 /// Start the rack on the output (never called automatically: the user presses Play).
 #[tauri::command]
 pub async fn ambient_play(
+    app: tauri::AppHandle,
     state: State<'_, AppState>,
     device: Option<String>,
 ) -> CmdResult<AmbientStatus> {
@@ -577,7 +701,285 @@ pub async fn ambient_play(
         release_all(&mut s);
         return Err(e);
     }
+    start_clock(app, &mut s);
     status(&mut s)
+}
+
+/// Program transport (F1A.5): run/pause the scene timeline and/or jump to a position.
+/// Works while the rack is stopped too (the position is applied when it plays).
+#[tauri::command]
+pub async fn ambient_program_set(
+    state: State<'_, AppState>,
+    playing: Option<bool>,
+    position: Option<f64>,
+) -> CmdResult<AmbientStatus> {
+    let mut s = state.lock();
+    let end = ambient_mut(&mut s)?.program.end();
+    if let Some(c) = s.ambient_clock.as_ref() {
+        if let Some(p) = position {
+            let p = p.clamp(0.0, end.max(0.0));
+            c.program_us.store((p * 1e6) as u64, Ordering::Relaxed);
+        }
+        if let Some(pl) = playing {
+            c.program_playing.store(pl && end > 0.0, Ordering::Relaxed);
+        }
+        // Apply the new position at once (the thread would do it within a tick).
+        if let Some(a) = s.ambient.as_ref() {
+            let pos = c.program_position();
+            let lane_t = c.lane_time();
+            let program_t = if end > 0.0 { Some(pos) } else { None };
+            let (layers, macros) = effective_rack(a, program_t, lane_t);
+            push_effective(&s, &layers, &macros);
+        }
+    }
+    status(&mut s)
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AmbientExportResult {
+    pub path: String,
+    pub bytes: u64,
+    pub format: WavFormat,
+    pub seconds: f64,
+    /// Stem files written next to the mix (empty unless asked for).
+    pub stems: Vec<String>,
+    pub render_ms: u64,
+}
+
+/// Build offline sources for every layer at `rate` (loop audio read under the lock).
+fn offline_sources(
+    s: &mut Inner,
+    a: &Ambient,
+    rate: u32,
+) -> CmdResult<Vec<(LiveParams, Box<dyn audio_engine::Source>)>> {
+    let mut out = Vec::new();
+    for l in &a.layers {
+        let item: (LiveParams, Box<dyn audio_engine::Source>) = match &l.source {
+            LayerSource::Noise { .. } => {
+                let p = Arc::new(NoiseParams::default());
+                p.seed.store(l.seed, Ordering::Relaxed);
+                (
+                    LiveParams::Noise(Arc::clone(&p)),
+                    Box::new(NoiseSource::new(p)),
+                )
+            }
+            LayerSource::Wind { .. } => {
+                let p = Arc::new(WindParams::default());
+                p.seed.store(l.seed, Ordering::Relaxed);
+                (
+                    LiveParams::Wind(Arc::clone(&p)),
+                    Box::new(WindSource::new(p)),
+                )
+            }
+            LayerSource::Texture { .. } => {
+                let p = Arc::new(TextureParams::default());
+                p.seed.store(l.seed, Ordering::Relaxed);
+                (
+                    LiveParams::Texture(Arc::clone(&p)),
+                    Box::new(TextureSource::new(p)),
+                )
+            }
+            LayerSource::Bells { .. } => {
+                let p = Arc::new(BellParams::default());
+                p.seed.store(l.seed, Ordering::Relaxed);
+                (
+                    LiveParams::Bells(Arc::clone(&p)),
+                    Box::new(BellSource::new(p)),
+                )
+            }
+            LayerSource::Pluck { .. } => {
+                let p = Arc::new(PluckParams::default());
+                p.seed.store(l.seed, Ordering::Relaxed);
+                (
+                    LiveParams::Pluck(Arc::clone(&p)),
+                    Box::new(PluckSource::new(p, rate)),
+                )
+            }
+            LayerSource::Loop {
+                take_id, reverse, ..
+            } => {
+                let buf = loop_buffer(s, take_id, *reverse, rate)?;
+                let p = Arc::new(LoopParams::default());
+                (
+                    LiveParams::Loop(Arc::clone(&p)),
+                    Box::new(LoopSource::new(p, buf)),
+                )
+            }
+        };
+        out.push(item);
+    }
+    Ok(out)
+}
+
+/// Offline bounce of the rack (F1A.5): `seconds` or the program's length, through
+/// the same graph code as playback, with the program and automation evaluated per
+/// block — deterministic and much faster than real time. Optional stems per layer.
+#[tauri::command]
+pub async fn export_ambient(
+    state: State<'_, AppState>,
+    path: String,
+    format: Option<WavFormat>,
+    seconds: Option<f64>,
+    stems: bool,
+    sample_rate: Option<u32>,
+) -> CmdResult<AmbientExportResult> {
+    let rate = sample_rate.unwrap_or(48_000);
+    if !(8_000..=192_000).contains(&rate) {
+        return Err(err("invalid_argument", "sample rate outside 8..192 kHz"));
+    }
+    let started = std::time::Instant::now();
+    // Everything that needs the app state: the rack, the pitch sets, loop audio.
+    let (a, sources, pitch_sets, master_db) = {
+        let mut s = state.lock();
+        let a = ambient_mut(&mut s)?.clone();
+        if a.layers.is_empty() {
+            return Err(err("empty", "The atmosphere has no layers"));
+        }
+        let sources = offline_sources(&mut s, &a, rate)?;
+        let pitch_sets: Vec<Vec<f32>> = a
+            .layers
+            .iter()
+            .map(|l| match &l.source {
+                LayerSource::Texture {
+                    tonal, register, ..
+                }
+                | LayerSource::Bells {
+                    tonal, register, ..
+                }
+                | LayerSource::Pluck {
+                    tonal, register, ..
+                } => pitch_set(&s, *tonal, *register, l.seed),
+                _ => Vec::new(),
+            })
+            .collect();
+        (a, sources, pitch_sets, s.master_db.unwrap_or(0.0))
+    };
+    let program_end = a.program.end();
+    let seconds = seconds
+        .filter(|s| *s > 0.0)
+        .unwrap_or(if program_end > 0.0 { program_end } else { 60.0 })
+        .min(4.0 * 3600.0);
+    // An offline Inner only for `apply_source` (pitch sets are pre-resolved below).
+    let gp = Arc::new(GraphParams::default());
+    gp.master.gain_db.set(master_db.min(0.0));
+    let mut g = Graph::new(Arc::clone(&gp), rate);
+    let mut live: Vec<LiveParams> = Vec::new();
+    for (i, (params, source)) in sources.into_iter().enumerate() {
+        g.set_source(AMBIENT_SLOT0 + i, source);
+        live.push(params);
+    }
+    let frames = (seconds * rate as f64).round() as usize;
+    let ch = 2usize;
+    let mut out = vec![0.0f32; frames * ch];
+    let mut stem_bufs: Vec<Vec<f32>> = if stems {
+        (0..audio_engine::MAX_LAYERS)
+            .map(|_| vec![0.0f32; frames * ch])
+            .collect()
+    } else {
+        Vec::new()
+    };
+    let block = 512usize;
+    let mut done = 0usize;
+    let offline = Inner::default();
+    while done < frames {
+        let n = (frames - done).min(block);
+        let t = done as f64 / rate as f64;
+        let program_t = if program_end > 0.0 {
+            Some(a.program.wrap(t).min(program_end))
+        } else {
+            None
+        };
+        let (layers, macros) = effective_rack(&a, program_t, t);
+        let any_solo = layers.iter().any(|l| l.solo);
+        for (i, l) in layers.iter().enumerate() {
+            if let Some(p) = live.get(i) {
+                apply_source(&offline, p, l, &macros);
+                // The offline Inner has no project: put the real pitch sets back.
+                match p {
+                    LiveParams::Texture(x) => x.pitches.set(&pitch_sets[i]),
+                    LiveParams::Bells(x) => x.pitches.set(&pitch_sets[i]),
+                    LiveParams::Pluck(x) => x.pitches.set(&pitch_sets[i]),
+                    LiveParams::Loop(x) => {
+                        // apply_source used 48 kHz for the frame math; redo at `rate`.
+                        if let LayerSource::Loop {
+                            start,
+                            end,
+                            crossfade,
+                            ..
+                        } = &l.source
+                        {
+                            x.start_frames
+                                .store((start * rate as f64).round() as u64, Ordering::Relaxed);
+                            x.end_frames
+                                .store((end * rate as f64).round() as u64, Ordering::Relaxed);
+                            x.crossfade_frames
+                                .store((crossfade * rate as f64).round() as u32, Ordering::Relaxed);
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            apply_layer_strip(&gp.layers[AMBIENT_SLOT0 + i], l, &macros, any_solo);
+        }
+        gp.master.space.set(macros.space as f32);
+        gp.master.space_size.set(macros.space_size as f32);
+        if done == 0 {
+            // Start exactly at the first state: no fade-in ramp from −60 dB.
+            let mut warm = vec![0.0f32; 2048 * ch];
+            g.render(&mut warm, ch);
+            g.reset();
+        }
+        let slice = &mut out[done * ch..(done + n) * ch];
+        if stems {
+            let mut parts: Vec<Vec<f32>> = (0..audio_engine::MAX_LAYERS)
+                .map(|_| vec![0.0f32; n * ch])
+                .collect();
+            g.render_with_stems(slice, ch, &mut parts);
+            for (sb, part) in stem_bufs.iter_mut().zip(parts.iter()) {
+                sb[done * ch..(done + n) * ch].copy_from_slice(part);
+            }
+        } else {
+            g.render(slice, ch);
+        }
+        done += n;
+    }
+    let mix = AudioBuffer::new(rate, ch as u16, out);
+    let mut p = std::path::PathBuf::from(&path);
+    if p.extension().is_none_or(|e| !e.eq_ignore_ascii_case("wav")) {
+        p.set_extension("wav");
+    }
+    let format = format.unwrap_or_default();
+    write_wav(&p, &mix, format)?;
+    let mut stem_paths = Vec::new();
+    if stems {
+        let stem_dir = p.with_extension("");
+        for (i, l) in a.layers.iter().enumerate() {
+            let buf = AudioBuffer::new(
+                rate,
+                ch as u16,
+                std::mem::take(&mut stem_bufs[AMBIENT_SLOT0 + i]),
+            );
+            let name =
+                project::sanitize_name(&l.name).unwrap_or_else(|_| format!("layer{}", i + 1));
+            let sp = std::path::PathBuf::from(format!(
+                "{}-{:02}-{}.wav",
+                stem_dir.to_string_lossy(),
+                i + 1,
+                name
+            ));
+            write_wav(&sp, &buf, format)?;
+            stem_paths.push(sp.to_string_lossy().into_owned());
+        }
+    }
+    let bytes = std::fs::metadata(&p).map(|m| m.len()).unwrap_or(0);
+    Ok(AmbientExportResult {
+        path: p.to_string_lossy().into_owned(),
+        bytes,
+        format,
+        seconds,
+        stems: stem_paths,
+        render_ms: started.elapsed().as_millis() as u64,
+    })
 }
 
 #[tauri::command]
