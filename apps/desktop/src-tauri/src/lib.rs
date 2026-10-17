@@ -2,6 +2,7 @@ mod analysis_cmds;
 mod commands;
 mod instrument_cmds;
 mod midi_cmds;
+mod midi_in_cmds;
 mod project_cmds;
 mod settings;
 mod state;
@@ -86,6 +87,10 @@ pub fn run() {
             synth_cmds::synth_note,
             synth_cmds::synth_all_off,
             synth_cmds::live_synth_status,
+            midi_in_cmds::list_midi_ports,
+            midi_in_cmds::open_midi_input,
+            midi_in_cmds::close_midi_input,
+            midi_in_cmds::poll_midi_events,
             project_cmds::export_wav,
         ])
         .build(tauri::generate_context!())

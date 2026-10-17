@@ -70,6 +70,8 @@ pub struct Inner {
     pub tone: Option<Player>,
     /// "Play the notes": the synth rendering of the current notes, playing.
     pub notes_player: Option<Player>,
+    /// MIDI keyboard input with its forwarding thread.
+    pub midi_input: Option<crate::midi_in_cmds::MidiInput>,
     /// Live synth driven by the computer keyboard / MIDI input.
     pub live_synth: Option<LiveSynth>,
     pub loaded: Option<LoadedTake>,

@@ -203,6 +203,49 @@ export function Studio() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [s.prefs.clickPlay]);
 
+  // ---------- MIDI keyboard input: open the chosen port, poll its events ----------
+
+  useEffect(() => {
+    void api.listMidiPorts().then((p) => useStore.getState().setMidiPorts(p.map((x) => x.name))).catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    const name = s.prefs.midiInput;
+    if (!name) {
+      void api.closeMidiInput().catch(() => undefined);
+      useStore.getState().setMidiState([], []);
+      return;
+    }
+    let cancelled = false;
+    const held = new Set<number>();
+    api.openMidiInput(name).catch((e) => {
+      fail(e);
+      useStore.getState().setPref("midiInput", null);
+    });
+    const tick = async () => {
+      if (cancelled) return;
+      try {
+        const r = await api.pollMidiEvents();
+        if (r) {
+          for (const ev of r.events) {
+            if (ev.kind === "note_on") held.add(ev.note);
+            else if (ev.kind === "note_off") held.delete(ev.note);
+          }
+          if (r.events.length) useStore.getState().setMidiState([...held], r.events);
+        }
+      } catch (e) {
+        fail(e);
+        return;
+      }
+      setTimeout(tick, STATUS_POLL_MS);
+    };
+    void tick();
+    return () => {
+      cancelled = true;
+      void api.closeMidiInput().catch(() => undefined);
+    };
+  }, [s.prefs.midiInput, fail]);
+
   // ---------- tuner: input monitor while idle ----------
 
   useEffect(() => {
@@ -665,6 +708,17 @@ export function Studio() {
             <button className="ghost" onClick={() => void api.playTestTone(s.prefs.selectedOutput).catch(fail)} disabled={busy}>
               {t.testTone}
             </button>
+            <label>
+              {t.midiInputLabel}
+              <select value={s.prefs.midiInput ?? ""} onChange={(e) => s.setPref("midiInput", e.target.value || null)}>
+                <option value="">{t.midiNone}</option>
+                {s.midiPorts.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
+            </label>
             <label className="inline">
               <input type="checkbox" checked={s.prefs.tuner} onChange={(e) => s.setPref("tuner", e.target.checked)} />
               {t.tuner}

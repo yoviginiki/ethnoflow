@@ -89,6 +89,7 @@ export function KeyboardPiano({ scale }: Props) {
   }, [on, base, lock, scale, s.prefs.selectedOutput, s.prefs.voice]);
 
   const keys = Array.from({ length: 29 }, (_, i) => base + i);
+  const midiHeld = s.midiHeld;
   return (
     <div className="panel kb-piano">
       <div className="analysis-row">
@@ -112,7 +113,7 @@ export function KeyboardPiano({ scale }: Props) {
           →
         </button>
       </div>
-      {on && (
+      {(on || s.prefs.midiInput) && (
         <div className="kb-keys" aria-hidden="true">
           {keys.map((m) => {
             const pc = ((m % 12) + 12) % 12;
@@ -120,7 +121,7 @@ export function KeyboardPiano({ scale }: Props) {
             return (
               <span
                 key={m}
-                className={`kb-key ${BLACK.has(pc) ? "black" : ""} ${pressed.has(m) ? "down" : ""} ${inScale ? "" : "dim"}`}
+                className={`kb-key ${BLACK.has(pc) ? "black" : ""} ${pressed.has(m) || midiHeld.includes(m) ? "down" : ""} ${inScale ? "" : "dim"}`}
                 title={`${t.noteNames[pc]}${noteParts(m).octave}`}
               />
             );

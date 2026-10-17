@@ -7,6 +7,7 @@ import type {
   AnalysisView,
   DeviceInfo,
   LoadedTakeInfo,
+  MidiEvent,
   MidiTakeView,
   MonitorStatus,
   Note,
@@ -39,6 +40,8 @@ export interface Prefs {
   voice: Voice;
   /** Snap the selection (loop) to bar boundaries on MIDI takes with a known meter. */
   snapBar: boolean;
+  /** MIDI input port name, or null for none. */
+  midiInput: string | null;
 }
 
 const PREFS_KEY = "ethnoflow.prefs.v1";
@@ -58,6 +61,7 @@ export const DEFAULT_PREFS: Prefs = {
   keyNames: true,
   voice: "flute",
   snapBar: true,
+  midiInput: null,
 };
 
 function loadPrefs(): Prefs {
@@ -141,6 +145,13 @@ interface Store {
   /** Loaded take is a MIDI file: its tracks and render options. */
   midi: MidiTakeView | null;
   setMidi: (m: MidiTakeView | null) => void;
+  /** Notes currently held on the MIDI keyboard (lights, trainer). */
+  midiHeld: number[];
+  /** Most recent MIDI events batch (consumed by the trainer). */
+  midiEvents: MidiEvent[];
+  setMidiState: (held: number[], events: MidiEvent[]) => void;
+  midiPorts: string[];
+  setMidiPorts: (p: string[]) => void;
   /** "Play the notes" synth playback status, or null when not playing. */
   notesPlayer: PlayerStatus | null;
   setNotesPlayer: (p: PlayerStatus | null) => void;
@@ -228,6 +239,11 @@ export const useStore = create<Store>((set, get) => ({
 
   midi: null,
   setMidi: (midi) => set({ midi }),
+  midiHeld: [],
+  midiEvents: [],
+  setMidiState: (midiHeld, midiEvents) => set({ midiHeld, midiEvents }),
+  midiPorts: [],
+  setMidiPorts: (midiPorts) => set({ midiPorts }),
   notesPlayer: null,
   setNotesPlayer: (notesPlayer) => set({ notesPlayer }),
 

@@ -49,6 +49,9 @@
   8 voices, attack/release, oldest-voice stealing, commands through a lock-free ring,
   nothing allocated in the callback) played from the computer keyboard (two rows =
   two octaves, ← → octave, Scale Lock to the chosen scale).
+- **F1.4.4 MIDI input** (0.2.6, ADR-0020 midir): choose a MIDI port in the device row;
+  notes go to the live synth through a 2 ms forwarding thread and light the on-screen
+  keys; the trainer takes a held MIDI key instead of the microphone when a port is open.
 
 ### Measurements (owner's laptop, release build, YIN hop 10 ms, window 1024)
 | material | pitch time | voiced | f0 p05 / median / p95 | confidence p10 / median | octave-sized jumps |

@@ -291,6 +291,11 @@ export interface MidiTakeView {
   duration_seconds: number;
 }
 
+export type MidiEvent =
+  | { kind: "note_on"; channel: number; note: number; velocity: number; t_us: number }
+  | { kind: "note_off"; channel: number; note: number; t_us: number }
+  | { kind: "other"; status: number; t_us: number };
+
 export type Level = "beginner" | "intermediate" | "advanced";
 export const LEVELS: Level[] = ["beginner", "intermediate", "advanced"];
 
@@ -475,6 +480,10 @@ export const api = {
   stopNotes: () => invoke<void>("stop_notes"),
   sendNotesToPlayer: (label: string | null) =>
     invoke<{ project: ProjectView; take_id: string }>("send_notes_to_player", { label }),
+  listMidiPorts: () => invoke<{ name: string }[]>("list_midi_ports"),
+  openMidiInput: (name: string) => invoke<void>("open_midi_input", { name }),
+  closeMidiInput: () => invoke<void>("close_midi_input"),
+  pollMidiEvents: () => invoke<{ name: string; events: MidiEvent[] } | null>("poll_midi_events"),
   startLiveSynth: (device: string | null, voice: Voice | null) =>
     invoke<{ sample_rate: number; active_voices: number; stream_errors: number }>("start_live_synth", { device, voice }),
   stopLiveSynth: () => invoke<void>("stop_live_synth"),

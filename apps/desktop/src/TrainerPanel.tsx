@@ -53,7 +53,16 @@ export function TrainerPanel({ notes, hz, confidence, a4, notesPosition, onPlayN
     else groups.push([n]);
   }
   const tol = level === "beginner" ? 30 : level === "intermediate" ? 20 : 10;
-  const midiFrac = hz !== null && confidence >= 0.6 ? hzToMidi(hz, a4) : null;
+  // Input: a held MIDI key wins over the microphone when a port is open.
+  const midiInputOn = s.prefs.midiInput !== null;
+  const midiHeld = s.midiHeld;
+  const midiFrac = midiInputOn
+    ? midiHeld.length
+      ? midiHeld[midiHeld.length - 1]
+      : null
+    : hz !== null && confidence >= 0.6
+      ? hzToMidi(hz, a4)
+      : null;
 
   const stop = async () => {
     setRunning(false);
@@ -69,7 +78,7 @@ export function TrainerPanel({ notes, hz, confidence, a4, notesPosition, onPlayN
     hold.current = 0;
     played.current = [];
     current.current = null;
-    if (!s.prefs.tuner) s.setPref("tuner", true);
+    if (!s.prefs.tuner && !midiInputOn) s.setPref("tuner", true);
     setRunning(true);
     if (mode === "wait" && groups.length) {
       onPosition(groups[0][0].start);
@@ -178,7 +187,7 @@ export function TrainerPanel({ notes, hz, confidence, a4, notesPosition, onPlayN
   return (
     <details className="panel trainer" open>
       <summary>
-        {t.trainer} · {t.inputMic}
+        {t.trainer} · {midiInputOn ? t.inputMidi : t.inputMic}
       </summary>
       <div className="analysis-row">
         {(["listen", "wait", "rhythm"] as Mode[]).map((m) => (
@@ -209,7 +218,7 @@ export function TrainerPanel({ notes, hz, confidence, a4, notesPosition, onPlayN
         )}
       </div>
       <div className="muted small">
-        {mode === "wait" ? t.waitHint : mode === "rhythm" ? t.rhythmHint : t.listenHint} {!s.prefs.tuner && t.trainerNeedsTuner}
+        {mode === "wait" ? t.waitHint : mode === "rhythm" ? t.rhythmHint : t.listenHint} {!s.prefs.tuner && !midiInputOn && t.trainerNeedsTuner}
       </div>
       {running && mode === "wait" && groups[group] && (
         <div className={`banner ${wrong ? "error" : "ok"}`} role="status" aria-live="polite">
