@@ -752,7 +752,7 @@ export function Studio() {
               )}
             </>
           )}
-          {s.loaded && <AnalysisPanel withPending={withPending} />}
+          {s.loaded && <AnalysisPanel withPending={withPending} selectTake={selectTake} />}
 
           <section className="transport">
             {s.mode === "recording" ? (

@@ -63,6 +63,7 @@ pub fn run() {
             midi_cmds::play_notes,
             midi_cmds::notes_playback_status,
             midi_cmds::stop_notes,
+            midi_cmds::send_notes_to_player,
             project_cmds::export_wav,
         ])
         .build(tauri::generate_context!())

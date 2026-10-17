@@ -273,6 +273,41 @@ fn analysis_documents_roundtrip_and_leave_audio_alone() {
 }
 
 #[test]
+fn derived_midi_take_links_to_its_parent_and_verifies() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut p = Project::create(dir.path(), "tomidi").unwrap();
+    let t = p.begin_recording(None).unwrap();
+    write_take(&p.take_path(&t), &tone());
+    let parent = p.finish_recording(&t.id, 0, 0).unwrap();
+    let bytes = b"MThd\0\0\0\x06\0\0\0\x01\x01\xE0MTrk\0\0\0\x04\0\xFF\x2F\0".to_vec();
+    let m = p
+        .create_derived_midi(
+            &parent.id,
+            Some("За плейъра"),
+            (48_000, 1, 96_000),
+            |path| std::fs::write(path, &bytes),
+        )
+        .unwrap();
+    assert_eq!(m.source, project::TakeSource::MidiFile);
+    assert_eq!(m.derived_from.as_deref(), Some(parent.id.as_str()));
+    assert!(m.file.ends_with(".mid"));
+    assert_eq!(
+        (m.sample_rate, m.channels, m.frames),
+        (Some(48_000), Some(1), Some(96_000))
+    );
+    assert_eq!(std::fs::read(p.take_path(&m)).unwrap(), bytes);
+    assert!(p
+        .verify_takes()
+        .unwrap()
+        .iter()
+        .all(|c| c.health == TakeHealth::Ok));
+    let root = p.root().to_path_buf();
+    drop(p);
+    let (p, _) = Project::open(&root).unwrap();
+    assert_eq!(p.take(&m.id).unwrap(), m);
+}
+
+#[test]
 fn names_are_made_safe_and_duplicates_refused() {
     assert_eq!(sanitize_name(" a/b:c? ").unwrap(), "a_b_c_");
     assert_eq!(sanitize_name("con").unwrap(), "con_");

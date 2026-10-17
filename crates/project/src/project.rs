@@ -344,6 +344,57 @@ impl Project {
         }
     }
 
+    /// Add a MIDI take made from `parent`'s notes (e.g. "send to the player"). `write`
+    /// writes the `.mid` to the given path; `rendered` = (sample_rate, channels, frames)
+    /// of the synth rendering, which is what playback uses. The parent is untouched.
+    pub fn create_derived_midi(
+        &mut self,
+        parent: &str,
+        label: Option<&str>,
+        rendered: (u32, u16, u64),
+        write: impl FnOnce(&Path) -> std::io::Result<()>,
+    ) -> Result<Take> {
+        let parent_take = self.take(parent)?;
+        if parent_take.state == TakeState::Recording {
+            return Err(ProjectError::InvalidState(format!(
+                "{parent} is still recording"
+            )));
+        }
+        let id = new_take_id();
+        let file = format!("{DERIVED_DIR}/{id}.mid");
+        let dest = self.root.join(&file);
+        if dest.exists() {
+            return Err(ProjectError::AlreadyExists(dest));
+        }
+        if let Err(e) = write(&dest) {
+            let _ = std::fs::remove_file(&dest);
+            return Err(e.into());
+        }
+        let facts = AudioFacts {
+            sample_rate: rendered.0,
+            channels: rendered.1,
+            frames: rendered.2,
+            blake3: checksum_file(&dest)?,
+        };
+        db::insert_take(
+            &self.conn,
+            &NewTake {
+                id: &id,
+                file: &file,
+                source: TakeSource::MidiFile,
+                state: TakeState::Recording,
+                original_name: None,
+                device: None,
+                derived_from: Some(parent),
+            },
+        )?;
+        let take = db::set_take_audio(&self.conn, &id, TakeState::Complete, &facts, 0, 0)?;
+        match label.map(str::trim).filter(|l| !l.is_empty()) {
+            Some(l) => db::set_label(&self.conn, &id, Some(l)),
+            None => Ok(take),
+        }
+    }
+
     pub fn rename_take(&mut self, id: &str, label: Option<&str>) -> Result<Take> {
         let label = label.map(str::trim).filter(|l| !l.is_empty());
         db::set_label(&self.conn, id, label)

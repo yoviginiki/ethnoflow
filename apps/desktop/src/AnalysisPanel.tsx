@@ -8,10 +8,12 @@ import { useStore } from "./store";
 interface Props {
   /** Run a slow command with a busy label (errors go to the banner). */
   withPending: <T>(label: string, fn: () => Promise<T>) => Promise<T | undefined>;
+  /** Load a take into the studio (used after "to the player"). */
+  selectTake: (id: string) => Promise<void>;
 }
 
 /** Analyse button, scale suggestions, chosen scale, tuning reference, MIDI export. */
-export function AnalysisPanel({ withPending }: Props) {
+export function AnalysisPanel({ withPending, selectTake }: Props) {
   const s = useStore();
   const t = messages[s.prefs.lang];
   const project = s.project!;
@@ -68,6 +70,17 @@ export function AnalysisPanel({ withPending }: Props) {
     );
   };
 
+  const toPlayer = async () => {
+    if (!loadedTake) return;
+    const label = `${takeName(loadedTake, t.take)} → MIDI`;
+    const r = await withPending(t.saving, () => api.sendNotesToPlayer(label));
+    if (!r) return;
+    s.setProject(r.project);
+    s.setPref("notesView", "falling");
+    await selectTake(r.take_id);
+    s.setMessage(t.sentToPlayer);
+  };
+
   const resetNotes = async () => {
     const a = await withPending(t.saving, () => api.resetNotes());
     if (a) s.setAnalysis(a);
@@ -89,6 +102,11 @@ export function AnalysisPanel({ withPending }: Props) {
         <button onClick={analyze} disabled={busy || !s.loaded}>
           {analysis ? t.reanalyze : t.analyze}
         </button>
+        {!s.midi && (
+          <button onClick={toPlayer} disabled={busy || !analysis || analysis.notes.length === 0} title={t.toPlayerHint}>
+            ⇢ {t.toPlayer}
+          </button>
+        )}
         <button onClick={exportMidi} disabled={busy || !analysis || analysis.notes.length === 0}>
           {t.exportMidi}
         </button>

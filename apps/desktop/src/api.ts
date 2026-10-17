@@ -361,6 +361,8 @@ export const api = {
     invoke<PlayerStatus>("play_notes", { device, voice }),
   notesPlaybackStatus: () => invoke<PlayerStatus | null>("notes_playback_status"),
   stopNotes: () => invoke<void>("stop_notes"),
+  sendNotesToPlayer: (label: string | null) =>
+    invoke<{ project: ProjectView; take_id: string }>("send_notes_to_player", { label }),
   startMonitor: (device: string | null, sampleRate: number | null) =>
     invoke<void>("start_monitor", { device, sampleRate }),
   stopMonitor: () => invoke<void>("stop_monitor"),

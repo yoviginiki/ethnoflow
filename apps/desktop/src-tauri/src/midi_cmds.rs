@@ -196,6 +196,79 @@ pub async fn stop_notes(state: State<'_, AppState>) -> CmdResult<()> {
     Ok(())
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct SentToPlayer {
+    pub project: ProjectView,
+    pub take_id: String,
+}
+
+/// Turn the current notes (extracted, edited or MIDI) into a new MIDI take of the
+/// project — no export/import round trip — ready for the falling-notes player.
+#[tauri::command]
+pub async fn send_notes_to_player(
+    state: State<'_, AppState>,
+    label: Option<String>,
+) -> CmdResult<SentToPlayer> {
+    let mut s = state.lock();
+    if s.mode_busy() {
+        return Err(err("busy", "Stop recording or playback first"));
+    }
+    let notes = current_notes(&s)?;
+    if notes.is_empty() {
+        return Err(err("no_notes", "There are no notes to send"));
+    }
+    let parent = s
+        .loaded
+        .as_ref()
+        .map(|l| l.id.clone())
+        .ok_or_else(|| err("no_take", "Nothing is loaded"))?;
+    let m = s
+        .project
+        .as_ref()
+        .ok_or_else(|| err("no_project", "No project is open"))?
+        .manifest();
+    let a4 = m.a4_hz.unwrap_or(DEFAULT_A4_HZ);
+    let opts = music_core::SmfOptions {
+        tempo_bpm: m
+            .tempo_map
+            .first()
+            .map(|t| t.bpm)
+            .unwrap_or(music_core::TECHNICAL_TEMPO_BPM),
+        time_signature: m
+            .time_signatures
+            .first()
+            .map(|t| (t.numerator as u8, t.unit as u8)),
+        ..music_core::SmfOptions::default()
+    };
+    let bytes = music_core::write_smf(&notes, &opts);
+    let rendered = render_notes(
+        &synth_notes(&notes),
+        &SynthConfig {
+            a4_hz: a4,
+            ..SynthConfig::new(RENDER_SAMPLE_RATE)
+        },
+    );
+    let p = s
+        .project
+        .as_mut()
+        .ok_or_else(|| err("no_project", "No project is open"))?;
+    let take = p.create_derived_midi(
+        &parent,
+        label.as_deref(),
+        (
+            rendered.sample_rate,
+            rendered.channels,
+            rendered.frames() as u64,
+        ),
+        |path| std::fs::write(path, &bytes),
+    )?;
+    s.health.insert(take.id.clone(), project::TakeHealth::Ok);
+    Ok(SentToPlayer {
+        project: project_view(&s)?,
+        take_id: take.id,
+    })
+}
+
 /// Build the in-memory take for a `.mid` file: parse, render, keep the clip.
 pub fn load_midi_take(id: &str, path: &Path, a4: f64) -> CmdResult<LoadedTake> {
     let clip = parse_midi_file(path)?;

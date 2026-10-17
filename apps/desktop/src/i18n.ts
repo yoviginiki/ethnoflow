@@ -219,6 +219,9 @@ const bg = {
   mute: "без звук",
   noteNamesOnKeys: "Имена на клавишите",
   lookahead: "Поглед напред",
+  toPlayer: "Към плейъра",
+  toPlayerHint: "Прави MIDI запис от нотите и го отваря в плейъра с падащи ноти, без експорт и импорт.",
+  sentToPlayer: "Нотите са в плейъра като нов запис",
 };
 
 const en: typeof bg = {
@@ -425,6 +428,9 @@ const en: typeof bg = {
   mute: "mute",
   noteNamesOnKeys: "Note names on keys",
   lookahead: "Lookahead",
+  toPlayer: "To the player",
+  toPlayerHint: "Makes a MIDI take from the notes and opens it in the falling-notes player, no export/import.",
+  sentToPlayer: "The notes are in the player as a new take",
 };
 
 export const messages: Record<Lang, typeof bg> = { bg, en };
