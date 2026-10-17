@@ -793,6 +793,7 @@ export const api = {
   setPad: (settings: PadSettings) => invoke<PadStatus>("set_pad", { settings }),
   stopPad: () => invoke<void>("stop_pad"),
   padStatus: () => invoke<PadStatus | null>("pad_status"),
+  setGraphMaster: (db: number) => invoke<void>("set_graph_master", { db }),
   performanceAnalysis: (settings: IntentSettings) => invoke<PerformanceAnalysis | null>("performance_analysis", { settings }),
   annotateNote: (settings: IntentSettings, index: number, cls: NoteClass | null) =>
     invoke<PerformanceAnalysis | null>("annotate_note", { settings, index, class: cls }),

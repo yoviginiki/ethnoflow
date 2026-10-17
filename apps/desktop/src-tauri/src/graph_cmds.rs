@@ -17,7 +17,7 @@ use crate::state::{AppState, Inner};
 pub const DRONE_SLOT: usize = 0;
 pub const PAD_SLOT: usize = 1;
 /// Headphone-safe master level (the layer level is the user's control).
-const MASTER_DB: f32 = -6.0;
+const DEFAULT_MASTER_DB: f32 = 0.0;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -90,7 +90,9 @@ pub fn note_hz(s: &Inner, midi: u8, cents: f64, intonation: Intonation) -> (f32,
 pub fn ensure_graph(s: &mut Inner, device: Option<&str>) -> CmdResult<()> {
     if s.graph.is_none() {
         let gp = Arc::new(GraphParams::default());
-        gp.master.gain_db.set(MASTER_DB);
+        gp.master
+            .gain_db
+            .set(s.master_db.unwrap_or(DEFAULT_MASTER_DB));
         for l in gp.layers.iter() {
             l.gain_db.set(-60.0);
         }
@@ -210,8 +212,8 @@ fn validate(set: &DroneSettings) -> CmdResult<()> {
             return Err(err("invalid_argument", "levels must be 0..1"));
         }
     }
-    if !(-60.0..=0.0).contains(&set.level_db) {
-        return Err(err("invalid_argument", "level outside -60..0 dB"));
+    if !(-60.0..=6.0).contains(&set.level_db) {
+        return Err(err("invalid_argument", "level outside -60..6 dB"));
     }
     Ok(())
 }
@@ -276,4 +278,18 @@ pub async fn drone_status(state: State<'_, AppState>) -> CmdResult<Option<DroneS
     };
     let r = resolve(&s, &settings);
     status(&mut s, &r).map(Some)
+}
+
+/// Master level of the background (drone + pad), in dB; remembered for the next start.
+#[tauri::command]
+pub async fn set_graph_master(state: State<'_, AppState>, db: f32) -> CmdResult<()> {
+    if !(-60.0..=6.0).contains(&db) {
+        return Err(err("invalid_argument", "master outside -60..6 dB"));
+    }
+    let mut s = state.lock();
+    s.master_db = Some(db);
+    if let Some(g) = s.graph.as_ref() {
+        g.params().master.gain_db.set(db);
+    }
+    Ok(())
 }

@@ -100,6 +100,7 @@ pub fn run() {
             graph_cmds::set_drone,
             graph_cmds::stop_drone,
             graph_cmds::drone_status,
+            graph_cmds::set_graph_master,
             pad_cmds::start_pad,
             pad_cmds::set_pad,
             pad_cmds::stop_pad,

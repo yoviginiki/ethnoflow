@@ -148,6 +148,16 @@ export function useBackgroundLayers() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [padOn, padPrefs, padNotesKey, profileKey, a4]);
 
+  // Master level of the background, whenever it changes and once per start.
+  const masterDb = useStore((s) => s.prefs.masterDb ?? 0);
+  const droneStarted = useStore((s) => s.droneStatus !== null);
+  const padStarted = useStore((s) => s.padStatus !== null);
+  useEffect(() => {
+    if (!droneStarted && !padStarted) return;
+    api.setGraphMaster(masterDb).catch(fail);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [masterDb, droneStarted, padStarted]);
+
   // Meters while anything plays.
   useEffect(() => {
     if (!droneOn && !padOn) return;

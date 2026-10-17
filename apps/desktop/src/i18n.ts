@@ -288,6 +288,9 @@ const bg = {
 
   padOutsideScale: "Това гласоводене има нота извън избрания лад (напрежение).",
   stopLayers: "Спри фона",
+  backgroundLevel: "Ниво на фона",
+  backgroundLevelHint: "Общо за дрон и пад; лимитерът не пуска над −0.3 dBFS. Отделните нива са в панелите.",
+  toStudio: "Към студиото",
 
   // Compose First (F3.5)
   composeTitle: "Подготви фон",
@@ -774,6 +777,9 @@ const en: typeof bg = {
 
   padOutsideScale: "This voicing has a note outside the chosen scale (tension).",
   stopLayers: "Stop background",
+  backgroundLevel: "Background level",
+  backgroundLevelHint: "Shared by drone and pad; the limiter never exceeds −0.3 dBFS. Individual levels are in the panels.",
+  toStudio: "To the studio",
 
   composeTitle: "Compose First",
   composeIntro: "Background first, melody after: choose a tonal centre and mode, tempo and meter, a style — and hear a drone and pad in that mode. \"Play & record\" records the instrument on its own track over the background.",

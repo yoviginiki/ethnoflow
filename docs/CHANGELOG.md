@@ -131,6 +131,12 @@
   shows the three cards with score bars, "why it works", "Play as A/B" (the pad and the
   drone follow the armed proposal during playback, changing only at phrase boundaries),
   seed and MIDI export of chords + bass.
+- **Background level and linkage** (0.2.8, after the owner's first test of 0.2.7: "the
+  pieces are not connected, no volume up/down"): one master level for drone + pad
+  (−40…+6 dB, limiter still at −0.3 dBFS) in the floating background bar on every
+  screen and in Compose First; the bar also switches drone/pad on and off and jumps
+  between the accompanist and the studio; master default raised from −6 to 0 dB and
+  layer levels up to +6 dB.
 
 ### Measurements (owner's laptop, release build, YIN hop 10 ms, window 1024)
 | material | pitch time | voiced | f0 p05 / median / p95 | confidence p10 / median | octave-sized jumps |

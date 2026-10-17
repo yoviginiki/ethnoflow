@@ -84,6 +84,8 @@ pub struct Inner {
     /// Parameters of the pad source in graph slot 1 while it plays.
     pub pad: Option<Arc<audio_engine::PadParams>>,
     pub pad_settings: Option<crate::pad_cmds::PadSettings>,
+    /// Master level of the background graph in dB (user setting), if set.
+    pub master_db: Option<f32>,
     pub loaded: Option<LoadedTake>,
 }
 

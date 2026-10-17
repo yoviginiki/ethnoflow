@@ -127,7 +127,7 @@ export function PadPanel({ scale, profile, allowTension = true }: Props) {
         <div className="drone-sliders pad-sliders">
           <label className="drone-slider">
             <span>{t.droneLevel}</span>
-            <input type="range" min={-40} max={0} step={1} value={prefs.levelDb} onChange={(e) => set({ levelDb: Number(e.target.value) })} />
+            <input type="range" min={-40} max={6} step={1} value={prefs.levelDb} onChange={(e) => set({ levelDb: Number(e.target.value) })} />
             <span className="mono-num small">{formatDb(prefs.levelDb)}</span>
           </label>
           <label className="drone-slider">

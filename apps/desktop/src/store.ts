@@ -58,6 +58,8 @@ export interface Prefs {
   intent: IntentSettings;
   /** Harmony proposal sliders (F3.4); locks are shared with `intent`. */
   harmony: HarmonyPrefs;
+  /** Master level of the background (drone + pad) in dB. */
+  masterDb: number;
 }
 
 export interface HarmonyPrefs {
@@ -165,6 +167,7 @@ export const DEFAULT_PREFS: Prefs = {
   pad: DEFAULT_PAD,
   intent: DEFAULT_INTENT,
   harmony: DEFAULT_HARMONY,
+  masterDb: 0,
 };
 
 function loadPrefs(): Prefs {

@@ -20,7 +20,7 @@ export const DRONE_PRESETS: Record<PresetKey, Partial<DronePrefs>> = {
 
 type SliderKey = "levelDb" | "fifth" | "octave" | "sub" | "warmth" | "movement" | "breath";
 const SLIDERS: { key: SliderKey; label: StringMessageKey; min: number; max: number; step: number }[] = [
-  { key: "levelDb", label: "droneLevel", min: -40, max: 0, step: 1 },
+  { key: "levelDb", label: "droneLevel", min: -40, max: 6, step: 1 },
   { key: "fifth", label: "droneFifth", min: 0, max: 1, step: 0.01 },
   { key: "octave", label: "droneOctave", min: 0, max: 1, step: 0.01 },
   { key: "sub", label: "droneSub", min: 0, max: 1, step: 0.01 },

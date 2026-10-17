@@ -63,8 +63,8 @@ fn validate(set: &PadSettings) -> CmdResult<()> {
     if !(0.0..=1.0).contains(&set.x) || !(0.0..=1.0).contains(&set.y) {
         return Err(err("invalid_argument", "x/y must be 0..1"));
     }
-    if !(-60.0..=0.0).contains(&set.level_db) {
-        return Err(err("invalid_argument", "level outside -60..0 dB"));
+    if !(-60.0..=6.0).contains(&set.level_db) {
+        return Err(err("invalid_argument", "level outside -60..6 dB"));
     }
     if !(0.005..=8.0).contains(&set.lfo_hz) {
         return Err(err("invalid_argument", "lfo rate outside 0.005..8 Hz"));
