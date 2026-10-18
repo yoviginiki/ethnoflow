@@ -4,6 +4,7 @@
 
 import { create } from "zustand";
 import type {
+  TransportStatus,
   Ambient,
   AmbientStatus,
   AnalysisView,
@@ -328,6 +329,9 @@ interface Store {
   setAmbientStatus: (s: AmbientStatus | null) => void;
   rhythmStatus: RhythmStatus | null;
   setRhythmStatus: (s: RhythmStatus | null) => void;
+  /** Song transport status (P3 Phase 1), polled while a project is open. */
+  transport: TransportStatus | null;
+  setTransport: (s: TransportStatus | null) => void;
   /** Standalone metronome switch (the click without recording/playback). */
   metronomeOn: boolean;
   setMetronomeOn: (on: boolean) => void;
@@ -385,6 +389,8 @@ export const useStore = create<Store>((set, get) => ({
   setAmbientStatus: (ambientStatus) => set({ ambientStatus }),
   rhythmStatus: null,
   setRhythmStatus: (rhythmStatus) => set({ rhythmStatus }),
+  transport: null,
+  setTransport: (transport) => set({ transport }),
   metronomeOn: false,
   setMetronomeOn: (metronomeOn) => set({ metronomeOn }),
   sleepAt: null,

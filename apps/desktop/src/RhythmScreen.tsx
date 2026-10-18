@@ -1,4 +1,5 @@
 import { BackgroundTransport } from "./BackgroundTransport";
+import { TransportBar } from "./TransportBar";
 import { messages } from "./i18n";
 import { RhythmPanel } from "./RhythmPanel";
 import { useStore } from "./store";
@@ -17,6 +18,10 @@ export function RhythmScreen() {
         {!project.scale && <div className="muted small">{t.noScaleYet}</div>}
       </section>
       <TimingPanel />
+      <section className="panel analysis-row">
+        <strong>{t.transportTitle}</strong>
+        <TransportBar />
+      </section>
       <RhythmPanel />
       <section className="panel">
         <h3>{t.backgroundTransport}</h3>

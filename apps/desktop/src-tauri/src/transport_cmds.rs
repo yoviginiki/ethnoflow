@@ -60,16 +60,26 @@ pub fn seconds_at_beats(map: &SongMap, beats: f64) -> f64 {
 /// clock's beat position mapped to seconds, else 0. Returns (seconds, source).
 pub(crate) fn current_seconds(s: &Inner) -> (f64, &'static str) {
     let rate = s.graph.as_ref().map(|g| g.sample_rate()).unwrap_or(48_000);
-    if let Some(p) = s.clips.as_ref() {
-        let secs = p.transport.position() as f64 / rate.max(1) as f64;
-        if p.transport.playing.load(Ordering::Relaxed) || secs > 0.0 {
-            return (secs, "arrangement");
-        }
+    let timeline = s.clips.as_ref().map(|p| {
+        (
+            p.transport.position() as f64 / rate.max(1) as f64,
+            p.transport.playing.load(Ordering::Relaxed),
+        )
+    });
+    // A playing timeline is the master; a running rhythm beats a paused timeline (it is
+    // the thing actually moving); a paused timeline still reports where it stands.
+    if let Some((secs, true)) = timeline {
+        return (secs, "arrangement");
     }
     if let (Some(live), Some(g), Some(map)) = (s.rhythm.as_ref(), s.graph.as_ref(), song_map(s)) {
         let frame = g.params().frame.load(Ordering::Relaxed);
         if let Some(beat) = live.clock.beat_at(frame, g.sample_rate()) {
             return (seconds_at_beats(&map, beat), "rhythm");
+        }
+    }
+    if let Some((secs, false)) = timeline {
+        if secs > 0.0 {
+            return (secs, "arrangement");
         }
     }
     (0.0, "idle")

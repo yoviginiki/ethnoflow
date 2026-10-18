@@ -8,7 +8,7 @@ import { Library } from "./Library";
 import { PresetLibrary } from "./PresetLibrary";
 import { useAssistantBridge } from "./assistant";
 import { applySession, collectSession, useProjectSession } from "./session";
-import { useBackgroundLayers } from "./layers";
+import { useBackgroundLayers, useSongTransport } from "./layers";
 import { ProjectMenu } from "./ProjectMenu";
 import { ProjectPicker } from "./ProjectPicker";
 import { RhythmScreen } from "./RhythmScreen";
@@ -49,6 +49,7 @@ export default function App() {
   const layers = useStore((s) => s.layers);
   const t = messages[lang];
   useBackgroundLayers();
+  useSongTransport();
   useProjectSession();
   useAssistantBridge();
 

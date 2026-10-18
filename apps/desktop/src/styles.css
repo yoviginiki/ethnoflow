@@ -524,6 +524,8 @@ button.ghost.on { border-color: var(--accent); color: var(--accent); }
 .songmap-screen { display: flex; flex-direction: column; gap: 10px; }
 
 /* Sample browser */
+.song-transport { display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.song-transport .song-pos { font-size: 1.15em; min-width: 3.5em; }
 .rack-head { margin-top: 10px; border-top: 1px solid var(--axis); padding-top: 8px; }
 .rack-head h4 { margin: 0; }
 .rack-part { border: 1px dashed var(--axis); border-radius: 8px; padding: 6px 8px; margin-top: 6px; }

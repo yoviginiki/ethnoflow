@@ -3,7 +3,7 @@
 | Phase | Scope | Acceptance (evidence) | Depends on |
 |---|---|---|---|
 | **0** | this audit + blueprint + contracts + test matrix; real screenshot of the current arrangement UI (`docs/audits/screenshots/2026-10-18-studio.png`) | owner approval | — |
-| **1** | SongMap in ticks (migration from markers) + song transport + `SongMapView` with 6 editable sections, zoom/scroll, playhead in bars, persistence | seek/loop/tempo/restart tests; screenshots 1280/1440/1920; short demo recording | shared with P2 C |
+| **1** (SongMap done 2026-10-18 night; song transport slice done 2026-10-18 morning — see FEATURE_MATRIX D.1) | SongMap in ticks (migration from markers) + song transport + `SongMapView` with 6 editable sections, zoom/scroll, playhead in bars, persistence | seek/loop/tempo/restart tests; screenshots 1280/1440/1920; short demo recording | shared with P2 C |
 | **2** | Cue scheduler + hand-authored cues (play/hold/rest/enter) + countdown synced to the audio clock with latency compensation + Coach cards | no stale cues after seek (test + demo); scheduling accuracy measured | 1 |
 | **3** | Cue planner v1: three plans for an existing arrangement, skill modes, edits/locks, compare, deterministic regeneration, rationale | plans distinct by metric; constraints tests | 2, P2 D (arrangement) or hand-made SongMap |
 | **4** | Guided recording & take review: raw WAV, latency calibration, activity aligned to cues, early/late/rest with uncertainty | synthetic + microphone session | 2 |

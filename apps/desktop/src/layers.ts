@@ -30,6 +30,32 @@ function busOut(name: LayerName, stop: () => Promise<unknown>): void {
   }, ms + 60);
 }
 
+/** Song transport polling (P3 Phase 1): fast while something runs, slow otherwise, off
+ *  without a project. Every screen reads the same position from the store. */
+export function useSongTransport() {
+  const projectRoot = useStore((s) => s.project?.root ?? null);
+  const running = useStore((s) => (s.transport?.playing ?? false) || s.layers.rhythm);
+  useEffect(() => {
+    if (!projectRoot) {
+      useStore.getState().setTransport(null);
+      return;
+    }
+    let alive = true;
+    const tick = () => {
+      api
+        .transportStatus()
+        .then((st) => alive && useStore.getState().setTransport(st))
+        .catch(() => undefined);
+    };
+    tick();
+    const id = window.setInterval(tick, running ? 150 : 1000);
+    return () => {
+      alive = false;
+      window.clearInterval(id);
+    };
+  }, [projectRoot, running]);
+}
+
 /** Suggested root: the project's scale tonic, else the lowest calibrated note. Never a
  *  built-in key — if nothing is known the user picks one. */
 export function suggestedRoot(scale: Scale | null, profile: InstrumentProfile | null): number | null {

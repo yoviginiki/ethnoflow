@@ -149,6 +149,18 @@ have their own knobs and a button **"Add to the rhythm as a new part"**.
 - **Library** (Home) shows everything from every project with filters by kind, project and tag. "Load" applies the preset and opens its screen.
 - Write notes: "why" and "when it works". They are searched, and they are how you learn.
 
+## Song transport
+
+The bar **⏮ ▶/⏸ bar.beat time 🔁** (in the Song map and the Rhythm section; My studio has
+the same transport with more tools) is **one position for the whole song**: the clips on
+the tracks, the rhythm section and the map line up on the bar. The rhythm joins where the
+song is (when you switch it on while the song runs) and re-aligns on ⏮ or a click on the
+ruler. **🔁 Loop** repeats N bars from the current bar (the region is stored in the
+arrangement). The "bar.beat" position follows the meter map (in 7/8 the beats are eighths).
+The background layers (drone, pad, atmosphere, rhythm) keep their own switches — the
+transport does not stop them. Limitation: the rhythm clock runs at the project tempo (one
+value); a tempo change inside the map re-aligns at the next play/seek.
+
 ## Tempo, meter and metronome
 
 - "Tempo & meter": BPM, numerator/unit, grouping for additive meters (e.g. 7/8 = 3+2+2).

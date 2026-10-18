@@ -1248,6 +1248,22 @@ export interface ArrangementView {
   duration_seconds: number;
 }
 
+/** Song transport (P3 Phase 1): one position for clips, rhythm and the song map. */
+export interface TransportStatus {
+  playing: boolean;
+  source: "arrangement" | "rhythm" | "idle";
+  seconds: number;
+  tick: number;
+  bar: number;
+  beat: number;
+  beats_in_bar: number;
+  bpm: number;
+  numerator: number;
+  unit: number;
+  duration_seconds: number;
+  loop_bars: [number, number] | null;
+}
+
 export interface ArrangeStatus {
   playing: boolean;
   position_seconds: number;
@@ -1440,6 +1456,11 @@ export const api = {
   ambientPresetLoad: (id: string) => invoke<Ambient>("ambient_preset_load", { id }),
   ambientPresetSave: (name: string, tags: string[], rack: Ambient) => invoke<PresetSummary[]>("ambient_preset_save", { name, tags, rack }),
   ambientPresetDelete: (id: string) => invoke<PresetSummary[]>("ambient_preset_delete", { id }),
+  transportPlay: (device: string | null, fromSeconds: number | null) => invoke<TransportStatus>("transport_play", { device, fromSeconds }),
+  transportStop: () => invoke<TransportStatus>("transport_stop"),
+  transportSeek: (seconds: number) => invoke<TransportStatus>("transport_seek", { seconds }),
+  transportStatus: () => invoke<TransportStatus>("transport_status"),
+  transportLoop: (startBar: number | null, bars: number | null) => invoke<TransportStatus>("transport_loop", { startBar, bars }),
   arrangementGet: () => invoke<ArrangementView>("arrangement_get"),
   setArrangement: (arrangement: Arrangement) => invoke<ArrangementView>("set_arrangement", { arrangement }),
   arrangementPlay: (device: string | null, fromSeconds: number | null) =>

@@ -202,6 +202,13 @@
   import in Atmosphere**: "Import samples…" (multi-file) or drag-and-drop from
   Explorer / a sample manager such as Soundly — each file becomes a take in the
   project (named after the file) and a looped layer.
+- **Song transport (P3 Phase 1 slice, 2026-10-18)**: `transport_*` commands on top of the
+  arrangement timeline with one position converted through the song map (ticks ↔ seconds ↔
+  beats); a running rhythm section is re-anchored on play/seek and joins at the song's bar
+  when started while the timeline plays; loop in bars; `TransportBar` (bar.beat, time,
+  BPM/meter, loop) in the Song map and Rhythm screens, polled status in the store.
+  Limitation: the rhythm clock holds one tempo; map tempo changes re-align at the next
+  play/seek. The atmosphere program lane keeps its own time (next step).
 - **Instrument Rack (P1 R3, 2026-10-18 morning)**: three new instruments — **Tapan**
   (boom/rim/ghost synth; strokes on the meter's accent groups, fills), **Chord pad** (chord
   pattern through two detuned polyBLEP saws, SVF with movement) and **Lead** (mono, glide,

@@ -65,6 +65,11 @@ rhythm_status, ambient_status }`
 | `load_preset` | `id`, `go?` (default true: open its screen) | applies it |
 | `session` | `payload` (a session payload), `restore_layers?` | applies all settings at once |
 | `rhythm_render` | `path`, `bars?`, `stems?` (default true) | offline WAV + stems of the current rhythm settings (audio evidence) |
+| `transport_status` | | song position: playing, source, seconds, tick, bar, beat, bpm, meter, loop_bars |
+| `transport_play` | `from_s?` | **starts the song timeline (sound)**; a running rhythm is re-anchored to the same bar |
+| `transport_stop` | | pauses the timeline (background switches stay) |
+| `transport_seek` | `seconds` | moves the song position (rhythm follows) |
+| `transport_loop` | `start_bar`, `bars` (omit both = off) | loop in bars, stored in the arrangement |
 | `reference_add` | `path` (WAV/MP3/FLAC/OGG) | copies the song into the references library (never into a project); reply: id, name, duration |
 | `reference_list` | | the references library (id, name, duration, analyzed) |
 | `reference_report` | `id` | the saved analysis report (tempo candidates, key hypotheses, segments) without the curves |

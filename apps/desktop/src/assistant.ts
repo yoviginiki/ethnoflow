@@ -157,6 +157,31 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
       const res = await api.rhythmRender(String(cmd.path), { ...r, chord: s.padChord, root_midi: s.prefs.drone?.rootMidi ?? null, intonation: s.prefs.drone?.intonation ?? "profile" }, typeof cmd.bars === "number" ? cmd.bars : null, cmd.stems !== false);
       return res;
     }
+    case "transport_status":
+      return await api.transportStatus();
+    case "transport_play": {
+      // Starts the song timeline (sound!) — the caller tells the user first.
+      project();
+      const st = await api.transportPlay(s.prefs.selectedOutput, typeof cmd.from_s === "number" ? cmd.from_s : null);
+      s.setTransport(st);
+      return st;
+    }
+    case "transport_stop": {
+      const st = await api.transportStop();
+      s.setTransport(st);
+      return st;
+    }
+    case "transport_seek": {
+      const st = await api.transportSeek(Number(cmd.seconds));
+      s.setTransport(st);
+      return st;
+    }
+    case "transport_loop": {
+      project();
+      const st = await api.transportLoop(typeof cmd.start_bar === "number" ? cmd.start_bar : null, typeof cmd.bars === "number" ? cmd.bars : null);
+      s.setTransport(st);
+      return st;
+    }
     case "reference_add": {
       const info = await api.referenceAdd(String(cmd.path));
       return { id: info.id, name: info.name, duration_s: info.duration_s };
