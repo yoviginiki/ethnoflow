@@ -100,7 +100,7 @@ export function Start() {
     return h ? scaleFromKind({ tonic_pc: h.tonic_pc, degrees_cents: [], kind: h.kind }) : null;
   }, [analysis, chosenKey, project.scale]);
   const register = useMemo(() => (analysis ? melodyRegister(analysis.notes) : null), [analysis]);
-  const names = useMemo(() => ({ noise: t.kindNoise, wind: t.kindWind, texture: t.kindTexture, bells: t.kindBells, pluck: t.kindPluck, loop: t.kindLoop, cloud: t.kindCloud, resonator: t.kindResonator }), [t]);
+  const names = useMemo(() => ({ noise: t.kindNoise, wind: t.kindWind, texture: t.kindTexture, bells: t.kindBells, pluck: t.kindPluck, loop: t.kindLoop, cloud: t.kindCloud, resonator: t.kindResonator, choir: t.kindChoir, bloom: t.kindBloom }), [t]);
   const starters: Starter[] = useMemo(() => {
     if (!analysis || !s.ambient) return [];
     return proposeStarters({ scale: chosenScale, timing: project.timing, detectedBpm: chosenTempo, register, baseRack: s.ambient, names });

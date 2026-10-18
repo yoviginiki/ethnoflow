@@ -9,10 +9,10 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 
 use audio_engine::{
-    write_wav, AudioBuffer, BellParams, BellSource, GrainParams, GrainSource, Graph, GraphCmd,
-    GraphParams, LoopParams, LoopSource, NoiseParams, NoiseSource, PluckParams, PluckSource,
-    ResonatorParams, ResonatorSource, TextureParams, TextureSource, WavFormat, WindParams,
-    WindSource, MAX_PITCHES,
+    write_wav, AudioBuffer, BellParams, BellSource, BloomParams, BloomSource, ChoirParams,
+    ChoirSource, GrainParams, GrainSource, Graph, GraphCmd, GraphParams, LoopParams, LoopSource,
+    NoiseParams, NoiseSource, PluckParams, PluckSource, ResonatorParams, ResonatorSource,
+    TextureParams, TextureSource, WavFormat, WindParams, WindSource, MAX_PITCHES,
 };
 use project::{
     effective_rack, is_animated, Ambient, AmbientLayer, LayerSource, Macros, MAX_AMBIENT_LAYERS,
@@ -37,6 +37,8 @@ pub enum LiveParams {
     Loop(Arc<LoopParams>),
     Cloud(Arc<GrainParams>),
     Resonator(Arc<ResonatorParams>),
+    Choir(Arc<ChoirParams>),
+    Bloom(Arc<BloomParams>),
 }
 
 pub struct LiveLayer {
@@ -413,6 +415,48 @@ pub(crate) fn apply_source(s: &Inner, live: &LiveParams, l: &AmbientLayer, m: &M
             p.seed.store(l.seed, Ordering::Relaxed);
         }
         (
+            LayerSource::Choir {
+                vowel,
+                breath,
+                spread,
+                brightness,
+                morph,
+                voices,
+                tonal,
+                register,
+            },
+            LiveParams::Choir(p),
+        ) => {
+            p.pitches.set(&pitch_set(s, *tonal, *register, l.seed));
+            p.vowel.set(*vowel as f32);
+            p.breath.set(*breath as f32);
+            p.width.set(*spread as f32);
+            p.brightness.set(*brightness as f32);
+            p.morph.set((*morph * motion.max(0.1)) as f32);
+            p.voices.store(*voices as u32, Ordering::Relaxed);
+            p.seed.store(l.seed, Ordering::Relaxed);
+        }
+        (
+            LayerSource::Bloom {
+                density,
+                note_s,
+                brightness,
+                attack_s,
+                phrase,
+                tonal,
+                register,
+            },
+            LiveParams::Bloom(p),
+        ) => {
+            p.pitches.set(&pitch_set(s, *tonal, *register, l.seed));
+            p.density.set((*density * motion) as f32);
+            p.note_s.set(*note_s as f32);
+            p.brightness.set(*brightness as f32);
+            p.attack_s.set(*attack_s as f32);
+            p.phrase.set(*phrase as f32);
+            p.seed.store(l.seed, Ordering::Relaxed);
+        }
+        (
             LayerSource::Pluck {
                 density,
                 damping,
@@ -555,6 +599,22 @@ fn build_layer(s: &mut Inner, i: usize) -> CmdResult<()> {
             (
                 LiveParams::Resonator(Arc::clone(&p)),
                 Box::new(ResonatorSource::new(p)),
+            )
+        }
+        LayerSource::Choir { .. } => {
+            let p = Arc::new(ChoirParams::default());
+            p.seed.store(l.seed, Ordering::Relaxed);
+            (
+                LiveParams::Choir(Arc::clone(&p)),
+                Box::new(ChoirSource::new(p)),
+            )
+        }
+        LayerSource::Bloom { .. } => {
+            let p = Arc::new(BloomParams::default());
+            p.seed.store(l.seed, Ordering::Relaxed);
+            (
+                LiveParams::Bloom(Arc::clone(&p)),
+                Box::new(BloomSource::new(p)),
             )
         }
         LayerSource::Pluck { .. } => {
@@ -702,6 +762,12 @@ fn status(s: &mut Inner) -> CmdResult<AmbientStatus> {
                 tonal, register, ..
             }
             | LayerSource::Resonator {
+                tonal, register, ..
+            }
+            | LayerSource::Choir {
+                tonal, register, ..
+            }
+            | LayerSource::Bloom {
                 tonal, register, ..
             } => pitch_set(s, *tonal, *register, l.seed),
             _ => Vec::new(),
@@ -910,6 +976,22 @@ pub(crate) fn offline_sources(
                     Box::new(ResonatorSource::new(p)),
                 )
             }
+            LayerSource::Choir { .. } => {
+                let p = Arc::new(ChoirParams::default());
+                p.seed.store(l.seed, Ordering::Relaxed);
+                (
+                    LiveParams::Choir(Arc::clone(&p)),
+                    Box::new(ChoirSource::new(p)),
+                )
+            }
+            LayerSource::Bloom { .. } => {
+                let p = Arc::new(BloomParams::default());
+                p.seed.store(l.seed, Ordering::Relaxed);
+                (
+                    LiveParams::Bloom(Arc::clone(&p)),
+                    Box::new(BloomSource::new(p)),
+                )
+            }
             LayerSource::Pluck { .. } => {
                 let p = Arc::new(PluckParams::default());
                 p.seed.store(l.seed, Ordering::Relaxed);
@@ -983,6 +1065,12 @@ pub async fn export_ambient(
                 }
                 | LayerSource::Resonator {
                     tonal, register, ..
+                }
+                | LayerSource::Choir {
+                    tonal, register, ..
+                }
+                | LayerSource::Bloom {
+                    tonal, register, ..
                 } => pitch_set(&s, *tonal, *register, l.seed),
                 _ => Vec::new(),
             })
@@ -1035,6 +1123,8 @@ pub async fn export_ambient(
                     LiveParams::Bells(x) => x.pitches.set(&pitch_sets[i]),
                     LiveParams::Pluck(x) => x.pitches.set(&pitch_sets[i]),
                     LiveParams::Resonator(x) => x.pitches.set(&pitch_sets[i]),
+                    LiveParams::Choir(x) => x.pitches.set(&pitch_sets[i]),
+                    LiveParams::Bloom(x) => x.pitches.set(&pitch_sets[i]),
                     LiveParams::Loop(x) => {
                         // apply_source used 48 kHz for the frame math; redo at `rate`.
                         if let LayerSource::Loop {

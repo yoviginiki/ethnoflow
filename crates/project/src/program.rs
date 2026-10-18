@@ -78,7 +78,12 @@ pub fn param_range(param: &str) -> Option<(f64, f64)> {
         "lowpass_hz" => (40.0, 20_000.0),
         "highpass_hz" => (10.0, 8_000.0),
         "color" | "gust" | "speed" | "resonance" | "brightness" | "motion" | "damping"
-        | "velocity_spread" | "structure" | "strike" => (0.0, 1.0),
+        | "velocity_spread" | "structure" | "strike" | "vowel" | "breath" | "morph" | "phrase" => {
+            (0.0, 1.0)
+        }
+        "spread" => (0.0, 30.0),
+        "note_s" => (0.2, 8.0),
+        "attack_s" => (0.005, 2.0),
         "center_hz" => (80.0, 6_000.0),
         "density" => (0.0, 120.0),
         "decay_s" => (0.2, 30.0),
@@ -107,6 +112,8 @@ pub fn source_params(src: &LayerSource) -> &'static [&'static str] {
         LayerSource::Resonator { .. } => {
             &["density", "decay_s", "structure", "brightness", "strike"]
         }
+        LayerSource::Choir { .. } => &["vowel", "breath", "spread", "brightness", "morph"],
+        LayerSource::Bloom { .. } => &["density", "note_s", "brightness", "attack_s", "phrase"],
         LayerSource::Cloud { .. } => &[
             "grain_ms",
             "density",
@@ -178,6 +185,16 @@ fn source_param(s: &LayerSource, param: &str) -> Option<f64> {
         (LayerSource::Resonator { structure, .. }, "structure") => *structure,
         (LayerSource::Resonator { brightness, .. }, "brightness") => *brightness,
         (LayerSource::Resonator { strike, .. }, "strike") => *strike,
+        (LayerSource::Choir { vowel, .. }, "vowel") => *vowel,
+        (LayerSource::Choir { breath, .. }, "breath") => *breath,
+        (LayerSource::Choir { spread, .. }, "spread") => *spread,
+        (LayerSource::Choir { brightness, .. }, "brightness") => *brightness,
+        (LayerSource::Choir { morph, .. }, "morph") => *morph,
+        (LayerSource::Bloom { density, .. }, "density") => *density,
+        (LayerSource::Bloom { note_s, .. }, "note_s") => *note_s,
+        (LayerSource::Bloom { brightness, .. }, "brightness") => *brightness,
+        (LayerSource::Bloom { attack_s, .. }, "attack_s") => *attack_s,
+        (LayerSource::Bloom { phrase, .. }, "phrase") => *phrase,
         (LayerSource::Cloud { grain_ms, .. }, "grain_ms") => *grain_ms,
         (LayerSource::Cloud { density, .. }, "density") => *density,
         (LayerSource::Cloud { position, .. }, "position") => *position,
@@ -242,6 +259,16 @@ fn set_source_param(s: &mut LayerSource, param: &str, v: f64) -> bool {
         (LayerSource::Resonator { structure, .. }, "structure") => *structure = v,
         (LayerSource::Resonator { brightness, .. }, "brightness") => *brightness = v,
         (LayerSource::Resonator { strike, .. }, "strike") => *strike = v,
+        (LayerSource::Choir { vowel, .. }, "vowel") => *vowel = v,
+        (LayerSource::Choir { breath, .. }, "breath") => *breath = v,
+        (LayerSource::Choir { spread, .. }, "spread") => *spread = v,
+        (LayerSource::Choir { brightness, .. }, "brightness") => *brightness = v,
+        (LayerSource::Choir { morph, .. }, "morph") => *morph = v,
+        (LayerSource::Bloom { density, .. }, "density") => *density = v,
+        (LayerSource::Bloom { note_s, .. }, "note_s") => *note_s = v,
+        (LayerSource::Bloom { brightness, .. }, "brightness") => *brightness = v,
+        (LayerSource::Bloom { attack_s, .. }, "attack_s") => *attack_s = v,
+        (LayerSource::Bloom { phrase, .. }, "phrase") => *phrase = v,
         (LayerSource::Cloud { grain_ms, .. }, "grain_ms") => *grain_ms = v,
         (LayerSource::Cloud { density, .. }, "density") => *density = v,
         (LayerSource::Cloud { position, .. }, "position") => *position = v,

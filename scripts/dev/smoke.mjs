@@ -228,6 +228,21 @@ async function main() {
     expectOk(send({ op: "clap_render", path: clap, plugin_id: f.plugins[0].id, out, midi: 62 }));
     return audible(out, 0.05);
   });
+  await step("atmosphere: choir + bloom layers render audibly through the export", () => {
+    const a = expectOk(send({ op: "add_layer", kind: "choir", name: "smoke choir" }));
+    const b = expectOk(send({ op: "add_layer", kind: "bloom", name: "smoke bloom", source: { density: 60, note_s: 0.5, attack_s: 0.02 } }));
+    const out = path.join(OUT_DIR, "atmo.wav");
+    try {
+      const r = expectOk(send({ op: "export_song", path: out, seconds: 6, ambient: true, rhythm: false, drone: false, pad: false }));
+      const stem = r.stems.find((p) => /atmosphere/i.test(path.basename(p)));
+      if (!stem) throw new Error(`no atmosphere stem in ${r.stems.map((p) => path.basename(p)).join(",")}`);
+      return audible(stem, 0.02);
+    } finally {
+      send({ op: "remove_layer", id: a.id ?? a.layer?.id ?? "smoke choir" });
+      send({ op: "remove_layer", name: "smoke bloom" });
+      send({ op: "remove_layer", name: "smoke choir" });
+    }
+  });
   await step("export: whole song offline with stems", () => {
     const out = path.join(OUT_DIR, "song.wav");
     const r = expectOk(send({ op: "export_song", path: out, seconds: 6 }));

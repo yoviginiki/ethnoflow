@@ -73,6 +73,35 @@ pub enum LayerSource {
         tonal: bool,
         register: (u8, u8),
     },
+    /// Choir drone (F1B.5): vowel formants on the pitch set — a vocal bed.
+    Choir {
+        /// 0..1 along a–e–i–o–u.
+        vowel: f64,
+        /// 0..1 breath swell depth.
+        breath: f64,
+        /// Per-voice detune, cents (0..30).
+        spread: f64,
+        brightness: f64,
+        /// 0..1 how far and fast the vowel drifts by itself.
+        morph: f64,
+        /// Voices used (1..6), low to high on the pitch set.
+        voices: u8,
+        tonal: bool,
+        register: (u8, u8),
+    },
+    /// Bloom (F1B.6): a generative melody on the pitch set — phrases with breaths.
+    Bloom {
+        /// Notes per minute.
+        density: f64,
+        /// Held length of a note, seconds.
+        note_s: f64,
+        brightness: f64,
+        attack_s: f64,
+        /// 0 random picks … 1 stepwise phrases with breaths.
+        phrase: f64,
+        tonal: bool,
+        register: (u8, u8),
+    },
     /// Granular cloud of a take (F1B.2): grains around a read position, transposed.
     Cloud {
         take_id: String,
@@ -115,6 +144,8 @@ impl LayerSource {
             LayerSource::Loop { .. } => "loop",
             LayerSource::Cloud { .. } => "cloud",
             LayerSource::Resonator { .. } => "resonator",
+            LayerSource::Choir { .. } => "choir",
+            LayerSource::Bloom { .. } => "bloom",
         }
     }
 
@@ -126,6 +157,8 @@ impl LayerSource {
                 | LayerSource::Bells { tonal: true, .. }
                 | LayerSource::Pluck { tonal: true, .. }
                 | LayerSource::Resonator { tonal: true, .. }
+                | LayerSource::Choir { tonal: true, .. }
+                | LayerSource::Bloom { tonal: true, .. }
         )
     }
 
@@ -253,6 +286,46 @@ impl LayerSource {
                 unit(*structure, "structure")?;
                 unit(*brightness, "brightness")?;
                 unit(*strike, "strike")?;
+                register(*r)
+            }
+            LayerSource::Choir {
+                vowel,
+                breath,
+                spread,
+                brightness,
+                morph,
+                voices,
+                register: r,
+                ..
+            } => {
+                if !(0.0..=30.0).contains(spread) || !(1..=6).contains(voices) {
+                    return Err(ProjectError::InvalidState("choir spread/voices".into()));
+                }
+                unit(*vowel, "vowel")?;
+                unit(*breath, "breath")?;
+                unit(*brightness, "brightness")?;
+                unit(*morph, "morph")?;
+                register(*r)
+            }
+            LayerSource::Bloom {
+                density,
+                note_s,
+                brightness,
+                attack_s,
+                phrase,
+                register: r,
+                ..
+            } => {
+                if !(0.0..=120.0).contains(density)
+                    || !(0.2..=8.0).contains(note_s)
+                    || !(0.005..=2.0).contains(attack_s)
+                {
+                    return Err(ProjectError::InvalidState(
+                        "bloom density/note/attack".into(),
+                    ));
+                }
+                unit(*brightness, "brightness")?;
+                unit(*phrase, "phrase")?;
                 register(*r)
             }
             LayerSource::Cloud {

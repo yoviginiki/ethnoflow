@@ -59,6 +59,23 @@ function randomizeSource(rnd: () => number, s: LayerSource): LayerSource {
     case "loop":
       // A loop keeps its region (the user chose it); only the rate breathes a little.
       return { ...s, rate: clamp(s.rate * Math.pow(2, (rnd() * 2 - 1) * 0.17), 0.25, 4) };
+    case "choir":
+      return {
+        ...s,
+        vowel: nudge(rnd, s.vowel, 0.35, 0, 1),
+        breath: nudge(rnd, s.breath, 0.3, 0, 1),
+        spread: clamp(s.spread + (rnd() * 2 - 1) * 6, 0, 30),
+        brightness: nudge(rnd, s.brightness, 0.25, 0, 1),
+        morph: nudge(rnd, s.morph, 0.3, 0, 1),
+      };
+    case "bloom":
+      return {
+        ...s,
+        density: clamp(s.density * Math.pow(2, (rnd() * 2 - 1) * 0.7), 2, 60),
+        note_s: clamp(s.note_s * Math.pow(2, (rnd() * 2 - 1) * 0.5), 0.3, 6),
+        brightness: nudge(rnd, s.brightness, 0.3, 0, 1),
+        phrase: nudge(rnd, s.phrase, 0.3, 0, 1),
+      };
     case "resonator":
       return {
         ...s,

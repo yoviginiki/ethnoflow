@@ -93,6 +93,8 @@ The same layers as Atmosphere, one at a time, with big knobs:
 
 - Pick a **Module** (layer) at the top or add a new one by kind. Under the title is "How to use it" for that module.
 - **Resonator** (modal synthesis): a struck body in the mode, from string/tube (Structure 0) to bowl/bell (1); Strike, Brightness, Decay, Density. Good for sparse bell hits over the pad or a wooden pulse under the melody.
+- **Choir** (vocal drone): vowels a–e–i–o–u through formants on the mode, Breath for slow swells, Spread for width, Voices = how many tones sing; a low register = a men's choir. Under the kaval with a big Space.
+- **Bloom** (generative melody): notes from the mode that appear by themselves — Density per minute, Length/Attack from drops to long tones, Phrasing from random to stepwise phrases with breaths. Same seed = same melody.
 - **Cloud** (granular): pick a take (kaval, voice, rain) and it becomes an endless pad of small grains. Position = where in the take, Scan 0 = freezes the moment, Grain and Density go from whisper to choir, Pitch transposes (−12 = an octave down), Reverse and Octave up are per-grain probabilities. The strongest ambient module for your own recordings.
 - Knobs: level with a meter, pan, the module's parameters, HP/LP. Drag up/down; Shift = fine; double-click = default; the wheel works too.
 - **Shuffle** gives new values to this module only (the level stays); 🔒 protects it from "Surprise me".

@@ -202,6 +202,13 @@
   import in Atmosphere**: "Import samples…" (multi-file) or drag-and-drop from
   Explorer / a sample manager such as Soundly — each file becomes a take in the
   project (named after the file) and a looped layer.
+- **Choir drone + Bloom (F1B.5/F1B.6, backlog #7, 2026-10-18)**: two Soundscapes modules —
+  `ChoirSource` (glottal pulse → three formants morphing along a–e–i–o–u, breath swells,
+  per-voice detune, vowel drift; voices on the pitch set) and `BloomSource` (seeded sparse
+  notes from the pitch set with stepwise phrases and breaths, soft harmonics, attack/length);
+  automatable params, shuffle, how-to texts, in Atmosphere/Soundscapes/automation/export;
+  measured tests (formants move with the vowel, in tune, breath swells; bloom notes on the
+  set, density, determinism, stepwise motion). Smoke step added.
 - **Live smoke test (2026-10-18)**: `scripts/dev/smoke.mjs` drives the running app through the
   bridge — every screen, every factory preset rendered and measured, rhythm and rack stems,
   references (add/analyse/phrases/remove), song map + follower, transport loop, presets,

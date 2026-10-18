@@ -3,6 +3,8 @@
 
 pub mod bass;
 pub mod bells;
+pub mod bloom;
+pub mod choir;
 pub mod chordpad;
 pub mod clips;
 pub mod drone;
@@ -24,6 +26,8 @@ pub mod wind;
 
 pub use bass::{BassNoteEvent, BassParams, BassPatternData, BassSource, BassVoice};
 pub use bells::{BellParams, BellSource, BELL_VOICES};
+pub use bloom::{BloomParams, BloomSource, BLOOM_VOICES};
+pub use choir::{ChoirParams, ChoirSource, CHOIR_VOICES};
 pub use chordpad::{
     ChordEvent, ChordPadParams, ChordPadSource, ChordPatternData, CHORDPAD_VOICES, CHORD_NOTES,
 };

@@ -150,6 +150,12 @@ pub async fn export_song(
                             }
                             | LayerSource::Resonator {
                                 tonal, register, ..
+                            }
+                            | LayerSource::Choir {
+                                tonal, register, ..
+                            }
+                            | LayerSource::Bloom {
+                                tonal, register, ..
                             } => pitch_set(&s, *tonal, *register, l.seed),
                             _ => Vec::new(),
                         })
@@ -289,6 +295,8 @@ pub async fn export_song(
                     LiveParams::Bells(x) => x.pitches.set(&pitch_sets[i]),
                     LiveParams::Pluck(x) => x.pitches.set(&pitch_sets[i]),
                     LiveParams::Resonator(x) => x.pitches.set(&pitch_sets[i]),
+                    LiveParams::Choir(x) => x.pitches.set(&pitch_sets[i]),
+                    LiveParams::Bloom(x) => x.pitches.set(&pitch_sets[i]),
                     LiveParams::Loop(x) => {
                         if let LayerSource::Loop {
                             start,

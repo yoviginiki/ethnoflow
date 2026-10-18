@@ -53,6 +53,21 @@ export const SOURCE_SLIDERS: Record<LayerKind, SliderSpec[]> = {
     { key: "brightness", label: "brightnessLabel", min: 0, max: 1, step: 0.01, fmt: pct },
     { key: "strike", label: "strikeLabel", min: 0, max: 1, step: 0.01, fmt: pct },
   ],
+  choir: [
+    { key: "vowel", label: "vowelLabel", min: 0, max: 1, step: 0.01, fmt: (v) => ["a", "e", "i", "o", "u"][Math.round(v * 4)] },
+    { key: "breath", label: "breathLabel", min: 0, max: 1, step: 0.01, fmt: pct },
+    { key: "spread", label: "detuneSpreadLabel", min: 0, max: 30, step: 0.5, fmt: (v) => `${v.toFixed(1)} ¢` },
+    { key: "brightness", label: "brightnessLabel", min: 0, max: 1, step: 0.01, fmt: pct },
+    { key: "morph", label: "morphLabel", min: 0, max: 1, step: 0.01, fmt: pct },
+    { key: "voices", label: "voicesLabel", min: 1, max: 6, step: 1, fmt: (v) => String(Math.round(v)) },
+  ],
+  bloom: [
+    { key: "density", label: "densityLabel", min: 0, max: 120, step: 0.5, fmt: (v) => v.toFixed(1) },
+    { key: "note_s", label: "noteLenLabel", min: 0.2, max: 8, step: 0.05, fmt: (v) => `${v.toFixed(2)} s` },
+    { key: "brightness", label: "brightnessLabel", min: 0, max: 1, step: 0.01, fmt: pct },
+    { key: "attack_s", label: "bloomAttackLabel", min: 0.005, max: 2, step: 0.005, fmt: (v) => `${v.toFixed(2)} s` },
+    { key: "phrase", label: "phraseLabel", min: 0, max: 1, step: 0.01, fmt: pct },
+  ],
   cloud: [
     { key: "grain_ms", label: "grainLabel", min: 10, max: 500, step: 1, fmt: (v) => `${Math.round(v)} ms` },
     { key: "density", label: "densityLabel", min: 0.5, max: 80, step: 0.5, fmt: (v) => `${v.toFixed(1)}/s` },

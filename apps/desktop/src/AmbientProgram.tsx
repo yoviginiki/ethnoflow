@@ -26,12 +26,23 @@ function sourceParams(src: LayerSource): string[] {
       return ["grain_ms", "density", "position", "spray", "scan", "pitch", "jitter", "reverse_p", "octave_p"];
     case "resonator":
       return ["density", "decay_s", "structure", "brightness", "strike"];
+    case "choir":
+      return ["vowel", "breath", "spread", "brightness", "morph"];
+    case "bloom":
+      return ["density", "note_s", "brightness", "attack_s", "phrase"];
   }
 }
 const PARAM_LABEL: Record<string, StringMessageKey> = {
   gain_db: "levelLabel",
   grain_ms: "grainLabel",
   structure: "structureLabel",
+  vowel: "vowelLabel",
+  breath: "breathLabel",
+  spread: "detuneSpreadLabel",
+  morph: "morphLabel",
+  note_s: "noteLenLabel",
+  attack_s: "bloomAttackLabel",
+  phrase: "phraseLabel",
   strike: "strikeLabel",
   position: "positionLabel",
   spray: "sprayLabel",

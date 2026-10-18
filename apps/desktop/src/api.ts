@@ -519,6 +519,8 @@ export type LayerSource =
   | { kind: "pluck"; density: number; damping: number; brightness: number; velocity_spread: number; tonal: boolean; register: [number, number] }
   | { kind: "loop"; take_id: string; start: number; end: number; crossfade: number; rate: number; reverse: boolean }
   | { kind: "resonator"; density: number; decay_s: number; structure: number; brightness: number; strike: number; tonal: boolean; register: [number, number] }
+  | { kind: "choir"; vowel: number; breath: number; spread: number; brightness: number; morph: number; voices: number; tonal: boolean; register: [number, number] }
+  | { kind: "bloom"; density: number; note_s: number; brightness: number; attack_s: number; phrase: number; tonal: boolean; register: [number, number] }
   | { kind: "cloud"; take_id: string; grain_ms: number; density: number; position: number; spray: number; scan: number; pitch: number; jitter: number; reverse_p: number; octave_p: number };
 export type LayerKind = LayerSource["kind"];
 

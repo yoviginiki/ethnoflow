@@ -13,9 +13,9 @@ import { commitRack, flushRack } from "./rack";
 import { useStore } from "./store";
 
 /** Module kinds in the order of the "new module" menu. */
-const KINDS: LayerKind[] = ["cloud", "resonator", "wind", "texture", "bells", "pluck", "noise", "loop"];
+const KINDS: LayerKind[] = ["cloud", "choir", "bloom", "resonator", "wind", "texture", "bells", "pluck", "noise", "loop"];
 /** How to use each module (the teaching text under the title). */
-const HOW_TO: Record<LayerKind, StringMessageKey> = { noise: "howNoise", wind: "howWind", texture: "howTexture", bells: "howBells", pluck: "howPluck", loop: "howLoop", cloud: "howCloud", resonator: "howResonator" };
+const HOW_TO: Record<LayerKind, StringMessageKey> = { noise: "howNoise", wind: "howWind", texture: "howTexture", bells: "howBells", pluck: "howPluck", loop: "howLoop", cloud: "howCloud", resonator: "howResonator", choir: "howChoir", bloom: "howBloom" };
 const NEEDS_TAKE = (k: LayerKind) => k === "loop" || k === "cloud";
 const POLL_MS = 150;
 
