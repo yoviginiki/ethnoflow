@@ -127,7 +127,7 @@ fn project_ref(s: &Inner) -> CmdResult<&Project> {
         .ok_or_else(|| err("no_project", "No project is open"))
 }
 
-fn view(s: &Inner) -> CmdResult<ProjectView> {
+pub(crate) fn view(s: &Inner) -> CmdResult<ProjectView> {
     let p = project_ref(s)?;
     let takes = p.takes()?.iter().map(|t| take_view(s, t)).collect();
     Ok(ProjectView {

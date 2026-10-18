@@ -83,7 +83,7 @@ fn references_dir(s: &Inner) -> CmdResult<PathBuf> {
         .ok_or_else(|| err("no_library_dir", "Library folder is not available"))
 }
 
-fn now_ms() -> i64 {
+pub(crate) fn now_ms() -> i64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_millis() as i64)
@@ -106,7 +106,7 @@ fn valid_id(id: &str) -> CmdResult<()> {
     Ok(())
 }
 
-fn folder(s: &Inner, id: &str) -> CmdResult<PathBuf> {
+pub(crate) fn folder(s: &Inner, id: &str) -> CmdResult<PathBuf> {
     valid_id(id)?;
     let dir = references_dir(s)?.join(id);
     if !dir.is_dir() {
@@ -115,7 +115,7 @@ fn folder(s: &Inner, id: &str) -> CmdResult<PathBuf> {
     Ok(dir)
 }
 
-fn read_json<T: serde::de::DeserializeOwned>(path: &Path) -> CmdResult<Option<T>> {
+pub(crate) fn read_json<T: serde::de::DeserializeOwned>(path: &Path) -> CmdResult<Option<T>> {
     if !path.is_file() {
         return Ok(None);
     }
@@ -125,14 +125,14 @@ fn read_json<T: serde::de::DeserializeOwned>(path: &Path) -> CmdResult<Option<T>
         .map_err(|e| err("corrupt", format!("{}: {e}", path.display())))
 }
 
-fn write_json<T: Serialize>(path: &Path, value: &T) -> CmdResult<()> {
+pub(crate) fn write_json<T: Serialize>(path: &Path, value: &T) -> CmdResult<()> {
     let text = serde_json::to_string_pretty(value).map_err(|e| err("json", e.to_string()))?;
     let tmp = path.with_extension("json.tmp");
     std::fs::write(&tmp, text).map_err(|e| err("io", e.to_string()))?;
     std::fs::rename(&tmp, path).map_err(|e| err("io", e.to_string()))
 }
 
-fn original_path(dir: &Path, meta: &ReferenceMeta) -> PathBuf {
+pub(crate) fn original_path(dir: &Path, meta: &ReferenceMeta) -> PathBuf {
     dir.join(format!("original.{}", meta.ext))
 }
 
@@ -152,7 +152,7 @@ fn info_of(dir: &Path) -> CmdResult<Option<ReferenceInfo>> {
 /// moment; playing section after section should not repeat it).
 static DECODED: Mutex<Option<(String, Arc<AudioBuffer>)>> = Mutex::new(None);
 
-fn decoded(id: &str, path: &Path) -> CmdResult<Arc<AudioBuffer>> {
+pub(crate) fn decoded(id: &str, path: &Path) -> CmdResult<Arc<AudioBuffer>> {
     if let Some((cached_id, buf)) = DECODED.lock().unwrap().as_ref() {
         if cached_id == id {
             return Ok(Arc::clone(buf));

@@ -16,6 +16,7 @@ mod pad_cmds;
 mod preset_cmds;
 mod project_cmds;
 mod reference_cmds;
+mod reference_phrases;
 mod rhythm_cmds;
 mod samples_cmds;
 mod settings;
@@ -205,6 +206,10 @@ pub fn run() {
             reference_cmds::reference_report,
             reference_cmds::reference_analyze,
             reference_cmds::reference_play,
+            reference_phrases::reference_phrases,
+            reference_phrases::reference_phrases_get,
+            reference_phrases::reference_phrase_play,
+            reference_phrases::reference_phrase_to_take,
             transport_cmds::transport_play,
             transport_cmds::transport_stop,
             transport_cmds::transport_seek,
