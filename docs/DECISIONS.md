@@ -180,6 +180,26 @@ the UI polls (keyboard lights, trainer). No MIDI *output* yet. Hot-plug: the por
 is re-read on demand; a vanished port surfaces as a stream error, not a panic.
 Supply chain: crates.io, pinned; small, maintained, widely used (Bevy, nih-plug).
 
+## ADR-0021 rustfft 6 for offline analysis (MIT OR Apache-2.0)
+
+Context: Program P2 (Music DNA) needs spectral features (flux, centroid, chroma, timbre
+bands), tempo candidates and novelty-based structure for *reference* material — offline,
+on demand, never on the audio thread (CONTRACT §3, FEATURE_SPEC Phase 10). Hand-rolled
+DFTs were enough for the Goertzel tests but not for a 2048-point STFT over minutes of
+audio.
+Decision: `rustfft` 6 (MIT OR Apache-2.0), pure Rust, no unsafe SIMD unless detected at
+runtime (AVX/SSE/NEON), no build-time toolchain, Windows/macOS/Linux. It lives only in
+the new `crates/analysis` crate (`ethnoflow-analysis`), which is pure (no I/O, no
+engine types): mono samples in, serialisable curves/candidates/hypotheses out. The
+shell decodes and resamples with the existing engine code, runs the analyzer on a
+worker thread and stores the result as JSON next to the project.
+Alternatives: `realfft` (wraps rustfft, saves half the work for real input — can be
+added later without an ADR change), `microfft` (no_std, fixed sizes, too small),
+Essentia/librosa via Python (rule: no toolchain on user machines).
+Supply chain: crates.io, pinned at the 6.x line; maintained (ejmahler), ~10 M
+downloads, dependencies `num-complex`, `num-traits`, `primal-check`, `strength_reduce`,
+`transpose` — all small and well known.
+
 ## ADR-0018 (proposed) CLAP as the internal instrument ABI; instruments in Rust or C++
 
 Status: **Proposed, not accepted.** No code, crate or dependency until the owner
