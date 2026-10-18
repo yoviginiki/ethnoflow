@@ -6,6 +6,7 @@
 pub mod bassline;
 pub mod counter;
 pub mod events;
+pub mod extras;
 pub mod groove;
 pub mod harmony;
 pub mod intent;
@@ -26,6 +27,10 @@ pub mod trainer;
 pub use bassline::{generate_bass, static_spans, BassParams, ChordSpan};
 pub use counter::{generate_countermelody, CounterParams, CounterRegister, ToneSpan};
 pub use events::{parse_smf, tick_to_seconds, MidiClip, MidiError, NoteEvent, TrackInfo};
+pub use extras::{
+    generate_chord_pad, generate_lead, generate_tapan, ChordPadParams, ChordStep,
+    LeadParams as LeadPhraseParams, TapanHit, TapanParams as TapanPatternParams, TapanStroke,
+};
 pub use groove::{generate_groove, Drum, DrumHit, DrumPattern, GrooveParams, GrooveStyle};
 pub use harmony::{
     propose, propose_all, BassEvent, ChordEvent, ChordTone, HarmonyParams, HarmonyProposal,
