@@ -20,6 +20,17 @@ describe("session", () => {
 
   it("leaves prefs alone for garbage", () => {
     expect(mergeSessionPrefs(DEFAULT_PREFS, null)).toBe(DEFAULT_PREFS);
+  });
+
+  it("merges nested objects at every depth so a partial bridge command keeps the other fields", () => {
+    const merged = mergeSessionPrefs(DEFAULT_PREFS, { rhythm: { ostinato: { on: true }, instruments: { bass: "factory:bass.wood" } } });
+    expect(merged.rhythm.ostinato.on).toBe(true);
+    expect(merged.rhythm.ostinato.steps).toBe(DEFAULT_PREFS.rhythm.ostinato.steps);
+    expect(merged.rhythm.drums).toEqual(DEFAULT_PREFS.rhythm.drums);
+    expect(merged.rhythm.instruments?.bass).toBe("factory:bass.wood");
+    // Arrays replace, they do not merge by index.
+    const g = mergeSessionPrefs(DEFAULT_PREFS, { rhythm: { drums: { ...DEFAULT_PREFS.rhythm.drums } } });
+    expect(g.rhythm.drums).toEqual(DEFAULT_PREFS.rhythm.drums);
     expect(mergeSessionPrefs(DEFAULT_PREFS, "x")).toBe(DEFAULT_PREFS);
     expect(isSessionPayload({ v: 2, prefs: {} })).toBe(false);
     expect(isSessionPayload({ v: 1, prefs: {}, ambient: null, layers: {} })).toBe(true);

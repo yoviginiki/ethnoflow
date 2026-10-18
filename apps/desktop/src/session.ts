@@ -37,10 +37,27 @@ export function mergeSessionPrefs(prefs: Prefs, saved: unknown): Prefs {
     const v = src[k];
     if (v === undefined || v === null) continue;
     const cur = prefs[k];
-    // Objects merge over the defaults so older sessions keep working when fields are added.
-    next[k] = cur && typeof cur === "object" && typeof v === "object" ? { ...(cur as object), ...(v as object) } : v;
+    // Objects merge over the defaults, at every depth, so older sessions keep working when
+    // fields are added and a bridge command may send only the fields it changes
+    // (e.g. rhythm.ostinato.on). Arrays and primitives replace.
+    next[k] = deepMerge(cur, v);
   }
   return next as unknown as Prefs;
+}
+
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return !!v && typeof v === "object" && !Array.isArray(v);
+}
+
+/** Pure: plain objects merge recursively; arrays, primitives and null replace. */
+export function deepMerge(cur: unknown, v: unknown): unknown {
+  if (!isPlainObject(cur) || !isPlainObject(v)) return v;
+  const out: Record<string, unknown> = { ...cur };
+  for (const [key, val] of Object.entries(v)) {
+    if (val === undefined) continue;
+    out[key] = deepMerge(cur[key], val);
+  }
+  return out;
 }
 
 /** Pure: is this value a session payload we can read? */
