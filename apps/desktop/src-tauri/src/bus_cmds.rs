@@ -49,6 +49,8 @@ pub struct BusState {
     pub muted: bool,
     /// Gain ramp length of the member slots, ms (0 = the engine's 20 ms).
     pub fade_ms: u32,
+    /// Offset the song-map section adds on top of the user's trim, dB (section follower).
+    pub section_db: f32,
 }
 
 pub fn bus_index(name: &str) -> CmdResult<usize> {
@@ -76,7 +78,7 @@ pub fn bus_gain(s: &Inner, bus: usize, own_db: f32) -> f32 {
     if b.muted || own_db <= -119.0 {
         -120.0
     } else {
-        (own_db + b.strip.gain_db).clamp(-120.0, 12.0)
+        (own_db + b.strip.gain_db + b.section_db).clamp(-120.0, 12.0)
     }
 }
 

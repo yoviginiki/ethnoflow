@@ -202,6 +202,14 @@
   import in Atmosphere**: "Import samples…" (multi-file) or drag-and-drop from
   Explorer / a sample manager such as Soundly — each file becomes a take in the
   project (named after the file) and a looped layer.
+- **Section follower (P2 E / P3 first slice, 2026-10-18)** — after the owner's "I took a map
+  from a reference, start the rhythm, nothing happens": the song map now *drives* the
+  background. `section_follow.rs`: role/energy/density → which rhythm parts play (never
+  switching on what the user turned off), density/complexity scales, variation seeds, bus
+  offsets (drone/pad/ambient/rhythm); applied on the status polls through `sync` (base
+  settings kept apart from what plays) and `bus.section_db`. "Follow the map" switch +
+  badge with the exact effect in the Song map and Rhythm screens; how-to text; guide table
+  per role. Limitation: offline render / export do not follow yet.
 - **CLAP host spike (F4.4 / ADR-0018 accepted, 2026-10-18)**: `crates/plugin-host` (clap-sys +
   libloading): load a `.clap`, list instruments, instantiate, activate, process with
   preallocated buffers, `ClapSource` playing a note pattern on the beat clock;

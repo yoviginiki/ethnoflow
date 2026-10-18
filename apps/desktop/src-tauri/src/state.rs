@@ -72,6 +72,9 @@ pub struct Inner {
     pub audition: Option<crate::forge_cmds::AuditionLive>,
     /// Sample browser preview on slot 3 (token tells a late stop which preview it was).
     pub previewing: bool,
+    /// Section follower switch (mirrors the rhythm prefs; kept here so buses follow even
+    /// when the rhythm section is off).
+    pub follow_map: bool,
     pub preview_token: u64,
     /// Result of the last checksum verification, by take id.
     pub health: HashMap<String, TakeHealth>,

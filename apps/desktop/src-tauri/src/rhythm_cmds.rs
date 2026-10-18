@@ -147,6 +147,9 @@ pub struct RhythmSettings {
     /// Extra parts of the Instrument Rack (P1 R3), in slot order from `EXTRA_SLOT0`.
     #[serde(default)]
     pub extras: Vec<ExtraPart>,
+    /// Let the song map's sections shape the parts and buses (section follower).
+    #[serde(default)]
+    pub follow_map: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -266,6 +269,9 @@ pub struct RhythmStatus {
     /// Peaks of the extra parts, in `settings.extras` order (0 when a part is off).
     #[serde(default)]
     pub extra_peaks: Vec<f32>,
+    /// The song-map section shaping the parts right now (None = not following / outside).
+    #[serde(default)]
+    pub section: Option<crate::section_follow::SectionStatus>,
 }
 
 /// Instrument preset ids per part (empty string / None = legacy fields).
@@ -310,6 +316,10 @@ pub struct RhythmLive {
     pub arp_swap: Option<PatternSwap<NotePatternData>>,
     /// Extra parts that are running (rack slots).
     pub extras: Vec<ExtraLive>,
+    /// The user's settings before the section overlay (`settings` is what plays).
+    pub base: RhythmSettings,
+    /// Overlay key the running parts were built for (see `section_follow::overlay_key`).
+    pub section_key: String,
 }
 
 pub struct ExtraLive {
@@ -988,8 +998,22 @@ fn clear(s: &mut Inner, slot: usize) {
 
 /// Bring the four slots in line with `set`: (re)build what changed, clear what is
 /// off, push the live parameters.
-fn sync(s: &mut Inner, set: RhythmSettings) -> CmdResult<()> {
+pub(crate) fn sync(s: &mut Inner, set: RhythmSettings) -> CmdResult<()> {
     validate(&set)?;
+    // The section follower: what plays is the user's base through the current section.
+    let base = set;
+    s.follow_map = base.follow_map;
+    let (set, section_key) = if base.follow_map {
+        match crate::section_follow::current(s) {
+            Some(st) => (
+                crate::section_follow::overlay(&base, &st.effect),
+                crate::section_follow::overlay_key(&st),
+            ),
+            None => (base.clone(), String::new()),
+        }
+    } else {
+        (base.clone(), String::new())
+    };
     let (bpm, meter) = timing(s)?;
     let (root, pcs) = chord_pcs(s, &set)?;
     let new_keys = keys(&set, &meter, root, &pcs);
@@ -1021,6 +1045,8 @@ fn sync(s: &mut Inner, set: RhythmSettings) -> CmdResult<()> {
         ostinato: live_prev.ostinato.clone(),
         arp: live_prev.arp.clone(),
         settings: set.clone(),
+        base: base.clone(),
+        section_key,
         keys: live_prev.keys.clone(),
         motif: live_prev.motif.clone(),
         drum_swap,
@@ -1266,6 +1292,7 @@ fn status(s: &mut Inner) -> CmdResult<RhythmStatus> {
         root_pc: None,
         chord_pcs: Vec::new(),
         extra_peaks: Vec::new(),
+        section: None,
     };
     let Some(live) = s.rhythm.as_ref() else {
         return Ok(out);
@@ -1339,6 +1366,8 @@ pub async fn start_rhythm(
             ostinato: None,
             arp: None,
             settings: settings.clone(),
+            base: settings.clone(),
+            section_key: String::new(),
             keys: Default::default(),
             motif: None,
             drum_swap: None,
@@ -1376,7 +1405,11 @@ pub async fn stop_rhythm(state: State<'_, AppState>) -> CmdResult<()> {
 
 #[tauri::command]
 pub async fn rhythm_status(state: State<'_, AppState>) -> CmdResult<RhythmStatus> {
-    status(&mut state.lock())
+    let mut s = state.lock();
+    let section = crate::section_follow::tick(&mut s);
+    let mut st = status(&mut s)?;
+    st.section = section;
+    Ok(st)
 }
 
 /// Restart the beat from bar 1 (keeps the patterns).
@@ -1461,6 +1494,8 @@ pub(crate) fn offline_parts(
         ostinato: None,
         arp: None,
         settings: settings.clone(),
+        base: settings.clone(),
+        section_key: String::new(),
         keys: Default::default(),
         motif: None,
         drum_swap: None,
@@ -1921,10 +1956,10 @@ pub async fn rhythm_to_takes(
 }
 
 #[cfg(test)]
-mod render_tests {
+pub(crate) mod render_tests {
     use super::*;
 
-    fn settings() -> RhythmSettings {
+    pub(crate) fn settings() -> RhythmSettings {
         serde_json::from_value(serde_json::json!({
             "drums": {"on": true, "style": "liquid", "complexity": 0.4, "humanize": 0.3, "swing": 0.0, "fill_every_bars": 4, "seed": 1, "level_db": -10.0, "kick_hz": 50.0, "decay": 0.5, "brightness": 0.5, "locked": false},
             "bass": {"on": true, "voice": 0, "density": 0.4, "syncopation": 0.3, "passing": 0.3, "register_low": 31, "register_high": 43, "seed": 1, "level_db": -12.0, "cutoff_hz": 400.0, "resonance": 0.2, "drive": 0.3, "glide_s": 0.08, "sidechain": 0.6, "wobble_div": 0, "wobble_depth": 0.5, "warmth": 0.5, "locked": false},

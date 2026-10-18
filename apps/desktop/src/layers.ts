@@ -35,6 +35,13 @@ function busOut(name: LayerName, stop: () => Promise<unknown>): void {
 export function useSongTransport() {
   const projectRoot = useStore((s) => s.project?.root ?? null);
   const running = useStore((s) => (s.transport?.playing ?? false) || s.layers.rhythm);
+  // The section follower's switch lives in the rhythm prefs; the backend keeps a copy so
+  // the buses follow even while the rhythm section is off.
+  const follow = useStore((s) => s.prefs.rhythm?.follow_map ?? true);
+  useEffect(() => {
+    if (!projectRoot) return;
+    void api.followMapSet(follow).catch(() => undefined);
+  }, [projectRoot, follow]);
   useEffect(() => {
     if (!projectRoot) {
       useStore.getState().setTransport(null);

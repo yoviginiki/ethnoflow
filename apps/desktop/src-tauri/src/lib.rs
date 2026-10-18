@@ -20,6 +20,7 @@ mod reference_cmds;
 mod reference_phrases;
 mod rhythm_cmds;
 mod samples_cmds;
+mod section_follow;
 mod settings;
 mod song_export_cmds;
 mod state;
@@ -216,6 +217,7 @@ pub fn run() {
             transport_cmds::transport_seek,
             transport_cmds::transport_status,
             transport_cmds::transport_loop,
+            transport_cmds::follow_map_set,
             clap_cmds::clap_default_folders,
             clap_cmds::clap_scan,
             clap_cmds::clap_render,

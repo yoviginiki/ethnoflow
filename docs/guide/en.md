@@ -103,7 +103,22 @@ The same layers as Atmosphere, one at a time, with big knobs:
 
 - From Home → **Song map** or from 🗺 in My studio. Sections (intro, establish, build, drop, variation, break, bridge, outro) sit on a bar ruler; edges drag by whole bars, "Split at position" cuts on a bar line, ⇥ merges with the next, 🔒 locks.
 - Every section has **energy** and **density** (0..1): the targets the Composer and the Director will read. The map is stored in the project in ticks (with tempo and meter maps); the studio's markers are updated from it.
-- Clicking the ruler moves the clip transport; the current bar and the bars until the next section are shown. One beat transport for all layers is the next step.
+- Clicking the ruler moves the song transport; the current bar and the bars until the next section are shown.
+- **Follow the map** (on by default): the sections drive the background. While the rhythm or the song runs, the current section decides which rhythm parts play, how dense the figures are and how loud the buses are (drone/pad/atmosphere/rhythm). Your settings are the base — a section only removes and softens, it never switches on what you turned off. The badge next to the switch says what it does right now (e.g. "3. Build 2 (build, 40%) · drums ✓ bass ✓ ostinato ✓ arpeggio ✗ · rhythm −3 dB, pad −2 dB").
+
+  | Role | What it does |
+  |---|---|
+  | Intro | no drums or bass (nor tapan/lead), sparser ostinato, rhythm −6 dB, pad forward |
+  | Establish | no arpeggio or lead, simpler drums, −3 dB |
+  | Build | starts thin and brings everything back by the end; level rises from −6 to 0 dB |
+  | Drop | everything plays, 0 dB; drone −3 dB |
+  | Variation | everything plays, ostinato/arpeggio/lead with a new figure (other seed) |
+  | Break | pad only (and lead), −4 dB |
+  | Bridge | no ostinato or tapan, drums at half complexity |
+  | Outro | lead stops halfway, drums in the last quarter; level falls to −12 dB |
+  | Custom | all as you set it; energy moves the level (±3 dB) |
+
+  The section's energy adds ±3 dB to the rhythm and lifts the pad in quiet parts; density scales the figures. Step by step: 1) tempo/meter and key; 2) sections (by hand or from References); 3) switch the background on; 4) ▶ or start the rhythm. The offline render and the export do not follow the map yet (next step).
 
 ## Instruments (designer)
 

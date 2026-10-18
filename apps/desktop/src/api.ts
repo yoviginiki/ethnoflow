@@ -756,6 +756,34 @@ export interface RhythmPrefs {
   bars: number;
   instruments?: InstrumentRefs;
   extras?: ExtraPart[];
+  /** Let the song map's sections shape the parts and buses (section follower). */
+  follow_map?: boolean;
+}
+
+/** What the current song-map section does to the parts and buses (section follower). */
+export interface SectionEffect {
+  drums: boolean;
+  bass: boolean;
+  ostinato: boolean;
+  arp: boolean;
+  tapan: boolean;
+  chord_pad: boolean;
+  lead: boolean;
+  density_scale: number;
+  complexity_scale: number;
+  seed_offset: number;
+  /** drone, pad, ambient, rhythm offsets in dB */
+  bus_db: [number, number, number, number];
+}
+export interface SectionStatus {
+  id: string;
+  name: string;
+  role: string;
+  index: number;
+  progress: number;
+  energy: number;
+  density: number;
+  effect: SectionEffect;
 }
 
 // ---------- References (P2 Phase B) ----------
@@ -942,6 +970,7 @@ export interface RhythmStatus {
   root_pc: number | null;
   chord_pcs: number[];
   extra_peaks?: number[];
+  section?: SectionStatus | null;
 }
 export interface TempoCandidate {
   bpm: number;
@@ -1297,6 +1326,7 @@ export interface TransportStatus {
   unit: number;
   duration_seconds: number;
   loop_bars: [number, number] | null;
+  section?: string | null;
 }
 
 export interface ArrangeStatus {
@@ -1498,6 +1528,7 @@ export const api = {
   transportStop: () => invoke<TransportStatus>("transport_stop"),
   transportSeek: (seconds: number) => invoke<TransportStatus>("transport_seek", { seconds }),
   transportStatus: () => invoke<TransportStatus>("transport_status"),
+  followMapSet: (on: boolean) => invoke<TransportStatus>("follow_map_set", { on }),
   transportLoop: (startBar: number | null, bars: number | null) => invoke<TransportStatus>("transport_loop", { startBar, bars }),
   arrangementGet: () => invoke<ArrangementView>("arrangement_get"),
   setArrangement: (arrangement: Arrangement) => invoke<ArrangementView>("set_arrangement", { arrangement }),

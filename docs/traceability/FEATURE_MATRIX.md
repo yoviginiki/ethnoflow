@@ -58,7 +58,7 @@ requirement *groups*; each program phase adds its rows when it starts.
 | Req | Target component | Tests | Status |
 |---|---|---|---|
 | 0 audit + blueprint | `docs/performance-director/*` | — | IMPLEMENTING (docs) |
-| 1 interactive song map slice (6 sections, zoom, playhead in bars, persistence) | `songmap.rs`, `SongMapPanel.tsx` | Rust + vitest; transport tests pending | FUNCTIONAL (editing, persistence); **song transport FUNCTIONAL 2026-10-18** (`transport_cmds.rs`, `TransportBar.tsx`: one position through the song map, rhythm re-anchored on play/seek, loop in bars; tests: tempo map, 7/8 bar:beat, idle); program lane still on its own time |
+| 1 interactive song map slice (6 sections, zoom, playhead in bars, persistence) | `songmap.rs`, `SongMapPanel.tsx` | Rust + vitest; transport tests pending | FUNCTIONAL (editing, persistence); **song transport FUNCTIONAL 2026-10-18** (`transport_cmds.rs`, `TransportBar.tsx`: one position through the song map, rhythm re-anchored on play/seek, loop in bars; tests: tempo map, 7/8 bar:beat, idle); program lane still on its own time; **section follower FUNCTIONAL 2026-10-18** (`section_follow.rs`: roles → parts/density/bus offsets, tests for roles, overlay and lookup) |
 | 2 cue scheduler (lookahead, latency-compensated countdown) | engine `CueQueue` on `BeatClock`, shell events | scheduling accuracy, seek invalidation | NOT STARTED |
 | 3 cue planner v1 | `music-core/cues.rs` | plans distinct, constraints, seeds | NOT STARTED |
 | 4 guided recording & take review | recorder + `intent.rs` alignment | synthetic + mic | NOT STARTED (recording and analysis exist) |

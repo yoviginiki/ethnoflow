@@ -100,6 +100,7 @@ export const DEFAULT_RHYTHM: RhythmPrefs = {
   bars: 4,
   instruments: {},
   extras: [],
+  follow_map: true,
 };
 
 export interface HarmonyPrefs {

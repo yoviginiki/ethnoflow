@@ -37,6 +37,9 @@ pub struct TransportStatus {
     pub duration_seconds: f64,
     /// Loop region in bars (start, end exclusive) when the timeline loops.
     pub loop_bars: Option<(u64, u64)>,
+    /// Name of the song-map section at the position (when following).
+    #[serde(default)]
+    pub section: Option<String>,
 }
 
 /// The project's song map (sections in ticks with tempo/meter maps), or None without a project.
@@ -153,6 +156,7 @@ fn status(s: &Inner) -> TransportStatus {
                 unit: meter.unit,
                 duration_seconds: duration,
                 loop_bars,
+                section: None,
             }
         }
         None => TransportStatus {
@@ -168,8 +172,24 @@ fn status(s: &Inner) -> TransportStatus {
             unit: 4,
             duration_seconds: duration,
             loop_bars,
+            section: None,
         },
     }
+}
+
+/// Switch the section follower (the rhythm prefs carry the same flag; this keeps the
+/// buses following when the rhythm section is off).
+#[tauri::command]
+pub async fn follow_map_set(state: State<'_, AppState>, on: bool) -> CmdResult<TransportStatus> {
+    let mut s = state.lock();
+    s.follow_map = on;
+    if let Some(l) = s.rhythm.as_mut() {
+        l.base.follow_map = on;
+    }
+    let sec = crate::section_follow::tick(&mut s);
+    let mut st = status(&s);
+    st.section = sec.map(|x| x.name);
+    Ok(st)
 }
 
 // ---------- commands ----------
@@ -227,7 +247,11 @@ pub async fn transport_seek(
 
 #[tauri::command]
 pub async fn transport_status(state: State<'_, AppState>) -> CmdResult<TransportStatus> {
-    Ok(status(&state.lock()))
+    let mut s = state.lock();
+    let sec = crate::section_follow::tick(&mut s);
+    let mut st = status(&s);
+    st.section = sec.map(|x| x.name);
+    Ok(st)
 }
 
 /// Loop `bars` bars from `start_bar` (1-based) on the timeline; `None` clears the loop.

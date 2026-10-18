@@ -3,6 +3,7 @@ import { api, describeError } from "./api";
 import { BackgroundTransport } from "./BackgroundTransport";
 import { SongMapPanel } from "./SongMapPanel";
 import { TransportBar } from "./TransportBar";
+import { FollowMap } from "./FollowMap";
 import { messages } from "./i18n";
 import { useStore } from "./store";
 
@@ -31,6 +32,10 @@ export function SongMapScreen() {
         <TransportBar />
         <BackgroundTransport compact />
       </div>
+      <div className="panel analysis-row">
+        <FollowMap />
+      </div>
+      <div className="muted small">{t.songMapHowTo}</div>
       <div className="panel">
         <SongMapPanel headSeconds={head} onSeek={seek} />
       </div>
