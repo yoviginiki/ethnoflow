@@ -1,0 +1,14 @@
+[package]
+name = "ethnoflow-clap-fixture"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "A minimal CLAP instrument (sine with release) written against clap-sys, used to test EthnoFlow's plugin host end to end. Builds as a .clap-compatible cdylib and as an rlib exposing the same entry for in-process tests."
+
+[lib]
+name = "clap_fixture"
+path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+clap-sys = { workspace = true }

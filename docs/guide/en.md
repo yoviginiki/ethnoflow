@@ -172,6 +172,15 @@ value); a tempo change inside the map re-aligns at the next play/seek.
 - The metronome has its own ▶/■; recording has its own click and count-in.
 - Nothing assumes 4/4 or 174 BPM: without a meter the rhythm does not start, and Start from a melody says explicitly when it suggests a value.
 
+## CLAP instruments (experimental)
+
+EthnoFlow can load instruments in the **CLAP** format (`.clap`, as in Bitwig/Reaper): for
+now only through the Claude Code bridge — `clap_scan` lists the instruments in the standard
+folders, `clap_render` plays a two-bar phrase through the chosen instrument and writes it
+to a WAV. That is how you check a plugin works in our graph before it gets a button in the
+Instrument Rack (next step). Limitations: the plugin runs inside the app (a crash in it
+stops EthnoFlow too), no parameters and no fine intonation yet (notes only).
+
 ## Bridge to Claude Code
 
 - The 📁 Project menu has a switch **🤖 Bridge to Claude Code**. When on, the app watches a folder in your profile (the path is shown there): it writes its state and reads commands.

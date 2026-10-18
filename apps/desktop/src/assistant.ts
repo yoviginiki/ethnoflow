@@ -157,6 +157,12 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
       const res = await api.rhythmRender(String(cmd.path), { ...r, chord: s.padChord, root_midi: s.prefs.drone?.rootMidi ?? null, intonation: s.prefs.drone?.intonation ?? "profile" }, typeof cmd.bars === "number" ? cmd.bars : null, cmd.stems !== false);
       return res;
     }
+    case "clap_scan": {
+      const folders = Array.isArray(cmd.folders) && cmd.folders.length > 0 ? (cmd.folders as string[]) : await api.clapDefaultFolders();
+      return { folders, files: await api.clapScan(folders) };
+    }
+    case "clap_render":
+      return await api.clapRender(String(cmd.path), String(cmd.plugin_id), String(cmd.out), typeof cmd.midi === "number" ? cmd.midi : null);
     case "transport_status":
       return await api.transportStatus();
     case "transport_play": {

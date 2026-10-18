@@ -3,6 +3,7 @@ mod analysis_cmds;
 mod arrangement_cmds;
 mod assistant_cmds;
 mod bus_cmds;
+mod clap_cmds;
 mod commands;
 mod forge_cmds;
 mod graph_cmds;
@@ -215,6 +216,9 @@ pub fn run() {
             transport_cmds::transport_seek,
             transport_cmds::transport_status,
             transport_cmds::transport_loop,
+            clap_cmds::clap_default_folders,
+            clap_cmds::clap_scan,
+            clap_cmds::clap_render,
             song_export_cmds::export_song,
         ])
         .build(tauri::generate_context!())

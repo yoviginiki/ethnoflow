@@ -65,6 +65,8 @@ rhythm_status, ambient_status }`
 | `load_preset` | `id`, `go?` (default true: open its screen) | applies it |
 | `session` | `payload` (a session payload), `restore_layers?` | applies all settings at once |
 | `rhythm_render` | `path`, `bars?`, `stems?` (default true) | offline WAV + stems of the current rhythm settings (audio evidence) |
+| `clap_scan` | `folders?` (default: the CLAP standard folders) | `.clap` files and the instruments they export |
+| `clap_render` | `path`, `plugin_id`, `out`, `midi?` | renders a two-bar demo phrase through the CLAP instrument into a WAV (proof it plays in the graph) |
 | `transport_status` | | song position: playing, source, seconds, tick, bar, beat, bpm, meter, loop_bars |
 | `transport_play` | `from_s?` | **starts the song timeline (sound)**; a running rhythm is re-anchored to the same bar |
 | `transport_stop` | | pauses the timeline (background switches stay) |

@@ -202,6 +202,12 @@
   import in Atmosphere**: "Import samples…" (multi-file) or drag-and-drop from
   Explorer / a sample manager such as Soundly — each file becomes a take in the
   project (named after the file) and a looped layer.
+- **CLAP host spike (F4.4 / ADR-0018 accepted, 2026-10-18)**: `crates/plugin-host` (clap-sys +
+  libloading): load a `.clap`, list instruments, instantiate, activate, process with
+  preallocated buffers, `ClapSource` playing a note pattern on the beat clock;
+  `crates/clap-fixture` sine instrument against the raw ABI (cdylib + rlib); three tests
+  incl. dynamic loading of the built `.clap`. Shell `clap_scan` / `clap_render` + bridge
+  ops. Limitations: in-process, keys only, no params/state/GUI, no UI yet.
 - **Melodic phrases from references (P2 melody step, 2026-10-18)**: "Extract phrases" in
   References — melody-band pitch track (YIN 110..1600 Hz at 22.05 kHz) → notes (the take
   analysis extractor) → phrases between rests, scored by confidence × length × variety; per

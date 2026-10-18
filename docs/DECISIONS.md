@@ -200,10 +200,24 @@ Supply chain: crates.io, pinned at the 6.x line; maintained (ejmahler), ~10 M
 downloads, dependencies `num-complex`, `num-traits`, `primal-check`, `strength_reduce`,
 `transpose` — all small and well known.
 
-## ADR-0018 (proposed) CLAP as the internal instrument ABI; instruments in Rust or C++
+## ADR-0018 CLAP as the internal instrument ABI; instruments in Rust or C++
 
-Status: **Proposed, not accepted.** No code, crate or dependency until the owner
-approves. Source: `docs/INSTRUMENT_MACHINE_CONCEPT.md` §4.
+Status: **Accepted 2026-10-18 (owner: "da suglasen sum") — spike implemented.**
+Crates: `clap-sys` 0.5 (MIT OR Apache-2.0, pure Rust bindings to the CLAP C headers, no
+build step) and `libloading` 0.9 (ISC, dynamic library loading; Windows/macOS/Linux).
+Both from crates.io, pinned to their minor lines, small and widely used (nih-plug, clack).
+What exists: `crates/plugin-host` (`ClapLibrary` load/in-process entry, descriptors,
+`ClapInstrument` activate/process with preallocated buffers, `ClapSource` on the graph's
+beat clock) and `crates/clap-fixture` (a sine instrument written against clap-sys,
+built as a `.clap`-compatible cdylib and as an rlib) with three tests: in-process entry
+renders A4 in tune and releases; `ClapSource` plays a pattern on the graph; the cdylib
+loads through `libloading` as `ethnoflow-fixture.clap`. Shell: `clap_scan`, `clap_render`
+(bridge ops), no UI yet. **Limitations recorded:** in-process only (a crashing plugin
+takes the app down; out-of-process hosting is a later option); note keys only (cents
+dropped — note expressions / tuning next); no parameters, state or GUI extensions yet; no
+C++ instrument is built in this repo (no C++ build step in the workspace) — any `.clap`
+built with the official C++ helpers loads the same way, which the owner can verify with a
+third-party CLAP (Surge XT, Vital…) through `clap_render`. Source: `docs/INSTRUMENT_MACHINE_CONCEPT.md` §4.
 
 Context: the owner wants to add instruments written in C++ without replacing the
 Rust/Tauri core, and wants EthnoFlow's own instruments usable inside Ableton/FL later.

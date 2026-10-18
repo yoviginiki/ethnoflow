@@ -1276,6 +1276,13 @@ export interface ArrangementView {
   duration_seconds: number;
 }
 
+/** A .clap library and the instruments it exports (ADR-0018 spike). */
+export interface ClapFile {
+  path: string;
+  plugins: { id: string; name: string; vendor: string; version: string; features: string[] }[];
+  error: string | null;
+}
+
 /** Song transport (P3 Phase 1): one position for clips, rhythm and the song map. */
 export interface TransportStatus {
   playing: boolean;
@@ -1484,6 +1491,9 @@ export const api = {
   ambientPresetLoad: (id: string) => invoke<Ambient>("ambient_preset_load", { id }),
   ambientPresetSave: (name: string, tags: string[], rack: Ambient) => invoke<PresetSummary[]>("ambient_preset_save", { name, tags, rack }),
   ambientPresetDelete: (id: string) => invoke<PresetSummary[]>("ambient_preset_delete", { id }),
+  clapDefaultFolders: () => invoke<string[]>("clap_default_folders"),
+  clapScan: (folders: string[]) => invoke<ClapFile[]>("clap_scan", { folders }),
+  clapRender: (path: string, pluginId: string, outPath: string, midi: number | null) => invoke<{ path: string; seconds: number; peak: number; plugin: string }>("clap_render", { path, pluginId, outPath, midi }),
   transportPlay: (device: string | null, fromSeconds: number | null) => invoke<TransportStatus>("transport_play", { device, fromSeconds }),
   transportStop: () => invoke<TransportStatus>("transport_stop"),
   transportSeek: (seconds: number) => invoke<TransportStatus>("transport_seek", { seconds }),

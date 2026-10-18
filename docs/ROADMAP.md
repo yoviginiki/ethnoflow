@@ -155,7 +155,7 @@ one limiter — together with an explicit background play/stop in every screen
 | 14 | Academy | Phase 6 |
 | 15 | Intelligent melody variations | Phase 7 / P2 D |
 | 16 | Live accompanist following the playing | Phase 8 / P3 6 |
-| 17 | CLAP host | **owner said yes 2026-10-18 morning** ("da suglasen sum"); spike scheduled after R3 + unified transport; ADR-0018 to be accepted with the concrete crates |
+| 17 | CLAP host | **spike done 2026-10-18** (ADR-0018 accepted: clap-sys + libloading; host crate + fixture instrument + tests; `clap_scan`/`clap_render` via bridge); next: tuning via note expressions, params/state, UI picker in the Instrument Rack, C++ instrument build |
 | 18 | Release 0.5.0 (installer, clean machine, owner's manual tests) | pending |
 
 ## Programs received 2026-10-18 (owner specifications; gated, audits first)
