@@ -542,11 +542,24 @@ pub(crate) fn apply_params(
     if let (Some(v), Some(p)) = (live.voices[3].as_ref(), live.arp.as_ref()) {
         apply_voice(v, &AuditionParams::Synth(Arc::clone(p)));
     }
+    // The part's level is the user's slider whatever the voice: a preset shapes the sound,
+    // the level stays with the part (offline renders have no bus strip to fall back on).
+    if live.drums.is_some() {
+        layer(DRUMS_SLOT).gain_db.set(lvl(set.drums.level_db));
+    }
+    if live.bass.is_some() {
+        layer(BASS_SLOT).gain_db.set(lvl(set.bass.level_db));
+    }
+    if live.ostinato.is_some() {
+        layer(OSTINATO_SLOT).gain_db.set(lvl(set.ostinato.level_db));
+    }
+    if live.arp.is_some() {
+        layer(ARP_SLOT).gain_db.set(lvl(set.arp.level_db));
+    }
     if let (None, Some(p)) = (live.voices[0].as_ref(), live.drums.as_ref()) {
         p.kick_hz.set(set.drums.kick_hz);
         p.decay.set(set.drums.decay);
         p.brightness.set(set.drums.brightness);
-        layer(DRUMS_SLOT).gain_db.set(lvl(set.drums.level_db));
     }
     if let (None, Some(p)) = (live.voices[1].as_ref(), live.bass.as_ref()) {
         let b = &set.bass;
@@ -559,18 +572,15 @@ pub(crate) fn apply_params(
         p.wobble_div.store(b.wobble_div, Ordering::Relaxed);
         p.wobble_depth.set(b.wobble_depth);
         p.warmth.set(b.warmth);
-        layer(BASS_SLOT).gain_db.set(lvl(b.level_db));
     }
     if let (None, Some(p)) = (live.voices[2].as_ref(), live.ostinato.as_ref()) {
         p.timbre
             .store(set.ostinato.timbre.min(2), Ordering::Relaxed);
         p.release_s.set(set.ostinato.release_s);
-        layer(OSTINATO_SLOT).gain_db.set(lvl(set.ostinato.level_db));
     }
     if let (None, Some(p)) = (live.voices[3].as_ref(), live.arp.as_ref()) {
         p.timbre.store(set.arp.timbre.min(2), Ordering::Relaxed);
         p.release_s.set(set.arp.release_s);
-        layer(ARP_SLOT).gain_db.set(lvl(set.arp.level_db));
     }
 }
 
@@ -1446,6 +1456,41 @@ mod render_tests {
             "bars": 2, "chord": null, "root_midi": 50, "intonation": "tempered"
         }))
         .unwrap()
+    }
+
+    #[test]
+    fn offline_render_with_instrument_presets_is_audible_and_differs_from_legacy() {
+        let s = Inner::default();
+        let meter = Meter::new(7, 8);
+        let pcs = vec![(2u8, 0.0), (5u8, 0.0), (9u8, 0.0)];
+        let ctx = SectionContext {
+            bpm: 120.0,
+            meter: &meter,
+            root: 2,
+            pcs: &pcs,
+        };
+        let legacy = render_section(&s, &settings(), &ctx, 2, 48_000, true).unwrap();
+        let mut set = settings();
+        set.instruments = InstrumentRefs {
+            drums: Some("factory:drums.ethno".into()),
+            bass: Some("factory:bass.wood".into()),
+            ostinato: Some("factory:synth.glass".into()),
+            arp: None,
+        };
+        let preset = render_section(&s, &set, &ctx, 2, 48_000, true).unwrap();
+        let peak = |b: &AudioBuffer| b.samples.iter().fold(0.0f32, |m, x| m.max(x.abs()));
+        assert!(
+            peak(&preset.mix) > 0.05,
+            "preset voices audible: {}",
+            peak(&preset.mix)
+        );
+        for (name, stem) in &preset.stems {
+            assert!(peak(stem) > 0.02, "stem {name} audible: {}", peak(stem));
+        }
+        assert_ne!(
+            legacy.mix.samples, preset.mix.samples,
+            "presets change the sound"
+        );
     }
 
     #[test]
