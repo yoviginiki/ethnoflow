@@ -418,6 +418,22 @@ pub async fn set_timing(state: State<'_, AppState>, timing: Timing) -> CmdResult
             }],
             _ => Vec::new(),
         };
+        // The song map is the song's source of truth for tempo and meter (P2 C / P3 1):
+        // keep its first segments in step with the project timing so the Song map, the
+        // transport and the rhythm section all read the same values. Sections stay in
+        // ticks (a meter change moves the bar lines, not the music).
+        if let Some(sm) = m.song_map.as_mut() {
+            if let (Some(bpm), Some(t0)) = (timing.bpm, sm.tempo_map.first_mut()) {
+                t0.bpm = bpm;
+            }
+            if let (Some(numerator), Some(unit), Some(m0)) =
+                (timing.numerator, timing.unit, sm.meter_map.first_mut())
+            {
+                m0.numerator = numerator;
+                m0.unit = unit;
+                m0.grouping = timing.grouping.clone();
+            }
+        }
     })?;
     if had_rhythm {
         crate::rhythm_cmds::on_timing_changed(&mut s);
