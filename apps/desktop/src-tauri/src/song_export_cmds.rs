@@ -229,7 +229,7 @@ pub async fn export_song(
             "app": "EthnoFlow Studio",
             "project": manifest.name,
             "sample_rate": rate,
-            "format": format.clone().unwrap_or_default(),
+            "format": format.unwrap_or_default(),
             "seconds": duration,
             "bar_offset_seconds": 0.0,
             "tempo_map": song_map.tempo_map,

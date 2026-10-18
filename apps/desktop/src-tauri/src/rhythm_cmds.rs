@@ -985,13 +985,16 @@ pub struct RhythmOffline {
     pub seconds: f64,
 }
 
+/// Live handles plus (slot, source) pairs for an offline graph.
+pub(crate) type OfflineParts = (RhythmLive, Vec<(usize, Box<dyn audio_engine::Source>)>);
+
 /// The section's live handles and sources for an offline graph (shared with the song
 /// export): the generators, the voices (preset or legacy) and a fresh clock at bar 1.
 pub(crate) fn offline_parts(
     s: &Inner,
     settings: &RhythmSettings,
     ctx: &SectionContext,
-) -> CmdResult<(RhythmLive, Vec<(usize, Box<dyn audio_engine::Source>)>)> {
+) -> CmdResult<OfflineParts> {
     validate(settings)?;
     let (bpm, meter, root, pcs) = (ctx.bpm, ctx.meter, ctx.root, ctx.pcs);
     let clock = Arc::new(BeatClock::new(bpm as f32));
