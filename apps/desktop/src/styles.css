@@ -544,6 +544,9 @@ button.ghost.on { border-color: var(--accent); color: var(--accent); }
 .references-table th, .references-table td { text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--axis); vertical-align: top; }
 .references-seg { cursor: pointer; }
 .references-seg:hover { background: var(--selection); }
+.phrase-strip { vertical-align: middle; background: var(--panel); border: 1px solid var(--axis); border-radius: 4px; fill: var(--accent); }
+.references-table tr.playing { outline: 1px solid var(--accent); }
+.references-phrases { margin-top: 8px; }
 .references-bar { display: inline-block; width: 60px; height: 8px; background: var(--axis); border-radius: 4px; overflow: hidden; vertical-align: middle; }
 .references-bar > span { display: block; height: 100%; background: var(--accent); }
 .references .panel-head { flex-wrap: wrap; }

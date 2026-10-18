@@ -819,6 +819,34 @@ export interface ReferenceReport {
   low: Curve;
 }
 
+export interface PhraseNote {
+  start_s: number;
+  dur_s: number;
+  midi: number;
+  cents: number;
+  velocity: number;
+  confidence: number;
+}
+export interface MelodicPhrase {
+  index: number;
+  start_s: number;
+  end_s: number;
+  section: number | null;
+  notes: PhraseNote[];
+  confidence: number;
+  in_key: number | null;
+  span_semitones: number;
+  score: number;
+}
+export interface PhraseReport {
+  id: string;
+  a4_hz: number;
+  extracted_ms: number;
+  notes_total: number;
+  voiced_share: number;
+  phrases: MelodicPhrase[];
+}
+
 // ---------- Sample browser ----------
 export interface SampleEntry {
   path: string;
@@ -1497,6 +1525,10 @@ export const api = {
   referenceReport: (id: string) => invoke<ReferenceReport | null>("reference_report", { id }),
   referenceAnalyze: (id: string) => invoke<ReferenceReport>("reference_analyze", { id }),
   referencePlay: (id: string, fromS: number, seconds: number | null, device: string | null) => invoke<number>("reference_play", { id, fromS, seconds, device }),
+  referencePhrases: (id: string) => invoke<PhraseReport>("reference_phrases", { id }),
+  referencePhrasesGet: (id: string) => invoke<PhraseReport | null>("reference_phrases_get", { id }),
+  referencePhrasePlay: (id: string, index: number, device: string | null) => invoke<number>("reference_phrase_play", { id, index, device }),
+  referencePhraseToTake: (id: string, index: number) => invoke<ProjectView>("reference_phrase_to_take", { id, index }),
   samplePreview: (path: string, device: string | null) => invoke<number>("sample_preview", { path, device }),
   samplePreviewStop: () => invoke<void>("sample_preview_stop"),
   // Instrument Forge

@@ -182,6 +182,16 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
       s.setTransport(st);
       return st;
     }
+    case "reference_phrases": {
+      const r = await api.referencePhrases(String(cmd.id));
+      return { ...r, phrases: r.phrases.map((p) => ({ ...p, notes: p.notes.map((n) => ({ s: +n.start_s.toFixed(3), d: +n.dur_s.toFixed(3), m: n.midi, c: Math.round(n.cents), v: +n.velocity.toFixed(2) })) })) };
+    }
+    case "reference_phrase_to_take": {
+      project();
+      const pv = await api.referencePhraseToTake(String(cmd.id), Number(cmd.index));
+      useStore.getState().setProject(pv);
+      return { takes: pv.takes.length };
+    }
     case "reference_add": {
       const info = await api.referenceAdd(String(cmd.path));
       return { id: info.id, name: info.name, duration_s: info.duration_s };

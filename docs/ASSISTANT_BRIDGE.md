@@ -70,6 +70,8 @@ rhythm_status, ambient_status }`
 | `transport_stop` | | pauses the timeline (background switches stay) |
 | `transport_seek` | `seconds` | moves the song position (rhythm follows) |
 | `transport_loop` | `start_bar`, `bars` (omit both = off) | loop in bars, stored in the arrangement |
+| `reference_phrases` | `id` | extracts melodic phrases (pitch track → notes → phrases) and returns them with compact notes (s, d, m, c, v) |
+| `reference_phrase_to_take` | `id`, `index` | puts phrase `index` into the open project as a MIDI take |
 | `reference_add` | `path` (WAV/MP3/FLAC/OGG) | copies the song into the references library (never into a project); reply: id, name, duration |
 | `reference_list` | | the references library (id, name, duration, analyzed) |
 | `reference_report` | `id` | the saved analysis report (tempo candidates, key hypotheses, segments) without the curves |

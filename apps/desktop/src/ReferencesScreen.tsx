@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { scaleFromKind } from "./AnalysisPanel";
-import { api, describeError, type ReferenceInfo, type ReferenceReport, type Scale, type Section, type WaveformPeaks } from "./api";
+import { api, describeError, type MelodicPhrase, type PhraseReport, type ReferenceInfo, type ReferenceReport, type Scale, type Section, type WaveformPeaks } from "./api";
 import { formatTime } from "./format";
 import { messages } from "./i18n";
 import { barTicks, ROLE_LABEL } from "./SongMapPanel";
@@ -414,7 +414,7 @@ export function ReferencesScreen() {
                   </button>
                   {project && !project.timing.bpm && <span className="muted small">{t.refNeedTiming}</span>}
                 </div>
-                <p className="muted small">{t.refMelodyNote}</p>
+                <PhrasesPanel id={current.id} hasProject={!!project} output={s.prefs.selectedOutput} onTake={(pv) => useStore.getState().setProject(pv)} />
               </div>
             </div>
           )}
@@ -432,6 +432,141 @@ export function ReferencesScreen() {
         </section>
       )}
     </div>
+  );
+}
+
+/** Melodic phrases (P2 melody step): extracted on request, auditioned, taken as MIDI takes. */
+function PhrasesPanel({ id, hasProject, output, onTake }: { id: string; hasProject: boolean; output: string | null; onTake: (pv: import("./api").ProjectView) => void }) {
+  const t = messages[useStore((s) => s.prefs.lang)];
+  const [report, setReport] = useState<PhraseReport | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [playing, setPlaying] = useState<number | null>(null);
+  const timer = useRef<number | null>(null);
+  const fail = (e: unknown) => useStore.getState().setError(describeError(e));
+  useEffect(() => {
+    setReport(null);
+    setPlaying(null);
+    api.referencePhrasesGet(id).then(setReport).catch(() => setReport(null));
+  }, [id]);
+  const extract = async () => {
+    setBusy(true);
+    try {
+      setReport(await api.referencePhrases(id));
+    } catch (e) {
+      fail(e);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const stop = async () => {
+    if (timer.current) window.clearTimeout(timer.current);
+    timer.current = null;
+    setPlaying(null);
+    await api.samplePreviewStop().catch(() => undefined);
+  };
+  const play = async (i: number) => {
+    await stop();
+    try {
+      const len = await api.referencePhrasePlay(id, i, output);
+      setPlaying(i);
+      timer.current = window.setTimeout(() => setPlaying(null), len * 1000 + 100);
+    } catch (e) {
+      fail(e);
+    }
+  };
+  const take = async (i: number) => {
+    try {
+      const pv = await api.referencePhraseToTake(id, i);
+      onTake(pv);
+      useStore.getState().setMessage(t.refPhraseTaken);
+    } catch (e) {
+      fail(e);
+    }
+  };
+  return (
+    <div className="panel references-phrases">
+      <div className="panel-head">
+        <strong>{t.refPhrases}</strong>
+        {report && (
+          <span className="muted small">
+            {report.phrases.length} · {t.refVoiced} {Math.round(report.voiced_share * 100)}%
+          </span>
+        )}
+        <span className="grow" />
+        <button onClick={extract} disabled={busy}>
+          {busy ? t.refExtracting : report ? t.refExtractAgain : t.refExtract}
+        </button>
+      </div>
+      {!report && <p className="muted small">{t.refPhrasesHint}</p>}
+      {report && report.phrases.length === 0 && <p className="muted small">{t.refNoPhrases}</p>}
+      {report && report.phrases.length > 0 && (
+        <table className="references-table small">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>{t.refSegment}</th>
+              <th>{t.refSection}</th>
+              <th>{t.refNoteCount}</th>
+              <th>{t.refSpan}</th>
+              <th>{t.refInKey}</th>
+              <th>{t.refConfidence}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {report.phrases.map((p) => (
+              <tr key={p.index} className={playing === p.index ? "playing" : ""}>
+                <td className="mono-num">{p.index + 1}</td>
+                <td className="mono-num">
+                  {formatTime(p.start_s)}–{formatTime(p.end_s)}
+                </td>
+                <td className="mono-num">{p.section ?? "–"}</td>
+                <td>
+                  <PhraseStrip phrase={p} /> <span className="mono-num">{p.notes.length}</span>
+                </td>
+                <td className="mono-num">{p.span_semitones} st</td>
+                <td className="mono-num">{p.in_key === null ? "–" : `${Math.round(p.in_key * 100)}%`}</td>
+                <td>
+                  <Bar v={p.confidence} />
+                </td>
+                <td>
+                  {playing === p.index ? (
+                    <button className="small" onClick={() => void stop()}>
+                      ■
+                    </button>
+                  ) : (
+                    <button className="small" onClick={() => void play(p.index)} title={t.refPlay}>
+                      ▶
+                    </button>
+                  )}{" "}
+                  <button className="small" onClick={() => void take(p.index)} disabled={!hasProject} title={t.refTakePhraseTip}>
+                    {t.refTakePhrase}
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      <p className="muted small">{t.refPhrasesExplain}</p>
+    </div>
+  );
+}
+
+/** A tiny piano-roll of the phrase: time → x, pitch → y. */
+function PhraseStrip({ phrase }: { phrase: MelodicPhrase }) {
+  const w = 140;
+  const h = 28;
+  const lo = Math.min(...phrase.notes.map((n) => n.midi));
+  const hi = Math.max(...phrase.notes.map((n) => n.midi));
+  const span = Math.max(1, hi - lo);
+  const len = Math.max(0.1, phrase.end_s - phrase.start_s);
+  return (
+    <svg width={w} height={h} className="phrase-strip" aria-hidden="true">
+      {phrase.notes.map((n, i) => (
+        <rect key={i} x={((n.start_s - phrase.start_s) / len) * w} y={h - 3 - ((n.midi - lo) / span) * (h - 4)} width={Math.max(1.5, (n.dur_s / len) * w)} height={3} opacity={0.4 + 0.6 * n.confidence} />
+      ))}
+    </svg>
   );
 }
 

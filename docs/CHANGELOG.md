@@ -202,6 +202,12 @@
   import in Atmosphere**: "Import samples…" (multi-file) or drag-and-drop from
   Explorer / a sample manager such as Soundly — each file becomes a take in the
   project (named after the file) and a looped layer.
+- **Melodic phrases from references (P2 melody step, 2026-10-18)**: "Extract phrases" in
+  References — melody-band pitch track (YIN 110..1600 Hz at 22.05 kHz) → notes (the take
+  analysis extractor) → phrases between rests, scored by confidence × length × variety; per
+  phrase: time, section, span, key fit, mini piano-roll, ▶ audition through the pattern
+  synth, "→ MIDI take" into the project. Bridge ops `reference_phrases`,
+  `reference_phrase_to_take`. Honest limits in the UI (proposals; dense mixes).
 - **Song transport (P3 Phase 1 slice, 2026-10-18)**: `transport_*` commands on top of the
   arrangement timeline with one position converted through the song map (ticks ↔ seconds ↔
   beats); a running rhythm section is re-anchored on play/seek and joins at the song's bar

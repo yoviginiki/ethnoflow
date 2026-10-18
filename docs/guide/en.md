@@ -79,7 +79,12 @@ things, each with a confidence and a "why":
   in the Song map.
 
 The notes under the song are for you ("I like how the bass enters in section 2").
-Melodic phrases are **not** extracted yet (next stage: pitch track per section).
+**Melodic phrases**: "Extract phrases" pitch-tracks the melody band (150 Hz – 3 kHz), turns it
+into notes and cuts them into phrases between rests; each shows time, section, note count,
+span, "in key" share and confidence, with a mini piano-roll. ▶ plays it with a synthesized
+voice at its original timing; "→ MIDI take" puts it into the project as a MIDI take (player,
+track, trainer). These are proposals: on a dense mix the tracker follows the most periodic
+voice, so it works best on solo passages and an up-front vocal or kaval.
 From the terminal: `reference_add`, `reference_analyze`, `reference_report` (see the bridge).
 
 ## Soundscapes
