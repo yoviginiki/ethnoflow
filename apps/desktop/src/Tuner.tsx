@@ -149,7 +149,7 @@ export function Tuner({ hz, confidence, a4, scale, active, profile }: Props) {
   const written = parts && profile && profile.transpose_semitones !== 0 ? noteParts(parts.midi + profile.transpose_semitones) : null;
   const scaleClass = scaleOff === null ? "" : Math.abs(scaleOff) <= IN_SCALE_TOLERANCE_CENTS ? "in" : "out";
   // F2.6: the owner's kaval chart next to the reading when the profile is a kaval.
-  const chart = chartFor(profile?.instrument);
+  const chart = chartFor(profile?.instrument, useStore((st) => st.fingeringOverrides));
 
   return (
     <section className="tuner" aria-label={t.tuner} aria-live="polite">

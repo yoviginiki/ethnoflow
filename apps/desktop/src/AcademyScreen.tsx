@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import kbSource from "../../../docs/kaval-baza-znania.md?raw";
 import { startGuided, stopGuided } from "./academyGuided";
 import { api, describeError, LEVELS, type AcademyInstance, type AcademyView, type EarRound, type InstanceView, type Level, type LessonView, type LText, type Note, type PlayNote, type RepeatScore, type RhythmScore } from "./api";
-import { FingeringDiagram } from "./FingeringDiagram";
-import { chartFor, KAVAL_D, nearestFingered } from "./fingerings";
+import { FingeringDiagram, HoleEditor } from "./FingeringDiagram";
+import { applyOverrides, chartFor, fingeringsFor, KAVAL_D, nearestFingered } from "./fingerings";
 import { hzToMidi, noteParts } from "./format";
 import { messages, type Lang } from "./i18n";
 import { blockText, parseMarkdown, sections, type Block, type Section } from "./md";
@@ -128,7 +128,7 @@ function HoldToneEx({ inst, level, onResult }: ExProps) {
   const [on, setOn] = useState(false);
   const mic = useMic(on);
   const a4 = useStore((s) => s.project?.a4_hz ?? 440);
-  const chart = chartFor(useStore((s) => s.project?.instrument?.instrument));
+  const chart = chartFor(useStore((s) => s.project?.instrument?.instrument), useStore((s) => s.fingeringOverrides));
   const [ref, setRef] = useState<number | null>(i.target_midi);
   const [secs, setSecs] = useState(0);
   const cents = useRef<number[]>([]);
@@ -229,7 +229,7 @@ function SightReadingEx({ inst, level, onResult }: ExProps) {
   const hold = useRef(0);
   const mic = useMic(on);
   const a4 = useStore((s) => s.project?.a4_hz ?? 440);
-  const chart = chartFor(useStore((s) => s.project?.instrument?.instrument));
+  const chart = chartFor(useStore((s) => s.project?.instrument?.instrument), useStore((s) => s.fingeringOverrides));
   const tol = TOL_CENTS[level];
   const midiFrac = mic && mic.hz !== null && mic.confidence >= 0.6 ? hzToMidi(mic.hz, a4) : null;
   const target = i.targets[idx];
@@ -347,7 +347,7 @@ function HearRepeatEx({ inst, level, onResult }: ExProps) {
   const [phase, setPhase] = useState<"idle" | "listen" | "repeat" | "done">("idle");
   const mic = useMic(phase === "repeat");
   const a4 = useStore((s) => s.project?.a4_hz ?? 440);
-  const chart = chartFor(useStore((s) => s.project?.instrument?.instrument));
+  const chart = chartFor(useStore((s) => s.project?.instrument?.instrument), useStore((s) => s.fingeringOverrides));
   const stream = useRef<{ t: number; midi: number | null }[]>([]);
   const started = useRef(0);
   const [result, setResult] = useState<RepeatScore | null>(null);
@@ -510,6 +510,7 @@ function EarEx({ inst, onResult }: ExProps) {
 
 function ClapEx({ inst, level, onResult }: ExProps) {
   const { t } = useT();
+  const latencyPref = useStore((s) => s.prefs.latencyMs);
   const i = inst.instance as Extract<AcademyInstance, { kind: "rhythm_clap" }>;
   const [on, setOn] = useState(false);
   const [result, setResult] = useState<RhythmScore | null>(null);
@@ -557,7 +558,8 @@ function ClapEx({ inst, level, onResult }: ExProps) {
         setPos(null);
         await api.stopMonitor().catch(() => undefined);
         try {
-          const r = await api.academyScoreRhythm(onsets.current, i.grid, level);
+          const lat = (useStore.getState().prefs.latencyMs ?? 0) / 1000;
+          const r = await api.academyScoreRhythm(onsets.current.map((o) => o - lat), i.grid, level);
           setResult(r);
           onResult(r.score);
         } catch (e) {
@@ -572,7 +574,9 @@ function ClapEx({ inst, level, onResult }: ExProps) {
   const inCountIn = pos !== null && pos < i.grid[0] - beat * 0.5;
   return (
     <div className="academy-ex">
-      <div className="muted small">{t.academyClapIntro}</div>
+      <div className="muted small">
+        {t.academyClapIntro} {latencyPref !== null ? `${t.latencyLabel} ${latencyPref.toFixed(0)} ms.` : t.latencyNotMeasured}
+      </div>
       <div className="analysis-row">
         {on ? <span className={`badge ${inCountIn ? "" : "ok"}`}>{inCountIn ? `${Math.max(1, Math.ceil((i.grid[0] - (pos ?? 0)) / beat))}…` : t.academyClapGo}</span> : null}
         <span className="mono-num small">{count} ♪</span>
@@ -975,24 +979,38 @@ function KnowledgeReader({ target }: { target: string | null }) {
 function FingeringChartView() {
   const { t, lang } = useT();
   const player = usePlayer();
+  const overrides = useStore((s) => s.fingeringOverrides[KAVAL_D.instrument] ?? []);
+  const chart = applyOverrides(KAVAL_D, overrides);
   const [sel, setSel] = useState<number>(62);
+  const [draft, setDraft] = useState<string | null>(null);
+  const primary = fingeringsFor(chart, sel)[0] ?? null;
+  const overridden = overrides.some((o) => o.midi === sel && primary && o.register === primary.register);
   const byRegister = useMemo(() => {
     const m = new Map<number, number[]>();
-    for (const f of KAVAL_D.fingerings) {
+    for (const f of chart.fingerings) {
       if (f.alt) continue;
       const arr = m.get(f.register) ?? [];
       if (!arr.includes(f.midi)) arr.push(f.midi);
       m.set(f.register, arr);
     }
     return [...m.entries()].sort((a, b) => a[0] - b[0]);
-  }, []);
+  }, [chart]);
+  const save = async (list: typeof overrides) => {
+    try {
+      const saved = await api.fingeringOverridesSet(KAVAL_D.instrument, list);
+      useStore.getState().setFingeringOverrides(KAVAL_D.instrument, saved);
+      setDraft(null);
+    } catch (e) {
+      useStore.getState().setError(describeError(e));
+    }
+  };
   return (
     <div className="panel">
       <div className="muted small">{t.fingeringChartHint}</div>
       {byRegister.map(([reg, notes]) => (
         <div key={reg} className="analysis-row">
           <span className="small muted" style={{ minWidth: 220 }}>
-            {KAVAL_D.registers[String(reg)]?.[lang]}
+            {chart.registers[String(reg)]?.[lang]}
           </span>
           {notes.map((m) => (
             <button
@@ -1000,6 +1018,7 @@ function FingeringChartView() {
               className={`ghost small ${sel === m ? "on" : ""}`}
               onClick={() => {
                 setSel(m);
+                setDraft(null);
                 void player.play([{ start: 0.05, end: 1.0, midi: m, velocity: 0.7 }]);
               }}
             >
@@ -1008,7 +1027,26 @@ function FingeringChartView() {
           ))}
         </div>
       ))}
-      <FingeringDiagram chart={KAVAL_D} midi={sel} />
+      <div className="analysis-row">
+        <FingeringDiagram chart={draft && primary ? applyOverrides(chart, [{ ...primary, holes: draft }]) : chart} midi={sel} />
+        {primary && (
+          <div className="academy-ex">
+            <div className="small muted">{t.fingeringEditHint}</div>
+            <HoleEditor holes={draft ?? primary.holes} onChange={setDraft} />
+            <div className="analysis-row">
+              <button disabled={!draft || draft === primary.holes} onClick={() => void save([...overrides.filter((o) => !(o.midi === sel && o.register === primary.register)), { midi: sel, register: primary.register, holes: draft!, alt: false, note: null }])}>
+                {t.fingeringSave}
+              </button>
+              {overridden && (
+                <button className="ghost small" onClick={() => void save(overrides.filter((o) => !(o.midi === sel && o.register === primary.register)))}>
+                  {t.fingeringRestore}
+                </button>
+              )}
+              {overridden && <span className="badge">{t.fingeringMine}</span>}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

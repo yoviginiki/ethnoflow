@@ -603,3 +603,9 @@ button.ghost.on { border-color: var(--accent); color: var(--accent); }
 .md-table { border-collapse: collapse; font-size: 12px; }
 .md-table th, .md-table td { border: 1px solid var(--axis); padding: 3px 6px; text-align: left; vertical-align: top; }
 .help-body blockquote { margin: 6px 0; padding: 4px 10px; border-left: 3px solid var(--axis); color: var(--muted); }
+
+.falling-fingering { display: flex; align-items: center; gap: 8px; }
+.fingering-dim { opacity: 0.45; }
+.hole-editor { display: flex; gap: 4px; flex-wrap: wrap; }
+.drill-passes { display: inline-flex; gap: 4px; }
+.trainer-history { margin: 4px 0; padding-left: 18px; }

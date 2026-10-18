@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { api, describeError, type Ambient as AmbientRack, type AmbientLayer, type LayerKind, type LayerSource, type LibraryKind, type Scale, type Timing, type Level } from "./api";
+import { api, describeError, type Ambient as AmbientRack, type AmbientLayer, type LayerKind, type LayerSource, type LibraryKind, type Scale, type Timing, type Level, type TrainerLogEntry, type FingeringOverride } from "./api";
 import { defaultSource, makeLayer, MAX_AMBIENT_LAYERS } from "./ambientPresets";
 import { applyLibraryPayload, applySession, collectSession, mergeSessionPrefs, pickSessionPrefs, rackForProject, SESSION_PREF_KEYS } from "./session";
 import { useStore, type LayerName, type Screen } from "./store";
@@ -319,6 +319,19 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
       return await api.academyScoreRhythm(cmd.onsets as number[], cmd.grid as number[], (cmd.level as Level) ?? "beginner");
     case "academy_record":
       return await api.academyRecord(String(cmd.id), Number(cmd.score), Boolean(cmd.passed));
+    case "trainer_history":
+      return await api.academyTrainerHistory(typeof cmd.limit === "number" ? cmd.limit : 20);
+    case "trainer_log":
+      return { count: await api.academyTrainerLog(cmd.entry as TrainerLogEntry) };
+    case "fingering_overrides": {
+      const instrument = String(cmd.instrument ?? "kaval-d");
+      if (Array.isArray(cmd.overrides)) {
+        const saved = await api.fingeringOverridesSet(instrument, cmd.overrides as FingeringOverride[]);
+        useStore.getState().setFingeringOverrides(instrument, saved);
+        return { overrides: saved };
+      }
+      return { overrides: await api.fingeringOverridesGet(instrument) };
+    }
     case "academy_reset":
       await api.academyReset(typeof cmd.id === "string" ? cmd.id : null);
       return { ok: true };

@@ -6,7 +6,7 @@ export interface Fingering {
   register: number;
   holes: string;
   alt?: boolean;
-  note?: { bg: string; en: string };
+  note?: { bg: string; en: string } | null;
 }
 
 export interface FingeringChart {
@@ -20,9 +20,29 @@ export interface FingeringChart {
 
 export const KAVAL_D: FingeringChart = kavalD as FingeringChart;
 
-/** Charts by profile instrument type (F2.6); only the kaval in D exists so far. */
-export function chartFor(instrument: string | null | undefined): FingeringChart | null {
-  return instrument === "kaval" ? KAVAL_D : null;
+/**
+ * The user's corrections on top of a chart: an override replaces every factory entry of
+ * the same note and register (so one corrected primary fingering is enough), keeps the
+ * other notes, and is sorted by note. The factory file never changes.
+ */
+export function applyOverrides(chart: FingeringChart, overrides: Fingering[] | undefined): FingeringChart {
+  if (!overrides || overrides.length === 0) return chart;
+  const replaced = new Set(overrides.map((o) => `${o.midi}:${o.register}`));
+  const kept = chart.fingerings.filter((f) => !replaced.has(`${f.midi}:${f.register}`));
+  const fingerings = [...kept, ...overrides].sort((a, b) => a.midi - b.midi || a.register - b.register || Number(!!a.alt) - Number(!!b.alt));
+  return { ...chart, fingerings };
+}
+
+/** Chart id by profile instrument type (F2.6); only the kaval in D exists so far. */
+export function chartIdFor(instrument: string | null | undefined): string | null {
+  return instrument === "kaval" ? KAVAL_D.instrument : null;
+}
+
+/** Charts by profile instrument type, with the user's overrides applied when given. */
+export function chartFor(instrument: string | null | undefined, overrides?: Record<string, Fingering[]>): FingeringChart | null {
+  const id = chartIdFor(instrument);
+  if (!id) return null;
+  return applyOverrides(KAVAL_D, overrides?.[id]);
 }
 
 /** Primary fingering(s) for a MIDI note: the non-alternative one first, then alternatives. */

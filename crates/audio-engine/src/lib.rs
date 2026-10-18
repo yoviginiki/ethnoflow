@@ -14,6 +14,7 @@ pub mod decode;
 pub mod devices;
 pub mod error;
 pub mod graph;
+pub mod latency;
 pub mod live_synth;
 pub mod metronome;
 pub mod midi_in;
@@ -52,6 +53,7 @@ pub use graph::sources::{
 pub use graph::{
     Graph, GraphMeters, GraphParams, LayerParams, MasterParams, SineSource, Source, MAX_LAYERS,
 };
+pub use latency::{click_burst, estimate_roundtrip, LatencyEstimate};
 pub use live_synth::{Cmd as SynthCmd, LiveEngine, LiveSynth, LiveSynthStatus};
 pub use metronome::{
     mix_click, ClickConfig, ClickKind, ClickSynth, GridPosition, Metronome, MetronomeStatus,

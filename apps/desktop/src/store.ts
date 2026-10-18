@@ -32,7 +32,7 @@ import type {
   WaveformPeaks,
   WavFormat,
 } from "./api";
-import type { AcademyCheck, BusStrip } from "./api";
+import type { AcademyCheck, BusStrip, FingeringOverride } from "./api";
 import type { Lang } from "./i18n";
 
 export type Mode = "idle" | "recording" | "playing";
@@ -67,6 +67,8 @@ export interface Prefs {
   snapBar: boolean;
   /** MIDI input port name, or null for none. */
   midiInput: string | null;
+  /** Measured round-trip latency (ms), subtracted by the trainer and the clap exercises; null = not measured. */
+  latencyMs: number | null;
   /** Drone settings (F3.2); `rootMidi` null until the user picks one (no assumed key). */
   drone: DronePrefs;
   /** Pad settings (F3.3). */
@@ -204,6 +206,7 @@ export const DEFAULT_PREFS: Prefs = {
   voice: "flute",
   snapBar: true,
   midiInput: null,
+  latencyMs: null,
   drone: DEFAULT_DRONE,
   pad: DEFAULT_PAD,
   intent: DEFAULT_INTENT,
@@ -376,6 +379,9 @@ interface Store {
   /** Academy play-along lesson whose phrase is loaded in the trainer (the trainer reports back). */
   academyPlayAlong: string | null;
   setAcademyPlayAlong: (id: string | null) => void;
+  /** User corrections to fingering charts by instrument id (F2.6), loaded at start. */
+  fingeringOverrides: Record<string, FingeringOverride[]>;
+  setFingeringOverrides: (instrument: string, list: FingeringOverride[]) => void;
 
   message: string | null;
   error: string | null;
@@ -509,4 +515,6 @@ export const useStore = create<Store>((set, get) => ({
   setAcademyGuided: (academyGuided) => set({ academyGuided }),
   academyPlayAlong: null,
   setAcademyPlayAlong: (academyPlayAlong) => set({ academyPlayAlong }),
+  fingeringOverrides: {},
+  setFingeringOverrides: (instrument, list) => set((st) => ({ fingeringOverrides: { ...st.fingeringOverrides, [instrument]: list } })),
 }));

@@ -1284,6 +1284,38 @@ export interface RepeatScore {
   shift_seconds: number;
 }
 
+export interface LatencyResult {
+  ms: number;
+  spread_ms: number;
+  per_click_ms: (number | null)[];
+  heard: number;
+  clicks: number;
+}
+export interface TrainerLogEntry {
+  at_ms: number;
+  take_id: string | null;
+  mode: string;
+  level: string;
+  tempo_percent: number;
+  expected: number;
+  hits: number;
+  wrong_pitch: number;
+  early: number;
+  late: number;
+  missed: number;
+  extra: number;
+  mean_abs_cents: number;
+  mean_abs_ms: number;
+  latency_ms: number;
+}
+export interface FingeringOverride {
+  midi: number;
+  register: number;
+  holes: string;
+  alt: boolean;
+  note: LText | null;
+}
+
 export interface MidiExportResult {
   path: string;
   bytes: number;
@@ -1589,6 +1621,13 @@ export const api = {
   academyReset: (id: string | null) => invoke<void>("academy_reset", { id }),
   academyNewTake: (sinceMs: number, minNotes: number) => invoke<string | null>("academy_new_take", { sinceMs, minNotes }),
   academyPlayAlong: (notes: PlayNote[], label: string) => invoke<ProjectView>("academy_play_along", { notes, label }),
+  academyTrainerLog: (entry: TrainerLogEntry) => invoke<number>("academy_trainer_log", { entry }),
+  academyTrainerHistory: (limit: number | null) => invoke<TrainerLogEntry[]>("academy_trainer_history", { limit }),
+  fingeringOverridesGet: (instrument: string) => invoke<FingeringOverride[]>("fingering_overrides_get", { instrument }),
+  fingeringOverridesSet: (instrument: string, overrides: FingeringOverride[]) => invoke<FingeringOverride[]>("fingering_overrides_set", { instrument, overrides }),
+  measureLatency: (input: string | null, output: string | null, sampleRate: number | null) => invoke<LatencyResult>("measure_latency", { input, output, sampleRate }),
+  playNotesDrill: (startS: number, endS: number, tempoFactor: number, device: string | null, voice: Voice | null) =>
+    invoke<PlayerStatus>("play_notes_drill", { startS, endS, tempoFactor, device, voice }),
   listProfiles: () => invoke<ProfileSummary[]>("list_profiles"),
   getProfile: (id: string) => invoke<ProfileView>("get_profile", { id }),
   createProfile: (req: { instrument: InstrumentType; name: string; tuning: string; transpose_semitones: number; a4_hz: number | null }) =>

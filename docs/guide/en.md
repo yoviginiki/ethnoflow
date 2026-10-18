@@ -34,6 +34,27 @@ The pad and the textures always sit **below** the melody (about two octaves unde
 - The tuner shows the note, the cents and whether it is in the project's mode.
 - "Analyse" here does the same as in Start from a melody but without the variants: contour, notes (editable), key proposals.
 
+## Trainer to the end: latency, drill, history, fingerings
+
+In Play & record › **Trainer** (the panel under the falling notes):
+
+- **Latency**: "Measure latency" plays 4 clicks through the headphones/speakers and measures
+  when the microphone hears them (≈ 4 s; shows ms ± spread and how many clicks were heard).
+  The value is kept in the settings and subtracted automatically from timing in the "In rhythm"
+  and "Loop drill" modes and from the clapping exercise in the Academy. "✕" forgets it. If the
+  microphone does not hear the clicks, raise the speakers a little or hold the headphones to it.
+- **Loop drill**: two bars from the cursor (or 4 s without a tempo) play at 50 % tempo; you
+  play along, every pass is scored; after 3 clean passes (≥ 90 % hits) the tempo steps up by
+  10 %, until 100 %. The dots show the passes (green = clean). "Stop" interrupts.
+- **Recent results**: every "In rhythm" report and every drill pass is logged locally (date,
+  mode, tempo, level, hits/expected, mean deviation in cents and ms); the last five are shown
+  under the panel. From the terminal: `trainer_history`.
+- **Fingerings with the falling notes** (kaval profile): next to the falling-notes view the
+  fingering of the lit (trainer) or next note is shown, with the one after it dimmed.
+- **Editing the chart**: Academy › Fingerings › pick a note › click the holes (● → ○ → ◌ → ◐) ›
+  "Save as mine". The correction lives in your settings folder and applies everywhere (tuner,
+  falling notes, lessons); "Restore the original" removes it. The app's table never changes.
+
 ## Compose (accompanist)
 
 - **Mode**: choose a tonic and mode or accept a proposal from the analysis. The drone and the pad follow the tonal centre.

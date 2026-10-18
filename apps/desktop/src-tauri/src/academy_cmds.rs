@@ -398,3 +398,144 @@ pub async fn academy_play_along(
     let _ = std::fs::remove_file(&path);
     out
 }
+
+// ---------------------------------------------------------------- trainer history (F6.3)
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TrainerLogEntry {
+    #[serde(default)]
+    pub at_ms: i64,
+    pub take_id: Option<String>,
+    /// listen | wait | rhythm | drill | academy
+    pub mode: String,
+    pub level: String,
+    pub tempo_percent: u32,
+    pub expected: u32,
+    pub hits: u32,
+    pub wrong_pitch: u32,
+    pub early: u32,
+    pub late: u32,
+    pub missed: u32,
+    pub extra: u32,
+    pub mean_abs_cents: f64,
+    pub mean_abs_ms: f64,
+    pub latency_ms: f64,
+}
+
+const HISTORY_CAP: usize = 500;
+
+fn history_path(s: &Inner) -> CmdResult<PathBuf> {
+    Ok(progress_path(s)?.with_file_name("trainer-history.json"))
+}
+
+/// Append a trainer result (Studio trainer modes and drills) to the local history.
+#[tauri::command]
+pub async fn academy_trainer_log(
+    state: State<'_, AppState>,
+    entry: TrainerLogEntry,
+) -> CmdResult<usize> {
+    if entry.mode.len() > 20 || entry.level.len() > 20 || entry.tempo_percent > 400 {
+        return Err(err("invalid_argument", "bad trainer entry"));
+    }
+    let s = state.lock();
+    let path = history_path(&s)?;
+    let mut list: Vec<TrainerLogEntry> =
+        crate::reference_cmds::read_json(&path)?.unwrap_or_default();
+    let mut e = entry;
+    if e.at_ms == 0 {
+        e.at_ms = crate::reference_cmds::now_ms();
+    }
+    list.push(e);
+    if list.len() > HISTORY_CAP {
+        let drop = list.len() - HISTORY_CAP;
+        list.drain(..drop);
+    }
+    if let Some(dir) = path.parent() {
+        std::fs::create_dir_all(dir).map_err(|e| err("io", e.to_string()))?;
+    }
+    crate::reference_cmds::write_json(&path, &list)?;
+    Ok(list.len())
+}
+
+/// Most recent trainer results, newest first.
+#[tauri::command]
+pub async fn academy_trainer_history(
+    state: State<'_, AppState>,
+    limit: Option<usize>,
+) -> CmdResult<Vec<TrainerLogEntry>> {
+    let s = state.lock();
+    let path = history_path(&s)?;
+    let mut list: Vec<TrainerLogEntry> =
+        crate::reference_cmds::read_json(&path)?.unwrap_or_default();
+    list.reverse();
+    list.truncate(limit.unwrap_or(20).min(HISTORY_CAP));
+    Ok(list)
+}
+
+// ---------------------------------------------------------------- fingering overrides (F2.6)
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FingeringOverride {
+    pub midi: u8,
+    pub register: u8,
+    /// 8 hole states in the order T 2 3 4 | 5 6 7 8: c closed, o open, x optional, h half.
+    pub holes: String,
+    #[serde(default)]
+    pub alt: bool,
+    #[serde(default)]
+    pub note: Option<lessons::Text>,
+}
+
+fn overrides_path(s: &Inner, instrument: &str) -> CmdResult<PathBuf> {
+    if instrument.is_empty()
+        || !instrument
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
+    {
+        return Err(err("invalid_argument", "bad instrument id"));
+    }
+    Ok(progress_path(s)?
+        .with_file_name("fingerings")
+        .join(format!("{instrument}.json")))
+}
+
+/// The user's corrections to a fingering chart (a copy next to the progress file; the
+/// factory table in the repository never changes).
+#[tauri::command]
+pub async fn fingering_overrides_get(
+    state: State<'_, AppState>,
+    instrument: String,
+) -> CmdResult<Vec<FingeringOverride>> {
+    let s = state.lock();
+    let path = overrides_path(&s, &instrument)?;
+    Ok(crate::reference_cmds::read_json(&path)?.unwrap_or_default())
+}
+
+#[tauri::command]
+pub async fn fingering_overrides_set(
+    state: State<'_, AppState>,
+    instrument: String,
+    overrides: Vec<FingeringOverride>,
+) -> CmdResult<Vec<FingeringOverride>> {
+    if overrides.len() > 256 {
+        return Err(err("invalid_argument", "too many overrides"));
+    }
+    for o in &overrides {
+        if o.register > 4
+            || o.holes.len() != 8
+            || !o.holes.chars().all(|c| matches!(c, 'c' | 'o' | 'x' | 'h'))
+        {
+            return Err(err(
+                "invalid_argument",
+                format!("bad fingering for midi {}", o.midi),
+            ));
+        }
+    }
+    let s = state.lock();
+    let path = overrides_path(&s, &instrument)?;
+    if let Some(dir) = path.parent() {
+        std::fs::create_dir_all(dir).map_err(|e| err("io", e.to_string()))?;
+    }
+    crate::reference_cmds::write_json(&path, &overrides)?;
+    Ok(overrides)
+}

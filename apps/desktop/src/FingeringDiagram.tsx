@@ -94,3 +94,57 @@ export function FingeringDiagram({ chart, midi, compact = false, showAlternative
     </div>
   );
 }
+
+
+/**
+ * The fingering that goes with the falling notes: the trainer's lit note when there is
+ * one, otherwise the first note at or after the playhead (F2.6 step 3).
+ */
+export function FallingFingering({ chart, notes, target, position }: { chart: FingeringChart; notes: { start: number; midi: number }[]; target: { index: number; wrong: boolean } | null; position: number }) {
+  const lang = useStore((s) => s.prefs.lang);
+  const t = messages[lang];
+  const sorted = [...notes].sort((a, b) => a.start - b.start);
+  const current = target ? notes[target.index] : sorted.find((n) => n.start >= position - 0.05) ?? null;
+  const next = current ? sorted.find((n) => n.start > current.start + 0.03) ?? null : null;
+  if (!current) return null;
+  return (
+    <div className="falling-fingering">
+      <span className="small muted">{t.fingeringNow}</span>
+      <FingeringDiagram chart={chart} midi={current.midi} compact showAlternatives={false} />
+      {next && (
+        <>
+          <span className="small muted">{t.fingeringNext}</span>
+          <span className="fingering-dim">
+            <FingeringDiagram chart={chart} midi={next.midi} compact showAlternatives={false} />
+          </span>
+        </>
+      )}
+    </div>
+  );
+}
+
+const HOLE_CYCLE = ["c", "o", "x", "h"];
+
+/** Click the holes to cycle closed → open → optional → half (the fingering editor). */
+export function HoleEditor({ holes, onChange }: { holes: string; onChange: (h: string) => void }) {
+  const t = messages[useStore((s) => s.prefs.lang)];
+  const labels = ["T", "2", "3", "4", "5", "6", "7", "8"];
+  const glyph = (c: string) => (c === "c" ? "●" : c === "o" ? "○" : c === "x" ? "◌" : "◐");
+  return (
+    <div className="hole-editor" role="group" aria-label={t.fingeringEdit}>
+      {holes.split("").map((c, i) => (
+        <button
+          key={i}
+          className="ghost small"
+          title={labels[i]}
+          onClick={() => {
+            const n = HOLE_CYCLE[(HOLE_CYCLE.indexOf(c) + 1) % HOLE_CYCLE.length];
+            onChange(holes.slice(0, i) + n + holes.slice(i + 1));
+          }}
+        >
+          {labels[i]} {glyph(c)}
+        </button>
+      ))}
+    </div>
+  );
+}

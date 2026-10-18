@@ -1,3 +1,5 @@
+import { api } from "./api";
+import { useEffect } from "react";
 import { Ambient } from "./Ambient";
 import { Arrange } from "./Arrange";
 import { BackgroundTransport } from "./BackgroundTransport";
@@ -56,6 +58,12 @@ export default function App() {
   useBackgroundLayers();
   useSongTransport();
   useAcademyGuided();
+  useEffect(() => {
+    void api
+      .fingeringOverridesGet("kaval-d")
+      .then((list) => useStore.getState().setFingeringOverrides("kaval-d", list))
+      .catch(() => undefined);
+  }, []);
   useProjectSession();
   useAssistantBridge();
 

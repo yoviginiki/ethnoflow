@@ -19,6 +19,8 @@ import { NEW_NOTE_S, PianoRoll } from "./PianoRoll";
 import { TakeList } from "./TakeList";
 import { TimingPanel } from "./TimingPanel";
 import { TrainerPanel } from "./TrainerPanel";
+import { FallingFingering } from "./FingeringDiagram";
+import { chartFor } from "./fingerings";
 import { Tuner } from "./Tuner";
 import { useStore } from "./store";
 import { Waveform } from "./Waveform";
@@ -639,6 +641,8 @@ export function Studio() {
   // ---------- render ----------
 
   const [trainerTarget, setTrainerTarget] = useState<{ index: number; wrong: boolean } | null>(null);
+  // F2.6: the owner's kaval chart follows the falling notes when the profile is a kaval.
+  const fingeringChart = chartFor(project?.instrument?.instrument, s.fingeringOverrides);
   // Bar length in playback seconds for a MIDI take with a known tempo and meter.
   const barSeconds =
     s.midi && s.midi.time_signature && s.midi.bpm > 0
@@ -894,6 +898,9 @@ export function Studio() {
                   classes={noteClasses}
                 />
               )}
+              {s.prefs.notesView === "falling" && fingeringChart && (
+                <FallingFingering chart={fingeringChart} notes={s.analysis.notes} target={trainerTarget} position={s.notesPlayer ? s.notesPlayer.position_seconds : s.mode === "playing" && s.player ? s.player.position_seconds : s.cursor} />
+              )}
               <IntentPanel />
               <HarmonyPanel />
               <TrainerPanel
@@ -909,6 +916,9 @@ export function Studio() {
                   s.setCursor(sec);
                 }}
                 onTarget={(index, wrong) => setTrainerTarget(index === null ? null : { index, wrong })}
+                cursor={s.cursor}
+                barSeconds={project.timing.bpm && project.timing.numerator && project.timing.unit ? (60 / project.timing.bpm) * project.timing.numerator * (4 / project.timing.unit) : null}
+                takeId={s.loaded?.id ?? null}
               />
             </>
           )}

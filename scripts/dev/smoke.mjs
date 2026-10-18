@@ -259,6 +259,20 @@ async function main() {
     if (!before) expectOk(send({ op: "academy_reset", id: "l0-03-clipping" }));
     return `${v.count} lessons, context ${lo}..${hi}, rhythm score ${sc.score}`;
   });
+  await step("trainer: history log round trip; fingering overrides saved, applied and restored", () => {
+    const before = expectOk(send({ op: "trainer_history", limit: 500 })).length;
+    const entry = { at_ms: 0, take_id: null, mode: "rhythm", level: "beginner", tempo_percent: 100, expected: 8, hits: 7, wrong_pitch: 1, early: 0, late: 0, missed: 0, extra: 0, mean_abs_cents: 12.5, mean_abs_ms: 31, latency_ms: 0 };
+    expectOk(send({ op: "trainer_log", entry }));
+    const hist = expectOk(send({ op: "trainer_history", limit: 500 }));
+    if (hist.length !== Math.min(500, before + 1) || hist[0].hits !== 7) throw new Error(`history ${before} → ${hist.length}`);
+    const orig = expectOk(send({ op: "fingering_overrides", instrument: "kaval-d" })).overrides;
+    const set = expectOk(send({ op: "fingering_overrides", instrument: "kaval-d", overrides: [...orig, { midi: 69, register: 1, holes: "ccoxoooo", alt: false, note: null }] })).overrides;
+    if (!set.some((o) => o.midi === 69 && o.holes === "ccoxoooo")) throw new Error("override not saved");
+    const bad = send({ op: "fingering_overrides", instrument: "kaval-d", overrides: [{ midi: 69, register: 1, holes: "zzzz", alt: false, note: null }] })[0];
+    if (bad.ok) throw new Error("bad holes accepted");
+    expectOk(send({ op: "fingering_overrides", instrument: "kaval-d", overrides: orig }));
+    return `history ${hist.length}, override round trip ok`;
+  });
   await step("presets: save, list, load", () => {
     const saved = expectOk(send({ op: "save_preset", kind: "rhythm", name: "smoke rhythm", tags: ["smoke"], notes: "automated" }));
     const list = expectOk(send({ op: "list_presets", kind: "rhythm", query: "smoke" })).entries;

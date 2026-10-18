@@ -3,6 +3,23 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Trainer to the end + fingerings (owner's item 6, 2026-10-18 night).**
+  - `audio_engine::latency`: `click_burst` + `estimate_roundtrip` (onset of each click after its
+    scheduled time, median, spread; 2 tests: 37 ms delay recovered within 1 ms, silence = no
+    estimate). Shell `measure_latency` records the input while a 4-click burst plays on the
+    output (≈ 4 s, lock released). The value lives in prefs (`latencyMs`) and is subtracted by
+    the trainer (Rhythm, drill) and the Academy clap exercise.
+  - **Loop drill** (F2.8 step 2): `play_notes_drill` renders the notes in `[start, end)` slowed
+    by a factor; the panel runs two bars from the cursor at 50 %, scores every pass, steps +10 %
+    after 3 clean passes (≥ 90 % hits) up to 100 %, pass dots, auto-continue with a pause.
+  - **Trainer history** (F6.3 progress): `academy_trainer_log/history` (local JSON, cap 500);
+    the panel logs every Rhythm report and drill pass and shows the last five.
+  - **Fingerings** (F2.6 steps 2–3): `FallingFingering` next to the falling notes (lit/next note
+    + the one after, dimmed); **editor** in Academy › Fingerings (click holes to cycle, "Save as
+    mine" → `fingering_overrides_set`, validated; "Restore the original"); overrides are loaded
+    at start and applied in the tuner, Studio and lessons (`applyOverrides`, vitest).
+  - Take fades: already real through the Sample Lab recipe (fade in/out per take); ROADMAP #13
+    updated. Bridge ops `trainer_history`, `trainer_log`, `fingering_overrides`; smoke step.
 - **Academy v1 (Phase 6 start, F6.1–F6.3 first slice, 2026-10-18 evening).** The owner asked for
   "a maximally complete and easy" music curriculum and gave a kaval knowledge base
   (`docs/kaval-baza-znania.md`: fingering tables, Snider self-tutor summary, Dosev 1994 ornamentation

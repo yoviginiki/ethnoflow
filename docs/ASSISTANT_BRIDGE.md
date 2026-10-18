@@ -79,6 +79,9 @@ rhythm_status, ambient_status }`
 | `academy_score_rhythm` | `onsets`, `grid`, `level?` | scores claps against the grid (deviations in ms) |
 | `academy_record` | `id`, `score`, `passed` | records an attempt in the local progress |
 | `academy_reset` | `id?` | clears progress for one lesson (or all) |
+| `trainer_history` | `limit?` | recent trainer results (rhythm reports, drill passes), newest first |
+| `trainer_log` | `entry` | appends a trainer result (what the Studio trainer does after each report) |
+| `fingering_overrides` | `instrument?`, `overrides?` | without `overrides`: the user's chart corrections; with: validates and saves them (holes = 8 of c/o/x/h) |
 | `error_clear` | | clears the app's error banner |
 | `create_project` | `name` | closes the current project and creates a new one |
 | `instrument_list` | | instrument presets (id, name, category, factory) |

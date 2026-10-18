@@ -151,7 +151,7 @@ one limiter — together with an explicit background play/stop in every screen
 | 10 | Track mixer (level, pan, solo, sends) | background buses done; **track strips done 2026-10-18** (pan, HP/LP, send per track); EQ bands / "Auto Studio Engineer" pending |
 | 11 | Phrase & Vocal Chopper | pending (F5.3) |
 | 12 | DAW export (stems, MIDI, tempo map in one package) | WAV stems + markers.csv + manifest.json done 2026-10-18 (song export); MIDI per track pending |
-| 13 | Take fade in/out; shared transport across screens; kaval fingerings (owner's table); trainer to the end | transport = P3 Phase 1; others pending |
+| 13 | Take fade in/out; shared transport across screens; kaval fingerings (owner's table); trainer to the end | **done 2026-10-18 night**: fades = Sample Lab recipe per take; transport = P3 Phase 1; fingerings = owner's table + diagram + editor + falling-notes sync; trainer = drill + latency + history |
 | 14 | Academy | **v1 shipped 2026-10-18 evening** (levels 0–3, kaval track, fingerings, knowledge base); v2 = levels 4–6 + Create-a-song wizard |
 | 15 | Intelligent melody variations | Phase 7 / P2 D |
 | 16 | Live accompanist following the playing | Phase 8 / P3 6 |
