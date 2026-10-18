@@ -11,7 +11,7 @@ use tauri::State;
 use crate::ambient_cmds::AMBIENT_SLOT0;
 use crate::commands::{err, CmdResult};
 use crate::graph_cmds::{DRONE_SLOT, PAD_SLOT};
-use crate::rhythm_cmds::{ARP_SLOT, DRUMS_SLOT};
+use crate::rhythm_cmds::DRUMS_SLOT;
 use crate::state::{AppState, Inner};
 
 pub const BUS_NAMES: [&str; 4] = ["drone", "pad", "ambient", "rhythm"];
@@ -64,7 +64,8 @@ pub fn bus_slots(bus: usize) -> std::ops::Range<usize> {
         BUS_DRONE => DRONE_SLOT..DRONE_SLOT + 1,
         BUS_PAD => PAD_SLOT..PAD_SLOT + 1,
         BUS_AMBIENT => AMBIENT_SLOT0..AMBIENT_SLOT0 + project::MAX_AMBIENT_LAYERS,
-        _ => DRUMS_SLOT..ARP_SLOT + 1,
+        // The rhythm bus: the four parts and the Instrument Rack's extra slots.
+        _ => DRUMS_SLOT..audio_engine::MAX_LAYERS,
     }
 }
 
@@ -200,13 +201,15 @@ pub async fn bus_status(state: State<'_, AppState>) -> CmdResult<Vec<f32>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::rhythm_cmds::ARP_SLOT;
 
     #[test]
     fn slots_and_gains() {
         assert_eq!(bus_index("ambient").unwrap(), BUS_AMBIENT);
         assert!(bus_index("x").is_err());
         assert_eq!(bus_slots(BUS_AMBIENT).len(), project::MAX_AMBIENT_LAYERS);
-        assert_eq!(bus_slots(BUS_RHYTHM), DRUMS_SLOT..ARP_SLOT + 1);
+        assert_eq!(bus_slots(BUS_RHYTHM), DRUMS_SLOT..audio_engine::MAX_LAYERS);
+        assert!(bus_slots(BUS_RHYTHM).contains(&ARP_SLOT));
         let mut s = Inner::default();
         s.bus[BUS_PAD].strip.gain_db = -6.0;
         assert_eq!(bus_gain(&s, BUS_PAD, -12.0), -18.0);

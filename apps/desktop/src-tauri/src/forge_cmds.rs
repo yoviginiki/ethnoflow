@@ -10,8 +10,10 @@ use std::sync::Arc;
 
 use audio_engine::{
     write_wav, AudioBuffer, BassNoteEvent, BassParams, BassPatternData, BassSource, BeatClock,
-    DrumEvent, DrumKind, DrumParams, DrumPatternData, DrumSource, Graph, GraphCmd, GraphParams,
-    NotePatternData, PatternNote, PatternParams, PatternSynthSource, WavFormat,
+    ChordEvent, ChordPadParams, ChordPadSource, ChordPatternData, DrumEvent, DrumKind, DrumParams,
+    DrumPatternData, DrumSource, Graph, GraphCmd, GraphParams, LeadParams, LeadSource,
+    NotePatternData, PatternNote, PatternParams, PatternSynthSource, TapanParams, TapanSource,
+    WavFormat,
 };
 use project::{factory_instruments, InstrumentPreset, InstrumentVoice};
 use serde::{Deserialize, Serialize};
@@ -232,6 +234,9 @@ pub enum AuditionParams {
     Drums(Arc<DrumParams>),
     Bass(Arc<BassParams>),
     Synth(Arc<PatternParams>),
+    Tapan(Arc<TapanParams>),
+    ChordPad(Arc<ChordPadParams>),
+    Lead(Arc<LeadParams>),
 }
 
 pub struct AuditionLive {
@@ -393,6 +398,80 @@ fn audition_pattern(voice: &InstrumentVoice, midi: f64) -> AuditionPattern {
                 .collect();
             AuditionPattern::Synth(Arc::new(NotePatternData::new(events, 4.0)))
         }
+        InstrumentVoice::Tapan { .. } => {
+            // Two bars of 7/8 (2+2+3): the drum's home ground.
+            let meter = music_core::Meter {
+                numerator: 7,
+                unit: 8,
+                grouping: vec![2, 2, 3],
+            };
+            let hits = music_core::generate_tapan(
+                &meter,
+                &music_core::TapanPatternParams {
+                    density: 0.5,
+                    humanize: 0.15,
+                    fill_every_bars: 2,
+                    seed: 1,
+                    bars: 2,
+                },
+            );
+            AuditionPattern::Tapan(tapan_pattern(&hits, 2.0 * meter.bar_beats()))
+        }
+        InstrumentVoice::ChordPad { .. } => {
+            // Root, fifth, octave, ninth (no third: the mode stays the user's), 4 beats
+            // on, 2 off, then a fifth higher.
+            let chord = |base: f64| {
+                vec![
+                    midi_hz(base),
+                    midi_hz(base + 7.0),
+                    midi_hz(base + 12.0),
+                    midi_hz(base + 14.0),
+                ]
+            };
+            AuditionPattern::Chord(Arc::new(ChordPatternData::new(
+                vec![
+                    ChordEvent {
+                        beat: 0.0,
+                        length_beats: 4.0,
+                        hz: chord(midi),
+                        velocity: 0.9,
+                    },
+                    ChordEvent {
+                        beat: 6.0,
+                        length_beats: 4.0,
+                        hz: chord(midi + 5.0),
+                        velocity: 0.8,
+                    },
+                ],
+                12.0,
+            )))
+        }
+        InstrumentVoice::Lead { .. } => {
+            // A short phrase without thirds (root, 2nd, 4th, 5th, 6th) with one long note
+            // for the vibrato to show and two legato pairs for the glide.
+            let steps: [(f64, f64, f64); 9] = [
+                (0.0, 0.45, 0.0),
+                (0.5, 0.45, 2.0),
+                (1.0, 0.45, 5.0),
+                (1.5, 1.4, 7.0),
+                (3.0, 0.5, 9.0),
+                (3.5, 0.45, 7.0),
+                (4.0, 0.95, 5.0),
+                (5.0, 0.45, 2.0),
+                (5.5, 2.4, 0.0),
+            ];
+            let events = steps
+                .iter()
+                .enumerate()
+                .map(|(i, (beat, len, st))| PatternNote {
+                    beat: *beat,
+                    length_beats: *len,
+                    hz: midi_hz(midi + st),
+                    velocity: if i % 3 == 0 { 1.0 } else { 0.75 },
+                })
+                .collect();
+            AuditionPattern::Lead(Arc::new(NotePatternData::new(events, 8.0)))
+        }
     }
 }
 
@@ -400,6 +479,31 @@ enum AuditionPattern {
     Drums(Arc<DrumPatternData>),
     Bass(Arc<BassPatternData>),
     Synth(Arc<NotePatternData>),
+    Tapan(Arc<DrumPatternData>),
+    Chord(Arc<ChordPatternData>),
+    Lead(Arc<NotePatternData>),
+}
+
+/// Tapan strokes → the drum pattern type the engine's tapan plays (boom = kick, rim =
+/// snare, ghost = ghost).
+pub(crate) fn tapan_pattern(
+    hits: &[music_core::TapanHit],
+    length_beats: f64,
+) -> Arc<DrumPatternData> {
+    Arc::new(DrumPatternData::new(
+        hits.iter()
+            .map(|h| DrumEvent {
+                beat: h.start_beat,
+                kind: match h.stroke {
+                    music_core::TapanStroke::Boom => DrumKind::Kick,
+                    music_core::TapanStroke::Rim => DrumKind::Snare,
+                    music_core::TapanStroke::Ghost => DrumKind::Ghost,
+                },
+                velocity: h.velocity as f32,
+            })
+            .collect(),
+        length_beats,
+    ))
 }
 
 /// Push a voice document into live params (the designer's knobs while auditioning, and
@@ -478,6 +582,70 @@ pub fn apply_voice(voice: &InstrumentVoice, params: &AuditionParams) {
             p.tone_hz.set(*tone_hz as f32);
             p.dynamics.set(*dynamics as f32);
         }
+        (
+            InstrumentVoice::Tapan {
+                tune_hz,
+                decay,
+                skin,
+                rim_tone,
+                levels_db,
+            },
+            AuditionParams::Tapan(p),
+        ) => {
+            p.tune_hz.set(*tune_hz as f32);
+            p.decay.set(*decay as f32);
+            p.skin.set(*skin as f32);
+            p.rim_tone.set(*rim_tone as f32);
+            for (k, l) in levels_db.iter().enumerate() {
+                p.level_db[k].set(*l as f32);
+            }
+        }
+        (
+            InstrumentVoice::ChordPad {
+                wave,
+                attack_s,
+                release_s,
+                detune_cents,
+                cutoff_hz,
+                movement,
+                dynamics,
+            },
+            AuditionParams::ChordPad(p),
+        ) => {
+            p.wave.store((*wave).min(1), Ordering::Relaxed);
+            p.attack_s.set(*attack_s as f32);
+            p.release_s.set(*release_s as f32);
+            p.detune_cents.set(*detune_cents as f32);
+            p.cutoff_hz.set(*cutoff_hz as f32);
+            p.movement.set(*movement as f32);
+            p.dynamics.set(*dynamics as f32);
+        }
+        (
+            InstrumentVoice::Lead {
+                wave,
+                glide_s,
+                vibrato_hz,
+                vibrato_cents,
+                cutoff_hz,
+                resonance,
+                env_amount,
+                attack_s,
+                release_s,
+                drive,
+            },
+            AuditionParams::Lead(p),
+        ) => {
+            p.wave.store((*wave).min(2), Ordering::Relaxed);
+            p.glide_s.set(*glide_s as f32);
+            p.vibrato_hz.set(*vibrato_hz as f32);
+            p.vibrato_cents.set(*vibrato_cents as f32);
+            p.cutoff_hz.set(*cutoff_hz as f32);
+            p.resonance.set(*resonance as f32);
+            p.env_amount.set(*env_amount as f32);
+            p.attack_s.set(*attack_s as f32);
+            p.release_s.set(*release_s as f32);
+            p.drive.set(*drive as f32);
+        }
         _ => {}
     }
 }
@@ -510,6 +678,27 @@ fn audition_source(
             apply_voice(voice, &params);
             (params, Box::new(src))
         }
+        AuditionPattern::Tapan(pat) => {
+            let p = Arc::new(TapanParams::default());
+            let src = TapanSource::new(Arc::clone(&p), Arc::clone(clock), pat);
+            let params = AuditionParams::Tapan(p);
+            apply_voice(voice, &params);
+            (params, Box::new(src))
+        }
+        AuditionPattern::Chord(pat) => {
+            let p = Arc::new(ChordPadParams::default());
+            let src = ChordPadSource::new(Arc::clone(&p), Arc::clone(clock), pat);
+            let params = AuditionParams::ChordPad(p);
+            apply_voice(voice, &params);
+            (params, Box::new(src))
+        }
+        AuditionPattern::Lead(pat) => {
+            let p = Arc::new(LeadParams::default());
+            let src = LeadSource::new(Arc::clone(&p), Arc::clone(clock), pat);
+            let params = AuditionParams::Lead(p);
+            apply_voice(voice, &params);
+            (params, Box::new(src))
+        }
     }
 }
 
@@ -539,7 +728,9 @@ pub async fn instrument_audition_start(
     let midi = midi.unwrap_or(match voice {
         InstrumentVoice::Bass { .. } => 38.0,
         InstrumentVoice::Synth { .. } => 48.0,
-        InstrumentVoice::Drums { .. } => 36.0,
+        InstrumentVoice::Drums { .. } | InstrumentVoice::Tapan { .. } => 36.0,
+        InstrumentVoice::ChordPad { .. } => 55.0,
+        InstrumentVoice::Lead { .. } => 74.0,
     });
     let (params, src) = audition_source(&voice, &clock, midi);
     let g = s.graph.as_mut().expect("graph just started");
@@ -638,7 +829,9 @@ pub async fn instrument_render(
     let midi = midi.unwrap_or(match voice {
         InstrumentVoice::Bass { .. } => 38.0,
         InstrumentVoice::Synth { .. } => 48.0,
-        InstrumentVoice::Drums { .. } => 36.0,
+        InstrumentVoice::Drums { .. } | InstrumentVoice::Tapan { .. } => 36.0,
+        InstrumentVoice::ChordPad { .. } => 55.0,
+        InstrumentVoice::Lead { .. } => 74.0,
     });
     let buf = render_voice(&voice, bpm, seconds, 48_000, midi);
     let mut p = std::path::PathBuf::from(&path);

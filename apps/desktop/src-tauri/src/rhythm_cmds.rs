@@ -14,10 +14,16 @@ use audio_engine::{
     GraphCmd, GraphParams, NotePatternData, PatternNote, PatternParams, PatternSwap,
     PatternSynthSource, WavFormat,
 };
+use audio_engine::{
+    ChordEvent, ChordPadParams, ChordPadSource, ChordPatternData, LeadParams, LeadSource,
+    TapanParams, TapanSource,
+};
 use music_core::{
-    generate_arpeggio, generate_bass, generate_groove, generate_ostinato, static_spans,
-    tones_in_register, ArpDirection, ArpParams, BassParams as BassGenParams, Drum, GrooveParams,
-    GrooveStyle, Meter, Motif, OstinatoParams, TempoCandidate,
+    generate_arpeggio, generate_bass, generate_chord_pad, generate_groove, generate_lead,
+    generate_ostinato, generate_tapan, static_spans, tones_in_register, ArpDirection, ArpParams,
+    BassParams as BassGenParams, ChordPadParams as ChordPadGenParams, Drum, GrooveParams,
+    GrooveStyle, LeadPhraseParams, Meter, Motif, OstinatoParams, TapanPatternParams,
+    TempoCandidate,
 };
 use serde::{Deserialize, Serialize};
 use tauri::State;
@@ -33,6 +39,10 @@ pub const DRUMS_SLOT: usize = 12;
 pub const BASS_SLOT: usize = 13;
 pub const OSTINATO_SLOT: usize = 14;
 pub const ARP_SLOT: usize = 15;
+/// First slot of the Instrument Rack's extra parts (tapan, chord pad, lead …); one slot
+/// per part, up to `MAX_EXTRAS` (P1 R3).
+pub const EXTRA_SLOT0: usize = 16;
+pub const MAX_EXTRAS: usize = audio_engine::MAX_LAYERS - EXTRA_SLOT0;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DrumsSettings {
@@ -134,6 +144,105 @@ pub struct RhythmSettings {
     #[serde(default)]
     pub root_midi: Option<u8>,
     pub intonation: Intonation,
+    /// Extra parts of the Instrument Rack (P1 R3), in slot order from `EXTRA_SLOT0`.
+    #[serde(default)]
+    pub extras: Vec<ExtraPart>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ExtraKind {
+    Tapan,
+    ChordPad,
+    Lead,
+}
+
+impl ExtraKind {
+    pub fn name(self) -> &'static str {
+        match self {
+            ExtraKind::Tapan => "tapan",
+            ExtraKind::ChordPad => "chordpad",
+            ExtraKind::Lead => "lead",
+        }
+    }
+}
+
+/// One extra part: what plays (kind + optional instrument preset), how loud, and the
+/// generator's knobs (each kind reads the fields it needs; the others are ignored).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ExtraPart {
+    pub id: String,
+    pub kind: ExtraKind,
+    #[serde(default = "yes")]
+    pub on: bool,
+    #[serde(default = "extra_level")]
+    pub level_db: f32,
+    #[serde(default)]
+    pub instrument: Option<String>,
+    /// Tapan: share of off-positions with strokes; lead: share of steps that sound.
+    #[serde(default = "half")]
+    pub density: f64,
+    /// Tapan: velocity spread.
+    #[serde(default = "fifth")]
+    pub humanize: f64,
+    /// Tapan: a rim roll every N bars (0 = never).
+    #[serde(default = "four")]
+    pub fill_every_bars: u32,
+    /// Chord pad: release gap before the next chord (0..0.9 of its length).
+    #[serde(default = "tenth")]
+    pub gap: f64,
+    /// Chord pad: bars per chord event.
+    #[serde(default = "one")]
+    pub bars_per_chord: u32,
+    /// Lead: step length in beats.
+    #[serde(default = "half")]
+    pub step_beats: f64,
+    /// Lead: phrase length in bars.
+    #[serde(default = "two")]
+    pub phrase_bars: u32,
+    /// Lead: share of leaps.
+    #[serde(default = "fifth")]
+    pub leaps: f64,
+    /// Chord pad / lead register, MIDI.
+    #[serde(default = "reg_low")]
+    pub register_low: i32,
+    #[serde(default = "reg_high")]
+    pub register_high: i32,
+    #[serde(default = "one")]
+    pub seed: u32,
+    #[serde(default)]
+    pub locked: bool,
+}
+
+fn yes() -> bool {
+    true
+}
+fn extra_level() -> f32 {
+    -14.0
+}
+fn half() -> f64 {
+    0.5
+}
+fn fifth() -> f64 {
+    0.2
+}
+fn tenth() -> f64 {
+    0.1
+}
+fn one() -> u32 {
+    1
+}
+fn two() -> u32 {
+    2
+}
+fn four() -> u32 {
+    4
+}
+fn reg_low() -> i32 {
+    60
+}
+fn reg_high() -> i32 {
+    84
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -154,6 +263,9 @@ pub struct RhythmStatus {
     pub motif: Option<Motif>,
     pub root_pc: Option<u8>,
     pub chord_pcs: Vec<u8>,
+    /// Peaks of the extra parts, in `settings.extras` order (0 when a part is off).
+    #[serde(default)]
+    pub extra_peaks: Vec<f32>,
 }
 
 /// Instrument preset ids per part (empty string / None = legacy fields).
@@ -196,6 +308,227 @@ pub struct RhythmLive {
     pub bass_swap: Option<PatternSwap<BassPatternData>>,
     pub ost_swap: Option<PatternSwap<NotePatternData>>,
     pub arp_swap: Option<PatternSwap<NotePatternData>>,
+    /// Extra parts that are running (rack slots).
+    pub extras: Vec<ExtraLive>,
+}
+
+pub struct ExtraLive {
+    pub id: String,
+    pub kind: ExtraKind,
+    pub slot: usize,
+    pub voice: Option<InstrumentVoice>,
+    pub params: AuditionParams,
+    pub key: String,
+    pub swap: ExtraSwap,
+}
+
+pub enum ExtraSwap {
+    Drum(PatternSwap<DrumPatternData>),
+    Chord(PatternSwap<ChordPatternData>),
+    Note(PatternSwap<NotePatternData>),
+    None,
+}
+
+impl ExtraSwap {
+    fn send(&mut self, pat: ExtraPattern) {
+        match (self, pat) {
+            (ExtraSwap::Drum(sw), ExtraPattern::Drum(p)) => {
+                sw.send(p);
+            }
+            (ExtraSwap::Chord(sw), ExtraPattern::Chord(p)) => {
+                sw.send(p);
+            }
+            (ExtraSwap::Note(sw), ExtraPattern::Note(p)) => {
+                sw.send(p);
+            }
+            _ => {}
+        }
+    }
+}
+
+pub enum ExtraPattern {
+    Drum(Arc<DrumPatternData>),
+    Chord(Arc<ChordPatternData>),
+    Note(Arc<NotePatternData>),
+}
+
+/// The project's mode (all degrees) for melodic parts; the chord tones when there is
+/// no scale.
+fn mode_pcs(s: &Inner, pcs: &[(u8, f64)]) -> Vec<(u8, f64)> {
+    if let Some(scale) = s.project.as_ref().and_then(|p| p.manifest().scale.clone()) {
+        let v: Vec<(u8, f64)> = scale
+            .degrees_cents
+            .iter()
+            .map(|&c| {
+                let semis = (c / 100.0).round() as i32;
+                (
+                    ((scale.tonic_pc as i32 + semis).rem_euclid(12)) as u8,
+                    c - semis as f64 * 100.0,
+                )
+            })
+            .collect();
+        if !v.is_empty() {
+            return v;
+        }
+    }
+    pcs.to_vec()
+}
+
+fn build_extra(
+    s: &Inner,
+    set: &RhythmSettings,
+    part: &ExtraPart,
+    meter: &Meter,
+    pcs: &[(u8, f64)],
+) -> ExtraPattern {
+    let bars = set.bars.clamp(1, 64);
+    let length = bars as f64 * meter.bar_beats();
+    match part.kind {
+        ExtraKind::Tapan => {
+            let hits = generate_tapan(
+                meter,
+                &TapanPatternParams {
+                    density: part.density,
+                    humanize: part.humanize,
+                    fill_every_bars: part.fill_every_bars,
+                    seed: part.seed,
+                    bars,
+                },
+            );
+            ExtraPattern::Drum(crate::forge_cmds::tapan_pattern(&hits, length))
+        }
+        ExtraKind::ChordPad => {
+            let steps = generate_chord_pad(
+                pcs,
+                &ChordPadGenParams {
+                    bars_per_chord: part.bars_per_chord,
+                    gap: part.gap,
+                    register_low: part.register_low,
+                    register_high: part.register_high,
+                    bars,
+                },
+                meter,
+            );
+            let events = steps
+                .iter()
+                .map(|st| ChordEvent {
+                    beat: st.start_beat,
+                    length_beats: st.length_beats,
+                    hz: st
+                        .tones
+                        .iter()
+                        .map(|(m, c)| hz(s, *m, *c, set.intonation))
+                        .collect(),
+                    velocity: st.velocity as f32,
+                })
+                .collect();
+            ExtraPattern::Chord(Arc::new(ChordPatternData::new(events, length)))
+        }
+        ExtraKind::Lead => {
+            let tones = tones_in_register(&mode_pcs(s, pcs), part.register_low, part.register_high);
+            let notes = generate_lead(
+                &tones,
+                &LeadPhraseParams {
+                    density: part.density,
+                    step_beats: part.step_beats,
+                    phrase_bars: part.phrase_bars,
+                    leaps: part.leaps,
+                    register_low: part.register_low,
+                    register_high: part.register_high,
+                    seed: part.seed,
+                    bars,
+                },
+                meter,
+            );
+            let events = notes
+                .iter()
+                .map(|n| PatternNote {
+                    beat: n.start_beat,
+                    length_beats: n.length_beats,
+                    hz: hz(s, n.midi, n.cents, set.intonation),
+                    velocity: n.velocity as f32,
+                })
+                .collect();
+            ExtraPattern::Note(Arc::new(NotePatternData::new(events, length)))
+        }
+    }
+}
+
+/// Everything pattern-affecting about an extra part (level, instrument and lock are not).
+fn extra_key(part: &ExtraPart, meter: &Meter, pcs: &[(u8, f64)], set: &RhythmSettings) -> String {
+    format!(
+        "{:?}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{:?}:{:?}:{:?}",
+        part.kind,
+        part.density,
+        part.humanize,
+        part.fill_every_bars,
+        part.gap,
+        part.bars_per_chord,
+        part.step_beats,
+        part.phrase_bars,
+        part.leaps,
+        part.register_low,
+        part.register_high,
+        part.seed,
+        set.bars,
+        set.intonation,
+        pcs,
+        meter
+    )
+}
+
+fn extra_params_default(kind: ExtraKind) -> AuditionParams {
+    match kind {
+        ExtraKind::Tapan => AuditionParams::Tapan(Arc::new(TapanParams::default())),
+        ExtraKind::ChordPad => AuditionParams::ChordPad(Arc::new(ChordPadParams::default())),
+        ExtraKind::Lead => AuditionParams::Lead(Arc::new(LeadParams::default())),
+    }
+}
+
+/// The engine source for an extra part; `live` adds the pattern inbox for in-place swaps.
+fn make_extra(
+    params: &AuditionParams,
+    clock: &Arc<BeatClock>,
+    pat: &ExtraPattern,
+    live: bool,
+) -> (Box<dyn audio_engine::Source>, ExtraSwap) {
+    match (params, pat) {
+        (AuditionParams::Tapan(p), ExtraPattern::Drum(d)) => {
+            let src = TapanSource::new(Arc::clone(p), Arc::clone(clock), Arc::clone(d));
+            if live {
+                let (swap, inbox) = pattern_channel::<DrumPatternData>();
+                (Box::new(src.with_inbox(inbox)), ExtraSwap::Drum(swap))
+            } else {
+                (Box::new(src), ExtraSwap::None)
+            }
+        }
+        (AuditionParams::ChordPad(p), ExtraPattern::Chord(d)) => {
+            let src = ChordPadSource::new(Arc::clone(p), Arc::clone(clock), Arc::clone(d));
+            if live {
+                let (swap, inbox) = pattern_channel::<ChordPatternData>();
+                (Box::new(src.with_inbox(inbox)), ExtraSwap::Chord(swap))
+            } else {
+                (Box::new(src), ExtraSwap::None)
+            }
+        }
+        (AuditionParams::Lead(p), ExtraPattern::Note(d)) => {
+            let src = LeadSource::new(Arc::clone(p), Arc::clone(clock), Arc::clone(d));
+            if live {
+                let (swap, inbox) = pattern_channel::<NotePatternData>();
+                (Box::new(src.with_inbox(inbox)), ExtraSwap::Note(swap))
+            } else {
+                (Box::new(src), ExtraSwap::None)
+            }
+        }
+        _ => unreachable!("extra kind and pattern always match (build_extra)"),
+    }
+}
+
+/// All slots the section uses right now (the four parts and the running extras).
+fn part_slots(live: &RhythmLive) -> Vec<usize> {
+    let mut v = vec![DRUMS_SLOT, BASS_SLOT, OSTINATO_SLOT, ARP_SLOT];
+    v.extend(live.extras.iter().map(|e| e.slot));
+    v
 }
 
 pub(crate) fn timing(s: &Inner) -> CmdResult<(f64, Meter)> {
@@ -468,6 +801,35 @@ fn keys(set: &RhythmSettings, meter: &Meter, root: u8, pcs: &[(u8, f64)]) -> [St
 
 fn validate(set: &RhythmSettings) -> CmdResult<()> {
     let unit = |v: f64| (0.0..=1.0).contains(&v);
+    if set.extras.len() > MAX_EXTRAS {
+        return Err(err(
+            "invalid_argument",
+            format!("at most {MAX_EXTRAS} extra parts"),
+        ));
+    }
+    for (i, x) in set.extras.iter().enumerate() {
+        if x.id.is_empty() || x.id.len() > 32 || set.extras[..i].iter().any(|y| y.id == x.id) {
+            return Err(err("invalid_argument", "extra part ids must be unique"));
+        }
+        if !(-40.0..=6.0).contains(&x.level_db)
+            || !unit(x.density)
+            || !unit(x.humanize)
+            || !(0.0..=0.9).contains(&x.gap)
+            || !unit(x.leaps)
+            || x.fill_every_bars > 64
+            || !(1..=16).contains(&x.bars_per_chord)
+            || !(0.125..=2.0).contains(&x.step_beats)
+            || !(1..=8).contains(&x.phrase_bars)
+            || !(24..=108).contains(&x.register_low)
+            || !(24..=108).contains(&x.register_high)
+            || x.register_low >= x.register_high
+        {
+            return Err(err(
+                "invalid_argument",
+                format!("extra part {} out of range", x.id),
+            ));
+        }
+    }
     let d = &set.drums;
     let b = &set.bass;
     let o = &set.ostinato;
@@ -529,6 +891,19 @@ pub(crate) fn apply_params(
 ) {
     let set = &live.settings;
     let layer = |slot: usize| &layers[slot];
+    // Extra parts: the preset shapes the voice, the part's slider sets the level.
+    for e in &live.extras {
+        if let Some(v) = e.voice.as_ref() {
+            apply_voice(v, &e.params);
+        }
+        let level = set
+            .extras
+            .iter()
+            .find(|p| p.id == e.id)
+            .map(|p| p.level_db)
+            .unwrap_or(extra_level());
+        layer(e.slot).gain_db.set(lvl(level));
+    }
     // Parts that reference an instrument preset take their voice from it.
     if let (Some(v), Some(p)) = (live.voices[0].as_ref(), live.drums.as_ref()) {
         apply_voice(v, &AuditionParams::Drums(Arc::clone(p)));
@@ -591,7 +966,7 @@ fn apply_live(s: &Inner, live: &RhythmLive) {
         let own = if db <= -39.5 { -120.0 } else { db };
         crate::bus_cmds::bus_gain(s, crate::bus_cmds::BUS_RHYTHM, own)
     };
-    for slot in [DRUMS_SLOT, BASS_SLOT, OSTINATO_SLOT, ARP_SLOT] {
+    for slot in part_slots(live) {
         crate::bus_cmds::apply_bus_strip(
             s,
             crate::bus_cmds::BUS_RHYTHM,
@@ -634,6 +1009,7 @@ fn sync(s: &mut Inner, set: RhythmSettings) -> CmdResult<()> {
         bass_swap,
         ost_swap,
         arp_swap,
+        extras: prev_extras,
         ..
     } = live_prev;
     let voices = resolve_voices(s, &set.instruments);
@@ -651,6 +1027,7 @@ fn sync(s: &mut Inner, set: RhythmSettings) -> CmdResult<()> {
         bass_swap,
         ost_swap,
         arp_swap,
+        extras: Vec::new(),
     };
     // Drums.
     if set.drums.on {
@@ -786,8 +1163,53 @@ fn sync(s: &mut Inner, set: RhythmSettings) -> CmdResult<()> {
         live.arp_swap = None;
         live.keys[3].clear();
     }
+    // Extra parts (rack slots): reuse a running part with the same id, kind and slot
+    // (push a new pattern when its key changed), build the rest, clear what vanished.
+    let mut prev_extras = prev_extras;
+    let mut next_extras: Vec<ExtraLive> = Vec::new();
+    for (i, part) in set.extras.iter().enumerate().take(MAX_EXTRAS) {
+        if !part.on {
+            continue;
+        }
+        let slot = EXTRA_SLOT0 + i;
+        let key = extra_key(part, &meter, &pcs, &set);
+        let voice = resolve_voice(s, part.instrument.as_deref());
+        if let Some(pos) = prev_extras
+            .iter()
+            .position(|e| e.id == part.id && e.kind == part.kind && e.slot == slot)
+        {
+            let mut e = prev_extras.swap_remove(pos);
+            if e.key != key {
+                let pat = build_extra(s, &set, part, &meter, &pcs);
+                e.swap.send(pat);
+                e.key = key;
+            }
+            e.voice = voice;
+            next_extras.push(e);
+        } else {
+            let pat = build_extra(s, &set, part, &meter, &pcs);
+            let params = extra_params_default(part.kind);
+            let (src, swap) = make_extra(&params, &clock, &pat, true);
+            let g = s.graph.as_mut().expect("graph");
+            g.params().layers[slot].gain_db.set(-60.0);
+            g.send(GraphCmd::SetSource { slot, source: src });
+            next_extras.push(ExtraLive {
+                id: part.id.clone(),
+                kind: part.kind,
+                slot,
+                voice,
+                params,
+                key,
+                swap,
+            });
+        }
+    }
+    for e in prev_extras {
+        clear(s, e.slot);
+    }
+    live.extras = next_extras;
     if let Some(g) = s.graph.as_ref() {
-        for slot in [DRUMS_SLOT, BASS_SLOT, OSTINATO_SLOT, ARP_SLOT] {
+        for slot in part_slots(&live) {
             g.params().layers[slot].pan.set(0.0);
         }
     }
@@ -802,11 +1224,11 @@ pub fn release_all(s: &mut Inner) {
     if let Some(live) = s.rhythm.take() {
         live.clock.stop();
         if let Some(g) = s.graph.as_mut() {
-            for slot in [DRUMS_SLOT, BASS_SLOT, OSTINATO_SLOT, ARP_SLOT] {
+            for slot in DRUMS_SLOT..audio_engine::MAX_LAYERS {
                 g.params().layers[slot].gain_db.set(-60.0);
             }
             std::thread::sleep(std::time::Duration::from_millis(30));
-            for slot in [DRUMS_SLOT, BASS_SLOT, OSTINATO_SLOT, ARP_SLOT] {
+            for slot in DRUMS_SLOT..audio_engine::MAX_LAYERS {
                 g.send(GraphCmd::Clear { slot });
             }
         }
@@ -843,6 +1265,7 @@ fn status(s: &mut Inner) -> CmdResult<RhythmStatus> {
         motif: None,
         root_pc: None,
         chord_pcs: Vec::new(),
+        extra_peaks: Vec::new(),
     };
     let Some(live) = s.rhythm.as_ref() else {
         return Ok(out);
@@ -853,6 +1276,12 @@ fn status(s: &mut Inner) -> CmdResult<RhythmStatus> {
         out.chord_pcs = pcs.iter().map(|p| p.0).collect();
     }
     let clock = Arc::clone(&live.clock);
+    let extra_slots: Vec<Option<usize>> = live
+        .settings
+        .extras
+        .iter()
+        .map(|p| live.extras.iter().find(|e| e.id == p.id).map(|e| e.slot))
+        .collect();
     let Some(graph) = s.graph.as_mut() else {
         return Ok(out);
     };
@@ -872,6 +1301,10 @@ fn status(s: &mut Inner) -> CmdResult<RhythmStatus> {
         m.layers.get(OSTINATO_SLOT).copied().unwrap_or(0.0),
         m.layers.get(ARP_SLOT).copied().unwrap_or(0.0),
     ];
+    out.extra_peaks = extra_slots
+        .iter()
+        .map(|slot| slot.and_then(|sl| m.layers.get(sl).copied()).unwrap_or(0.0))
+        .collect();
     out.master_peak = m.master_peak;
     out.limiter_gain = m.limiter_gain;
     out.stream_errors = st.stream_errors;
@@ -911,6 +1344,7 @@ pub async fn start_rhythm(
             bass_swap: None,
             ost_swap: None,
             arp_swap: None,
+            extras: Vec::new(),
         });
     }
     if let Err(e) = sync(&mut s, settings) {
@@ -979,6 +1413,11 @@ pub async fn rhythm_regenerate(settings: RhythmSettings) -> CmdResult<RhythmSett
     if !set.arp.locked {
         set.arp.seed = next();
     }
+    for x in set.extras.iter_mut() {
+        if !x.locked {
+            x.seed = next();
+        }
+    }
     Ok(set)
 }
 
@@ -991,8 +1430,13 @@ pub const PART_NAMES: [&str; 4] = ["drums", "bass", "ostinato", "arp"];
 /// part that was on (post-fader, pre-master), all the same length.
 pub struct RhythmOffline {
     pub mix: AudioBuffer,
-    pub stems: Vec<(&'static str, AudioBuffer)>,
+    pub stems: Vec<(String, AudioBuffer)>,
     pub seconds: f64,
+}
+
+/// Stem name of an extra part: its kind and 1-based position ("tapan-1").
+pub fn extra_stem_name(part: &ExtraPart, index: usize) -> String {
+    format!("{}-{}", part.kind.name(), index + 1)
 }
 
 /// Live handles plus (slot, source) pairs for an offline graph.
@@ -1022,6 +1466,7 @@ pub(crate) fn offline_parts(
         bass_swap: None,
         ost_swap: None,
         arp_swap: None,
+        extras: Vec::new(),
     };
     let mut sources: Vec<(usize, Box<dyn audio_engine::Source>)> = Vec::new();
     if settings.drums.on {
@@ -1072,6 +1517,25 @@ pub(crate) fn offline_parts(
             )),
         ));
         live.arp = Some(p);
+    }
+    for (i, part) in settings.extras.iter().enumerate().take(MAX_EXTRAS) {
+        if !part.on {
+            continue;
+        }
+        let slot = EXTRA_SLOT0 + i;
+        let pat = build_extra(s, settings, part, meter, pcs);
+        let params = extra_params_default(part.kind);
+        let (src, swap) = make_extra(&params, &clock, &pat, false);
+        sources.push((slot, src));
+        live.extras.push(ExtraLive {
+            id: part.id.clone(),
+            kind: part.kind,
+            slot,
+            voice: resolve_voice(s, part.instrument.as_deref()),
+            params,
+            key: String::new(),
+            swap,
+        });
     }
     Ok((live, sources))
 }
@@ -1157,8 +1621,20 @@ pub fn render_section(
         {
             if on[i] {
                 stems.push((
-                    PART_NAMES[i],
+                    PART_NAMES[i].to_string(),
                     AudioBuffer::new(rate, ch as u16, std::mem::take(&mut stem_bufs[slot])),
+                ));
+            }
+        }
+        for (i, part) in settings.extras.iter().enumerate().take(MAX_EXTRAS) {
+            if part.on {
+                stems.push((
+                    extra_stem_name(part, i),
+                    AudioBuffer::new(
+                        rate,
+                        ch as u16,
+                        std::mem::take(&mut stem_bufs[EXTRA_SLOT0 + i]),
+                    ),
                 ));
             }
         }
@@ -1459,6 +1935,70 @@ mod render_tests {
     }
 
     #[test]
+    fn extra_parts_render_their_own_stems_and_follow_presets() {
+        let s = Inner::default();
+        let meter = Meter {
+            numerator: 7,
+            unit: 8,
+            grouping: vec![2, 2, 3],
+        };
+        let pcs = vec![(2u8, 0.0), (5u8, 0.0), (9u8, 0.0)];
+        let ctx = SectionContext {
+            bpm: 120.0,
+            meter: &meter,
+            root: 2,
+            pcs: &pcs,
+        };
+        let mut set = settings();
+        set.drums.on = false;
+        set.bass.on = false;
+        set.ostinato.on = false;
+        set.arp.on = false;
+        let extra = |id: &str, kind: ExtraKind| ExtraPart {
+            id: id.into(),
+            kind,
+            on: true,
+            level_db: -10.0,
+            instrument: None,
+            density: 0.5,
+            humanize: 0.2,
+            fill_every_bars: 2,
+            gap: 0.1,
+            bars_per_chord: 1,
+            step_beats: 0.5,
+            phrase_bars: 2,
+            leaps: 0.2,
+            register_low: 50,
+            register_high: 84,
+            seed: 3,
+            locked: false,
+        };
+        set.extras = vec![
+            extra("x1", ExtraKind::Tapan),
+            extra("x2", ExtraKind::ChordPad),
+            extra("x3", ExtraKind::Lead),
+        ];
+        validate(&set).unwrap();
+        let r = render_section(&s, &set, &ctx, 2, 48_000, true).unwrap();
+        let names: Vec<&str> = r.stems.iter().map(|(n, _)| n.as_str()).collect();
+        assert_eq!(names, vec!["tapan-1", "chordpad-2", "lead-3"]);
+        let peak = |b: &AudioBuffer| b.samples.iter().fold(0.0f32, |m, x| m.max(x.abs()));
+        for (name, stem) in &r.stems {
+            assert!(peak(stem) > 0.02, "{name} audible: {}", peak(stem));
+        }
+        assert!(peak(&r.mix) > 0.05 && peak(&r.mix) <= 1.0);
+        // A preset changes the sound: the deep tapan differs from the default one.
+        let mut with_preset = set.clone();
+        with_preset.extras[0].instrument = Some("factory:tapan.deep".into());
+        let r2 = render_section(&s, &with_preset, &ctx, 2, 48_000, true).unwrap();
+        assert_ne!(r.stems[0].1.samples, r2.stems[0].1.samples);
+        // Too many or duplicate ids are refused.
+        let mut bad = set.clone();
+        bad.extras.push(extra("x1", ExtraKind::Lead));
+        assert!(validate(&bad).is_err());
+    }
+
+    #[test]
     fn offline_render_with_instrument_presets_is_audible_and_differs_from_legacy() {
         let s = Inner::default();
         let meter = Meter::new(7, 8);
@@ -1535,7 +2075,7 @@ mod render_tests {
         let peak = a.mix.samples.iter().fold(0.0f32, |m, x| m.max(x.abs()));
         assert!(peak > 0.05 && peak <= 1.0, "audible, not clipping: {peak}");
         assert_eq!(
-            a.stems.iter().map(|(n, _)| *n).collect::<Vec<_>>(),
+            a.stems.iter().map(|(n, _)| n.as_str()).collect::<Vec<_>>(),
             vec!["drums", "bass", "ostinato"]
         );
         // Stems are pre-master; with master at 0 dB and no reverb their sum is the mix

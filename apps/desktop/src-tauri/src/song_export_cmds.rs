@@ -25,8 +25,8 @@ use crate::commands::{err, CmdResult};
 use crate::graph_cmds::{DroneSettings, DRONE_SLOT, PAD_SLOT};
 use crate::pad_cmds::PadSettings;
 use crate::rhythm_cmds::{
-    apply_params, offline_parts, RhythmSettings, SectionContext, ARP_SLOT, BASS_SLOT, DRUMS_SLOT,
-    OSTINATO_SLOT, PART_NAMES,
+    apply_params, extra_stem_name, offline_parts, RhythmSettings, SectionContext, ARP_SLOT,
+    BASS_SLOT, DRUMS_SLOT, EXTRA_SLOT0, MAX_EXTRAS, OSTINATO_SLOT, PART_NAMES,
 };
 use crate::state::{AppState, Inner};
 
@@ -74,7 +74,7 @@ pub async fn export_song(
     let want_stems = stems.unwrap_or(true);
     let gp = Arc::new(GraphParams::default());
     let mut pending: Vec<(usize, Box<dyn audio_engine::Source>)> = Vec::new();
-    let mut groups: Vec<(&'static str, Vec<usize>)> = Vec::new();
+    let mut groups: Vec<(String, Vec<usize>)> = Vec::new();
 
     // ---- everything that needs the app state, under one lock ----
     let (duration, ambient_pack, rhythm_live, markers_rows, manifest_json) = {
@@ -99,7 +99,7 @@ pub async fn export_song(
                     pending.push((ARRANGE_SLOT, Box::new(ClipSource::new(params, clips))));
                     gp.layers[ARRANGE_SLOT].gain_db.set(0.0);
                     duration = duration.max(a.duration());
-                    groups.push(("clips", vec![ARRANGE_SLOT]));
+                    groups.push(("clips".to_string(), vec![ARRANGE_SLOT]));
                 }
             }
         }
@@ -113,7 +113,7 @@ pub async fn export_song(
                 .set(bus_gain(&s, BUS_DRONE, set.level_db));
             apply_bus_strip(&s, BUS_DRONE, &gp.layers[DRONE_SLOT], 0.0, 20_000.0, 10.0);
             pending.push((DRONE_SLOT, Box::new(DroneSource::new(params))));
-            groups.push(("drone", vec![DRONE_SLOT]));
+            groups.push(("drone".to_string(), vec![DRONE_SLOT]));
         }
         // Pad.
         if let Some(set) = include.pad.as_ref() {
@@ -127,7 +127,7 @@ pub async fn export_song(
                 PAD_SLOT,
                 Box::new(PadSource::new(params).with_sample_rate(rate)),
             ));
-            groups.push(("pad", vec![PAD_SLOT]));
+            groups.push(("pad".to_string(), vec![PAD_SLOT]));
         }
         // Atmosphere (rack + its program): sources now, parameters per block below.
         let ambient_pack = if include.ambient {
@@ -161,7 +161,7 @@ pub async fn export_song(
                         live.push(params);
                         slots.push(AMBIENT_SLOT0 + i);
                     }
-                    groups.push(("atmosphere", slots));
+                    groups.push(("atmosphere".to_string(), slots));
                     let end = a.program.end();
                     if end > 0.0 {
                         duration = duration.max(end);
@@ -189,7 +189,7 @@ pub async fn export_song(
                 bus_gain(&s, BUS_RHYTHM, own)
             };
             apply_params(&gp.layers, &live, &lvl);
-            for slot in [DRUMS_SLOT, BASS_SLOT, OSTINATO_SLOT, ARP_SLOT] {
+            for slot in DRUMS_SLOT..audio_engine::MAX_LAYERS {
                 apply_bus_strip(&s, BUS_RHYTHM, &gp.layers[slot], 0.0, 20_000.0, 10.0);
             }
             pending.extend(sources);
@@ -199,7 +199,12 @@ pub async fn export_song(
             {
                 let on = [set.drums.on, set.bass.on, set.ostinato.on, set.arp.on][i];
                 if on {
-                    groups.push((PART_NAMES[i], vec![slot]));
+                    groups.push((PART_NAMES[i].to_string(), vec![slot]));
+                }
+            }
+            for (i, part) in set.extras.iter().enumerate().take(MAX_EXTRAS) {
+                if part.on {
+                    groups.push((extra_stem_name(part, i), vec![EXTRA_SLOT0 + i]));
                 }
             }
             Some(live)
@@ -235,7 +240,7 @@ pub async fn export_song(
             "tempo_map": song_map.tempo_map,
             "meter_map": song_map.meter_map,
             "sections": song_map.sections,
-            "stems": groups.iter().map(|(n, _)| *n).collect::<Vec<_>>(),
+            "stems": groups.iter().map(|(n, _)| n.as_str()).collect::<Vec<_>>(),
         });
         (
             duration,
