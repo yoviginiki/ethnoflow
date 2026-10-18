@@ -31,8 +31,8 @@ docs/                    PRODUCT_VISION, ARCHITECTURE, ROADMAP, DECISIONS (ADRs)
 scripts/release/         Windows build + smoke scripts
 ```
 
-Crates planned but not yet created (do not stub them with fake code): `crates/arranger`,
-`packages/lesson-content`. (`crates/analysis` exists since 2026-10-18 — ADR-0021;
+Crates planned but not yet created (do not stub them with fake code): `crates/arranger`.
+(`crates/lessons` + `packages/lesson-content` exist since 2026-10-18 — Academy v1.) (`crates/analysis` exists since 2026-10-18 — ADR-0021;
 `crates/plugin-host` + `crates/clap-fixture` exist since 2026-10-18 — ADR-0018 accepted.) (`packages/project-schema` became `crates/project`, ADR-0015.)
 
 Product concept for the instrument layer (Phase 2+): `docs/INSTRUMENT_MACHINE_CONCEPT.md`.

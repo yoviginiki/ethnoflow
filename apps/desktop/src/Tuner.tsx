@@ -3,6 +3,8 @@ import type { InstrumentProfile, Scale } from "./api";
 import { centsFromScale, hzToMidi, noteParts } from "./format";
 import { messages } from "./i18n";
 import { useStore } from "./store";
+import { FingeringDiagram } from "./FingeringDiagram";
+import { chartFor } from "./fingerings";
 
 interface Props {
   hz: number | null;
@@ -146,6 +148,8 @@ export function Tuner({ hz, confidence, a4, scale, active, profile }: Props) {
   })();
   const written = parts && profile && profile.transpose_semitones !== 0 ? noteParts(parts.midi + profile.transpose_semitones) : null;
   const scaleClass = scaleOff === null ? "" : Math.abs(scaleOff) <= IN_SCALE_TOLERANCE_CENTS ? "in" : "out";
+  // F2.6: the owner's kaval chart next to the reading when the profile is a kaval.
+  const chart = chartFor(profile?.instrument);
 
   return (
     <section className="tuner" aria-label={t.tuner} aria-live="polite">
@@ -199,6 +203,7 @@ export function Tuner({ hz, confidence, a4, scale, active, profile }: Props) {
         </div>
       </div>
 
+      {chart && active && parts && <FingeringDiagram chart={chart} midi={parts.midi} compact showAlternatives={false} />}
       <div className="practice">
         <label className="inline small">
           <input

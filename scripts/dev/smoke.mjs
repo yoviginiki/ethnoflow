@@ -133,7 +133,7 @@ const audible = (p, min = 0.02) => {
   return `${path.basename(p)} ${s.seconds.toFixed(1)} s peak ${s.peak.toFixed(2)}`;
 };
 
-const SCREENS = ["home", "play", "compose", "studio", "ambient", "soundscapes", "rhythm", "library", "instrument", "songmap", "samples", "references", "start", "help"];
+const SCREENS = ["home", "play", "compose", "studio", "ambient", "soundscapes", "rhythm", "library", "instrument", "songmap", "samples", "references", "academy", "start", "help"];
 
 async function main() {
   await step("bridge: ping", () => expectOk(send({ op: "ping" })).pong === true || Promise.reject(new Error("no pong")));
@@ -237,6 +237,27 @@ async function main() {
     const b = expectOk(send({ op: "transport_loop" }));
     if (b.loop_bars) throw new Error("loop not cleared");
     return "3–6";
+  });
+  await step("academy: lessons validate, instances are seeded, scoring and progress round trip", () => {
+    const v = expectOk(send({ op: "academy_lessons" }));
+    if (v.count < 40) throw new Error(`only ${v.count} lessons`);
+    if (!v.lessons.some((l) => l.track === "kaval")) throw new Error("no kaval track");
+    const a = expectOk(send({ op: "academy_instance", id: "l2-02-intervals", seed: 5 }));
+    const b = expectOk(send({ op: "academy_instance", id: "l2-02-intervals", seed: 5 }));
+    if (JSON.stringify(a.instance) !== JSON.stringify(b.instance)) throw new Error("instance not reproducible");
+    if (a.instance.kind !== "ear" || a.instance.rounds.length !== 8) throw new Error("expected 8 ear rounds");
+    const lo = a.context.lo_midi, hi = a.context.hi_midi;
+    for (const r of a.instance.rounds) for (const n of r.prompt) if (n.midi < lo || n.midi > hi) throw new Error(`prompt ${n.midi} outside ${lo}..${hi}`);
+    const clap = expectOk(send({ op: "academy_instance", id: "l1-04-pulse", seed: 1 }));
+    const sc = expectOk(send({ op: "academy_score_rhythm", onsets: clap.instance.grid, grid: clap.instance.grid, level: "beginner" }));
+    if (Math.abs(sc.score - 1) > 1e-9) throw new Error(`perfect claps scored ${sc.score}`);
+    const before = v.lessons.find((l) => l.id === "l0-03-clipping").passed;
+    const rec = expectOk(send({ op: "academy_record", id: "l0-03-clipping", score: 1, passed: true }));
+    if (!rec.passed_at_ms) throw new Error("record did not pass");
+    const after = expectOk(send({ op: "academy_lessons" })).lessons.find((l) => l.id === "l0-03-clipping").passed;
+    if (!after) throw new Error("progress not read back");
+    if (!before) expectOk(send({ op: "academy_reset", id: "l0-03-clipping" }));
+    return `${v.count} lessons, context ${lo}..${hi}, rhythm score ${sc.score}`;
   });
   await step("presets: save, list, load", () => {
     const saved = expectOk(send({ op: "save_preset", kind: "rhythm", name: "smoke rhythm", tags: ["smoke"], notes: "automated" }));

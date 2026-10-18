@@ -87,6 +87,46 @@ track, trainer). These are proposals: on a dense mix the tracker follows the mos
 voice, so it works best on solo passages and an up-front vocal or kaval.
 From the terminal: `reference_add`, `reference_analyze`, `reference_report` (see the bridge).
 
+## Academy (Learn music)
+
+Home › **Learn music**. Lessons of 5–10 minutes: a short explanation (three sentences at
+most), a demonstration the app plays itself, an exercise with a real check, and a quiz.
+Progress is a local file (no points, streaks or notifications); "passed" means a threshold
+was met. The whole programme is planned in `docs/academy/CURRICULUM.md`.
+
+- **Levels 0–3** (28 lessons): First sound, Notes and rhythm, Melody, Harmony. Order: top to
+  bottom, nothing is locked. The last lesson of level 3 is the guided **Lesson No. 1 "The ancient
+  kaval meets 174 BPM"** (tone → rhythm 174 → take → scale → Space → preset).
+- **Kaval (Thracian style)** (14 lessons) from the owner's knowledge base: sound, fingers and
+  grip, registers (with the fingering chart), sitnene and tongue-less articulation, klepane,
+  kaba; then Dosev's ornamentation (1994): vibrato, cutting, substitution, glissando, accents
+  (AT), short trill, the song appendix. Every lesson has a "Read in the knowledge base" button
+  to its exact section.
+- **Fingerings**: the whole chart for the kaval in D by register (kaba, 1–4); click a note to
+  hear it and see the diagram (T 2 3 4 | 5 6 7 8; closed ● open ○ optional ◌ half ◐). The same
+  diagram appears next to the tuner when the project profile is a kaval, and in the exercises.
+- **Knowledge base**: the full `docs/kaval-baza-znania.md` with a table of contents by part
+  and chapter and search (tables and quotes render).
+
+Exercises: **quiz**; **hold the tone** (the tuner counts seconds in tolerance; with a stability
+σ target it is measured too); **read the note** (a note is shown, you play it, reaction time is
+measured; on a kaval the fingering and the nearest one to what you play are shown); **hear and
+repeat** (the synth plays the phrase, then you; timing is aligned to your first note; the
+trainer's evaluation scores it); **ear** for interval / chord / mode / meter (rounds with
+choices); **clapping** (one count-in bar, then the microphone counts hits against the grid;
+result in ms); **play along** (the phrase becomes a MIDI take and opens in Play & record ›
+Trainer; the Wait / Rhythm result is recorded in the lesson); **guided steps** (they tick
+themselves from the real state: screen, metronome, tuner steady N s, rhythm running at X BPM,
+new take with ≥ N notes, scale chosen, Space ≥ X, preset saved). While a guided lesson runs, a
+bar on every screen shows the current step.
+
+Exercises are **in the project scale and the instrument range** (profile or type). Without a
+scale they use C major and a middle range and say so; pick a scale in the Scale panel.
+Level: beginner ±30 c / ±80 ms, intermediate ±20 / ±50, advanced ±10 / ±30. "Once more" gives a
+new variant (seed) of the same exercise.
+From the terminal: `academy_lessons`, `academy_instance`, `academy_score_rhythm`,
+`academy_record`, `academy_reset` (see the bridge).
+
 ## Soundscapes
 
 The same layers as Atmosphere, one at a time, with big knobs:

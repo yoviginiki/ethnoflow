@@ -3,6 +3,32 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Academy v1 (Phase 6 start, F6.1–F6.3 first slice, 2026-10-18 evening).** The owner asked for
+  "a maximally complete and easy" music curriculum and gave a kaval knowledge base
+  (`docs/kaval-baza-znania.md`: fingering tables, Snider self-tutor summary, Dosev 1994 ornamentation
+  notes) to put into it. Plan: `docs/academy/CURRICULUM.md` (levels 0–6, exercise catalogue,
+  lesson format, progress, "Create a song" = the same guided engine).
+  - `crates/lessons`: lesson schema + validator (ids, translations, ranges, `next`, quiz answers,
+    meters, guided checks), seeded exercise generators inside a `Context` (tonic, scale kind,
+    instrument range; per-lesson range override), scoring (`score_rhythm`, `score_hold`,
+    `score_repeat` aligned on the first onset + trainer evaluation). 5 tests, incl. "every
+    embedded lesson instantiates in a kaval range".
+  - `packages/lesson-content/lessons`: levels 0–3 (28 lessons, BG+EN) and the **kaval track**
+    (14 lessons) with `reading` links into the knowledge base; `fingerings/kaval-d.json` = the
+    owner's complete chart (kaba, registers 1–4, alternatives, the missing E♭ note).
+  - Shell `academy_cmds.rs`: lessons + progress (`<config>/academy/progress.json`), instances,
+    demo/prompt playback through the synth (`academy_play`), rhythm/repeat scoring, record/reset,
+    `academy_new_take` (guided check), `academy_play_along` (phrase → MIDI take → trainer).
+  - UI: **Научи музика** screen (tabs Levels / Kaval / Fingerings / Knowledge base), exercise
+    components (quiz, hold tone, sight reading, hear & repeat, ear interval/chord/mode/meter,
+    rhythm clap with mic onsets, play-along hand-off, guided steps), `FingeringDiagram` (also
+    next to the tuner for kaval profiles), knowledge-base reader (markdown parser now renders
+    tables, quotes, deep headings; sections by chapter; search), guided banner on every screen
+    (`useAcademyGuided` evaluates checks against real state), trainer reports play-along
+    results back to the lesson. Bridge ops + smoke step; guide BG/EN.
+  - Known limits: demonstrations use the built-in flute synth (profile samples = v3); vibrato,
+    cutting and glissando lessons are reading + quiz (no measurement of the ornament itself yet);
+    levels 4–6 and the "Create a song" wizard are v2.
 - **`crates/music-core`** (pure): Hz ↔ MIDI at a configurable A4; scales (7 modes,
   harmonic/melodic minor, hijaz, double harmonic, pentatonics, user-defined cents);
   tonic/mode hypotheses as a ranked probability list (never a single answer);

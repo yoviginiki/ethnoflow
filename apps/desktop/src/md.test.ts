@@ -28,3 +28,26 @@ describe("md", () => {
     expect(s[1].id).toBe("дрон");
   });
 });
+
+describe("md tables and quotes", () => {
+  it("parses a pipe table with escaped pipes, quotes and deep headings", () => {
+    const row = "| A `x \\| y` | B |";
+    const b = parseMarkdown(["#### Deep", "", "> note one", "> continues", "", row, "|---|---|", "| 1 | **2** |", "| 3 | 4 |", "", "text"].join("\n"));
+    expect(b[0]).toMatchObject({ kind: "heading", level: 4, text: "Deep" });
+    expect(b[1]).toMatchObject({ kind: "quote" });
+    expect((b[1] as { inlines: { text: string }[] }).inlines.map((i) => i.text).join("")).toBe("note one continues");
+    const t = b[2] as { kind: string; header: { text: string }[][]; rows: { text: string }[][][] };
+    expect(t.kind).toBe("table");
+    expect(t.header[0].map((i) => i.text).join("")).toBe("A x | y");
+    expect(t.rows.length).toBe(2);
+    expect(t.rows[0][1][0]).toMatchObject({ kind: "bold", text: "2" });
+    expect(b[3]).toMatchObject({ kind: "paragraph" });
+  });
+
+  it("sections can split at ### too", () => {
+    const s = sections(parseMarkdown("## Част 1\n### Дупки\nx\n### Регистри\ny"), 3);
+    expect(s.map((x) => x.title)).toEqual(["Част 1", "Дупки", "Регистри"]);
+    expect(s[2].text).toContain("y");
+  });
+});
+

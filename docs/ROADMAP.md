@@ -12,7 +12,7 @@ this file tracks status and the concrete Phase 1 plan.
 | 3 | Harmony / drone MVP | not started |
 | 4 | Liquid DnB engine | **0.4.0**: rhythm section (synthesized drums, bass, ostinato, arpeggio) on one beat clock in Compose First, sections, tempo from the take, countermelody; F4.4 CLAP spike deferred (needs owner's go for the dependency) |
 | 5 | Mini DAW + export | **F5.1 pulled forward (0.2.9)**: tracks/clips editor on the audio graph, after the owner's feedback that the pieces were not connected; F5.2–F5.4 not started |
-| 6 | Beginner Academy v1 | not started |
+| 6 | Beginner Academy v1 | **started 2026-10-18** (levels 0–3 + kaval track, see docs/academy/CURRICULUM.md) |
 | 7 | Intelligent variations | not started |
 | 8 | Live accompanist R&D | not started |
 | 9 | Release readiness | not started |
@@ -152,7 +152,7 @@ one limiter — together with an explicit background play/stop in every screen
 | 11 | Phrase & Vocal Chopper | pending (F5.3) |
 | 12 | DAW export (stems, MIDI, tempo map in one package) | WAV stems + markers.csv + manifest.json done 2026-10-18 (song export); MIDI per track pending |
 | 13 | Take fade in/out; shared transport across screens; kaval fingerings (owner's table); trainer to the end | transport = P3 Phase 1; others pending |
-| 14 | Academy | Phase 6 |
+| 14 | Academy | **v1 shipped 2026-10-18 evening** (levels 0–3, kaval track, fingerings, knowledge base); v2 = levels 4–6 + Create-a-song wizard |
 | 15 | Intelligent melody variations | Phase 7 / P2 D |
 | 16 | Live accompanist following the playing | Phase 8 / P3 6 |
 | 17 | CLAP host | **spike done 2026-10-18** (ADR-0018 accepted: clap-sys + libloading; host crate + fixture instrument + tests; `clap_scan`/`clap_render` via bridge); next: tuning via note expressions, params/state, UI picker in the Instrument Rack, C++ instrument build |

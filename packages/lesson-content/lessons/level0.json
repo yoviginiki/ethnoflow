@@ -1,0 +1,127 @@
+[
+  {
+    "id": "l0-01-sound",
+    "level": 0,
+    "order": 1,
+    "title": { "bg": "Какво е звук", "en": "What sound is" },
+    "objectives": [
+      { "bg": "Да чуеш четирите страни на един тон: височина, сила, продължителност, тембър.", "en": "Hear the four sides of one tone: pitch, loudness, duration, timbre." },
+      { "bg": "Да издадеш тон и да го видиш в тунера.", "en": "Make a tone and see it in the tuner." }
+    ],
+    "explanation": {
+      "bg": "Звукът е трептене на въздуха; колкото по-бързо трепти, толкова по-висок е тонът. Колко силно трепти е силата, колко дълго — продължителността, а формата на трептенето е тембърът (затова флейта и пиано звучат различно на една и съща нота).",
+      "en": "Sound is air vibrating; the faster it vibrates, the higher the pitch. How hard it vibrates is loudness, how long is duration, and the shape of the vibration is timbre (why a flute and a piano differ on the same note)."
+    },
+    "glossary": ["тон", "честота", "тембър"],
+    "demo": { "kind": "notes", "notes": [
+      { "degree": 0, "beats": 1, "velocity": 0.3 },
+      { "degree": 0, "beats": 1, "velocity": 0.9 },
+      { "degree": 0, "beats": 0.5 },
+      { "degree": 0, "beats": 3 }
+    ] },
+    "exercise": { "type": "hold_tone", "seconds": 2, "target": { "kind": "any" } },
+    "quiz": [
+      { "q": { "bg": "Кое определя колко висок е тонът?", "en": "What decides how high a tone is?" },
+        "choices": [ { "bg": "Колко бързо трепти въздухът", "en": "How fast the air vibrates" }, { "bg": "Колко силно духаш", "en": "How hard you blow" }, { "bg": "Колко дълго свириш", "en": "How long you play" } ],
+        "answer": 0, "why": { "bg": "Височината е честота: трептения в секунда (Hz).", "en": "Pitch is frequency: vibrations per second (Hz)." } },
+      { "q": { "bg": "Флейта и пиано свирят една и съща нота. По какво ги различаваш?", "en": "A flute and a piano play the same note. What tells them apart?" },
+        "choices": [ { "bg": "По височината", "en": "By pitch" }, { "bg": "По тембъра", "en": "By timbre" } ],
+        "answer": 1, "why": { "bg": "Същата честота, различна форма на трептенето и различно начало на тона.", "en": "Same frequency, different vibration shape and a different attack." } },
+      { "q": { "bg": "Силата на звука е…", "en": "Loudness is…" },
+        "choices": [ { "bg": "колко силно трепти въздухът", "en": "how hard the air vibrates" }, { "bg": "колко висок е тонът", "en": "how high the tone is" }, { "bg": "колко ноти свириш", "en": "how many notes you play" } ],
+        "answer": 0 }
+    ],
+    "mini_project": { "bg": "Изсвири една и съща нота тихо, силно, кратко и дълго и гледай тунера: името не се сменя, мени се само метърът.", "en": "Play the same note soft, loud, short and long while watching the tuner: the name stays, only the meter moves." },
+    "next": "l0-02-signal"
+  },
+  {
+    "id": "l0-02-signal",
+    "level": 0,
+    "order": 2,
+    "title": { "bg": "Микрофон, слушалки, звукова карта", "en": "Microphone, headphones, sound card" },
+    "objectives": [
+      { "bg": "Да разбереш пътя на звука: инструмент → микрофон → карта → програма → слушалки.", "en": "Understand the path: instrument → microphone → card → app → headphones." },
+      { "bg": "Да държиш тон, без нивото да скача.", "en": "Hold a tone without the level jumping." }
+    ],
+    "explanation": {
+      "bg": "Микрофонът превръща трептенето в напрежение, картата го мери хиляди пъти в секунда (sample rate) и програмата получава числа. Обратният път към слушалките отнема време — това е латентността, затова се свири със слушалки, а не с колони пред микрофона.",
+      "en": "The microphone turns vibration into voltage, the card measures it thousands of times a second (sample rate) and the app receives numbers. The way back to the headphones takes time: that is latency, which is why you play with headphones, not speakers in front of the mic."
+    },
+    "glossary": ["латентност", "sample rate", "монитор"],
+    "exercise": { "type": "hold_tone", "seconds": 3, "max_sigma_cents": 15, "target": { "kind": "any" } },
+    "quiz": [
+      { "q": { "bg": "Защо се свири със слушалки, когато микрофонът е пуснат?", "en": "Why use headphones while the microphone is on?" },
+        "choices": [ { "bg": "За да не се върне звукът от колоните в микрофона (feedback)", "en": "So the speakers do not feed back into the microphone" }, { "bg": "Защото е по-силно", "en": "Because it is louder" } ],
+        "answer": 0 },
+      { "q": { "bg": "Латентността е…", "en": "Latency is…" },
+        "choices": [ { "bg": "закъснението между свиренето и чуването", "en": "the delay between playing and hearing" }, { "bg": "силата на микрофона", "en": "the microphone gain" }, { "bg": "грешка в тунера", "en": "a tuner error" } ],
+        "answer": 0, "why": { "bg": "Няколко милисекунди в приложението са нормални; калибрирането ги измерва.", "en": "A few milliseconds are normal; calibration measures them." } },
+      { "q": { "bg": "Sample rate 48 000 означава…", "en": "A sample rate of 48,000 means…" },
+        "choices": [ { "bg": "48 000 измервания в секунда", "en": "48,000 measurements per second" }, { "bg": "48 000 ноти", "en": "48,000 notes" } ],
+        "answer": 0 }
+    ],
+    "mini_project": { "bg": "В „Свири и записвай“ избери микрофона си и гледай метъра: при силно духане да не светва червено.", "en": "In Play & record pick your microphone and watch the meter: a hard blow must not turn it red." },
+    "next": "l0-03-clipping"
+  },
+  {
+    "id": "l0-03-clipping",
+    "level": 0,
+    "order": 3,
+    "title": { "bg": "Clipping и безопасна сила", "en": "Clipping and safe levels" },
+    "objectives": [
+      { "bg": "Да познаваш червеното на метъра и какво губи.", "en": "Know the red on the meter and what it loses." },
+      { "bg": "Да пазиш ушите си.", "en": "Protect your ears." }
+    ],
+    "explanation": {
+      "bg": "Когато сигналът е по-силен, отколкото картата може да измери, върховете се отрязват — това е clipping и то не се поправя после. Дръж върховете около −6 dB под червеното, а силата в слушалките такава, че да можеш да говориш спокойно върху музиката.",
+      "en": "When the signal is louder than the card can measure, the peaks are cut off: that is clipping and it cannot be repaired later. Keep peaks about −6 dB below red, and headphone volume low enough to talk over the music comfortably."
+    },
+    "glossary": ["clipping", "dBFS", "headroom"],
+    "exercise": { "type": "quiz" },
+    "quiz": [
+      { "q": { "bg": "Метърът светва червено при най-силната нота. Какво правиш?", "en": "The meter goes red on the loudest note. What do you do?" },
+        "choices": [ { "bg": "Намалявам входното усилване (gain) и записвам пак", "en": "Lower the input gain and record again" }, { "bg": "Намалявам силата в слушалките", "en": "Turn the headphones down" }, { "bg": "Нищо, после ще го оправя", "en": "Nothing, I will fix it later" } ],
+        "answer": 0, "why": { "bg": "Слушалките не променят записа; отрязаните върхове не се връщат.", "en": "Headphones do not change the recording; cut peaks never come back." } },
+      { "q": { "bg": "Къде е добре да стоят върховете на записа?", "en": "Where should the recording peaks sit?" },
+        "choices": [ { "bg": "Точно под червеното", "en": "Right under the red" }, { "bg": "Около −6 dB", "en": "Around −6 dB" }, { "bg": "Колкото може по-тихо", "en": "As quiet as possible" } ],
+        "answer": 1 },
+      { "q": { "bg": "Кое пази слуха?", "en": "What protects your hearing?" },
+        "choices": [ { "bg": "Да свириш дълго много силно", "en": "Playing loud for a long time" }, { "bg": "Умерена сила и почивки", "en": "Moderate level and breaks" } ],
+        "answer": 1 },
+      { "q": { "bg": "Clipping е…", "en": "Clipping is…" },
+        "choices": [ { "bg": "отрязване на върховете на сигнала", "en": "the signal peaks being cut off" }, { "bg": "ехо в записа", "en": "echo in the recording" }, { "bg": "грешна нота", "en": "a wrong note" } ],
+        "answer": 0 }
+    ],
+    "next": "l0-04-look-listen"
+  },
+  {
+    "id": "l0-04-look-listen",
+    "level": 0,
+    "order": 4,
+    "title": { "bg": "Слушай срещу гледай", "en": "Listen versus look" },
+    "objectives": [
+      { "bg": "Да четеш тунера, вълната и контура като три прозореца към един звук.", "en": "Read the tuner, the waveform and the contour as three windows on one sound." },
+      { "bg": "Да държиш тон стабилно 4 секунди.", "en": "Hold a tone steadily for 4 seconds." }
+    ],
+    "explanation": {
+      "bg": "Тунерът показва височината сега, вълната показва силата във времето, а контурът — как височината се движи през записа. Ухото решава; картините само потвърждават или подсказват къде да слушаш.",
+      "en": "The tuner shows pitch now, the waveform shows loudness over time, the contour shows how pitch moves across the take. The ear decides; the pictures only confirm or point where to listen."
+    },
+    "glossary": ["тунер", "контур", "cents"],
+    "demo": { "kind": "notes", "notes": [ { "degree": 0, "beats": 4 } ] },
+    "exercise": { "type": "hold_tone", "seconds": 4, "max_sigma_cents": 12, "target": { "kind": "any" } },
+    "quiz": [
+      { "q": { "bg": "Кой прозорец показва как се движи височината в записа?", "en": "Which window shows how pitch moves through a take?" },
+        "choices": [ { "bg": "Контурът", "en": "The contour" }, { "bg": "Метърът", "en": "The meter" }, { "bg": "Метрономът", "en": "The metronome" } ],
+        "answer": 0 },
+      { "q": { "bg": "„+15 c“ в тунера означава…", "en": "“+15 c” in the tuner means…" },
+        "choices": [ { "bg": "15 цента над най-близката нота", "en": "15 cents above the nearest note" }, { "bg": "15 % по-силно", "en": "15 % louder" } ],
+        "answer": 0, "why": { "bg": "Полутонът е 100 цента; ±15 е нормално колебание за духов инструмент.", "en": "A semitone is 100 cents; ±15 is a normal wobble on a wind instrument." } },
+      { "q": { "bg": "Кой решава дали тонът е „верен“ в етно мелодия?", "en": "Who decides whether a tone is “right” in an ethno melody?" },
+        "choices": [ { "bg": "Тунерът", "en": "The tuner" }, { "bg": "Ухото и стилът; тунерът само мери", "en": "The ear and the style; the tuner only measures" } ],
+        "answer": 1 }
+    ],
+    "mini_project": { "bg": "Запиши 5 секунди дълъг тон в „Свири и записвай“ и сравни трите прозореца.", "en": "Record a 5-second long tone in Play & record and compare the three windows." },
+    "next": "l1-01-names"
+  }
+]

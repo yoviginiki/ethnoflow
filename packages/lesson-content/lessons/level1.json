@@ -1,0 +1,220 @@
+[
+  {
+    "id": "l1-01-names",
+    "level": 1,
+    "order": 1,
+    "title": { "bg": "Седемте имена", "en": "The seven names" },
+    "objectives": [
+      { "bg": "Да знаеш До Ре Ми Фа Сол Ла Си и че след Си пак идва До.", "en": "Know C D E F G A B and that after B comes C again." },
+      { "bg": "Да изсвириш нотата, която видиш.", "en": "Play the note you see." }
+    ],
+    "explanation": {
+      "bg": "Нотите имат седем имена, които се повтарят нагоре и надолу: До Ре Ми Фа Сол Ла Си До. Числото до името (Ре4, Ре5) казва в коя октава си.",
+      "en": "Notes have seven names that repeat up and down: C D E F G A B C. The number next to the name (D4, D5) says which octave you are in."
+    },
+    "glossary": ["нота", "октава"],
+    "demo": { "kind": "scale", "scale": "ionian" },
+    "exercise": { "type": "sight_reading", "count": 5 },
+    "quiz": [
+      { "q": { "bg": "Коя нота идва след Си?", "en": "Which note comes after B?" },
+        "choices": [ { "bg": "До", "en": "C" }, { "bg": "Ла", "en": "A" }, { "bg": "Ре", "en": "D" } ],
+        "answer": 0 },
+      { "q": { "bg": "Ре4 и Ре5 са…", "en": "D4 and D5 are…" },
+        "choices": [ { "bg": "една и съща нота в различни октави", "en": "the same note in different octaves" }, { "bg": "две различни ноти", "en": "two different notes" } ],
+        "answer": 0 }
+    ],
+    "next": "l1-02-octaves"
+  },
+  {
+    "id": "l1-02-octaves",
+    "level": 1,
+    "order": 2,
+    "title": { "bg": "Октави", "en": "Octaves" },
+    "objectives": [
+      { "bg": "Да чуваш октавата като „същото, но по-високо“.", "en": "Hear the octave as “the same, only higher”." }
+    ],
+    "explanation": {
+      "bg": "Октавата е същото име с двойна честота: Ре4 ≈ 294 Hz, Ре5 ≈ 587 Hz. Затова звучи като един и същ тон, само по-високо; на кавала се взима с по-силен въздух при същите пръсти.",
+      "en": "An octave is the same name at double the frequency: D4 ≈ 294 Hz, D5 ≈ 587 Hz. That is why it sounds like the same tone, only higher; on the kaval it comes with more air and the same fingers."
+    },
+    "glossary": ["октава", "честота"],
+    "demo": { "kind": "notes", "notes": [ { "degree": 0, "beats": 1.5 }, { "degree": 12, "beats": 1.5 } ] },
+    "exercise": { "type": "ear_interval", "choices": [12, 7, 5], "rounds": 6 },
+    "quiz": [
+      { "q": { "bg": "Ла4 е 440 Hz. Колко е Ла5?", "en": "A4 is 440 Hz. What is A5?" },
+        "choices": [ { "bg": "880 Hz", "en": "880 Hz" }, { "bg": "450 Hz", "en": "450 Hz" }, { "bg": "220 Hz", "en": "220 Hz" } ],
+        "answer": 0 },
+      { "q": { "bg": "Как се взима горната октава на кавала?", "en": "How do you get the upper octave on the kaval?" },
+        "choices": [ { "bg": "С други пръсти", "en": "With other fingers" }, { "bg": "Със същите пръсти и по-бърз въздух", "en": "Same fingers, faster air" } ],
+        "answer": 1 }
+    ],
+    "next": "l1-03-accidentals"
+  },
+  {
+    "id": "l1-03-accidentals",
+    "level": 1,
+    "order": 3,
+    "title": { "bg": "Диез, бемол, бекар", "en": "Sharp, flat, natural" },
+    "objectives": [
+      { "bg": "Да знаеш, че между повечето имена има още един тон.", "en": "Know that between most names there is one more tone." },
+      { "bg": "Да свириш и „черните“ ноти.", "en": "Play the “black” notes too." }
+    ],
+    "explanation": {
+      "bg": "Най-малката стъпка е полутонът; диезът (♯) вдига с полутон, бемолът (♭) сваля, бекарът връща. До♯ и Ре♭ са един и същ тон с две имена; между Ми–Фа и Си–До няма тон помежду.",
+      "en": "The smallest step is the semitone; a sharp (♯) raises by one, a flat (♭) lowers, a natural cancels. C♯ and D♭ are one tone with two names; there is nothing between E–F and B–C."
+    },
+    "glossary": ["полутон", "диез", "бемол"],
+    "demo": { "kind": "notes", "notes": [ { "degree": 0 }, { "degree": 1 }, { "degree": 2 } ] },
+    "exercise": { "type": "sight_reading", "count": 6, "accidentals": true },
+    "quiz": [
+      { "q": { "bg": "Между кои две имена няма друг тон?", "en": "Between which two names is there no other tone?" },
+        "choices": [ { "bg": "Ми и Фа", "en": "E and F" }, { "bg": "Ре и Ми", "en": "D and E" }, { "bg": "Сол и Ла", "en": "G and A" } ],
+        "answer": 0 },
+      { "q": { "bg": "До♯ и Ре♭ са…", "en": "C♯ and D♭ are…" },
+        "choices": [ { "bg": "един тон с две имена", "en": "one tone with two names" }, { "bg": "два различни тона", "en": "two different tones" } ],
+        "answer": 0 },
+      { "q": { "bg": "Бекарът (♮)…", "en": "A natural (♮)…" },
+        "choices": [ { "bg": "връща нотата без ♯/♭", "en": "returns the note to no ♯/♭" }, { "bg": "вдига с цял тон", "en": "raises by a whole tone" } ],
+        "answer": 0 }
+    ],
+    "next": "l1-04-pulse"
+  },
+  {
+    "id": "l1-04-pulse",
+    "level": 1,
+    "order": 4,
+    "title": { "bg": "Пулс и темпо (BPM)", "en": "Pulse and tempo (BPM)" },
+    "objectives": [
+      { "bg": "Да усещаш равния пулс и да пляскаш с него.", "en": "Feel the steady pulse and clap with it." },
+      { "bg": "Да знаеш какво значи 60 и 120 BPM.", "en": "Know what 60 and 120 BPM mean." }
+    ],
+    "explanation": {
+      "bg": "Пулсът са равните удари, върху които стои музиката; темпото казва колко са на минута (BPM). 60 BPM е един удар в секунда, 120 — два; метрономът ги свири, за да не ги броиш в ума си.",
+      "en": "The pulse is the steady beats music sits on; tempo says how many per minute (BPM). 60 BPM is one a second, 120 is two; the metronome plays them so you do not count in your head."
+    },
+    "glossary": ["BPM", "пулс", "метроном"],
+    "demo": { "kind": "clicks", "bpm": 60, "numerator": 4, "bars": 2 },
+    "exercise": { "type": "rhythm_clap", "bpm": 80, "numerator": 4, "bars": 2 },
+    "quiz": [
+      { "q": { "bg": "120 BPM е…", "en": "120 BPM is…" },
+        "choices": [ { "bg": "два удара в секунда", "en": "two beats a second" }, { "bg": "един удар в секунда", "en": "one beat a second" }, { "bg": "120 ноти в такт", "en": "120 notes in a bar" } ],
+        "answer": 0 },
+      { "q": { "bg": "Пляскаш малко преди клика всеки път. Ти си…", "en": "You clap slightly before every click. You are…" },
+        "choices": [ { "bg": "подранил (early)", "en": "early" }, { "bg": "закъснял (late)", "en": "late" } ],
+        "answer": 0, "why": { "bg": "Ако изглежда, че закъсняваш винаги с едно и също, провери калибрирането на латентността.", "en": "If you always seem late by the same amount, check the latency calibration." } }
+    ],
+    "mini_project": { "bg": "Пусни метронома на 80 и после на 120 и пляскай 30 секунди без да гледаш екрана.", "en": "Run the metronome at 80, then 120, and clap for 30 seconds without looking at the screen." },
+    "next": "l1-05-meters"
+  },
+  {
+    "id": "l1-05-meters",
+    "level": 1,
+    "order": 5,
+    "title": { "bg": "Размери 2/4, 3/4, 4/4", "en": "Meters 2/4, 3/4, 4/4" },
+    "objectives": [
+      { "bg": "Да чуваш кой удар е първи и колко са в такта.", "en": "Hear which beat is first and how many are in a bar." }
+    ],
+    "explanation": {
+      "bg": "Ударите се групират в тактове и първият е по-тежък: по два (марш), по три (валс), по четири (повечето песни). Горното число на размера казва колко са ударите, долното — каква нота е един удар.",
+      "en": "Beats group into bars and the first is heavier: in twos (march), threes (waltz), fours (most songs). The top number of the meter says how many beats, the bottom what note one beat is."
+    },
+    "glossary": ["такт", "размер", "акцент"],
+    "demo": { "kind": "clicks", "bpm": 100, "numerator": 3, "bars": 2 },
+    "exercise": { "type": "ear_meter", "choices": [ { "numerator": 2, "unit": 4 }, { "numerator": 3, "unit": 4 }, { "numerator": 4, "unit": 4 } ], "rounds": 6, "bpm": 100 },
+    "quiz": [
+      { "q": { "bg": "Валсът е най-често в…", "en": "A waltz is most often in…" },
+        "choices": [ { "bg": "3/4", "en": "3/4" }, { "bg": "4/4", "en": "4/4" }, { "bg": "2/4", "en": "2/4" } ],
+        "answer": 0 },
+      { "q": { "bg": "В 4/4 долната четворка значи…", "en": "In 4/4 the bottom 4 means…" },
+        "choices": [ { "bg": "ударът е четвъртина нота", "en": "the beat is a quarter note" }, { "bg": "четири такта", "en": "four bars" } ],
+        "answer": 0 }
+    ],
+    "next": "l1-06-values"
+  },
+  {
+    "id": "l1-06-values",
+    "level": 1,
+    "order": 6,
+    "title": { "bg": "Нотни стойности и паузи", "en": "Note values and rests" },
+    "objectives": [
+      { "bg": "Да различаваш цяла, половина, четвърт и осмина.", "en": "Tell whole, half, quarter and eighth apart." },
+      { "bg": "Да пляскаш ритъм с различни стойности.", "en": "Clap a rhythm with mixed values." }
+    ],
+    "explanation": {
+      "bg": "Цялата нота трае четири удара, половината два, четвъртината един, осмината половин удар. Паузите имат същите дължини и са част от музиката — тишината също се брои.",
+      "en": "A whole note lasts four beats, a half two, a quarter one, an eighth half a beat. Rests have the same lengths and are part of the music: silence counts too."
+    },
+    "glossary": ["четвъртина", "осмина", "пауза"],
+    "demo": { "kind": "notes", "notes": [ { "degree": 0, "beats": 4 }, { "degree": 0, "beats": 2 }, { "degree": 0, "beats": 2 }, { "degree": 0, "beats": 1 }, { "degree": 0, "beats": 1 }, { "degree": 0, "beats": 1 }, { "degree": 0, "beats": 1 }, { "degree": 0, "beats": 0.5 }, { "degree": 0, "beats": 0.5 }, { "degree": 0, "beats": 0.5 }, { "degree": 0, "beats": 0.5 }, { "degree": 0, "beats": 2 } ] },
+    "exercise": { "type": "rhythm_clap", "bpm": 80, "numerator": 4, "bars": 2, "pattern": [0, 2, 2.5, 3] },
+    "quiz": [
+      { "q": { "bg": "Колко осмини има в една четвъртина?", "en": "How many eighths in a quarter?" },
+        "choices": [ { "bg": "2", "en": "2" }, { "bg": "4", "en": "4" }, { "bg": "8", "en": "8" } ],
+        "answer": 0 },
+      { "q": { "bg": "Паузата…", "en": "A rest…" },
+        "choices": [ { "bg": "е тишина с точна дължина", "en": "is silence with an exact length" }, { "bg": "спира метронома", "en": "stops the metronome" } ],
+        "answer": 0 },
+      { "q": { "bg": "Половина нота в 4/4 трае…", "en": "A half note in 4/4 lasts…" },
+        "choices": [ { "bg": "два удара", "en": "two beats" }, { "bg": "половин удар", "en": "half a beat" } ],
+        "answer": 0 }
+    ],
+    "next": "l1-07-odd-meters"
+  },
+  {
+    "id": "l1-07-odd-meters",
+    "level": 1,
+    "order": 7,
+    "title": { "bg": "6/8 и 7/8 — първият неравноделен", "en": "6/8 and 7/8, the first uneven meter" },
+    "objectives": [
+      { "bg": "Да чуваш групите 3+3 и 2+2+3.", "en": "Hear the groups 3+3 and 2+2+3." },
+      { "bg": "Да не свеждаш ръченицата до „грешно 4/4“.", "en": "Never reduce a rachenitsa to “wrong 4/4”." }
+    ],
+    "explanation": {
+      "bg": "При осмините не броим всяка, а групите: 6/8 е две групи по три, 7/8 (ръченица) е 2+2+3 — кратко, кратко, дълго. Българските неравноделни размери са реални групирания, не „неправилен“ четворен такт.",
+      "en": "With eighths we count groups, not each one: 6/8 is two groups of three, 7/8 (rachenitsa) is 2+2+3: short, short, long. Bulgarian uneven meters are real groupings, not a “wrong” four."
+    },
+    "glossary": ["неравноделен размер", "групиране", "ръченица"],
+    "demo": { "kind": "clicks", "bpm": 160, "numerator": 7, "unit": 8, "grouping": [2, 2, 3], "bars": 2 },
+    "exercise": { "type": "ear_meter", "choices": [ { "numerator": 6, "unit": 8, "grouping": [3, 3] }, { "numerator": 7, "unit": 8, "grouping": [2, 2, 3] }, { "numerator": 4, "unit": 4 } ], "rounds": 6, "bpm": 160 },
+    "quiz": [
+      { "q": { "bg": "Ръченицата е…", "en": "The rachenitsa is…" },
+        "choices": [ { "bg": "7/8 като 2+2+3", "en": "7/8 as 2+2+3" }, { "bg": "4/4 с грешка", "en": "4/4 with a mistake" }, { "bg": "3/4", "en": "3/4" } ],
+        "answer": 0 },
+      { "q": { "bg": "6/8 се брои като…", "en": "6/8 is counted as…" },
+        "choices": [ { "bg": "две групи по три", "en": "two groups of three" }, { "bg": "шест равни удара без акцент", "en": "six equal beats with no accent" } ],
+        "answer": 0 }
+    ],
+    "mini_project": { "bg": "В „Ритъм секция“ сложи размер 7/8 с групи 2+2+3 и слушай как пада акцентът.", "en": "In Rhythm section set 7/8 with groups 2+2+3 and listen where the accent falls." },
+    "next": "l1-08-latency"
+  },
+  {
+    "id": "l1-08-latency",
+    "level": 1,
+    "order": 8,
+    "title": { "bg": "Калибриране на латентността", "en": "Latency calibration" },
+    "objectives": [
+      { "bg": "Да разбереш защо винаги изглеждаш „закъснял“ с едно и също.", "en": "Understand why you always look “late” by the same amount." },
+      { "bg": "Да минеш през екрана Свири с метроном и тунер.", "en": "Walk through the Play screen with the metronome and the tuner." }
+    ],
+    "explanation": {
+      "bg": "Между клика и микрофона има път през картата и въздуха; той добавя постоянно закъснение. Тренажорът го изважда, ако го знае — затова един път се мери, а после пляскането ти се оценява честно.",
+      "en": "Between the click and the microphone there is a path through the card and the air; it adds a constant delay. The trainer subtracts it when it knows it, so you measure once and your clapping is judged fairly."
+    },
+    "glossary": ["латентност", "калибриране"],
+    "exercise": { "type": "guided", "steps": [
+      { "text": { "bg": "Отвори „Свири и записвай“.", "en": "Open Play & record." }, "check": { "kind": "screen", "name": "play" } },
+      { "text": { "bg": "Пусни метронома (♩) при зададено темпо в проекта.", "en": "Start the metronome (♩) with a tempo set in the project." }, "check": { "kind": "metronome_on" } },
+      { "text": { "bg": "Включи тунера и изсвири стабилен тон 2 секунди.", "en": "Turn the tuner on and play a steady tone for 2 seconds." }, "check": { "kind": "tuner_stable", "seconds": 2 } }
+    ] },
+    "pass_score": 1,
+    "quiz": [
+      { "q": { "bg": "Латентността на системата е…", "en": "System latency is…" },
+        "choices": [ { "bg": "постоянна и може да се извади", "en": "constant and can be subtracted" }, { "bg": "случайна всеки път", "en": "random every time" } ],
+        "answer": 0 },
+      { "q": { "bg": "Ако пляскаш точно, но докладът казва „късно +40 ms“ всеки път, причината най-вероятно е…", "en": "If you clap in time but the report says “late +40 ms” every time, the likely cause is…" },
+        "choices": [ { "bg": "некалибрирана латентност", "en": "uncalibrated latency" }, { "bg": "лош слух", "en": "bad hearing" } ],
+        "answer": 0 }
+    ],
+    "next": "l2-01-steps"
+  }
+]

@@ -32,11 +32,11 @@ import type {
   WaveformPeaks,
   WavFormat,
 } from "./api";
-import type { BusStrip } from "./api";
+import type { AcademyCheck, BusStrip } from "./api";
 import type { Lang } from "./i18n";
 
 export type Mode = "idle" | "recording" | "playing";
-export type Screen = "home" | "play" | "compose" | "studio" | "ambient" | "rhythm" | "library" | "soundscapes" | "start" | "help" | "instrument" | "songmap" | "samples" | "references";
+export type Screen = "home" | "play" | "compose" | "studio" | "ambient" | "rhythm" | "library" | "soundscapes" | "start" | "help" | "instrument" | "songmap" | "samples" | "references" | "academy";
 export type LayerName = "drone" | "pad" | "ambient" | "rhythm";
 
 /** Background mixer strip per layer: the bus (trim, pan, cuts) plus fade times in seconds. */
@@ -236,6 +236,15 @@ function savePrefs(p: Prefs) {
   }
 }
 
+/** A running guided lesson: which checks are done and which screens were visited since the start. */
+export interface GuidedRun {
+  lessonId: string;
+  startedAtMs: number;
+  checks: AcademyCheck[];
+  done: boolean[];
+  visited: string[];
+}
+
 interface Store {
   prefs: Prefs;
   setPref: <K extends keyof Prefs>(k: K, v: Prefs[K]) => void;
@@ -360,6 +369,13 @@ interface Store {
   padChord: PadNote[] | null;
   droneRootOverride: number | null;
   setFollow: (chord: PadNote[] | null, droneRoot: number | null) => void;
+
+  /** Academy: a guided lesson in progress (checked on every screen by useAcademyGuided). */
+  academyGuided: GuidedRun | null;
+  setAcademyGuided: (g: GuidedRun | null) => void;
+  /** Academy play-along lesson whose phrase is loaded in the trainer (the trainer reports back). */
+  academyPlayAlong: string | null;
+  setAcademyPlayAlong: (id: string | null) => void;
 
   message: string | null;
   error: string | null;
@@ -489,4 +505,8 @@ export const useStore = create<Store>((set, get) => ({
   error: null,
   setMessage: (message) => set({ message, error: null }),
   setError: (error) => set({ error }),
+  academyGuided: null,
+  setAcademyGuided: (academyGuided) => set({ academyGuided }),
+  academyPlayAlong: null,
+  setAcademyPlayAlong: (academyPlayAlong) => set({ academyPlayAlong }),
 }));

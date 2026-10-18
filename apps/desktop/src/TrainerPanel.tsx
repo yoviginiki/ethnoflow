@@ -65,6 +65,14 @@ export function TrainerPanel({ notes, hz, confidence, a4, notesPosition, onPlayN
       ? hzToMidi(hz, a4)
       : null;
 
+  // Academy play-along (F6): a finished Wait run or a Rhythm report counts for the lesson.
+  const reportAcademy = (score: number) => {
+    const id = useStore.getState().academyPlayAlong;
+    if (!id) return;
+    useStore.getState().setAcademyPlayAlong(null);
+    void api.academyRecord(id, Math.max(0, Math.min(1, score)), score >= 0.7).catch((e) => s.setError(describeError(e)));
+  };
+
   const stop = async () => {
     setRunning(false);
     onTarget(null, false);
@@ -108,6 +116,7 @@ export function TrainerPanel({ notes, hz, confidence, a4, notesPosition, onPlayN
           if (next >= groups.length) {
             setDone(true);
             void stop();
+            reportAcademy(1);
           } else {
             setGroup(next);
             onPosition(groups[next][0].start);
@@ -138,7 +147,10 @@ export function TrainerPanel({ notes, hz, confidence, a4, notesPosition, onPlayN
       onTarget(null, false);
       void api
         .evaluatePerformance(sorted, played.current, level, 0)
-        .then(setReport)
+        .then((r) => {
+          setReport(r);
+          reportAcademy(r.summary.expected ? r.summary.hits / r.summary.expected : 0);
+        })
         .catch((e) => s.setError(describeError(e)));
       return;
     }

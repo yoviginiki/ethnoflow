@@ -1,10 +1,12 @@
-/** A tiny Markdown subset for the in-app guide: headings, paragraphs, lists, bold, code. */
+/** A tiny Markdown subset for the in-app guide and the knowledge base: headings, paragraphs, lists, tables, quotes, bold, code. */
 export type Inline = { kind: "text"; text: string } | { kind: "bold"; text: string } | { kind: "code"; text: string };
 export type Block =
   | { kind: "heading"; level: number; text: string; id: string }
   | { kind: "paragraph"; inlines: Inline[] }
   | { kind: "list"; ordered: boolean; items: Inline[][] }
-  | { kind: "code"; text: string };
+  | { kind: "code"; text: string }
+  | { kind: "table"; header: Inline[][]; rows: Inline[][][] }
+  | { kind: "quote"; inlines: Inline[] };
 
 export function slug(text: string): string {
   return text
@@ -31,21 +33,51 @@ export function parseInline(text: string): Inline[] {
   return out;
 }
 
+const ESC_PIPE = "\u0001";
+
+/** Split a table row into cells; `\|` inside a cell stays a pipe. */
+export function tableCells(line: string): string[] {
+  const t = line.trim().replace(/\\\|/g, ESC_PIPE);
+  const inner = t.startsWith("|") ? t.slice(1) : t;
+  const body = inner.endsWith("|") ? inner.slice(0, -1) : inner;
+  return body.split("|").map((c) => c.split(ESC_PIPE).join("|").trim());
+}
+
+const isTableRow = (line: string) => /^\s*\|.*\|\s*$/.test(line);
+const isTableSep = (line: string) => /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(line);
+
 export function parseMarkdown(md: string): Block[] {
   const lines = md.split(/\r?\n/);
   const blocks: Block[] = [];
   let para: string[] = [];
+  let quote: string[] = [];
   let list: { ordered: boolean; items: string[] } | null = null;
   let code: string[] | null = null;
+  let table: { header: string[]; rows: string[][] } | null = null;
   const flushPara = () => {
     if (para.length) blocks.push({ kind: "paragraph", inlines: parseInline(para.join(" ")) });
     para = [];
+  };
+  const flushQuote = () => {
+    if (quote.length) blocks.push({ kind: "quote", inlines: parseInline(quote.join(" ")) });
+    quote = [];
   };
   const flushList = () => {
     if (list) blocks.push({ kind: "list", ordered: list.ordered, items: list.items.map(parseInline) });
     list = null;
   };
-  for (const raw of lines) {
+  const flushTable = () => {
+    if (table) blocks.push({ kind: "table", header: table.header.map(parseInline), rows: table.rows.map((r) => r.map(parseInline)) });
+    table = null;
+  };
+  const flushAll = () => {
+    flushPara();
+    flushQuote();
+    flushList();
+    flushTable();
+  };
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i];
     if (code) {
       if (raw.startsWith("```")) {
         blocks.push({ kind: "code", text: code.join("\n") });
@@ -55,18 +87,41 @@ export function parseMarkdown(md: string): Block[] {
     }
     const line = raw.trimEnd();
     if (line.startsWith("```")) {
-      flushPara();
-      flushList();
+      flushAll();
       code = [];
       continue;
     }
-    const h = /^(#{1,4})\s+(.*)$/.exec(line);
+    if (isTableRow(line)) {
+      if (!table) {
+        // A header row followed by a separator row starts a table; otherwise it is text.
+        if (i + 1 < lines.length && isTableSep(lines[i + 1])) {
+          flushAll();
+          table = { header: tableCells(line), rows: [] };
+          i++; // skip the separator
+          continue;
+        }
+      } else {
+        table.rows.push(tableCells(line));
+        continue;
+      }
+    } else if (table) {
+      flushTable();
+    }
+    const h = /^(#{1,6})\s+(.*)$/.exec(line);
     if (h) {
-      flushPara();
-      flushList();
+      flushAll();
       blocks.push({ kind: "heading", level: h[1].length, text: h[2].trim(), id: slug(h[2]) });
       continue;
     }
+    const q = /^\s*>\s?(.*)$/.exec(line);
+    if (q) {
+      flushPara();
+      flushList();
+      if (q[1].trim() === "") flushQuote();
+      else quote.push(q[1].trim());
+      continue;
+    }
+    if (quote.length) flushQuote();
     const li = /^\s*(?:[-*]|\d+[.)])\s+(.*)$/.exec(line);
     if (li) {
       flushPara();
@@ -78,7 +133,7 @@ export function parseMarkdown(md: string): Block[] {
       list.items.push(li[1]);
       continue;
     }
-    if (line.trim() === "") {
+    if (line.trim() === "" || line.trim() === "---") {
       flushPara();
       flushList();
       continue;
@@ -91,8 +146,7 @@ export function parseMarkdown(md: string): Block[] {
     flushList();
     para.push(line.trim());
   }
-  flushPara();
-  flushList();
+  flushAll();
   if (code) blocks.push({ kind: "code", text: (code as string[]).join("\n") });
   return blocks;
 }
@@ -106,18 +160,31 @@ export interface Section {
   text: string;
 }
 
-/** Split into sections at `##` headings (the `#` title and anything before the first `##` form section 0). */
-export function sections(blocks: Block[]): Section[] {
+export function blockText(b: Block): string {
+  switch (b.kind) {
+    case "heading":
+      return b.text;
+    case "code":
+      return b.text;
+    case "paragraph":
+    case "quote":
+      return b.inlines.map((i) => i.text).join("");
+    case "list":
+      return b.items.map((it) => it.map((i) => i.text).join("")).join(" ");
+    case "table":
+      return [b.header, ...b.rows].map((r) => r.map((c) => c.map((i) => i.text).join("")).join(" ")).join(" ");
+  }
+}
+
+/**
+ * Split into sections at headings up to `maxLevel` (default `##`; the `#` title and
+ * anything before the first `##` form section 0).
+ */
+export function sections(blocks: Block[], maxLevel = 2): Section[] {
   const out: Section[] = [];
   let cur: Section | null = null;
-  const textOf = (b: Block): string => {
-    if (b.kind === "heading") return b.text;
-    if (b.kind === "code") return b.text;
-    if (b.kind === "paragraph") return b.inlines.map((i) => i.text).join("");
-    return b.items.map((it) => it.map((i) => i.text).join("")).join(" ");
-  };
   for (const b of blocks) {
-    if (b.kind === "heading" && b.level <= 2) {
+    if (b.kind === "heading" && b.level <= maxLevel) {
       cur = { title: b.text, id: b.id, level: b.level, blocks: [], text: "" };
       out.push(cur);
       continue;
@@ -128,6 +195,6 @@ export function sections(blocks: Block[]): Section[] {
     }
     cur.blocks.push(b);
   }
-  for (const s of out) s.text = (s.title + " " + s.blocks.map(textOf).join(" ")).toLowerCase();
+  for (const s of out) s.text = (s.title + " " + s.blocks.map(blockText).join(" ")).toLowerCase();
   return out;
 }

@@ -19,6 +19,8 @@ import { SongMapScreen } from "./SongMapScreen";
 import { SamplesScreen } from "./SamplesScreen";
 import { Studio } from "./Studio";
 import { ReferencesScreen } from "./ReferencesScreen";
+import { AcademyScreen, GuidedBanner } from "./AcademyScreen";
+import { useAcademyGuided } from "./academyGuided";
 import { messages, type Lang, type StringMessageKey } from "./i18n";
 import { useStore, type Screen } from "./store";
 
@@ -35,6 +37,7 @@ const SCREEN_TITLE: Record<Exclude<Screen, "home">, StringMessageKey> = {
   songmap: "areaSongMap",
   samples: "areaSamples",
   references: "areaReferences",
+  academy: "areaLearn",
   start: "areaStart",
   help: "areaHelp",
 };
@@ -52,6 +55,7 @@ export default function App() {
   const setError = useStore((s) => s.setError);
   useBackgroundLayers();
   useSongTransport();
+  useAcademyGuided();
   useProjectSession();
   useAssistantBridge();
 
@@ -99,6 +103,7 @@ export default function App() {
           </label>
         </div>
       </header>
+      <GuidedBanner />
       {error && screen !== "studio" && (
         <div className="banner error" role="alert">
           {error}{" "}
@@ -122,6 +127,7 @@ export default function App() {
       {screen === "songmap" && (project ? <SongMapScreen /> : <ProjectPicker />)}
       {screen === "samples" && <SamplesScreen />}
       {screen === "references" && <ReferencesScreen />}
+      {screen === "academy" && <AcademyScreen />}
       {(layers.drone || layers.pad || layers.ambient || layers.rhythm) && (
         <div className="layers-badge small" role="status">
           <BackgroundTransport compact />

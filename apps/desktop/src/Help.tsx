@@ -1,54 +1,10 @@
 import { useMemo, useState } from "react";
 import guideBg from "../../../docs/guide/bg.md?raw";
 import guideEn from "../../../docs/guide/en.md?raw";
-import { parseMarkdown, sections, type Block, type Inline } from "./md";
+import { parseMarkdown, sections } from "./md";
+import { BlockView } from "./MdView";
 import { messages } from "./i18n";
 import { useStore } from "./store";
-
-function Inlines({ items }: { items: Inline[] }) {
-  return (
-    <>
-      {items.map((i, k) =>
-        i.kind === "bold" ? <strong key={k}>{i.text}</strong> : i.kind === "code" ? <code key={k}>{i.text}</code> : <span key={k}>{i.text}</span>,
-      )}
-    </>
-  );
-}
-
-function BlockView({ b }: { b: Block }) {
-  switch (b.kind) {
-    case "heading": {
-      const Tag = (`h${Math.min(6, b.level + 1)}` as unknown) as "h3";
-      return <Tag id={b.id}>{b.text}</Tag>;
-    }
-    case "paragraph":
-      return (
-        <p>
-          <Inlines items={b.inlines} />
-        </p>
-      );
-    case "list":
-      return b.ordered ? (
-        <ol>
-          {b.items.map((it, i) => (
-            <li key={i}>
-              <Inlines items={it} />
-            </li>
-          ))}
-        </ol>
-      ) : (
-        <ul>
-          {b.items.map((it, i) => (
-            <li key={i}>
-              <Inlines items={it} />
-            </li>
-          ))}
-        </ul>
-      );
-    case "code":
-      return <pre>{b.text}</pre>;
-  }
-}
 
 /**
  * Help: the user guide (docs/guide/bg.md, en.md) rendered in the app, with a table of

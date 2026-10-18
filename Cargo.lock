@@ -953,6 +953,7 @@ version = "0.4.0"
 dependencies = [
  "ethnoflow-analysis",
  "ethnoflow-audio-engine",
+ "ethnoflow-lessons",
  "ethnoflow-music-core",
  "ethnoflow-plugin-host",
  "ethnoflow-project",
@@ -964,6 +965,15 @@ dependencies = [
  "tauri-plugin-dialog",
  "tauri-plugin-log",
  "tempfile",
+]
+
+[[package]]
+name = "ethnoflow-lessons"
+version = "0.4.0"
+dependencies = [
+ "ethnoflow-music-core",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

@@ -1173,6 +1173,117 @@ export interface TrainerReport {
   summary: TrainerSummary;
 }
 
+// ---------- Academy (F6.1–F6.3, crates/lessons) ----------
+
+export interface LText {
+  bg: string;
+  en: string;
+}
+export type AcademyCheck =
+  | { kind: "tuner_stable"; seconds: number }
+  | { kind: "rhythm_running"; bpm: number | null }
+  | { kind: "new_take"; min_notes: number }
+  | { kind: "scale_chosen" }
+  | { kind: "space_at_least"; value: number }
+  | { kind: "preset_saved" }
+  | { kind: "metronome_on" }
+  | { kind: "screen"; name: string };
+export interface GuidedStep {
+  text: LText;
+  check: AcademyCheck;
+}
+export interface AcademyExercise {
+  type: "quiz" | "hold_tone" | "sight_reading" | "hear_and_repeat" | "ear_interval" | "ear_chord" | "ear_mode" | "ear_meter" | "rhythm_clap" | "play_along" | "guided";
+  steps?: GuidedStep[];
+  seconds?: number;
+  rounds?: number;
+  bars?: number;
+  bpm?: number;
+  numerator?: number;
+  count?: number;
+}
+export interface QuizItem {
+  q: LText;
+  choices: LText[];
+  answer: number;
+  why: LText | null;
+}
+export interface LessonProgress {
+  attempts: number;
+  best_score: number;
+  passed_at_ms: number | null;
+  last_at_ms: number | null;
+}
+export interface LessonView {
+  id: string;
+  level: number;
+  order: number;
+  title: LText;
+  objectives: LText[];
+  explanation: LText;
+  glossary: string[];
+  demo: unknown | null;
+  exercise: AcademyExercise;
+  pass_score: number;
+  quiz: QuizItem[];
+  mini_project: LText | null;
+  next: string | null;
+  track: string | null;
+  reading: string[];
+  range: [number, number] | null;
+  progress: LessonProgress;
+}
+export interface AcademyContext {
+  tonic_pc: number;
+  kind: ScaleKind;
+  lo_midi: number;
+  hi_midi: number;
+}
+export interface AcademyView {
+  lessons: LessonView[];
+  context: AcademyContext;
+  has_project: boolean;
+  has_scale: boolean;
+}
+export interface PlayNote {
+  start: number;
+  end: number;
+  midi: number;
+  velocity: number;
+}
+export interface EarRound {
+  prompt: PlayNote[];
+  /** Keys the UI translates: interval:7, chord:major, mode:dorian, meter:7/8:2+2+3. */
+  choices: string[];
+  answer: number;
+}
+export type AcademyInstance =
+  | { kind: "quiz" }
+  | { kind: "hold_tone"; target_midi: number | null; seconds: number; max_sigma_cents: number | null }
+  | { kind: "sight_reading"; targets: number[] }
+  | { kind: "hear_and_repeat"; expected: PlayNote[] }
+  | { kind: "ear"; rounds: EarRound[] }
+  | { kind: "rhythm_clap"; clicks: PlayNote[]; grid: number[]; bpm: number }
+  | { kind: "play_along"; notes: PlayNote[] }
+  | { kind: "guided" };
+export interface InstanceView {
+  seed: number;
+  context: AcademyContext;
+  instance: AcademyInstance;
+  demo: PlayNote[] | null;
+}
+export interface RhythmScore {
+  score: number;
+  deviations_ms: (number | null)[];
+  extra: number;
+  mean_abs_ms: number;
+}
+export interface RepeatScore {
+  score: number;
+  report: TrainerReport;
+  shift_seconds: number;
+}
+
 export interface MidiExportResult {
   path: string;
   bytes: number;
@@ -1468,6 +1579,16 @@ export const api = {
   exportHarmonyMidi: (proposal: HarmonyProposal, path: string) => invoke<HarmonyExportResult>("export_harmony_midi", { proposal, path }),
   evaluatePerformance: (expected: Note[], played: Note[], level: Level, latencyMs: number) =>
     invoke<TrainerReport>("evaluate_performance", { expected, played, level, latencyMs }),
+  // Academy
+  academyLessons: () => invoke<AcademyView>("academy_lessons"),
+  academyInstance: (id: string, seed: number | null) => invoke<InstanceView>("academy_instance", { id, seed }),
+  academyPlay: (notes: PlayNote[], device: string | null, voice: Voice | null) => invoke<PlayerStatus>("academy_play", { notes, device, voice }),
+  academyScoreRhythm: (onsets: number[], grid: number[], level: Level) => invoke<RhythmScore>("academy_score_rhythm", { onsets, grid, level }),
+  academyScoreRepeat: (expected: PlayNote[], played: Note[], level: Level) => invoke<RepeatScore>("academy_score_repeat", { expected, played, level }),
+  academyRecord: (id: string, score: number, passed: boolean) => invoke<LessonProgress>("academy_record", { id, score, passed }),
+  academyReset: (id: string | null) => invoke<void>("academy_reset", { id }),
+  academyNewTake: (sinceMs: number, minNotes: number) => invoke<string | null>("academy_new_take", { sinceMs, minNotes }),
+  academyPlayAlong: (notes: PlayNote[], label: string) => invoke<ProjectView>("academy_play_along", { notes, label }),
   listProfiles: () => invoke<ProfileSummary[]>("list_profiles"),
   getProfile: (id: string) => invoke<ProfileView>("get_profile", { id }),
   createProfile: (req: { instrument: InstrumentType; name: string; tuning: string; transpose_semitones: number; a4_hz: number | null }) =>

@@ -1,0 +1,241 @@
+[
+  {
+    "id": "l3-01-tonic",
+    "level": 3,
+    "order": 1,
+    "title": { "bg": "Тоника и опорен тон", "en": "Tonic and home tone" },
+    "objectives": [
+      { "bg": "Да усещаш „дома“ на мелодията.", "en": "Feel the “home” of a melody." },
+      { "bg": "Да държиш тониката 4 секунди върху пуснато ручило.", "en": "Hold the tonic for 4 seconds over a running drone." }
+    ],
+    "explanation": {
+      "bg": "Тониката е тонът, на който мелодията „си почива“; всичко друго е напрежение спрямо него. Ручилото (бурдонът) държи тониката постоянно, за да се чува колко далеч е всяка нота от дома.",
+      "en": "The tonic is the tone the melody “rests” on; everything else is tension against it. The drone holds the tonic constantly so you hear how far each note is from home."
+    },
+    "glossary": ["тоника", "ручило", "бурдон"],
+    "demo": { "kind": "notes", "notes": [ { "degree": 0, "beats": 2 }, { "degree": 2 }, { "degree": 3 }, { "degree": 5 }, { "degree": 3 }, { "degree": 2 }, { "degree": 0, "beats": 2 } ] },
+    "exercise": { "type": "hold_tone", "seconds": 4, "max_sigma_cents": 20, "target": { "kind": "tonic" } },
+    "quiz": [
+      { "q": { "bg": "Тониката е…", "en": "The tonic is…" },
+        "choices": [ { "bg": "тонът, на който мелодията си почива", "en": "the tone the melody rests on" }, { "bg": "най-високата нота", "en": "the highest note" }, { "bg": "първата нота в записа", "en": "the first note recorded" } ],
+        "answer": 0 },
+      { "q": { "bg": "Ручилото…", "en": "The drone…" },
+        "choices": [ { "bg": "държи дома постоянно", "en": "holds home constantly" }, { "bg": "сменя акорда всеки такт", "en": "changes chord every bar" } ],
+        "answer": 0 }
+    ],
+    "mini_project": { "bg": "В „Атмосфера“ пусни ручилото в лада на проекта и свири бавно всички ноти на гамата, като спираш на всяка — коя „иска“ да се върне у дома?", "en": "In Atmosphere start the drone in the project scale and play every scale note slowly, stopping on each: which one “wants” to go home?" },
+    "next": "l3-02-fifth"
+  },
+  {
+    "id": "l3-02-fifth",
+    "level": 3,
+    "order": 2,
+    "title": { "bg": "Квинта и бурдон", "en": "Fifth and drone" },
+    "objectives": [
+      { "bg": "Да различаваш кварта, квинта и октава по слух.", "en": "Tell fourth, fifth and octave apart by ear." }
+    ],
+    "explanation": {
+      "bg": "Квинтата (7 полутона) е най-устойчивият интервал след октавата — честотите ѝ са в отношение 3:2, затова звучи „празно и спокойно“. Ручилото с тоника + квинта пасва на мажор, минор и повечето ладове, защото не съдържа терца.",
+      "en": "The fifth (7 semitones) is the steadiest interval after the octave; its frequencies sit in a 3:2 ratio, so it sounds “empty and calm”. A drone of tonic + fifth fits major, minor and most modes because it has no third."
+    },
+    "glossary": ["квинта", "кварта", "бурдон"],
+    "demo": { "kind": "chord", "chord": "power" },
+    "exercise": { "type": "ear_interval", "choices": [5, 7, 12], "rounds": 6 },
+    "quiz": [
+      { "q": { "bg": "Защо ручило тоника+квинта пасва и на мажор, и на минор?", "en": "Why does a tonic+fifth drone fit both major and minor?" },
+        "choices": [ { "bg": "Няма терца, която да решава", "en": "There is no third to decide" }, { "bg": "Защото е тихо", "en": "Because it is quiet" } ],
+        "answer": 0 },
+      { "q": { "bg": "Квинтата е…", "en": "A fifth is…" },
+        "choices": [ { "bg": "7 полутона, 3:2", "en": "7 semitones, 3:2" }, { "bg": "5 полутона, 4:3", "en": "5 semitones, 4:3" } ],
+        "answer": 0 }
+    ],
+    "next": "l3-03-triads"
+  },
+  {
+    "id": "l3-03-triads",
+    "level": 3,
+    "order": 3,
+    "title": { "bg": "Тризвучия", "en": "Triads" },
+    "objectives": [
+      { "bg": "Да чуваш мажорен срещу минорен акорд.", "en": "Hear a major versus a minor chord." }
+    ],
+    "explanation": {
+      "bg": "Тризвучието са три тона през един: тоника, терца, квинта. Голяма терца отдолу дава мажор (светло), малка — минор (тъмно); квинтата е една и съща.",
+      "en": "A triad is three tones a third apart: tonic, third, fifth. A major third at the bottom gives major (bright), a minor third gives minor (dark); the fifth is the same."
+    },
+    "glossary": ["тризвучие", "акорд"],
+    "demo": { "kind": "chord", "chord": "major" },
+    "exercise": { "type": "ear_chord", "choices": ["major", "minor"], "rounds": 6 },
+    "quiz": [
+      { "q": { "bg": "Мажорното тризвучие е…", "en": "A major triad is…" },
+        "choices": [ { "bg": "0 – 4 – 7 полутона", "en": "0 – 4 – 7 semitones" }, { "bg": "0 – 3 – 7 полутона", "en": "0 – 3 – 7 semitones" } ],
+        "answer": 0 },
+      { "q": { "bg": "Какво е общото между мажорния и минорния акорд?", "en": "What do the major and minor chord share?" },
+        "choices": [ { "bg": "Тониката и квинтата", "en": "The tonic and the fifth" }, { "bg": "Терцата", "en": "The third" } ],
+        "answer": 0 }
+    ],
+    "next": "l3-04-sus"
+  },
+  {
+    "id": "l3-04-sus",
+    "level": 3,
+    "order": 4,
+    "title": { "bg": "Обръщения и sus-акорди", "en": "Inversions and sus chords" },
+    "objectives": [
+      { "bg": "Да чуваш sus2 и sus4 като акорди „без решение“.", "en": "Hear sus2 and sus4 as chords “without a decision”." }
+    ],
+    "explanation": {
+      "bg": "Обръщение е същият акорд с друг тон отдолу — звучи по-меко, но е същата хармония. Sus-акордът замества терцата със секунда (sus2) или кварта (sus4): нито мажор, нито минор, затова е любим в модална и етно музика.",
+      "en": "An inversion is the same chord with another tone at the bottom: softer, same harmony. A sus chord swaps the third for a second (sus2) or a fourth (sus4): neither major nor minor, which is why modal and ethno music love it."
+    },
+    "glossary": ["обръщение", "sus"],
+    "demo": { "kind": "chord", "chord": "sus4" },
+    "exercise": { "type": "ear_chord", "choices": ["major", "minor", "sus2", "sus4"], "rounds": 8 },
+    "quiz": [
+      { "q": { "bg": "Sus4 заменя терцата с…", "en": "Sus4 replaces the third with…" },
+        "choices": [ { "bg": "кварта", "en": "a fourth" }, { "bg": "секста", "en": "a sixth" } ],
+        "answer": 0 },
+      { "q": { "bg": "Обръщението променя…", "en": "An inversion changes…" },
+        "choices": [ { "bg": "кой тон е най-отдолу", "en": "which tone is lowest" }, { "bg": "кои тонове участват", "en": "which tones take part" } ],
+        "answer": 0 }
+    ],
+    "next": "l3-05-sevenths"
+  },
+  {
+    "id": "l3-05-sevenths",
+    "level": 3,
+    "order": 5,
+    "title": { "bg": "Септакорди и add9", "en": "Seventh chords and add9" },
+    "objectives": [
+      { "bg": "Да различаваш maj7, m7 и доминантов 7.", "en": "Tell maj7, m7 and dominant 7 apart." }
+    ],
+    "explanation": {
+      "bg": "Четвъртият тон на терца отгоре дава цвят: голяма септима (maj7) е мечтателна, малка върху минор (m7) е мека, малка върху мажор (7) иска да се разреши. Add9 добавя секунда над октавата, без септима — широко, „течно“ звучене за падове.",
+      "en": "A fourth tone a third higher adds colour: a major seventh (maj7) is dreamy, a minor seventh on minor (m7) is soft, a minor seventh on major (7) wants to resolve. Add9 adds a second above the octave without a seventh: wide, “liquid”, good for pads."
+    },
+    "glossary": ["септакорд", "add9"],
+    "demo": { "kind": "chord", "chord": "dominant7" },
+    "exercise": { "type": "ear_chord", "choices": ["major7", "minor7", "dominant7"], "rounds": 6 },
+    "quiz": [
+      { "q": { "bg": "Кой септакорд „иска да се разреши“?", "en": "Which seventh chord “wants to resolve”?" },
+        "choices": [ { "bg": "Доминантовият (7)", "en": "The dominant (7)" }, { "bg": "maj7", "en": "maj7" } ],
+        "answer": 0 },
+      { "q": { "bg": "Add9…", "en": "Add9…" },
+        "choices": [ { "bg": "добавя секунда над октавата без септима", "en": "adds a second above the octave with no seventh" }, { "bg": "е друго име за sus2", "en": "is another name for sus2" } ],
+        "answer": 0 }
+    ],
+    "next": "l3-06-tension"
+  },
+  {
+    "id": "l3-06-tension",
+    "level": 3,
+    "order": 6,
+    "title": { "bg": "Напрежение и разрешение", "en": "Tension and resolution" },
+    "objectives": [
+      { "bg": "Да чуваш водещия тон, който „иска“ тониката.", "en": "Hear the leading tone that “wants” the tonic." },
+      { "bg": "Да различаваш акордов тон от преходен.", "en": "Tell a chord tone from a passing tone." }
+    ],
+    "explanation": {
+      "bg": "Полутон под тониката стои водещият тон — най-напрегнатата нота, която се разрешава нагоре в дома (V → I). Нотите на акорда са опорни, а тези между тях са преходни: те минават, не спират.",
+      "en": "A semitone below the tonic sits the leading tone, the most tense note, resolving up into home (V → I). Chord notes are anchors; the ones between them are passing tones: they move through, they do not stop."
+    },
+    "glossary": ["водещ тон", "разрешение", "преходен тон"],
+    "demo": { "kind": "notes", "notes": [ { "degree": 7 }, { "degree": 11, "beats": 2 }, { "degree": 12, "beats": 3 } ] },
+    "exercise": { "type": "quiz" },
+    "quiz": [
+      { "q": { "bg": "Водещият тон е…", "en": "The leading tone is…" },
+        "choices": [ { "bg": "полутон под тониката", "en": "a semitone below the tonic" }, { "bg": "квинтата", "en": "the fifth" }, { "bg": "октавата", "en": "the octave" } ],
+        "answer": 0 },
+      { "q": { "bg": "V → I означава…", "en": "V → I means…" },
+        "choices": [ { "bg": "доминантата се разрешава в тониката", "en": "the dominant resolves to the tonic" }, { "bg": "пет такта, после един", "en": "five bars, then one" } ],
+        "answer": 0 },
+      { "q": { "bg": "Преходният тон…", "en": "A passing tone…" },
+        "choices": [ { "bg": "минава между два акордови тона и не спира", "en": "moves between two chord tones without stopping" }, { "bg": "винаги е грешка", "en": "is always a mistake" } ],
+        "answer": 0 },
+      { "q": { "bg": "Мелодията спира на водещия тон и не продължава. Слушателят усеща…", "en": "The melody stops on the leading tone and goes no further. The listener feels…" },
+        "choices": [ { "bg": "недовършеност", "en": "incompleteness" }, { "bg": "покой", "en": "rest" } ],
+        "answer": 0 }
+    ],
+    "next": "l3-07-modes"
+  },
+  {
+    "id": "l3-07-modes",
+    "level": 3,
+    "order": 7,
+    "title": { "bg": "Ладове: дорийски, фригийски, миксолидийски, хиджаз", "en": "Modes: Dorian, Phrygian, Mixolydian, Hijaz" },
+    "objectives": [
+      { "bg": "Да разпознаваш четири лада по слух от една и съща тоника.", "en": "Recognise four modes by ear from the same tonic." }
+    ],
+    "explanation": {
+      "bg": "Ладът е гама с друг „дом“: дорийският е минор със светла секста, фригийският има ♭2 (тъмен), миксолидийският е мажор с ♭7, а хиджаз (фригийски доминантов) има ♭2 и голяма терца — увеличената секунда, която звучи „ориенталски“. Повечето балкански мелодии живеят тук, не в чист мажор/минор.",
+      "en": "A mode is a scale with another “home”: Dorian is minor with a bright sixth, Phrygian has ♭2 (dark), Mixolydian is major with ♭7, and Hijaz (Phrygian dominant) has ♭2 and a major third, the augmented second that sounds “oriental”. Most Balkan melodies live here, not in plain major/minor."
+    },
+    "glossary": ["лад", "дорийски", "фригийски", "миксолидийски", "хиджаз"],
+    "demo": { "kind": "scale", "scale": "phrygian_dominant" },
+    "exercise": { "type": "ear_mode", "choices": ["dorian", "phrygian", "mixolydian", "phrygian_dominant"], "rounds": 8 },
+    "quiz": [
+      { "q": { "bg": "Хиджаз се познава по…", "en": "Hijaz is recognised by…" },
+        "choices": [ { "bg": "♭2 и голяма терца (увеличена секунда)", "en": "♭2 and a major third (augmented second)" }, { "bg": "голяма секста", "en": "a major sixth" } ],
+        "answer": 0 },
+      { "q": { "bg": "Дорийският е…", "en": "Dorian is…" },
+        "choices": [ { "bg": "минор със светла (голяма) секста", "en": "minor with a bright (major) sixth" }, { "bg": "мажор с ♭7", "en": "major with ♭7" } ],
+        "answer": 0 }
+    ],
+    "mini_project": { "bg": "Смени лада на проекта на дорийски, после на хиджаз, и пусни ручилото — чуй как едни и същи пръсти звучат другояче.", "en": "Change the project scale to Dorian, then Hijaz, and start the drone: hear the same fingers sound different." },
+    "next": "l3-08-no-chords"
+  },
+  {
+    "id": "l3-08-no-chords",
+    "level": 3,
+    "order": 8,
+    "title": { "bg": "Кога без акорди", "en": "When not to add chords" },
+    "objectives": [
+      { "bg": "Да чуеш една и съща мелодия само с ручило и с пад.", "en": "Hear the same melody with only a drone and with a pad." },
+      { "bg": "Да запишеш избора си като пресет с бележка защо.", "en": "Save your choice as a preset with a note why." }
+    ],
+    "explanation": {
+      "bg": "Акордите не са задължителни: етно мелодия с орнаменти често звучи по-естествено върху ручило, защото акордът „решава“ мажор/минор на всяка нота. Когато има акорди, сменяй ги по фрази, не на всеки такт.",
+      "en": "Chords are not mandatory: an ornamented ethno melody often sounds more natural over a drone, because a chord “decides” major/minor on every note. When there are chords, change them per phrase, not every bar."
+    },
+    "glossary": ["хармоничен ритъм", "модална хармония"],
+    "exercise": { "type": "guided", "steps": [
+      { "text": { "bg": "Отвори „Атмосфера“ и пусни само ручилото в лада на проекта; свири мелодията си отгоре.", "en": "Open Atmosphere and start only the drone in the project scale; play your melody over it." }, "check": { "kind": "screen", "name": "ambient" } },
+      { "text": { "bg": "Отвори „Акомпаниатор“ и чуй същата мелодия с пад (акорди).", "en": "Open Accompanist and hear the same melody with a pad (chords)." }, "check": { "kind": "screen", "name": "compose" } },
+      { "text": { "bg": "Избери това, което ти харесва, и го запази като пресет с бележка защо.", "en": "Pick the one you like and save it as a preset with a note why." }, "check": { "kind": "preset_saved" } }
+    ] },
+    "pass_score": 1,
+    "quiz": [
+      { "q": { "bg": "Защо ручилото често пасва по-добре на орнаментирана мелодия?", "en": "Why does a drone often fit an ornamented melody better?" },
+        "choices": [ { "bg": "Не решава мажор/минор на всяка нота", "en": "It does not decide major/minor on every note" }, { "bg": "По-силно е", "en": "It is louder" } ],
+        "answer": 0 },
+      { "q": { "bg": "Хармоничен ритъм „по фрази“ значи…", "en": "Harmonic rhythm “per phrase” means…" },
+        "choices": [ { "bg": "акордът се сменя на няколко такта, с фразата", "en": "the chord changes every few bars, with the phrase" }, { "bg": "акорд на всяка нота", "en": "a chord on every note" } ],
+        "answer": 0 }
+    ],
+    "next": "l3-09-lesson-one"
+  },
+  {
+    "id": "l3-09-lesson-one",
+    "level": 3,
+    "order": 9,
+    "title": { "bg": "Урок №1: Древният кавал среща 174 BPM", "en": "Lesson No. 1: The ancient kaval meets 174 BPM" },
+    "objectives": [
+      { "bg": "Да минеш целия път: тон → ритъм → запис → лад → пространство → пресет.", "en": "Walk the whole path: tone → rhythm → take → scale → space → preset." }
+    ],
+    "explanation": {
+      "bg": "Това е сценарият от концепцията, стъпка по стъпка в истинските екрани; всяка стъпка се отмята сама, когато приложението види, че е направена. Не мисли за грешките при записа — анализът ги показва, ти решаваш.",
+      "en": "This is the concept scenario, step by step in the real screens; each step ticks itself when the app sees it done. Do not think about mistakes while recording: the analysis shows them, you decide."
+    },
+    "glossary": ["Liquid DnB", "лад", "Space"],
+    "exercise": { "type": "guided", "steps": [
+      { "text": { "bg": "Калибриране: отвори „Свири и записвай“, включи тунера и изсвири дълъг тон (2 s стабилно).", "en": "Calibration: open Play & record, turn the tuner on and play a long tone (2 s steady)." }, "check": { "kind": "tuner_stable", "seconds": 2 } },
+      { "text": { "bg": "Барабани: в „Ритъм секция“ избери Liquid пресет и темпо 174, пусни ритъма.", "en": "Drums: in Rhythm section choose a Liquid preset and tempo 174, start the rhythm." }, "check": { "kind": "rhythm_running", "bpm": 174 } },
+      { "text": { "bg": "Запис: изсвири 4–5 ноти върху ритъма, не мисли за грешките.", "en": "Take: play 4–5 notes over the rhythm, forget about mistakes." }, "check": { "kind": "new_take", "min_notes": 3 } },
+      { "text": { "bg": "Лад: избери една от хипотезите за тоналност (панел „Лад“).", "en": "Scale: pick one of the key hypotheses (Scale panel)." }, "check": { "kind": "scale_chosen" } },
+      { "text": { "bg": "Атмосфера: вдигни Space до 70 % (миксерът на фона).", "en": "Atmosphere: raise Space to 70 % (background mixer)." }, "check": { "kind": "space_at_least", "value": 0.6 } },
+      { "text": { "bg": "Финал: запази фона като пресет с бележка какво чуваш.", "en": "Finish: save the background as a preset with a note on what you hear." }, "check": { "kind": "preset_saved" } }
+    ] },
+    "pass_score": 1,
+    "mini_project": { "bg": "Следващ път: Референции › Фрази — вземи фраза от любима песен и я повтори с „Чуй и повтори“.", "en": "Next time: References › Phrases: take a phrase from a favourite song and repeat it with Hear and repeat." }
+  }
+]

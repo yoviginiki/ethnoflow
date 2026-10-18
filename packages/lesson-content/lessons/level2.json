@@ -1,0 +1,199 @@
+[
+  {
+    "id": "l2-01-steps",
+    "level": 2,
+    "order": 1,
+    "title": { "bg": "Цял тон и полутон", "en": "Whole tone and semitone" },
+    "objectives": [
+      { "bg": "Да чуваш разликата между малка и голяма стъпка.", "en": "Hear the difference between the small and the big step." }
+    ],
+    "explanation": {
+      "bg": "Всяка мелодия е направена от две стъпки: полутон (най-малката, Ми–Фа) и цял тон (две такива, Ре–Ми). Къде в гамата стоят полутоновете определя характера ѝ — мажор, минор или лад.",
+      "en": "Every melody is built from two steps: the semitone (the smallest, E–F) and the whole tone (two of them, D–E). Where the semitones sit in a scale decides its character: major, minor or mode."
+    },
+    "glossary": ["полутон", "цял тон", "интервал"],
+    "demo": { "kind": "notes", "notes": [ { "degree": 0 }, { "degree": 2, "beats": 1.5 }, { "degree": 4 }, { "degree": 5, "beats": 1.5 } ] },
+    "exercise": { "type": "ear_interval", "choices": [1, 2], "rounds": 6 },
+    "quiz": [
+      { "q": { "bg": "Ре–Ми е…", "en": "D–E is…" },
+        "choices": [ { "bg": "цял тон", "en": "a whole tone" }, { "bg": "полутон", "en": "a semitone" } ],
+        "answer": 0 },
+      { "q": { "bg": "Колко полутона има в цял тон?", "en": "How many semitones in a whole tone?" },
+        "choices": [ { "bg": "2", "en": "2" }, { "bg": "1", "en": "1" }, { "bg": "3", "en": "3" } ],
+        "answer": 0 }
+    ],
+    "next": "l2-02-intervals"
+  },
+  {
+    "id": "l2-02-intervals",
+    "level": 2,
+    "order": 2,
+    "title": { "bg": "Интервали до октава", "en": "Intervals up to the octave" },
+    "objectives": [
+      { "bg": "Да разпознаваш терца, кварта, квинта, секста, септима и октава по слух.", "en": "Recognise third, fourth, fifth, sixth, seventh and octave by ear." }
+    ],
+    "explanation": {
+      "bg": "Интервалът е разстоянието между два тона, броено в полутонове: малка терца 3, голяма терца 4, кварта 5, квинта 7, голяма секста 9, октава 12. Квинтата и октавата звучат „отворено“, терците — „топло“ или „тъжно“.",
+      "en": "An interval is the distance between two tones in semitones: minor third 3, major third 4, fourth 5, fifth 7, major sixth 9, octave 12. Fifths and octaves sound “open”, thirds “warm” or “sad”."
+    },
+    "glossary": ["интервал", "терца", "квинта"],
+    "demo": { "kind": "notes", "notes": [ { "degree": 0 }, { "degree": 7, "beats": 1.5 }, { "degree": 0 }, { "degree": 4, "beats": 1.5 }, { "degree": 0 }, { "degree": 3, "beats": 1.5 } ] },
+    "exercise": { "type": "ear_interval", "choices": [3, 4, 5, 7, 9, 12], "rounds": 8 },
+    "quiz": [
+      { "q": { "bg": "Квинтата е…", "en": "A fifth is…" },
+        "choices": [ { "bg": "7 полутона", "en": "7 semitones" }, { "bg": "5 полутона", "en": "5 semitones" }, { "bg": "12 полутона", "en": "12 semitones" } ],
+        "answer": 0 },
+      { "q": { "bg": "Малка и голяма терца се различават с…", "en": "Minor and major third differ by…" },
+        "choices": [ { "bg": "един полутон", "en": "one semitone" }, { "bg": "цял тон", "en": "a whole tone" } ],
+        "answer": 0, "why": { "bg": "3 срещу 4 полутона — това решава „минор“ срещу „мажор“ в акорда.", "en": "3 versus 4 semitones: that decides minor versus major in a chord." } }
+    ],
+    "next": "l2-03-major-minor"
+  },
+  {
+    "id": "l2-03-major-minor",
+    "level": 2,
+    "order": 3,
+    "title": { "bg": "Мажор и минор", "en": "Major and minor" },
+    "objectives": [
+      { "bg": "Да чуваш двете гами като две настроения.", "en": "Hear the two scales as two moods." }
+    ],
+    "explanation": {
+      "bg": "Мажорната гама има голяма терца над тониката (светла), минорната — малка (по-тъмна); всичко друго е почти същото. Същите седем тона, започнати от друго място, дават другата гама — Ре минор и Фа мажор са едни и същи ноти.",
+      "en": "The major scale has a major third above the tonic (bright), the minor a minor third (darker); nearly everything else is the same. The same seven tones started elsewhere give the other scale: D minor and F major are the same notes."
+    },
+    "glossary": ["мажор", "минор", "гама", "тоника"],
+    "demo": { "kind": "scale", "scale": "aeolian" },
+    "exercise": { "type": "ear_mode", "choices": ["ionian", "aeolian"], "rounds": 6 },
+    "quiz": [
+      { "q": { "bg": "Кой интервал над тониката решава мажор/минор?", "en": "Which interval above the tonic decides major/minor?" },
+        "choices": [ { "bg": "Терцата", "en": "The third" }, { "bg": "Квинтата", "en": "The fifth" }, { "bg": "Октавата", "en": "The octave" } ],
+        "answer": 0 },
+      { "q": { "bg": "Ре минор (еолийски) и Фа мажор са…", "en": "D minor (Aeolian) and F major are…" },
+        "choices": [ { "bg": "същите ноти с различен дом", "en": "the same notes with a different home" }, { "bg": "напълно различни ноти", "en": "entirely different notes" } ],
+        "answer": 0 }
+    ],
+    "next": "l2-04-pentatonic"
+  },
+  {
+    "id": "l2-04-pentatonic",
+    "level": 2,
+    "order": 4,
+    "title": { "bg": "Пентатоника", "en": "Pentatonic" },
+    "objectives": [
+      { "bg": "Да свириш петте тона, с които „не може да сгрешиш“.", "en": "Play the five tones you “cannot go wrong” with." },
+      { "bg": "Да повториш тритонов мотив по слух.", "en": "Repeat a three-note motif by ear." }
+    ],
+    "explanation": {
+      "bg": "Пентатониката са пет тона без полутонове помежду им — затова всеки от тях пасва на всеки. Повечето народни мелодии по света тръгват оттук; мажорната е 1 2 3 5 6, минорната 1 ♭3 4 5 ♭7.",
+      "en": "The pentatonic is five tones with no semitones between them, which is why each fits every other. Most folk melodies in the world start here; the major one is 1 2 3 5 6, the minor 1 ♭3 4 5 ♭7."
+    },
+    "glossary": ["пентатоника"],
+    "demo": { "kind": "scale", "scale": "major_pentatonic" },
+    "exercise": { "type": "hear_and_repeat", "notes": 3, "phrase": [0, 2, 4], "beat_seconds": 0.6 },
+    "pass_score": 0.66,
+    "quiz": [
+      { "q": { "bg": "Колко тона има пентатониката?", "en": "How many tones in a pentatonic?" },
+        "choices": [ { "bg": "5", "en": "5" }, { "bg": "7", "en": "7" }, { "bg": "12", "en": "12" } ],
+        "answer": 0 },
+      { "q": { "bg": "Защо „не може да сгрешиш“ с нея?", "en": "Why “can’t you go wrong” with it?" },
+        "choices": [ { "bg": "Няма полутонове, нищо не дразни", "en": "No semitones, nothing clashes" }, { "bg": "Защото е по-бавна", "en": "Because it is slower" } ],
+        "answer": 0 }
+    ],
+    "next": "l2-05-five-notes"
+  },
+  {
+    "id": "l2-05-five-notes",
+    "level": 2,
+    "order": 5,
+    "title": { "bg": "Пет ноти на кавал (чуй и повтори)", "en": "Five notes on the kaval (hear and repeat)" },
+    "objectives": [
+      { "bg": "Да повториш пет ноти в лада на проекта със собствения си инструмент.", "en": "Repeat five notes in the project scale on your own instrument." }
+    ],
+    "explanation": {
+      "bg": "Мотивът е най-малката музикална идея — няколко ноти, които се помнят. Чуй го, после го изсвири; времето ти се подравнява по първата нота, затова започни когато си готов.",
+      "en": "A motif is the smallest musical idea: a few notes you remember. Hear it, then play it; your timing is aligned to your first note, so start when ready."
+    },
+    "glossary": ["мотив", "лад"],
+    "exercise": { "type": "hear_and_repeat", "notes": 5, "beat_seconds": 0.6 },
+    "pass_score": 0.6,
+    "mini_project": { "bg": "Натисни „Още веднъж“ за нов мотив (друг seed) и го повтори три пъти подред.", "en": "Press “Once more” for a new motif (another seed) and repeat it three times in a row." },
+    "next": "l2-06-motif"
+  },
+  {
+    "id": "l2-06-motif",
+    "level": 2,
+    "order": 6,
+    "title": { "bg": "Мотив, фраза, повторение, вариация", "en": "Motif, phrase, repetition, variation" },
+    "objectives": [
+      { "bg": "Да чуеш въпрос и отговор във фраза.", "en": "Hear question and answer in a phrase." },
+      { "bg": "Да повториш мотив и вариацията му.", "en": "Repeat a motif and its variation." }
+    ],
+    "explanation": {
+      "bg": "Фразата е музикално изречение: мотив, повторен и после променен с една-две ноти (вариация). Първата половина „пита“ (свършва встрани от дома), втората „отговаря“ (връща се на тониката).",
+      "en": "A phrase is a musical sentence: a motif repeated, then changed by a note or two (variation). The first half “asks” (ends away from home), the second “answers” (returns to the tonic)."
+    },
+    "glossary": ["фраза", "вариация", "въпрос–отговор"],
+    "demo": { "kind": "notes", "notes": [ { "degree": 0 }, { "degree": 2 }, { "degree": 3 }, { "degree": 2, "beats": 2 }, { "degree": 0 }, { "degree": 2 }, { "degree": 3 }, { "degree": 5 }, { "degree": 0, "beats": 2 } ] },
+    "exercise": { "type": "hear_and_repeat", "notes": 8, "phrase": [0, 2, 3, 2, 0, 2, 3, 0], "beat_seconds": 0.5 },
+    "pass_score": 0.6,
+    "quiz": [
+      { "q": { "bg": "Вариацията е…", "en": "A variation is…" },
+        "choices": [ { "bg": "същият мотив с малка промяна", "en": "the same motif with a small change" }, { "bg": "съвсем нова мелодия", "en": "a brand-new melody" } ],
+        "answer": 0 },
+      { "q": { "bg": "„Отговорът“ във фразата обикновено…", "en": "The “answer” in a phrase usually…" },
+        "choices": [ { "bg": "се връща на тониката", "en": "returns to the tonic" }, { "bg": "спира на най-високата нота", "en": "stops on the highest note" } ],
+        "answer": 0 }
+    ],
+    "next": "l2-07-breath"
+  },
+  {
+    "id": "l2-07-breath",
+    "level": 2,
+    "order": 7,
+    "title": { "bg": "Дишане, артикулация, динамика", "en": "Breath, articulation, dynamics" },
+    "objectives": [
+      { "bg": "Да държиш дълъг равен тон 6 секунди на тониката.", "en": "Hold a long even tone for 6 seconds on the tonic." }
+    ],
+    "explanation": {
+      "bg": "Дишането се планира между фразите, не вътре в тях; началото на тона може да е меко (с въздух) или твърдо (с език). Динамиката е тихо–силно и е най-евтиният начин една фраза да стане жива.",
+      "en": "Breathing is planned between phrases, not inside them; a tone can start soft (with air) or hard (with the tongue). Dynamics are soft–loud and the cheapest way to make a phrase alive."
+    },
+    "glossary": ["артикулация", "динамика"],
+    "exercise": { "type": "hold_tone", "seconds": 6, "max_sigma_cents": 20, "target": { "kind": "tonic" } },
+    "quiz": [
+      { "q": { "bg": "Къде се диша?", "en": "Where do you breathe?" },
+        "choices": [ { "bg": "Между фразите", "en": "Between phrases" }, { "bg": "По средата на дълга нота", "en": "In the middle of a long note" } ],
+        "answer": 0 },
+      { "q": { "bg": "Динамиката е…", "en": "Dynamics are…" },
+        "choices": [ { "bg": "тихо и силно", "en": "soft and loud" }, { "bg": "бързо и бавно", "en": "fast and slow" } ],
+        "answer": 0 }
+    ],
+    "next": "l2-08-ornaments"
+  },
+  {
+    "id": "l2-08-ornaments",
+    "level": 2,
+    "order": 8,
+    "title": { "bg": "Орнаменти", "en": "Ornaments" },
+    "objectives": [
+      { "bg": "Да чуеш форшлаг, мордент и трилер върху една фраза.", "en": "Hear a grace note, a mordent and a trill on one phrase." },
+      { "bg": "Да изсвириш украсената фраза по падащите ноти.", "en": "Play the ornamented phrase from the falling notes." }
+    ],
+    "explanation": {
+      "bg": "Орнаментът е бърза съседна нота около главната: форшлагът е една преди нея, мордентът — горе и обратно, трилерът — трептене между двете. На кавала са част от езика на мелодията, не грешки — тунерът ги вижда като кратки отклонения.",
+      "en": "An ornament is a quick neighbour around the main note: a grace note before it, a mordent up and back, a trill shaking between the two. On the kaval they are the melody’s language, not mistakes; the tuner sees them as short deviations."
+    },
+    "glossary": ["форшлаг", "мордент", "трилер"],
+    "demo": { "kind": "notes", "notes": [ { "degree": 0 }, { "degree": 2 }, { "degree": 3, "beats": 2 }, { "degree": 0 }, { "degree": 2, "beats": 0.25 }, { "degree": 3, "beats": 0.25 }, { "degree": 2, "beats": 0.5 }, { "degree": 3, "beats": 2 } ] },
+    "exercise": { "type": "play_along", "phrase": [0, 2, 3, 2, 3, 2, 0, -2, 0], "beat_seconds": 0.4 },
+    "quiz": [
+      { "q": { "bg": "Форшлагът е…", "en": "A grace note is…" },
+        "choices": [ { "bg": "кратка нота точно преди главната", "en": "a short note right before the main one" }, { "bg": "дълга нота след главната", "en": "a long note after the main one" } ],
+        "answer": 0 },
+      { "q": { "bg": "Тунерът показва кратко отклонение по време на орнамент. Това е…", "en": "The tuner shows a short deviation during an ornament. That is…" },
+        "choices": [ { "bg": "нормално — орнаментът е част от стила", "en": "normal, the ornament is part of the style" }, { "bg": "грешка, която трябва да се махне", "en": "an error to remove" } ],
+        "answer": 0 }
+    ],
+    "next": "l3-01-tonic"
+  }
+]

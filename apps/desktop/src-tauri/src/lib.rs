@@ -1,3 +1,4 @@
+mod academy_cmds;
 mod ambient_cmds;
 mod analysis_cmds;
 mod arrangement_cmds;
@@ -113,6 +114,15 @@ pub fn run() {
             instrument_cmds::remove_profile_note,
             instrument_cmds::play_profile_note,
             trainer_cmds::evaluate_performance,
+            academy_cmds::academy_lessons,
+            academy_cmds::academy_instance,
+            academy_cmds::academy_play,
+            academy_cmds::academy_score_rhythm,
+            academy_cmds::academy_score_repeat,
+            academy_cmds::academy_record,
+            academy_cmds::academy_reset,
+            academy_cmds::academy_new_take,
+            academy_cmds::academy_play_along,
             synth_cmds::start_live_synth,
             synth_cmds::stop_live_synth,
             synth_cmds::synth_note,

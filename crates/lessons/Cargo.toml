@@ -1,0 +1,15 @@
+[package]
+name = "ethnoflow-lessons"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Academy (F6.1): lessons as data (schema + validator), seeded exercise generators and scoring. Pure Rust, no I/O beyond the embedded lesson files."
+
+[lib]
+name = "lessons"
+path = "src/lib.rs"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+ethnoflow-music-core = { path = "../music-core" }

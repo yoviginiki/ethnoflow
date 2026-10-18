@@ -74,6 +74,11 @@ rhythm_status, ambient_status }`
 | `transport_loop` | `start_bar`, `bars` (omit both = off) | loop in bars, stored in the arrangement |
 | `reference_phrases` | `id` | extracts melodic phrases (pitch track → notes → phrases) and returns them with compact notes (s, d, m, c, v) |
 | `reference_phrase_to_take` | `id`, `index` | puts phrase `index` into the open project as a MIDI take |
+| `academy_lessons` | | all lessons (id, level, track, exercise type, passed) + the exercise context (tonic, kind, range) |
+| `academy_instance` | `id`, `seed?` | a concrete, reproducible instance of the lesson's exercise (prompt notes, choices, grid…) + demo notes |
+| `academy_score_rhythm` | `onsets`, `grid`, `level?` | scores claps against the grid (deviations in ms) |
+| `academy_record` | `id`, `score`, `passed` | records an attempt in the local progress |
+| `academy_reset` | `id?` | clears progress for one lesson (or all) |
 | `error_clear` | | clears the app's error banner |
 | `create_project` | `name` | closes the current project and creates a new one |
 | `instrument_list` | | instrument presets (id, name, category, factory) |

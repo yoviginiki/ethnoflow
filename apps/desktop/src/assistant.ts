@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { api, describeError, type Ambient as AmbientRack, type AmbientLayer, type LayerKind, type LayerSource, type LibraryKind, type Scale, type Timing } from "./api";
+import { api, describeError, type Ambient as AmbientRack, type AmbientLayer, type LayerKind, type LayerSource, type LibraryKind, type Scale, type Timing, type Level } from "./api";
 import { defaultSource, makeLayer, MAX_AMBIENT_LAYERS } from "./ambientPresets";
 import { applyLibraryPayload, applySession, collectSession, mergeSessionPrefs, pickSessionPrefs, rackForProject, SESSION_PREF_KEYS } from "./session";
 import { useStore, type LayerName, type Screen } from "./store";
@@ -309,6 +309,19 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
       useStore.getState().setProject(r.project, r.report);
       return { name: r.project.name, root: r.project.root, takes: r.project.takes.length };
     }
+    case "academy_lessons": {
+      const v = await api.academyLessons();
+      return { count: v.lessons.length, context: v.context, lessons: v.lessons.map((l) => ({ id: l.id, level: l.level, track: l.track, type: l.exercise.type, passed: !!l.progress.passed_at_ms })) };
+    }
+    case "academy_instance":
+      return await api.academyInstance(String(cmd.id), typeof cmd.seed === "number" ? cmd.seed : null);
+    case "academy_score_rhythm":
+      return await api.academyScoreRhythm(cmd.onsets as number[], cmd.grid as number[], (cmd.level as Level) ?? "beginner");
+    case "academy_record":
+      return await api.academyRecord(String(cmd.id), Number(cmd.score), Boolean(cmd.passed));
+    case "academy_reset":
+      await api.academyReset(typeof cmd.id === "string" ? cmd.id : null);
+      return { ok: true };
     case "recent_projects":
       return { recent: await api.recentProjects() };
     case "set_scale": {

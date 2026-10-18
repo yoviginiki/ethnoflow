@@ -1,0 +1,420 @@
+[
+  {
+    "id": "k-01-first-sound",
+    "level": 1,
+    "order": 101,
+    "track": "kaval",
+    "reading": ["издаване-на-звук-най-трудната-начална-стъпка"],
+    "title": { "bg": "Кавал 1: Издаване на звук", "en": "Kaval 1: Making a sound" },
+    "objectives": [
+      { "bg": "Да намериш ъгъла и струята, при които кавалът проговаря.", "en": "Find the angle and the air stream at which the kaval speaks." },
+      { "bg": "Да задържиш първия си тон 2 секунди.", "en": "Hold your first tone for 2 seconds." }
+    ],
+    "explanation": {
+      "bg": "Кавалът няма цепка: устните насочват мека, закръглена струя („молив от въздух“, устни на „О“) към скосения ръб на наустника, в дясната половина на устата, посока „8–10 часа“. Първият тон може да отнеме от час до седмица — започни без затворени дупки и с много слабо духане. Ако тонът се губи при затваряне на дупки, някой пръст пропуска въздух; проверявай отгоре надолу.",
+      "en": "The kaval has no windway: the lips aim a soft, round stream (“a pencil of air”, lips in an “O”) at the bevelled edge of the mouthpiece, in the right half of the mouth, towards “8–10 o’clock”. The first tone can take an hour or a week; start with no holes closed and very little air. If the tone dies when you close holes, a finger is leaking; check from the top down."
+    },
+    "glossary": ["наустник", "струя", "регистър"],
+    "exercise": { "type": "hold_tone", "seconds": 2, "target": { "kind": "any" } },
+    "quiz": [
+      { "q": { "bg": "Накъде се насочва струята?", "en": "Where is the air stream aimed?" },
+        "choices": [ { "bg": "Диагонално към ръба, посока 8–10 часа", "en": "Diagonally at the edge, 8–10 o’clock" }, { "bg": "Право в тръбата", "en": "Straight into the tube" } ],
+        "answer": 0 },
+      { "q": { "bg": "Звукът е добър с отворени дупки, но изчезва при затворени. Най-вероятно…", "en": "The sound is fine with open holes but dies with closed ones. Most likely…" },
+        "choices": [ { "bg": "някой пръст пропуска въздух", "en": "a finger is leaking air" }, { "bg": "кавалът е повреден", "en": "the kaval is broken" }, { "bg": "духаш твърде слабо", "en": "you blow too softly" } ],
+        "answer": 0, "why": { "bg": "Теч в горна дупка разваля всички тонове под нея — проверявай отгоре надолу.", "en": "A leak in an upper hole spoils every tone below it; check from the top down." } },
+      { "q": { "bg": "Силата на духане в началото е…", "en": "The blowing strength at the start is…" },
+        "choices": [ { "bg": "слаба", "en": "soft" }, { "bg": "колкото може по-силна", "en": "as strong as possible" } ],
+        "answer": 0 }
+    ],
+    "mini_project": { "bg": "Контролен списък: устни на „О“, слабо духане, тръбата докосва двете устни, посока 8–10 часа, кръгови промени на ъгъла, без затворени дупки.", "en": "Checklist: lips in an “O”, soft air, tube touching both lips, direction 8–10 o’clock, small circular changes of angle, no holes closed." },
+    "next": "k-02-fingers-grip"
+  },
+  {
+    "id": "k-02-fingers-grip",
+    "level": 1,
+    "order": 102,
+    "track": "kaval",
+    "reading": ["поставяне-на-пръстите", "захват-придържане-на-кавала", "означения"],
+    "title": { "bg": "Кавал 2: Пръсти и захват", "en": "Kaval 2: Fingers and grip" },
+    "objectives": [
+      { "bg": "Да покриваш дупките с втората фаланга, не с възглавничките.", "en": "Cover the holes with the second phalanx, not the pads." },
+      { "bg": "Да държиш основния тон (Ре, всички дупки затворени) 3 секунди.", "en": "Hold the fundamental (D, all holes closed) for 3 seconds." }
+    ],
+    "explanation": {
+      "bg": "Лявата ръка е горе: палецът (Т) затваря дупката отдолу, показалец–среден–безименен (2–4) трите горни; дясната ръка (5–8) затваря долните четири, десният палец само поддържа. Четирите най-долни отвори („душници“) никога не се затварят. При ноти с малко затворени дупки кавалът се придържа с пръст върху дупка, която не влияе на височината — внимавай с левия безименен, той сваля Ла почти до Ла бемол.",
+      "en": "The left hand is on top: the thumb (T) closes the hole underneath, index–middle–ring (2–4) the three upper holes; the right hand (5–8) closes the lower four, the right thumb only supports. The four lowest vents are never closed. On notes with few closed holes the kaval is held by a finger on a hole that does not change the pitch; beware of the left ring finger, it pulls A almost down to A♭."
+    },
+    "glossary": ["душници", "захват"],
+    "exercise": { "type": "hold_tone", "seconds": 3, "max_sigma_cents": 20, "target": { "kind": "midi", "midi": 62 } },
+    "quiz": [
+      { "q": { "bg": "С коя част на пръста се затварят повечето дупки?", "en": "Which part of the finger closes most holes?" },
+        "choices": [ { "bg": "Плоската част на втората фаланга", "en": "The flat of the second phalanx" }, { "bg": "Възглавничката на върха", "en": "The fingertip pad" } ],
+        "answer": 0, "why": { "bg": "Изключение: десният кутре и обикновено левият безименен затварят с възглавничката.", "en": "Exception: the right little finger and usually the left ring finger close with the pad." } },
+      { "q": { "bg": "Душниците…", "en": "The vents (dushnitsi)…" },
+        "choices": [ { "bg": "никога не се затварят", "en": "are never closed" }, { "bg": "се затварят за ниските ноти", "en": "are closed for the low notes" } ],
+        "answer": 0 },
+      { "q": { "bg": "Кой пръст е опасен за придържане, защото сваля Ла?", "en": "Which finger is risky for holding because it lowers A?" },
+        "choices": [ { "bg": "Левият безименен (4)", "en": "The left ring finger (4)" }, { "bg": "Десният показалец (5)", "en": "The right index (5)" } ],
+        "answer": 0 }
+    ],
+    "next": "k-03-first-register"
+  },
+  {
+    "id": "k-03-first-register",
+    "level": 1,
+    "order": 103,
+    "track": "kaval",
+    "reading": ["първи-втори-и-трети-регистър"],
+    "range": [62, 71],
+    "title": { "bg": "Кавал 3: Първият регистър (Ре¹–Си¹)", "en": "Kaval 3: The first register (D¹–B¹)" },
+    "objectives": [
+      { "bg": "Да изсвириш всяка нота от Ре¹ до Си¹ по схемата с пръстовката.", "en": "Play every note from D¹ to B¹ from the fingering chart." }
+    ],
+    "explanation": {
+      "bg": "Всички дупки затворени е Ре¹; всяка повдигната дупка от долния край нагоре дава полутон по-високо: Ми (8 отворена), Фа (7–8), Фа♯ (6–8), Сол (5–8), Сол♯ (4–8), Ла (3–8), Си♭ (2–8, 4 по избор за придържане), Си (всичко отворено). Няма чисто Ми♭ — вдигането на кутрето води направо от Ре към Ми; то понякога се взема с частично покриване на дупка 8.",
+      "en": "All holes closed is D¹; every hole lifted from the bottom up gives a semitone higher: E (8 open), F (7–8), F♯ (6–8), G (5–8), G♯ (4–8), A (3–8), B♭ (2–8, 4 optional for holding), B (all open). There is no clean E♭: lifting the little finger goes straight from D to E; it is sometimes taken by half-covering hole 8."
+    },
+    "glossary": ["регистър", "пръстовка"],
+    "demo": { "kind": "notes", "notes": [ { "degree": 0, "beats": 0.7 }, { "degree": 2, "beats": 0.7 }, { "degree": 3, "beats": 0.7 }, { "degree": 4, "beats": 0.7 }, { "degree": 5, "beats": 0.7 }, { "degree": 6, "beats": 0.7 }, { "degree": 7, "beats": 0.7 }, { "degree": 8, "beats": 0.7 }, { "degree": 9, "beats": 1.4 } ] },
+    "exercise": { "type": "sight_reading", "count": 6, "accidentals": true },
+    "quiz": [
+      { "q": { "bg": "Коя нота липсва като чиста пръстовка в първия регистър?", "en": "Which note has no clean fingering in the first register?" },
+        "choices": [ { "bg": "Ми♭", "en": "E♭" }, { "bg": "Фа♯", "en": "F♯" }, { "bg": "Сол♯", "en": "G♯" } ],
+        "answer": 0 },
+      { "q": { "bg": "Ла¹ се свири с…", "en": "A¹ is played with…" },
+        "choices": [ { "bg": "Т и 2 затворени, останалото отворено", "en": "T and 2 closed, the rest open" }, { "bg": "всички дупки затворени", "en": "all holes closed" } ],
+        "answer": 0 }
+    ],
+    "next": "k-04-registers"
+  },
+  {
+    "id": "k-04-registers",
+    "level": 1,
+    "order": 104,
+    "track": "kaval",
+    "reading": ["регистри-и-особени-ноти", "първи-втори-и-трети-регистър", "четвърти-най-висок-регистър"],
+    "range": [74, 83],
+    "title": { "bg": "Кавал 4: Регистри и пренадуване", "en": "Kaval 4: Registers and overblowing" },
+    "objectives": [
+      { "bg": "Да вземаш втория регистър със същите пръсти и по-бърз въздух.", "en": "Take the second register with the same fingers and faster air." },
+      { "bg": "Да знаеш, че третият регистър е октава + квинта.", "en": "Know that the third register is an octave plus a fifth." }
+    ],
+    "explanation": {
+      "bg": "Една и съща пръстовка дава различни ноти според силата и фокуса на струята: първи регистър е основният тон, втори — октава по-високо (там са повечето мелодии), трети — октава и квинта (всички затворени дават Ла²). Четвъртият регистър (Фа♯³–До♯⁴) има свои пръстовки с отворени горни дупки и затворено кутре и нотите над Сол³ са много трудни. Проблемна ниска нота почти винаги означава лошо уплътняване, не лош регистър.",
+      "en": "The same fingering gives different notes depending on the strength and focus of the stream: the first register is the fundamental, the second an octave up (where most melodies live), the third an octave and a fifth (all closed gives A²). The fourth register (F♯³–C♯⁴) has its own fingerings with upper holes open and the little finger closed; notes above G³ are very hard. A troublesome low note almost always means a bad seal, not a bad register."
+    },
+    "glossary": ["пренадуване", "дуодецима"],
+    "demo": { "kind": "notes", "notes": [ { "degree": -12, "beats": 1.2 }, { "degree": 0, "beats": 1.2 }, { "degree": 7, "beats": 1.5 } ] },
+    "exercise": { "type": "sight_reading", "count": 6 },
+    "quiz": [
+      { "q": { "bg": "Всички дупки затворени в третия регистър дават…", "en": "All holes closed in the third register gives…" },
+        "choices": [ { "bg": "Ла²", "en": "A²" }, { "bg": "Ре³", "en": "D³" }, { "bg": "Ре²", "en": "D²" } ],
+        "answer": 0 },
+      { "q": { "bg": "Как се минава от първи във втори регистър?", "en": "How do you go from the first to the second register?" },
+        "choices": [ { "bg": "Същите пръсти, по-бърз и по-фокусиран въздух", "en": "Same fingers, faster and more focused air" }, { "bg": "Отварят се всички дупки", "en": "All holes are opened" } ],
+        "answer": 0 },
+      { "q": { "bg": "Нотите над Сол³…", "en": "Notes above G³…" },
+        "choices": [ { "bg": "са много трудни за изпълнение", "en": "are very hard to play" }, { "bg": "са най-лесните", "en": "are the easiest" } ],
+        "answer": 0 }
+    ],
+    "next": "k-05-sitnene"
+  },
+  {
+    "id": "k-05-sitnene",
+    "level": 2,
+    "order": 105,
+    "track": "kaval",
+    "reading": ["артикулация-и-ситнене-основни-елементи-не-орнаменти"],
+    "range": [74, 83],
+    "title": { "bg": "Кавал 5: Ситнене и артикулация без език", "en": "Kaval 5: Sitnene and articulation without the tongue" },
+    "objectives": [
+      { "bg": "Да разделяш еднакви ноти с пръсти, а не с език.", "en": "Separate repeated notes with the fingers, not the tongue." }
+    ],
+    "explanation": {
+      "bg": "В тракийския стил се духа непрекъснато и всичко се разделя с пръсти (шопският и македонският стил ползват език). Ситнене: най-долният затворен пръст (този точно над първата отворена дупка) се отлепя и връща много бързо — прозвучава мъничка по-висока нота, която „цепи“ тона. Еднаквите ноти се разделят с много кратка междинна нота: плясване на дупката точно под нотата, с два съседни пръста за по-ясно, или удар много по-нагоре за „изпукване“.",
+      "en": "In the Thracian style the air is continuous and everything is separated with the fingers (Shop and Macedonian styles use the tongue). Sitnene: the lowest closed finger (the one right above the first open hole) lifts and returns very fast, sounding a tiny higher note that “splits” the tone. Repeated notes are separated by a very short in-between note: a slap on the hole just below the note, two neighbouring fingers for clarity, or a strike much higher up for a “pop”."
+    },
+    "glossary": ["ситнене", "артикулация"],
+    "demo": { "kind": "notes", "notes": [ { "degree": 2, "beats": 0.5 }, { "degree": 3, "beats": 0.12, "velocity": 0.5 }, { "degree": 2, "beats": 0.5 }, { "degree": 3, "beats": 0.12, "velocity": 0.5 }, { "degree": 2, "beats": 1 } ] },
+    "exercise": { "type": "hear_and_repeat", "notes": 6, "phrase": [0, 0, 0, 2, 2, 0], "beat_seconds": 0.45 },
+    "pass_score": 0.6,
+    "quiz": [
+      { "q": { "bg": "В тракийския стил нотите се разделят…", "en": "In the Thracian style notes are separated…" },
+        "choices": [ { "bg": "с пръсти, при непрекъснато духане", "en": "with the fingers, air continuous" }, { "bg": "с езика („ту“)", "en": "with the tongue (“tu”)" } ],
+        "answer": 0 },
+      { "q": { "bg": "Ситненето се прави с…", "en": "Sitnene is done with…" },
+        "choices": [ { "bg": "най-долния затворен пръст", "en": "the lowest closed finger" }, { "bg": "палеца", "en": "the thumb" }, { "bg": "кутрето винаги", "en": "always the little finger" } ],
+        "answer": 0 },
+      { "q": { "bg": "По школата на Георги Желязков при ноти с дясната ръка се плясва с…", "en": "In Georgi Zhelyazkov’s school, on right-hand notes you slap with…" },
+        "choices": [ { "bg": "левия безименен пръст", "en": "the left ring finger" }, { "bg": "десния палец", "en": "the right thumb" } ],
+        "answer": 0 }
+    ],
+    "next": "k-06-klepane"
+  },
+  {
+    "id": "k-06-klepane",
+    "level": 2,
+    "order": 106,
+    "track": "kaval",
+    "reading": ["артикулация-и-ситнене-основни-елементи-не-орнаменти", "прости-украшения"],
+    "title": { "bg": "Кавал 6: Клепане, вибрато с пръст, глисандо", "en": "Kaval 6: Klepane, finger vibrato, glissando" },
+    "objectives": [
+      { "bg": "Да държиш Ла¹ стабилно и да знаеш двете му пръстовки.", "en": "Hold A¹ steadily and know its two fingerings." },
+      { "bg": "Да различаваш простите украшения от орнаментиката на Досев.", "en": "Tell the simple ornaments from Dosev’s ornamentation." }
+    ],
+    "explanation": {
+      "bg": "Клепане е смяна на две пръстовки за една и съща нота (Ла с палец и показалец, после Ла с всички пръсти отпуснати, устните държат Ла) — звучи като ехо. Вибратото на кавала е пръстово: най-долният затворен пръст леко открива дупката, без да я отваря. Глисандо е плъзгане на пръстите по дупките вместо повдигане.",
+      "en": "Klepane swaps two fingerings of the same note (A with thumb and index, then A with all fingers relaxed, the lips holding A): it sounds like an echo. Kaval vibrato is a finger vibrato: the lowest closed finger slightly uncovers the hole without opening it. Glissando is sliding the fingers across the holes instead of lifting."
+    },
+    "glossary": ["клепане", "вибрато", "глисандо"],
+    "exercise": { "type": "hold_tone", "seconds": 4, "max_sigma_cents": 20, "target": { "kind": "midi", "midi": 69 } },
+    "quiz": [
+      { "q": { "bg": "Клепането е…", "en": "Klepane is…" },
+        "choices": [ { "bg": "смяна на алтернативни пръстовки за същата нота", "en": "switching alternative fingerings of the same note" }, { "bg": "бързо духане", "en": "fast blowing" } ],
+        "answer": 0 },
+      { "q": { "bg": "Пръстовото вибрато…", "en": "Finger vibrato…" },
+        "choices": [ { "bg": "леко открива дупката, без да я отваря", "en": "slightly uncovers the hole without opening it" }, { "bg": "затваря и отваря дупката докрай", "en": "closes and opens the hole fully" } ],
+        "answer": 0 }
+    ],
+    "next": "k-07-kaba"
+  },
+  {
+    "id": "k-07-kaba",
+    "level": 2,
+    "order": 107,
+    "track": "kaval",
+    "reading": ["каба"],
+    "range": [50, 59],
+    "title": { "bg": "Кавал 7: Каба", "en": "Kaval 7: Kaba" },
+    "objectives": [
+      { "bg": "Да намериш ниския регистър (октава под Ре¹–Си¹) с много леко духане.", "en": "Find the low register (an octave below D¹–B¹) with very light air." }
+    ],
+    "explanation": {
+      "bg": "Каба са „крехките“ ниски ноти, октава под нормалния регистър, с много леко духане; могат да звучат заедно с горната октава — не двуглас, а нисък тон с ярък „кларинетов“ тембър, по който се познават майсторите. Упражнение: свири ниско Ла, пренадуй до нормалното, „разхождай се“ между двете само с устни и налягане, търси точката, в която звучат и двете. Най-ниските ноти са най-трудни и резултатът се мени от ден на ден.",
+      "en": "Kaba are the “fragile” low notes an octave below the normal register, taken with very light air; they can sound together with the upper octave: not a two-voice chord but a low tone with a bright “clarinet” timbre that marks the masters. Exercise: play low A, overblow to the normal one, “walk” between the two with lips and pressure only, look for the point where both sound. The lowest notes are the hardest and the result changes from day to day."
+    },
+    "glossary": ["каба"],
+    "exercise": { "type": "hold_tone", "seconds": 2, "target": { "kind": "any" } },
+    "quiz": [
+      { "q": { "bg": "Каба се свири с…", "en": "Kaba is played with…" },
+        "choices": [ { "bg": "много леко духане", "en": "very light air" }, { "bg": "най-силното духане", "en": "the strongest air" } ],
+        "answer": 0 },
+      { "q": { "bg": "Когато каба звучи заедно с горната октава, това е…", "en": "When kaba sounds with the upper octave, that is…" },
+        "choices": [ { "bg": "нисък тон с ярък „кларинетов“ тембър", "en": "a low tone with a bright “clarinet” timbre" }, { "bg": "двуглас", "en": "a two-voice chord" } ],
+        "answer": 0 }
+    ],
+    "mini_project": { "bg": "Пробвай: разшири устната кухина без да отваряш устни, дръпни челюстта назад, промени ъгъла, „ааах“ с гърлото, връх на езика зад долните зъби.", "en": "Try: widen the mouth cavity without opening the lips, pull the jaw back, change the angle, “aaah” with the throat, tongue tip behind the lower teeth." },
+    "next": "k-08-vibrato-dosev"
+  },
+  {
+    "id": "k-08-vibrato-dosev",
+    "level": 3,
+    "order": 108,
+    "track": "kaval",
+    "reading": ["обобщение-на-правилата-за-вибрато-според-стр-8-29", "вибратото-като-компонент-на-фразата"],
+    "title": { "bg": "Кавал 8: Вибратото по Досев", "en": "Kaval 8: Vibrato after Dosev" },
+    "objectives": [
+      { "bg": "Да знаеш единадесетте правила за тракийското вибрато.", "en": "Know the eleven rules of Thracian vibrato." },
+      { "bg": "Да държиш дълъг тон, върху който да го упражняваш.", "en": "Hold a long tone to practise it on." }
+    ],
+    "explanation": {
+      "bg": "По Любен Досев вибратото е пръстово, с последния пръст на тона, само нагоре (до 5–7 Hz, най-много малка секунда), на относително дълги стойности в бавни мелодии. Движението е строго ритмично: едно разлюляване = преобладаващата метрична единица на фразата (осмина при осминово движение, триолна осмина при триоли), а броят разлюлявания = на колко равни части е разделена нотата мислено. Твърде бързото е „козе вибрато“ и се отхвърля; на Си♭² и Фа³ е най-трудно и в началото не се маркира.",
+      "en": "After Lyuben Dosev, vibrato is a finger vibrato with the last finger of the tone, upward only (up to 5–7 Hz, at most a minor second), on relatively long values in slow melodies. The motion is strictly rhythmic: one swing = the prevailing metric unit of the phrase (an eighth in eighth motion, a triplet eighth in triplets), and the number of swings = the equal parts the note is mentally divided into. Too fast is “goat vibrato” and rejected; on B♭² and F³ it is hardest and not marked at first."
+    },
+    "glossary": ["вибрато", "разлюляване", "триола"],
+    "demo": { "kind": "notes", "notes": [ { "degree": 12, "beats": 1, "velocity": 0.7 }, { "degree": 13, "beats": 0.25, "velocity": 0.45 }, { "degree": 12, "beats": 0.25 }, { "degree": 13, "beats": 0.25, "velocity": 0.45 }, { "degree": 12, "beats": 0.25 }, { "degree": 13, "beats": 0.25, "velocity": 0.45 }, { "degree": 12, "beats": 1 } ] },
+    "exercise": { "type": "hold_tone", "seconds": 5, "target": { "kind": "degree", "n": 5 } },
+    "quiz": [
+      { "q": { "bg": "Отклонението при тракийското вибрато е…", "en": "The deviation in Thracian vibrato is…" },
+        "choices": [ { "bg": "само нагоре, до малка секунда", "en": "upward only, up to a minor second" }, { "bg": "нагоре и надолу", "en": "up and down" }, { "bg": "само надолу", "en": "downward only" } ],
+        "answer": 0 },
+      { "q": { "bg": "Едно разлюляване е равно на…", "en": "One swing equals…" },
+        "choices": [ { "bg": "преобладаващата метрична единица на фразата", "en": "the prevailing metric unit of the phrase" }, { "bg": "винаги четвъртина", "en": "always a quarter note" } ],
+        "answer": 0 },
+      { "q": { "bg": "„Козе вибрато“ е…", "en": "“Goat vibrato” is…" },
+        "choices": [ { "bg": "твърде бързо вибрато, близо до трилер — отхвърлено от майсторите", "en": "too fast a vibrato, near a trill, rejected by the masters" }, { "bg": "правилното вибрато в хората", "en": "the right vibrato in dance tunes" } ],
+        "answer": 0 },
+      { "q": { "bg": "Пунктирана четвъртина в осминова фраза се вибрира като…", "en": "A dotted quarter in an eighth-note phrase is vibrated as…" },
+        "choices": [ { "bg": "три равни осмини (три разлюлявания)", "en": "three equal eighths (three swings)" }, { "bg": "триола", "en": "a triplet" } ],
+        "answer": 0, "why": { "bg": "Правило 5 и 8: пунктираната четвъртина е 3 равни осмини, не триола; триолата идва при пунктирана четвъртина + 2 шестнадесетини.", "en": "Rules 5 and 8: a dotted quarter is 3 equal eighths, not a triplet; the triplet comes with dotted quarter + 2 sixteenths." } }
+    ],
+    "mini_project": { "bg": "Отвори базата знания › Скан p-016–p-018: употреба на вибрато в 5/8, 7/8 и 9/8, и свири примерите бавно с метронома.", "en": "Open the knowledge base › Scans p-016–p-018: vibrato in 5/8, 7/8 and 9/8, and play the examples slowly with the metronome." },
+    "next": "k-09-sechene"
+  },
+  {
+    "id": "k-09-sechene",
+    "level": 3,
+    "order": 109,
+    "track": "kaval",
+    "reading": ["обобщена-таблица-сечене-по-тонове-стр-38-61", "употреба-на-сечене-в-практиката-на-тракийските-кавалджии"],
+    "title": { "bg": "Кавал 9: Сечене", "en": "Kaval 9: Sechene (cutting)" },
+    "objectives": [
+      { "bg": "Да знаеш кои тонове се секат и какъв е жестът.", "en": "Know which tones are cut and what the gesture is." }
+    ],
+    "explanation": {
+      "bg": "Сеченето „раздробява“ дълъг тон с бързо затваряне на свободните отвори на долната ръка (5–8) върху задържаната пръстовка; пръстите на горната ръка не мърдат. Секат се Фа³, Ми³, Ми♭³, Ре³, Си², Си♭², Ла², Си¹, Ла¹ (по няколко начина всеки, напр. осем за Си♭²); До♯³, До³ и тоновете от Сол♯² надолу до Ре² не се секат — там ефектът е само форшлаг. Сеченето е втората стъпка след вибратото в методиката на Досев.",
+      "en": "Cutting “breaks up” a long tone by quickly closing the free holes of the lower hand (5–8) over the held fingering; the upper-hand fingers stay still. F³, E³, E♭³, D³, B², B♭², A², B¹ and A¹ are cut (several ways each, e.g. eight for B♭²); C♯³, C³ and the tones from G♯² down to D² are not cut, there the effect is only a grace note. Cutting is the second step after vibrato in Dosev’s method."
+    },
+    "glossary": ["сечене", "форшлаг"],
+    "exercise": { "type": "quiz" },
+    "quiz": [
+      { "q": { "bg": "Кой жест прави сеченето?", "en": "Which gesture makes the cut?" },
+        "choices": [ { "bg": "Бързо затваряне на свободните отвори на долната ръка (5–8)", "en": "Fast closing of the free lower-hand holes (5–8)" }, { "bg": "Удар с езика", "en": "A tongue stroke" }, { "bg": "Движение на горната ръка", "en": "An upper-hand movement" } ],
+        "answer": 0 },
+      { "q": { "bg": "Кой тон НЕ се сече?", "en": "Which tone is NOT cut?" },
+        "choices": [ { "bg": "До³", "en": "C³" }, { "bg": "Си♭²", "en": "B♭²" }, { "bg": "Ла²", "en": "A²" } ],
+        "answer": 0, "why": { "bg": "При До♯³/До³ и от Сол♯² до Ре² ефектът е само форшлаг (таблицата на стр. 38–61).", "en": "On C♯³/C³ and from G♯² down to D² the effect is only a grace note (table, pp. 38–61)." } },
+      { "q": { "bg": "Колко начина за сечене има Си♭²?", "en": "How many ways is B♭² cut?" },
+        "choices": [ { "bg": "8", "en": "8" }, { "bg": "2", "en": "2" }, { "bg": "1", "en": "1" } ],
+        "answer": 0 }
+    ],
+    "mini_project": { "bg": "База знания › Скан p-020–p-031: вземи схема 1 (Фа³) и упражнявай сеченето бавно, първо без мелодия.", "en": "Knowledge base › Scans p-020–p-031: take scheme 1 (F³) and practise the cut slowly, first without a melody." },
+    "next": "k-10-substitute"
+  },
+  {
+    "id": "k-10-substitute",
+    "level": 3,
+    "order": 110,
+    "track": "kaval",
+    "reading": ["заместване-на-вибрато-със-сечене-нова-глава-стр-65"],
+    "title": { "bg": "Кавал 10: Заместване на вибрато със сечене", "en": "Kaval 10: Replacing vibrato with cutting" },
+    "objectives": [
+      { "bg": "Да разбираш кога, къде и как едното замества другото.", "en": "Understand when, where and how one replaces the other." }
+    ],
+    "explanation": {
+      "bg": "И вибратото, и сеченето раздробяват дълги стойности на по-кратки части, затова народните свирачи умело ги заменят едно с друго — мелодията става по-плавна и по-емоционална, без да губи красотата си. Досев разглежда характерни мелодични ходове, в които е възможно и двете: първо в бавните (протяжни, rubato) мелодии, после в хороводните. Примерите (43 и нататък) са дадени в много интерпретации, за да се изчерпят вариантите.",
+      "en": "Both vibrato and cutting break long values into shorter parts, so folk players skilfully swap one for the other: the melody becomes smoother and more emotional without losing its beauty. Dosev examines characteristic melodic moves where both are possible: first in slow (rubato) melodies, then in dance tunes. The examples (43 onward) come in many interpretations to exhaust the variants."
+    },
+    "glossary": ["rubato", "хороводна мелодия"],
+    "exercise": { "type": "quiz" },
+    "quiz": [
+      { "q": { "bg": "Защо вибратото и сеченето могат да се заместват?", "en": "Why can vibrato and cutting replace each other?" },
+        "choices": [ { "bg": "И двете раздробяват дълги стойности на по-кратки", "en": "Both break long values into shorter ones" }, { "bg": "Защото звучат еднакво", "en": "Because they sound the same" } ],
+        "answer": 0 },
+      { "q": { "bg": "Къде Досев разглежда заместването първо?", "en": "Where does Dosev examine the substitution first?" },
+        "choices": [ { "bg": "В бавните, протяжни мелодии", "en": "In slow, drawn-out melodies" }, { "bg": "В бързите хора", "en": "In fast dances" } ],
+        "answer": 0 }
+    ],
+    "next": "k-11-glissando"
+  },
+  {
+    "id": "k-11-glissando",
+    "level": 3,
+    "order": 111,
+    "track": "kaval",
+    "reading": ["свързване-на-тоновете-чрез-глисандо-нова-глава"],
+    "range": [74, 86],
+    "title": { "bg": "Кавал 11: Глисандо", "en": "Kaval 11: Glissando" },
+    "objectives": [
+      { "bg": "Да знаеш техниката: плъзгане от първа към трета фаланга.", "en": "Know the technique: sliding from the first to the third phalanx." },
+      { "bg": "Да изсвириш възходяща фраза с глисанда (по Пример 62, приблизително).", "en": "Play an ascending phrase with glissandi (after Example 62, approximate)." }
+    ],
+    "explanation": {
+      "bg": "Глисандото дава „леещото се“ звучене на тракийските кавалджии: пръстите не се вдигат, а се плъзгат по отворите от първа към трета фаланга за време, равно на сбора от двете ноти. Използва се най-често във възходяща посока (пръстът отваря отвора и се появява съседният горен тон); низходящото е възможно при специфични съчетания. Учи се едва след като пръстовката е напълно овладяна.",
+      "en": "Glissando gives the Thracian players’ “flowing” sound: the fingers are not lifted but slid across the holes from the first to the third phalanx, for the combined length of the two notes. It is used mostly ascending (the finger opens the hole and the upper neighbour appears); descending is possible in specific combinations. It is learned only once the fingering is fully mastered."
+    },
+    "glossary": ["глисандо", "фаланга"],
+    "demo": { "kind": "notes", "notes": [ { "degree": 18, "beats": 0.5 }, { "degree": 19, "beats": 0.5 }, { "degree": 21, "beats": 0.5 }, { "degree": 19, "beats": 0.5 }, { "degree": 18, "beats": 0.5 }, { "degree": 19, "beats": 0.5 }, { "degree": 17, "beats": 0.5 }, { "degree": 15, "beats": 0.5 }, { "degree": 14, "beats": 2 } ] },
+    "exercise": { "type": "play_along", "phrase": [18, 19, 21, 19, 18, 19, 17, 15, 14], "beat_seconds": 0.45 },
+    "quiz": [
+      { "q": { "bg": "При глисандо пръстите…", "en": "In a glissando the fingers…" },
+        "choices": [ { "bg": "се плъзгат по отворите", "en": "slide across the holes" }, { "bg": "се вдигат бързо", "en": "lift quickly" } ],
+        "answer": 0 },
+      { "q": { "bg": "Най-често глисандото е…", "en": "Most often the glissando is…" },
+        "choices": [ { "bg": "възходящо", "en": "ascending" }, { "bg": "низходящо", "en": "descending" } ],
+        "answer": 0 },
+      { "q": { "bg": "Кога се учи глисандото?", "en": "When is glissando learned?" },
+        "choices": [ { "bg": "След като пръстовката е напълно овладяна", "en": "After the fingering is fully mastered" }, { "bg": "Първата седмица", "en": "In the first week" } ],
+        "answer": 0 }
+    ],
+    "next": "k-12-accents"
+  },
+  {
+    "id": "k-12-accents",
+    "level": 3,
+    "order": 112,
+    "track": "kaval",
+    "reading": ["акценти"],
+    "title": { "bg": "Кавал 12: Акценти и акцентиращ тон (АТ)", "en": "Kaval 12: Accents and the accenting tone (AT)" },
+    "objectives": [
+      { "bg": "Да знаеш, че акцентът на кавала е пръстов, а не динамичен.", "en": "Know that a kaval accent is made with the fingers, not dynamics." }
+    ],
+    "explanation": {
+      "bg": "При кавалджиите акцентът не е по-силно духане: нотата се отделя от следващата с много кратък, сух, „писклив“ трети тон — акцентиращ тон (АТ), обикновено с няколко степени по-висок (понякога по-нисък), който няма нищо общо с мелодията и не е форшлаг. Всеки тон от фразата може да бъде акцентиран, независимо от метричното време. Пример 109 е таблица: двойки съседни степени и АТ за всяка.",
+      "en": "For kaval players an accent is not louder air: the note is separated from the next by a very short, dry, “squeaky” third tone, the accenting tone (AT), usually a few steps higher (sometimes lower), unrelated to the melody and not a grace note. Any tone in the phrase can be accented regardless of metric position. Example 109 is a table: pairs of neighbouring degrees and the AT for each."
+    },
+    "glossary": ["акцент", "акцентиращ тон"],
+    "exercise": { "type": "quiz" },
+    "quiz": [
+      { "q": { "bg": "Акцентът на кавала се постига с…", "en": "A kaval accent is achieved with…" },
+        "choices": [ { "bg": "допълнително движение на пръстите (АТ)", "en": "an extra finger movement (AT)" }, { "bg": "по-силно духане", "en": "louder air" }, { "bg": "по-бавно темпо", "en": "a slower tempo" } ],
+        "answer": 0 },
+      { "q": { "bg": "Акцентиращият тон е…", "en": "The accenting tone is…" },
+        "choices": [ { "bg": "кратък трети тон извън мелодията", "en": "a short third tone outside the melody" }, { "bg": "форшлаг", "en": "a grace note" } ],
+        "answer": 0 },
+      { "q": { "bg": "Кои тонове могат да се акцентират?", "en": "Which tones can be accented?" },
+        "choices": [ { "bg": "Практически всеки тон от фразата", "en": "Practically any tone of the phrase" }, { "bg": "Само на силно време", "en": "Only on strong beats" } ],
+        "answer": 0 }
+    ],
+    "next": "k-13-short-trill"
+  },
+  {
+    "id": "k-13-short-trill",
+    "level": 3,
+    "order": 113,
+    "track": "kaval",
+    "reading": ["трилери"],
+    "title": { "bg": "Кавал 13: Къс трилер (КТ)", "en": "Kaval 13: The short trill (KT)" },
+    "objectives": [
+      { "bg": "Да знаеш как тракийският трилер се различава от западния.", "en": "Know how the Thracian trill differs from the Western one." }
+    ],
+    "explanation": {
+      "bg": "Тракийският трилер започва от горния съседен тон (най-често на полутон) и основният тон се сменя практически само веднъж — затова Досев го нарича къс трилер (КТ), близък до пралтрилера; прави се с едно движение на пръста, който отваря и затваря своя отвор. Не се среща „в чист вид“: обикновено се подготвя от възходящо глисандо или от АТ и се прилага на по-дълга стойност, например в началото на фразата. При твърда атака („ту“) първият звук е горният съсед, пръстът „се спуска“ и отскача веднъж.",
+      "en": "The Thracian trill starts from the upper neighbour (usually a semitone) and the main tone changes practically only once, which is why Dosev calls it a short trill (KT), close to the pralltriller; it is one movement of the finger that opens and closes its hole. It never appears “pure”: usually it is prepared by an ascending glissando or an AT and placed on a longer value, e.g. at the start of a phrase. With a hard attack (“tu”) the first sound is the upper neighbour, the finger “drops” and bounces once."
+    },
+    "glossary": ["трилер", "пралтрилер"],
+    "demo": { "kind": "notes", "notes": [ { "degree": 12, "beats": 0.2, "velocity": 0.6 }, { "degree": 11, "beats": 0.2 }, { "degree": 12, "beats": 0.2, "velocity": 0.6 }, { "degree": 11, "beats": 1.4 }, { "degree": 9, "beats": 0.5 }, { "degree": 11, "beats": 1 } ] },
+    "exercise": { "type": "quiz" },
+    "quiz": [
+      { "q": { "bg": "Тракийският трилер…", "en": "The Thracian trill…" },
+        "choices": [ { "bg": "сменя основния тон практически само веднъж", "en": "changes the main tone practically only once" }, { "bg": "е дълго бързо трептене между два тона", "en": "is a long fast shake between two tones" } ],
+        "answer": 0 },
+      { "q": { "bg": "Откъде започва КТ?", "en": "Where does the KT start?" },
+        "choices": [ { "bg": "От горния съседен тон", "en": "From the upper neighbour" }, { "bg": "От основния тон", "en": "From the main tone" } ],
+        "answer": 0 },
+      { "q": { "bg": "КТ обикновено се подготвя от…", "en": "The KT is usually prepared by…" },
+        "choices": [ { "bg": "възходящо глисандо или АТ", "en": "an ascending glissando or an AT" }, { "bg": "пауза", "en": "a rest" } ],
+        "answer": 0 }
+    ],
+    "next": "k-14-songs"
+  },
+  {
+    "id": "k-14-songs",
+    "level": 3,
+    "order": 114,
+    "track": "kaval",
+    "reading": ["приложение"],
+    "title": { "bg": "Кавал 14: Приложение — народни песни", "en": "Kaval 14: Appendix, folk songs" },
+    "objectives": [
+      { "bg": "Да научиш мелодия по слух от текста, после да я украсиш по означенията.", "en": "Learn a melody by ear from the lyrics, then ornament it from the markings." }
+    ],
+    "explanation": {
+      "bg": "Приложението на Досев дава популярни народни песни в удобни за кавала тоналности; вторият ред на акколадата е за свирене и в него са отбелязани местата на орнаментите (форшлаги, вълнообразни линии за глисандо, фигурки за вибрато, стрелки за АТ). Поетичният текст служи, за да научиш мелодията по слух, преди да я интерпретираш на инструмента. Пример 139 е „Бурен, бурен“ (Умерено, 1 бемол, 2/4).",
+      "en": "Dosev’s appendix gives popular folk songs in kaval-friendly keys; the second staff is for playing and marks where the ornaments go (grace notes, wavy lines for glissando, small figures for vibrato, arrows for AT). The lyrics serve to learn the melody by ear before interpreting it on the instrument. Example 139 is “Buren, buren” (Moderato, one flat, 2/4)."
+    },
+    "glossary": ["акколада", "8va"],
+    "exercise": { "type": "guided", "steps": [
+      { "text": { "bg": "Отвори Референции и добави запис на народна песен (или своя), после Анализирай и вземи темпото.", "en": "Open References and add a recording of a folk song (or your own), then Analyse and take the tempo." }, "check": { "kind": "screen", "name": "references" } },
+      { "text": { "bg": "В „Свири и записвай“ включи тунера и изсвири мелодията по слух, 2 секунди стабилен край на фразата.", "en": "In Play & record turn the tuner on and play the melody by ear, with a 2-second steady phrase ending." }, "check": { "kind": "tuner_stable", "seconds": 2 } },
+      { "text": { "bg": "Запиши я като нов запис с поне 5 ноти и виж орнаментите като кратки отклонения в контура.", "en": "Record it as a new take with at least 5 notes and see the ornaments as short deviations in the contour." }, "check": { "kind": "new_take", "min_notes": 5 } }
+    ] },
+    "pass_score": 1,
+    "quiz": [
+      { "q": { "bg": "Кой ред на акколадата в приложението е за свирене?", "en": "Which staff of the appendix system is for playing?" },
+        "choices": [ { "bg": "Вторият", "en": "The second" }, { "bg": "Първият", "en": "The first" } ],
+        "answer": 0 }
+    ],
+    "mini_project": { "bg": "База знания › Приложение: „Бурен, бурен“ (Пример 139) — научи текста, изпей мелодията, после я изсвири чиста и накрая с вибрато по фигурките.", "en": "Knowledge base › Appendix: “Buren, buren” (Example 139): learn the lyrics, sing the melody, then play it plain and finally with vibrato from the figures." }
+  }
+]
