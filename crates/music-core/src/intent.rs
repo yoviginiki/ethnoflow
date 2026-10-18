@@ -344,12 +344,16 @@ pub fn classify(input: &ClassifyInput) -> Vec<Classified> {
             if next_to_held {
                 reasons.push(Reason::NextToHeldTone);
             }
-            let repeats = next_phrase.is_some_and(|np| {
-                np.notes.iter().any(|&j| {
+            // "Comes back": the same pitch class held in the next phrase (offline lookahead)
+            // or in the previous one (what a live follower can know at the boundary).
+            let prev_phrase = pi.checked_sub(1).and_then(|j| phrases.get(j));
+            let held_in = |ph: &Phrase| {
+                ph.notes.iter().any(|&j| {
                     let m = &notes[j];
                     (m.midi - n.midi).rem_euclid(12) == 0 && m.duration() > p.ornament_max_seconds
                 })
-            });
+            };
+            let repeats = next_phrase.is_some_and(held_in) || prev_phrase.is_some_and(held_in);
             if repeats && in_scale == Some(false) {
                 reasons.push(Reason::RepeatsNextPhrase);
             }
@@ -650,7 +654,17 @@ mod tests {
             c[1].reasons
         );
         assert!(c[1].reasons.contains(&Reason::RepeatsNextPhrase));
-        assert_eq!(c[3].class, NoteClass::ProbableError, "{:?}", c[3].reasons);
+        // The second B♭ comes back from the previous phrase: meant as well (a live
+        // follower only knows the past at a phrase boundary, so the rule is symmetric).
+        assert_eq!(c[3].class, NoteClass::Stable, "{:?}", c[3].reasons);
+        // Alone in its phrase (nothing before or after brings it back): a probable error.
+        let lone = vec![
+            note(0.0, 0.5, 62, 0.0),
+            note(0.5, 0.6, 70, 0.0),
+            note(1.1, 0.5, 69, 0.0),
+        ];
+        let lone_ph = segment_phrases(&lone, &PhraseParams::default());
+        assert_eq!(mk(&lone, &lone_ph)[1].class, NoteClass::ProbableError);
         // The user says the second one was meant: a mark overrides, and calibration moves.
         let marked = classify(&ClassifyInput {
             notes: &notes,

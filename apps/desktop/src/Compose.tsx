@@ -7,6 +7,7 @@ import { messages, type StringMessageKey } from "./i18n";
 import { IntentBadge } from "./IntentPanel";
 import { PadPanel } from "./PadPanel";
 import { RhythmPanel } from "./RhythmPanel";
+import { LiveFollowPanel } from "./LiveFollowPanel";
 import { DEFAULT_DRONE, DEFAULT_PAD, DEFAULT_RHYTHM, useStore, type DronePrefs, type PadPrefs } from "./store";
 import { TimingPanel } from "./TimingPanel";
 
@@ -166,6 +167,8 @@ export function Compose() {
 
       <DronePanel scale={scale} profile={project.instrument} />
       <PadPanel scale={scale} profile={project.instrument} allowTension={tension} />
+
+      <LiveFollowPanel />
 
       <RhythmPanel />
 

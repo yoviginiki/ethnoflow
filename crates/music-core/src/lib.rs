@@ -11,6 +11,7 @@ pub mod groove;
 pub mod harmony;
 pub mod intent;
 pub mod key;
+pub mod live;
 pub mod midi;
 pub mod notes;
 pub mod ostinato;
@@ -44,6 +45,7 @@ pub use intent::{
 pub use key::{
     explain, rank_hypotheses, Decisive, Evidence, Hypothesis, PcShare, PitchClassHistogram,
 };
+pub use live::{HoldReason, LiveDecision, LiveFollower, LiveParams, LiveStatus, RecentNote};
 pub use midi::{write_smf, SmfOptions, TECHNICAL_TEMPO_BPM};
 pub use notes::{extract_notes, Note, NoteParams, PitchSample};
 pub use ostinato::{

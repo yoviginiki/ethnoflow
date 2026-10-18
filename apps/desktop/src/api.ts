@@ -1316,6 +1316,79 @@ export interface FingeringOverride {
   note: LText | null;
 }
 
+// ---------- Live accompanist (F8.1) ----------
+
+export type HoldReason =
+  | { kind: "low_confidence"; context: number; intent: number }
+  | { kind: "locked" }
+  | { kind: "bypass" }
+  | { kind: "same_chord" }
+  | { kind: "no_tones" };
+export interface LiveDecision {
+  phrase: number;
+  at_s: number;
+  phrase_start: number;
+  phrase_end: number;
+  tonic_pc: number;
+  kind: ScaleKind;
+  context_confidence: number;
+  intent_confidence: number;
+  switched: boolean;
+  chord: ChordTone[] | null;
+  chord_root_pc: number | null;
+  chord_kind: string | null;
+  chord_shape: string | null;
+  drone_root: number | null;
+  changed: boolean;
+  held: HoldReason | null;
+}
+export interface LiveRecentNote {
+  start: number;
+  end: number;
+  midi: number;
+  cents: number;
+  class: NoteClass | null;
+  phrase: number | null;
+}
+export interface LiveStatus {
+  seconds: number;
+  notes: number;
+  phrases: number;
+  open_phrase_notes: number;
+  tonic_pc: number | null;
+  kind: ScaleKind | null;
+  context_confidence: number;
+  alternatives: { tonic_pc: number; kind: ScaleKind; score: number; probability: number }[];
+  chord: ChordTone[] | null;
+  chord_root_pc: number | null;
+  chord_kind: string | null;
+  chord_shape: string | null;
+  drone_root: number | null;
+  last_change_s: number | null;
+  last_hold: HoldReason | null;
+  switches: number;
+  holds: number;
+  changes: number;
+  bypass: boolean;
+  locks: Locks;
+  mode: IntentMode;
+  recent: LiveRecentNote[];
+}
+export interface LiveView {
+  running: boolean;
+  status: LiveStatus | null;
+  decisions: LiveDecision[];
+  monitor_pitch_hz: number | null;
+  monitor_confidence: number;
+}
+export interface LiveStartParams {
+  intent: IntentSettings;
+  harmony: HarmonyUiParams;
+  strategy: Strategy;
+  device: string | null;
+  sample_rate: number | null;
+}
+
 export interface MidiExportResult {
   path: string;
   bytes: number;
@@ -1621,6 +1694,10 @@ export const api = {
   academyReset: (id: string | null) => invoke<void>("academy_reset", { id }),
   academyNewTake: (sinceMs: number, minNotes: number) => invoke<string | null>("academy_new_take", { sinceMs, minNotes }),
   academyPlayAlong: (notes: PlayNote[], label: string) => invoke<ProjectView>("academy_play_along", { notes, label }),
+  liveStart: (params: LiveStartParams) => invoke<LiveView>("live_start", { params }),
+  liveTick: () => invoke<LiveView>("live_tick"),
+  liveSet: (set: { locks: Locks | null; bypass: boolean | null }) => invoke<LiveView>("live_set", { set }),
+  liveStop: () => invoke<void>("live_stop"),
   academyTrainerLog: (entry: TrainerLogEntry) => invoke<number>("academy_trainer_log", { entry }),
   academyTrainerHistory: (limit: number | null) => invoke<TrainerLogEntry[]>("academy_trainer_history", { limit }),
   fingeringOverridesGet: (instrument: string) => invoke<FingeringOverride[]>("fingering_overrides_get", { instrument }),

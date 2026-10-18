@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
-import { api, describeError, type Ambient as AmbientRack, type AmbientLayer, type LayerKind, type LayerSource, type LibraryKind, type Scale, type Timing, type Level, type TrainerLogEntry, type FingeringOverride } from "./api";
+import { api, describeError, type Ambient as AmbientRack, type AmbientLayer, type LayerKind, type LayerSource, type LibraryKind, type Scale, type Timing, type Level, type TrainerLogEntry, type FingeringOverride, type Locks } from "./api";
+import { startLive, stopLive } from "./LiveFollowPanel";
 import { defaultSource, makeLayer, MAX_AMBIENT_LAYERS } from "./ambientPresets";
 import { applyLibraryPayload, applySession, collectSession, mergeSessionPrefs, pickSessionPrefs, rackForProject, SESSION_PREF_KEYS } from "./session";
 import { useStore, type LayerName, type Screen } from "./store";
@@ -319,6 +320,17 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
       return await api.academyScoreRhythm(cmd.onsets as number[], cmd.grid as number[], (cmd.level as Level) ?? "beginner");
     case "academy_record":
       return await api.academyRecord(String(cmd.id), Number(cmd.score), Boolean(cmd.passed));
+    case "live_start": {
+      await startLive();
+      return { running: useStore.getState().liveRunning };
+    }
+    case "live_tick":
+      return await api.liveTick();
+    case "live_set":
+      return await api.liveSet({ locks: (cmd.locks as Locks | undefined) ?? null, bypass: typeof cmd.bypass === "boolean" ? cmd.bypass : null });
+    case "live_stop":
+      await stopLive();
+      return { running: false };
     case "trainer_history":
       return await api.academyTrainerHistory(typeof cmd.limit === "number" ? cmd.limit : 20);
     case "trainer_log":

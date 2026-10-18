@@ -10,8 +10,8 @@ use std::time::Duration;
 
 use cpal::traits::DeviceTrait;
 use cpal::SampleFormat;
-use ringbuf::traits::{Consumer, Split};
-use ringbuf::HeapRb;
+use ringbuf::traits::{Consumer, Producer, Split};
+use ringbuf::{HeapCons, HeapRb};
 use serde::{Deserialize, Serialize};
 
 use crate::devices::{choose_config, find_device, Direction, StreamRequest};
@@ -41,7 +41,12 @@ pub struct InputMonitor {
     shared: Arc<Shared>,
     info: StreamInfo,
     device_name: String,
+    /// Every pitch frame the drain thread produced, for the live follower (F8.1).
+    pitch_rx: HeapCons<ContourPoint>,
 }
+
+/// Pitch frames kept for the live follower: 20 ms hop → about 160 s.
+const PITCH_RING: usize = 8192;
 
 impl InputMonitor {
     pub fn start(device_name: Option<&str>, request: StreamRequest) -> Result<Self> {
@@ -56,6 +61,7 @@ impl InputMonitor {
         };
         let shared = Arc::new(Shared::default());
         let (prod, mut cons) = HeapRb::<f32>::new(RING_CAPACITY_SAMPLES).split();
+        let (mut pitch_tx, pitch_rx) = HeapRb::<ContourPoint>::new(PITCH_RING).split();
         let mut tracker = PitchTracker::new(
             PitchConfig {
                 min_hz: 70.0,
@@ -88,6 +94,10 @@ impl InputMonitor {
                     );
                     est.clear();
                     tracker.push(&mono, &mut est);
+                    for e in &est {
+                        // Full ring = nobody is following; the newest frames win later.
+                        let _ = pitch_tx.try_push(*e);
+                    }
                     if let Some(e) = est.last() {
                         drain_shared
                             .pitch_hz_bits
@@ -142,7 +152,15 @@ impl InputMonitor {
             shared,
             info,
             device_name: resolved_name,
+            pitch_rx,
         })
+    }
+
+    /// Pitch frames since the previous call (seconds from the monitor start), oldest first.
+    pub fn drain_pitch(&mut self, out: &mut Vec<ContourPoint>) {
+        while let Some(p) = self.pitch_rx.try_pop() {
+            out.push(p);
+        }
     }
 
     pub fn device_name(&self) -> &str {

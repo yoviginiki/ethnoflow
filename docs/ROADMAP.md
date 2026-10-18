@@ -14,7 +14,7 @@ this file tracks status and the concrete Phase 1 plan.
 | 5 | Mini DAW + export | **F5.1 pulled forward (0.2.9)**: tracks/clips editor on the audio graph, after the owner's feedback that the pieces were not connected; F5.2–F5.4 not started |
 | 6 | Beginner Academy v1 | **started 2026-10-18** (levels 0–3 + kaval track, see docs/academy/CURRICULUM.md) |
 | 7 | Intelligent variations | not started |
-| 8 | Live accompanist R&D | not started |
+| 8 | Live accompanist R&D | **first slice 2026-10-18 night** (F8.1 follower + panel) |
 | 9 | Release readiness | not started |
 
 ## Phase 0 — exit criteria vs. reality

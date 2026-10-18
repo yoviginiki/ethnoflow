@@ -27,7 +27,7 @@ pub struct IntentSettings {
 }
 
 impl IntentSettings {
-    fn mode(&self) -> Mode {
+    pub(crate) fn mode(&self) -> Mode {
         if self.enabled {
             self.mode
         } else {
@@ -43,8 +43,8 @@ pub struct AnnotationsDoc {
 
 /// Per-user calibration pairs (what the classifier said, what the user marked).
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
-struct CalibrationDoc {
-    pairs: Vec<(NoteClass, NoteClass)>,
+pub(crate) struct CalibrationDoc {
+    pub(crate) pairs: Vec<(NoteClass, NoteClass)>,
 }
 
 const MAX_CALIBRATION_PAIRS: usize = 500;
@@ -55,7 +55,7 @@ fn calibration_path(s: &Inner) -> Option<std::path::PathBuf> {
         .and_then(|d| d.parent().map(|p| p.join("intent_calibration.json")))
 }
 
-fn load_calibration(s: &Inner) -> CalibrationDoc {
+pub(crate) fn load_calibration(s: &Inner) -> CalibrationDoc {
     calibration_path(s)
         .and_then(|p| std::fs::read_to_string(p).ok())
         .and_then(|t| serde_json::from_str(&t).ok())
@@ -75,7 +75,7 @@ fn save_calibration(s: &Inner, doc: &CalibrationDoc) {
     }
 }
 
-fn profile_offsets(s: &Inner) -> Vec<(i32, f64)> {
+pub(crate) fn profile_offsets(s: &Inner) -> Vec<(i32, f64)> {
     crate::instrument_cmds::project_profile(s)
         .map(|p| {
             p.notes
@@ -86,7 +86,7 @@ fn profile_offsets(s: &Inner) -> Vec<(i32, f64)> {
         .unwrap_or_default()
 }
 
-fn phrase_params(s: &Inner) -> PhraseParams {
+pub(crate) fn phrase_params(s: &Inner) -> PhraseParams {
     let wind = crate::instrument_cmds::project_profile(s).is_some_and(|p| {
         matches!(
             p.instrument,

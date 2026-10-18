@@ -12,6 +12,7 @@ mod harmony_cmds;
 mod instrument_cmds;
 mod intent_cmds;
 mod library_cmds;
+mod live_cmds;
 mod midi_cmds;
 mod midi_in_cmds;
 mod pad_cmds;
@@ -129,6 +130,10 @@ pub fn run() {
             academy_cmds::fingering_overrides_set,
             trainer_cmds::measure_latency,
             trainer_cmds::play_notes_drill,
+            live_cmds::live_start,
+            live_cmds::live_tick,
+            live_cmds::live_set,
+            live_cmds::live_stop,
             synth_cmds::start_live_synth,
             synth_cmds::stop_live_synth,
             synth_cmds::synth_note,

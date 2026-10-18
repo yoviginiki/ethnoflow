@@ -3,6 +3,31 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Live accompanist (F8.1 first slice, owner's item 9, 2026-10-18 night).**
+  - `music_core::live::LiveFollower` (pure): pitch samples → notes → phrases → classes →
+    intent → tracked context → harmony decision, incrementally; a phrase is closed when a
+    breath-long silence follows it or the next phrase has started; decisions only there.
+    Confidence gate (harmony min_confidence raised by mode: Stable 0.55 / Assisted 0.4 /
+    Creative 0.25) holds the harmony with a reason (`HoldReason`); safe drone on the tonic
+    before any harmony; locks and emergency bypass. 4 tests: ornamented phrase = 0 changes
+    inside the phrase and one decision after it; low-confidence phrase holds with a reason;
+    deliberate D dorian → D hijaz switches once and not before the second hijaz phrase;
+    bypass/locks hold everything.
+  - Classifier (F2.11): a held out-of-scale note that **comes back from the previous phrase**
+    is meant (the live follower cannot look ahead); the rule was lookahead-only. The
+    `held_isolated…` test now covers both directions and the lone case.
+  - `InputMonitor::drain_pitch`: the drain thread publishes every pitch frame into a ring
+    (8192 frames ≈ 160 s) besides the latest-value atomics; no change on the audio callback.
+  - Shell `live_cmds.rs`: `live_start` (ensures the monitor, builds LiveParams from the
+    project scale, profile offsets, phrase params, calibration and the UI intent/harmony
+    prefs), `live_tick` (drains frames, pushes, returns status + new decisions),
+    `live_set` (locks, bypass), `live_stop`.
+  - UI: `LiveFollowPanel` (Compose + Studio): Follow/Stop, strategy, locks, bypass, context +
+    confidence, harmony, counts, "why the harmony stayed", recent notes coloured by class,
+    alternatives; `useLiveFollow` (App) applies decisions through `setFollow` (pad/drone
+    crossfade at phrase boundaries). Bridge ops + smoke step; guide BG/EN.
+  - Known limits: the follower runs in the UI poll (150 ms), not on a dedicated analysis
+    thread; no live beat follower; latency budget not yet shown in the panel.
 - **Trainer to the end + fingerings (owner's item 6, 2026-10-18 night).**
   - `audio_engine::latency`: `click_burst` + `estimate_roundtrip` (onset of each click after its
     scheduled time, median, spread; 2 tests: 37 ms delay recovered within 1 ms, silence = no

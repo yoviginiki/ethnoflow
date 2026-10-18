@@ -23,6 +23,7 @@ import { Studio } from "./Studio";
 import { ReferencesScreen } from "./ReferencesScreen";
 import { AcademyScreen, GuidedBanner } from "./AcademyScreen";
 import { useAcademyGuided } from "./academyGuided";
+import { useLiveFollow } from "./LiveFollowPanel";
 import { messages, type Lang, type StringMessageKey } from "./i18n";
 import { useStore, type Screen } from "./store";
 
@@ -58,6 +59,7 @@ export default function App() {
   useBackgroundLayers();
   useSongTransport();
   useAcademyGuided();
+  useLiveFollow();
   useEffect(() => {
     void api
       .fingeringOverridesGet("kaval-d")

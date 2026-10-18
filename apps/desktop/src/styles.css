@@ -609,3 +609,14 @@ button.ghost.on { border-color: var(--accent); color: var(--accent); }
 .hole-editor { display: flex; gap: 4px; flex-wrap: wrap; }
 .drill-passes { display: inline-flex; gap: 4px; }
 .trainer-history { margin: 4px 0; padding-left: 18px; }
+
+/* Live accompanist (F8.1) */
+.live-status { display: flex; flex-direction: column; gap: 6px; }
+.live-notes { display: flex; gap: 4px; flex-wrap: wrap; }
+.live-note { font-size: 12px; padding: 1px 6px; border-radius: 10px; border: 1px solid var(--axis); background: var(--panel); }
+.live-note.stable { border-color: var(--accent); }
+.live-note.ornament { border-color: var(--warn); color: var(--warn); }
+.live-note.transition { opacity: 0.7; }
+.live-note.noise { opacity: 0.4; }
+.live-note.probable_error { border-color: var(--rec); color: var(--rec); }
+.live-note.now { background: var(--accent); color: #111; border-color: var(--accent); }

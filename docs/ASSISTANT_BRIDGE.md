@@ -79,6 +79,10 @@ rhythm_status, ambient_status }`
 | `academy_score_rhythm` | `onsets`, `grid`, `level?` | scores claps against the grid (deviations in ms) |
 | `academy_record` | `id`, `score`, `passed` | records an attempt in the local progress |
 | `academy_reset` | `id?` | clears progress for one lesson (or all) |
+| `live_start` | | starts the live accompanist on the microphone with the current intent/harmony prefs (needs a project) |
+| `live_tick` | | the follower's status (context, harmony, counts, recent notes) and new decisions |
+| `live_set` | `locks?`, `bypass?` | locks tonic/mode/chord/drone; emergency bypass |
+| `live_stop` | | stops following and releases the pad/drone |
 | `trainer_history` | `limit?` | recent trainer results (rhythm reports, drill passes), newest first |
 | `trainer_log` | `entry` | appends a trainer result (what the Studio trainer does after each report) |
 | `fingering_overrides` | `instrument?`, `overrides?` | without `overrides`: the user's chart corrections; with: validates and saves them (holes = 8 of c/o/x/h) |

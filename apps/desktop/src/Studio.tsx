@@ -19,6 +19,7 @@ import { NEW_NOTE_S, PianoRoll } from "./PianoRoll";
 import { TakeList } from "./TakeList";
 import { TimingPanel } from "./TimingPanel";
 import { TrainerPanel } from "./TrainerPanel";
+import { LiveFollowPanel } from "./LiveFollowPanel";
 import { FallingFingering } from "./FingeringDiagram";
 import { chartFor } from "./fingerings";
 import { Tuner } from "./Tuner";
@@ -903,6 +904,7 @@ export function Studio() {
               )}
               <IntentPanel />
               <HarmonyPanel />
+              <LiveFollowPanel />
               <TrainerPanel
                 notes={s.analysis.notes}
                 hz={s.monitor?.pitch_hz ?? null}

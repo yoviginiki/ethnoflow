@@ -63,6 +63,28 @@ In Play & record › **Trainer** (the panel under the falling notes):
 - **Harmony**: proposals for chord movement in three styles with A/B. "Intent" follows what you play and suggests tonic and chord.
 - Styles ("Deep Ethno DnB", "Ambient no key"…) are quick starting settings.
 
+## Live accompanist (follows your playing)
+
+Compose and Play & record › **Live accompanist** panel. Start a drone and/or pad from the
+background, press **Follow** and play: the follower listens to the microphone, cuts the
+playing into notes and phrases, classifies the notes (stable / ornament / transition / noise /
+probable error), tracks the tonal centre with hysteresis and, at the **end of every phrase**,
+decides the pad chord and the drone root. Rules: it never changes anything mid-phrase or
+because of an ornament; the mode switches only after several phrases of evidence (the mode
+from the “Intent” badge: Stable slowest, Creative fastest); at low confidence it **holds** the
+previous harmony and shows “Why the harmony stayed”; with no harmony yet it falls back to a
+safe drone on the tonic. Audio never waits for the analysis.
+
+- **Strategy**: drone only / modal pads / liquid chords (as in the proposals).
+- **Lock**: tonic, mode, chord, drone — locked things are not touched.
+- **Emergency bypass**: the follower keeps showing but does not act; the background stays.
+- The panel shows the context and its confidence, the current harmony, phrase/change/hold
+  counts, the recent notes with their class (coloured) and the alternative modes. “Stop
+  following” releases the pad and drone to their own settings.
+- Measured: the decision comes at the phrase boundary (after a ≈ 0.35 s breath for winds); a
+  test with an ornamented phrase = 0 changes inside the phrase. From the terminal:
+  `live_start`, `live_tick`, `live_set`, `live_stop`.
+
 ## Atmosphere
 
 - Up to 8 layers: noise, wind, texture, bells, plucks, looped take. Each has level, pan, filters, its own parameters, M/S and a lock.

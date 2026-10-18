@@ -90,6 +90,8 @@ pub struct Inner {
     pub midi_input: Option<crate::midi_in_cmds::MidiInput>,
     /// Live synth driven by the computer keyboard / MIDI input.
     pub live_synth: Option<LiveSynth>,
+    /// Live accompanist (F8.1): follows the microphone while it runs.
+    pub live: Option<crate::live_cmds::LiveRun>,
     /// The audio graph's output stream (F1.6); started on demand by the drone/pad.
     pub graph: Option<GraphPlayer>,
     /// Parameters of the drone source in graph slot 0 while it plays.

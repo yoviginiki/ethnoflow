@@ -273,6 +273,26 @@ async function main() {
     expectOk(send({ op: "fingering_overrides", instrument: "kaval-d", overrides: orig }));
     return `history ${hist.length}, override round trip ok`;
   });
+  await step("live accompanist: start on the microphone, tick, locks + bypass, stop (no sound is produced)", async () => {
+    const started = send({ op: "live_start" })[0];
+    if (!started.ok) {
+      const msg = String(started.error ?? "");
+      if (/device|input|no_device|NoDevice|not found/i.test(msg)) return "not run: no input device (" + msg + ")";
+      throw new Error(msg);
+    }
+    if (!started.result.running) throw new Error("not running after start");
+    await sleep(700);
+    const v1 = expectOk(send({ op: "live_tick" }));
+    if (!v1.running || !v1.status) throw new Error("tick without status");
+    const v2 = expectOk(send({ op: "live_set", locks: { tonic: true, mode: true, chord: true, drone: true }, bypass: true }));
+    if (!v2.status.bypass || !v2.status.locks.chord) throw new Error("locks/bypass not applied");
+    expectOk(send({ op: "live_set", locks: { tonic: false, mode: false, chord: false, drone: false }, bypass: false }));
+    const stopped = expectOk(send({ op: "live_stop" }));
+    if (stopped.running) throw new Error("still running");
+    const v3 = expectOk(send({ op: "live_tick" }));
+    if (v3.running) throw new Error("tick says running after stop");
+    return `status after ${v1.status.seconds.toFixed(2)} s: ${v1.status.notes} notes, ${v1.status.phrases} phrases, mode ${v1.status.mode}`;
+  });
   await step("presets: save, list, load", () => {
     const saved = expectOk(send({ op: "save_preset", kind: "rhythm", name: "smoke rhythm", tags: ["smoke"], notes: "automated" }));
     const list = expectOk(send({ op: "list_presets", kind: "rhythm", query: "smoke" })).entries;
