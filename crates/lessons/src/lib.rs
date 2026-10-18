@@ -147,6 +147,20 @@ pub enum Check {
     /// An ambient preset saved after the lesson started.
     PresetSaved,
     MetronomeOn,
+    /// The project has a tempo and a meter.
+    TimingSet,
+    /// The song map has at least this many sections.
+    SongMapSections {
+        min: u32,
+    },
+    /// At least one background layer (drone, pad, atmosphere, rhythm) is switched on.
+    BackgroundOn,
+    /// The arrangement holds at least this many clips.
+    ArrangementClips {
+        min: u32,
+    },
+    /// The whole song was exported after the lesson started.
+    SongExported,
     /// The user visited this screen.
     Screen {
         name: String,
@@ -237,7 +251,7 @@ pub struct QuizItem {
 
 // ---------------------------------------------------------------- embedded content
 
-const FILES: [(&str, &str); 5] = [
+const FILES: [(&str, &str); 6] = [
     (
         "level0.json",
         include_str!("../../../packages/lesson-content/lessons/level0.json"),
@@ -257,6 +271,10 @@ const FILES: [(&str, &str); 5] = [
     (
         "kaval.json",
         include_str!("../../../packages/lesson-content/lessons/kaval.json"),
+    ),
+    (
+        "level5.json",
+        include_str!("../../../packages/lesson-content/lessons/level5.json"),
     ),
 ];
 
@@ -492,6 +510,11 @@ pub fn validate(lessons: &[Lesson]) -> Result<(), String> {
                         }
                         Check::SpaceAtLeast { value } => range(*value, 0.0, 1.0, "value", id)?,
                         Check::RhythmRunning { bpm: Some(b) } => range(*b, 30.0, 300.0, "bpm", id)?,
+                        Check::SongMapSections { min } | Check::ArrangementClips { min }
+                            if *min == 0 || *min > 64 =>
+                        {
+                            return Err(format!("{id}: min 1..64"));
+                        }
                         _ => {}
                     }
                 }
@@ -1159,7 +1182,7 @@ mod tests {
     #[test]
     fn builtin_lessons_validate_and_cover_levels_0_to_3() {
         let all = builtin().expect("lesson files valid");
-        for level in 0..=3u8 {
+        for level in [0u8, 1, 2, 3, 5] {
             assert!(
                 all.iter().any(|l| l.level == level),
                 "no lessons for level {level}"
@@ -1174,6 +1197,7 @@ mod tests {
             "l2-05-five-notes",
             "l3-01-tonic",
             "l3-09-lesson-one",
+            "l5-06-first-song",
         ] {
             assert!(all.iter().any(|l| l.id == id), "missing {id}");
         }

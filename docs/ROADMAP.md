@@ -11,7 +11,7 @@ this file tracks status and the concrete Phase 1 plan.
 | 2 | Pitch, notation & practice | **approved 2026-10-16; 2.1–2.5 implemented the same day; DoD (2.6) needs the owner's kaval test and a DAW re-import** |
 | 3 | Harmony / drone MVP | not started |
 | 4 | Liquid DnB engine | **0.4.0**: rhythm section (synthesized drums, bass, ostinato, arpeggio) on one beat clock in Compose First, sections, tempo from the take, countermelody; F4.4 CLAP spike deferred (needs owner's go for the dependency) |
-| 5 | Mini DAW + export | **F5.1 pulled forward (0.2.9)**: tracks/clips editor on the audio graph, after the owner's feedback that the pieces were not connected; F5.2–F5.4 not started |
+| 5 | Mini DAW + export (Create-a-song guide shipped 2026-10-18 night) | **F5.1 pulled forward (0.2.9)**: tracks/clips editor on the audio graph, after the owner's feedback that the pieces were not connected; F5.2–F5.4 not started |
 | 6 | Beginner Academy v1 | **started 2026-10-18** (levels 0–3 + kaval track, see docs/academy/CURRICULUM.md) |
 | 7 | Intelligent variations | not started |
 | 8 | Live accompanist R&D | **first slice 2026-10-18 night** (F8.1 follower + panel) |

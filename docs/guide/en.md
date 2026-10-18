@@ -130,6 +130,15 @@ track, trainer). These are proposals: on a dense mix the tracker follows the mos
 voice, so it works best on solo passages and an up-front vocal or kaval.
 From the terminal: `reference_add`, `reference_analyze`, `reference_report` (see the bridge).
 
+## Create a song (step-by-step guide)
+
+Home › **Create a song**. Seven steps in the real screens: melody (a take with ≥ 3 notes) →
+scale (a hypothesis) → tempo and meter → song map (≥ 2 sections) → background (drone/pad/
+rhythm) → studio (a clip on a track) → export of the whole song. "Start the guide" and each
+step ticks itself when the app sees it done; "Go" takes you to the screen; the order is not
+mandatory. While the guide runs, a bar on every screen shows the current step. The same
+guided engine is lesson 5.6 in the Academy (Level 5), so passing it is recorded in the progress.
+
 ## Academy (Learn music)
 
 Home › **Learn music**. Lessons of 5–10 minutes: a short explanation (three sentences at

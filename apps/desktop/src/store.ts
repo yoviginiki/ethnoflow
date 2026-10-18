@@ -36,7 +36,7 @@ import type { AcademyCheck, BusStrip, FingeringOverride, LiveView, Strategy } fr
 import type { Lang } from "./i18n";
 
 export type Mode = "idle" | "recording" | "playing";
-export type Screen = "home" | "play" | "compose" | "studio" | "ambient" | "rhythm" | "library" | "soundscapes" | "start" | "help" | "instrument" | "songmap" | "samples" | "references" | "academy";
+export type Screen = "home" | "play" | "compose" | "studio" | "ambient" | "rhythm" | "library" | "soundscapes" | "start" | "help" | "instrument" | "songmap" | "samples" | "references" | "academy" | "create";
 export type LayerName = "drone" | "pad" | "ambient" | "rhythm";
 
 /** Background mixer strip per layer: the bus (trim, pan, cuts) plus fade times in seconds. */
@@ -385,6 +385,9 @@ interface Store {
   /** Live accompanist (F8.1): the poll loop runs while true; the last view for the panel. */
   liveRunning: boolean;
   setLiveRunning: (on: boolean) => void;
+  /** When the whole song was last exported (the Create-a-song guide checks it). */
+  lastSongExportMs: number | null;
+  setLastSongExportMs: (ms: number | null) => void;
   liveView: LiveView | null;
   setLiveView: (v: LiveView | null) => void;
   /** User corrections to fingering charts by instrument id (F2.6), loaded at start. */
@@ -524,6 +527,8 @@ export const useStore = create<Store>((set, get) => ({
   academyPlayAlong: null,
   setAcademyPlayAlong: (academyPlayAlong) => set({ academyPlayAlong }),
   liveRunning: false,
+  lastSongExportMs: null,
+  setLastSongExportMs: (lastSongExportMs) => set({ lastSongExportMs }),
   setLiveRunning: (liveRunning) => set({ liveRunning }),
   liveView: null,
   setLiveView: (liveView) => set({ liveView }),

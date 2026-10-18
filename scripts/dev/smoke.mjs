@@ -133,7 +133,7 @@ const audible = (p, min = 0.02) => {
   return `${path.basename(p)} ${s.seconds.toFixed(1)} s peak ${s.peak.toFixed(2)}`;
 };
 
-const SCREENS = ["home", "play", "compose", "studio", "ambient", "soundscapes", "rhythm", "library", "instrument", "songmap", "samples", "references", "academy", "start", "help"];
+const SCREENS = ["home", "play", "compose", "studio", "ambient", "soundscapes", "rhythm", "library", "instrument", "songmap", "samples", "references", "academy", "create", "start", "help"];
 
 async function main() {
   await step("bridge: ping", () => expectOk(send({ op: "ping" })).pong === true || Promise.reject(new Error("no pong")));
@@ -240,7 +240,8 @@ async function main() {
   });
   await step("academy: lessons validate, instances are seeded, scoring and progress round trip", () => {
     const v = expectOk(send({ op: "academy_lessons" }));
-    if (v.count < 40) throw new Error(`only ${v.count} lessons`);
+    if (v.count < 45) throw new Error(`only ${v.count} lessons`);
+    if (!v.lessons.some((l) => l.id === "l5-06-first-song" && l.type === "guided")) throw new Error("no Create-a-song wizard lesson");
     if (!v.lessons.some((l) => l.track === "kaval")) throw new Error("no kaval track");
     const a = expectOk(send({ op: "academy_instance", id: "l2-02-intervals", seed: 5 }));
     const b = expectOk(send({ op: "academy_instance", id: "l2-02-intervals", seed: 5 }));

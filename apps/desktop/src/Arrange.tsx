@@ -924,6 +924,7 @@ export function Arrange() {
         rhythm: st.layers.rhythm ? { ...st.prefs.rhythm, chord: st.padChord, root_midi: dRoot, intonation: dp.intonation } : null,
       };
       const r = await api.exportSong(path, include, prefs.exportFormat, null, null, true);
+      useStore.getState().setLastSongExportMs(Date.now());
       st.setMessage(`${t.mixExported}: ${r.path} (${formatBytes(r.bytes)}) · ${r.stems.length} ${t.stemsWord}`);
     } catch (e) {
       fail(e);

@@ -1,0 +1,52 @@
+[
+  {
+    "id": "l5-02-structure",
+    "level": 5,
+    "order": 2,
+    "title": { "bg": "Структура: intro, A, B, build, breakdown, drop, outro", "en": "Structure: intro, A, B, build, breakdown, drop, outro" },
+    "objectives": [
+      { "bg": "Да дадеш на песента си карта със секции и роли.", "en": "Give your song a map with sections and roles." }
+    ],
+    "explanation": {
+      "bg": "Секциите са предложение, не задължение: intro подготвя, A е темата, B е контрастът, build вдига напрежението, breakdown го сваля, drop е кулминацията, outro затваря. Ролята на секцията казва на фона колко плътен да е (следачът на картата го прави сам).",
+      "en": "Sections are a suggestion, not a rule: the intro prepares, A is the theme, B the contrast, the build raises tension, the breakdown lowers it, the drop is the peak, the outro closes. A section's role tells the background how dense to be (the map follower does it by itself)."
+    },
+    "glossary": ["секция", "роля", "карта на песента"],
+    "exercise": { "type": "guided", "steps": [
+      { "text": { "bg": "Отвори „Карта на песента“ и направи поне две секции с различни роли (например intro + A).", "en": "Open the Song map and make at least two sections with different roles (e.g. intro + A)." }, "check": { "kind": "song_map_sections", "min": 2 } },
+      { "text": { "bg": "Пусни ритъма или фона и чуй как следачът сменя плътността между секциите.", "en": "Start the rhythm or the background and hear the follower change density between sections." }, "check": { "kind": "background_on" } }
+    ] },
+    "pass_score": 1,
+    "quiz": [
+      { "q": { "bg": "Breakdown е…", "en": "A breakdown is…" },
+        "choices": [ { "bg": "секция, в която напрежението пада", "en": "a section where tension drops" }, { "bg": "кулминацията", "en": "the peak" } ],
+        "answer": 0 }
+    ],
+    "next": "l5-06-first-song"
+  },
+  {
+    "id": "l5-06-first-song",
+    "level": 5,
+    "order": 6,
+    "title": { "bg": "Моята първа композиция (водач „Създай песен“)", "en": "My first composition (the “Create a song” guide)" },
+    "objectives": [
+      { "bg": "Да минеш целия път от мелодия до експортиран файл с фон и структура.", "en": "Walk the whole path from a melody to an exported file with background and structure." }
+    ],
+    "explanation": {
+      "bg": "Това е водачът „Създай песен“: седем стъпки в истинските екрани, всяка се отмята сама, когато приложението види, че е направена. Можеш да ги правиш в друг ред и да се връщаш; нищо не се губи, записът е непроменим.",
+      "en": "This is the “Create a song” guide: seven steps in the real screens, each ticking itself when the app sees it done. You can do them in another order and come back; nothing is lost, the recording is immutable."
+    },
+    "glossary": ["мелодия", "лад", "темпо", "карта на песента", "фон", "експорт"],
+    "exercise": { "type": "guided", "steps": [
+      { "text": { "bg": "Мелодия: запиши (или внеси) мелодия с поне 3 разпознати ноти в „Свири и записвай“.", "en": "Melody: record (or import) a melody with at least 3 detected notes in Play & record." }, "check": { "kind": "new_take", "min_notes": 3 } },
+      { "text": { "bg": "Лад: избери една от хипотезите за тоналност (панел „Лад“ под записа).", "en": "Scale: pick one of the key hypotheses (the Scale panel under the take)." }, "check": { "kind": "scale_chosen" } },
+      { "text": { "bg": "Темпо и размер: задай ги в „Подготви фон“ (или вземи ги от референция).", "en": "Tempo and meter: set them in Compose (or take them from a reference)." }, "check": { "kind": "timing_set" } },
+      { "text": { "bg": "Карта: направи поне две секции с роли в „Карта на песента“.", "en": "Map: make at least two sections with roles in the Song map." }, "check": { "kind": "song_map_sections", "min": 2 } },
+      { "text": { "bg": "Фон: пусни ручило, пад или ритъм от „Подготви фон“ и ги остави да следват картата.", "en": "Background: start a drone, pad or rhythm from Compose and let them follow the map." }, "check": { "kind": "background_on" } },
+      { "text": { "bg": "Студио: сложи записа си като клип на писта в „Моето студио“ (или запиши там върху фона).", "en": "Studio: put your take on a track as a clip in My studio (or record there over the background)." }, "check": { "kind": "arrangement_clips", "min": 1 } },
+      { "text": { "bg": "Експорт: „Експорт на песента“ в студиото — целият микс със stems.", "en": "Export: “Export the song” in the studio — the whole mix with stems." }, "check": { "kind": "song_exported" } }
+    ] },
+    "pass_score": 1,
+    "mini_project": { "bg": "Отвори експортирания WAV в друг плейър и го чуй отначало докрай с бележник: кое би сменил първо?", "en": "Open the exported WAV in another player and listen start to end with a notebook: what would you change first?" }
+  }
+]

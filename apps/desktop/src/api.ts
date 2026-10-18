@@ -1187,6 +1187,11 @@ export type AcademyCheck =
   | { kind: "space_at_least"; value: number }
   | { kind: "preset_saved" }
   | { kind: "metronome_on" }
+  | { kind: "timing_set" }
+  | { kind: "song_map_sections"; min: number }
+  | { kind: "background_on" }
+  | { kind: "arrangement_clips"; min: number }
+  | { kind: "song_exported" }
   | { kind: "screen"; name: string };
 export interface GuidedStep {
   text: LText;

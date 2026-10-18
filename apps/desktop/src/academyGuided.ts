@@ -29,6 +29,23 @@ async function evaluate(c: AcademyCheck, r: GuidedRun, stable: { since: number |
       return r.visited.includes(c.name) || st.screen === c.name;
     case "metronome_on":
       return st.metronomeOn;
+    case "timing_set":
+      return !!(st.project?.timing.bpm && st.project.timing.numerator && st.project.timing.unit);
+    case "song_map_sections":
+      return (st.project?.song_map.sections.length ?? 0) >= c.min;
+    case "background_on":
+      return st.layers.drone || st.layers.pad || st.layers.ambient || st.layers.rhythm;
+    case "arrangement_clips": {
+      if (!st.project) return false;
+      try {
+        const a = await api.arrangementGet();
+        return a.arrangement.tracks.reduce((n, tr) => n + tr.clips.length, 0) >= c.min;
+      } catch {
+        return false;
+      }
+    }
+    case "song_exported":
+      return (st.lastSongExportMs ?? 0) >= r.startedAtMs;
     case "scale_chosen":
       return !!st.project?.scale;
     case "space_at_least":

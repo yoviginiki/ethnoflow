@@ -22,6 +22,7 @@ import { SamplesScreen } from "./SamplesScreen";
 import { Studio } from "./Studio";
 import { ReferencesScreen } from "./ReferencesScreen";
 import { AcademyScreen, GuidedBanner } from "./AcademyScreen";
+import { CreateSongScreen } from "./CreateSongScreen";
 import { useAcademyGuided } from "./academyGuided";
 import { useLiveFollow } from "./LiveFollowPanel";
 import { messages, type Lang, type StringMessageKey } from "./i18n";
@@ -41,6 +42,7 @@ const SCREEN_TITLE: Record<Exclude<Screen, "home">, StringMessageKey> = {
   samples: "areaSamples",
   references: "areaReferences",
   academy: "areaLearn",
+  create: "areaCreate",
   start: "areaStart",
   help: "areaHelp",
 };
@@ -138,6 +140,7 @@ export default function App() {
       {screen === "samples" && <SamplesScreen />}
       {screen === "references" && <ReferencesScreen />}
       {screen === "academy" && <AcademyScreen />}
+      {screen === "create" && <CreateSongScreen />}
       {(layers.drone || layers.pad || layers.ambient || layers.rhythm) && (
         <div className="layers-badge small" role="status">
           <BackgroundTransport compact />

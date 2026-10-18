@@ -3,6 +3,14 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Create a song guide (Phase 5 wizard, 2026-10-18 night; owner: "създай песен е сиво").**
+  The home card is live: `CreateSongScreen` runs the Academy's guided engine on lesson
+  `l5-06-first-song` (new `packages/lesson-content/lessons/level5.json`, with 5.2 structure):
+  melody → scale → tempo/meter → song map → background → studio clip → export. New guided
+  checks in `crates/lessons` and `academyGuided.ts`: `timing_set`, `song_map_sections`,
+  `background_on`, `arrangement_clips`, `song_exported` (the studio export marks
+  `lastSongExportMs`). Per-step "Go" buttons map a check to its screen. Smoke: screen
+  "create" + wizard lesson present (45 lessons). Guide BG/EN.
 - **Live accompanist (F8.1 first slice, owner's item 9, 2026-10-18 night).**
   - `music_core::live::LiveFollower` (pure): pitch samples → notes → phrases → classes →
     intent → tracked context → harmony decision, incrementally; a phrase is closed when a
