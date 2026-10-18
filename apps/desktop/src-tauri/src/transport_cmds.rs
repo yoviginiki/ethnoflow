@@ -106,16 +106,21 @@ pub(crate) fn song_beat_for_rhythm_start(s: &Inner) -> f64 {
 
 /// Re-anchor a running rhythm clock to the timeline position (after play/seek).
 pub(crate) fn follow_rhythm(s: &Inner) {
-    let (Some(live), Some(g), Some(map)) = (s.rhythm.as_ref(), s.graph.as_ref(), song_map(s))
-    else {
-        return;
-    };
     let (secs, source) = current_seconds(s);
     if source != "arrangement" {
         return;
     }
+    anchor_rhythm(s, secs);
+}
+
+/// Put a running rhythm clock at a song position (seconds through the song map).
+pub(crate) fn anchor_rhythm(s: &Inner, seconds: f64) {
+    let (Some(live), Some(g), Some(map)) = (s.rhythm.as_ref(), s.graph.as_ref(), song_map(s))
+    else {
+        return;
+    };
     let frame = g.params().frame.load(Ordering::Relaxed);
-    live.clock.start(frame, beats_at_seconds(&map, secs));
+    live.clock.start(frame, beats_at_seconds(&map, seconds));
 }
 
 fn status(s: &Inner) -> TransportStatus {
@@ -241,8 +246,13 @@ pub async fn transport_seek(
                 .store(frames(seconds.max(0.0), rate), Ordering::Relaxed);
         }
     }
-    follow_rhythm(&s);
-    Ok(status(&s))
+    // A seek moves the song wherever it is heard from: the timeline (paused or playing)
+    // and a running rhythm section alike; the section follower re-reads the position.
+    anchor_rhythm(&s, seconds.max(0.0));
+    let sec = crate::section_follow::tick(&mut s);
+    let mut st = status(&s);
+    st.section = sec.map(|x| x.name);
+    Ok(st)
 }
 
 #[tauri::command]

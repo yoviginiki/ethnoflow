@@ -147,8 +147,9 @@ pub struct RhythmSettings {
     /// Extra parts of the Instrument Rack (P1 R3), in slot order from `EXTRA_SLOT0`.
     #[serde(default)]
     pub extras: Vec<ExtraPart>,
-    /// Let the song map's sections shape the parts and buses (section follower).
-    #[serde(default)]
+    /// Let the song map's sections shape the parts and buses (section follower). On by
+    /// default: older sessions without the field follow the map too.
+    #[serde(default = "yes")]
     pub follow_map: bool,
 }
 

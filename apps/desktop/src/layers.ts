@@ -173,7 +173,7 @@ export function useBackgroundLayers() {
   const rhythmPrefs = useStore((s) => s.prefs.rhythm ?? DEFAULT_RHYTHM);
   const timing = project?.timing ?? null;
   const timingKey = timing ? `${timing.bpm}:${timing.numerator}:${timing.unit}:${timing.grouping.join(",")}` : "";
-  const rhythmSettings = () => ({ ...rhythmPrefs, chord: padChord, root_midi: dRoot, intonation: dronePrefs.intonation });
+  const rhythmSettings = () => ({ ...rhythmPrefs, follow_map: rhythmPrefs.follow_map ?? true, chord: padChord, root_midi: dRoot, intonation: dronePrefs.intonation });
 
   // Closing the project stops everything (the backend does too).
   useEffect(() => {
