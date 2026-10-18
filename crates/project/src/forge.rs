@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::{ProjectError, Result};
 
 pub const INSTRUMENT_SCHEMA_VERSION: u32 = 1;
-pub const CATEGORIES: [&str; 3] = ["drums", "bass", "synth"];
+pub const CATEGORIES: [&str; 6] = ["drums", "bass", "synth", "tapan", "chordpad", "lead"];
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "engine", rename_all = "snake_case")]
@@ -53,6 +53,45 @@ pub enum InstrumentVoice {
         tone_hz: f64,
         dynamics: f64,
     },
+    /// The tapan (P1 R3): boom tuning and decay, skin noise in the boom, rim brightness,
+    /// a level per stroke (boom, rim, ghost), dB.
+    Tapan {
+        tune_hz: f64,
+        decay: f64,
+        skin: f64,
+        rim_tone: f64,
+        #[serde(default = "default_tapan_levels")]
+        levels_db: [f64; 3],
+    },
+    /// The chord pad (P1 R3): wave 0 saw / 1 triangle, attack, release, detune between the
+    /// two oscillators (cents), low-pass cutoff, slow movement, dynamics.
+    ChordPad {
+        wave: u8,
+        attack_s: f64,
+        release_s: f64,
+        detune_cents: f64,
+        cutoff_hz: f64,
+        movement: f64,
+        dynamics: f64,
+    },
+    /// The lead (P1 R3): wave 0 saw / 1 pulse / 2 triangle, glide, vibrato rate and depth,
+    /// filter cutoff / resonance / envelope amount, attack, release, drive.
+    Lead {
+        wave: u8,
+        glide_s: f64,
+        vibrato_hz: f64,
+        vibrato_cents: f64,
+        cutoff_hz: f64,
+        resonance: f64,
+        env_amount: f64,
+        attack_s: f64,
+        release_s: f64,
+        drive: f64,
+    },
+}
+
+fn default_tapan_levels() -> [f64; 3] {
+    [0.0, 0.0, -10.0]
 }
 
 fn default_levels() -> [f64; 6] {
@@ -65,6 +104,9 @@ impl InstrumentVoice {
             InstrumentVoice::Drums { .. } => "drums",
             InstrumentVoice::Bass { .. } => "bass",
             InstrumentVoice::Synth { .. } => "synth",
+            InstrumentVoice::Tapan { .. } => "tapan",
+            InstrumentVoice::ChordPad { .. } => "chordpad",
+            InstrumentVoice::Lead { .. } => "lead",
         }
     }
 
@@ -147,6 +189,69 @@ impl InstrumentVoice {
                     return Err(ProjectError::InvalidState("synth parameters".into()));
                 }
                 unit(*dynamics, "dynamics")
+            }
+            InstrumentVoice::Tapan {
+                tune_hz,
+                decay,
+                skin,
+                rim_tone,
+                levels_db,
+            } => {
+                if !(45.0..=110.0).contains(tune_hz) {
+                    return Err(ProjectError::InvalidState("tapan tune 45..110 Hz".into()));
+                }
+                if levels_db.iter().any(|l| !(-60.0..=6.0).contains(l)) {
+                    return Err(ProjectError::InvalidState("tapan level −60..6 dB".into()));
+                }
+                unit(*decay, "decay")?;
+                unit(*skin, "skin")?;
+                unit(*rim_tone, "rim_tone")
+            }
+            InstrumentVoice::ChordPad {
+                wave,
+                attack_s,
+                release_s,
+                detune_cents,
+                cutoff_hz,
+                movement,
+                dynamics,
+            } => {
+                if *wave > 1
+                    || !(0.005..=4.0).contains(attack_s)
+                    || !(0.05..=8.0).contains(release_s)
+                    || !(0.0..=30.0).contains(detune_cents)
+                    || !(200.0..=12_000.0).contains(cutoff_hz)
+                {
+                    return Err(ProjectError::InvalidState("chord pad parameters".into()));
+                }
+                unit(*movement, "movement")?;
+                unit(*dynamics, "dynamics")
+            }
+            InstrumentVoice::Lead {
+                wave,
+                glide_s,
+                vibrato_hz,
+                vibrato_cents,
+                cutoff_hz,
+                resonance,
+                env_amount,
+                attack_s,
+                release_s,
+                drive,
+            } => {
+                if *wave > 2
+                    || !(0.0..=1.0).contains(glide_s)
+                    || !(0.5..=9.0).contains(vibrato_hz)
+                    || !(0.0..=100.0).contains(vibrato_cents)
+                    || !(200.0..=12_000.0).contains(cutoff_hz)
+                    || !(0.0..=0.95).contains(resonance)
+                    || !(0.001..=2.0).contains(attack_s)
+                    || !(0.01..=4.0).contains(release_s)
+                {
+                    return Err(ProjectError::InvalidState("lead parameters".into()));
+                }
+                unit(*env_amount, "env_amount")?;
+                unit(*drive, "drive")
             }
         }
     }
@@ -363,6 +468,27 @@ pub fn factory_instruments() -> Vec<InstrumentPreset> {
             InstrumentVoice::Synth { timbre: 1, attack_s: 0.001, release_s: 0.22, tone_hz: 3500.0, dynamics: 0.9 }),
         factory("synth.pad", "Soft pad", &["pad", "slow", "ambient"], "Slow attack and long release on the flute voice: an arpeggio becomes a wash.",
             InstrumentVoice::Synth { timbre: 2, attack_s: 0.25, release_s: 1.6, tone_hz: 4000.0, dynamics: 0.3 }),
+        // ---- tapan (R3)
+        factory("tapan.folk", "Tapan", &["tapan", "ethno", "7/8"], "The village drum: 70 Hz boom with a felt beater, medium decay, wooden rim.",
+            InstrumentVoice::Tapan { tune_hz: 70.0, decay: 0.5, skin: 0.45, rim_tone: 0.5, levels_db: [0.0, -1.0, -10.0] }),
+        factory("tapan.deep", "Deep tapan", &["tapan", "deep", "slow"], "Big, low (52 Hz), long and dark: for slow pieces and halftime, ghosts almost gone.",
+            InstrumentVoice::Tapan { tune_hz: 52.0, decay: 0.85, skin: 0.25, rim_tone: 0.3, levels_db: [1.0, -3.0, -16.0] }),
+        factory("tapan.tight", "Tight tapan", &["tapan", "fast", "bright"], "Small and dry (88 Hz), hard beater, bright metal rim: for fast horos and DnB.",
+            InstrumentVoice::Tapan { tune_hz: 88.0, decay: 0.28, skin: 0.7, rim_tone: 0.85, levels_db: [-1.0, 0.0, -6.0] }),
+        // ---- chord pad (R3)
+        factory("chordpad.warm", "Warm pad", &["pad", "saw", "warm"], "Two detuned saws, slow attack, 1.4 kHz low-pass with gentle movement: the classic bed.",
+            InstrumentVoice::ChordPad { wave: 0, attack_s: 0.8, release_s: 1.6, detune_cents: 7.0, cutoff_hz: 1400.0, movement: 0.3, dynamics: 0.4 }),
+        factory("chordpad.glass", "Glass pad", &["pad", "triangle", "bright", "ambient"], "Triangles, little detune, open filter with more movement: thin and shining.",
+            InstrumentVoice::ChordPad { wave: 1, attack_s: 0.3, release_s: 2.5, detune_cents: 4.0, cutoff_hz: 5000.0, movement: 0.5, dynamics: 0.3 }),
+        factory("chordpad.dark", "Dark pad", &["pad", "saw", "dark", "deep"], "Wide detune, very slow attack and a 700 Hz filter: a low fog under the kaval.",
+            InstrumentVoice::ChordPad { wave: 0, attack_s: 1.5, release_s: 3.0, detune_cents: 12.0, cutoff_hz: 700.0, movement: 0.15, dynamics: 0.2 }),
+        // ---- lead (R3)
+        factory("lead.kaval", "Kaval-like lead", &["lead", "triangle", "flute"], "Triangle with a little glide, delayed vibrato, soft attack and an open filter: a breathy answer to the melody.",
+            InstrumentVoice::Lead { wave: 2, glide_s: 0.05, vibrato_hz: 5.5, vibrato_cents: 15.0, cutoff_hz: 3000.0, resonance: 0.1, env_amount: 0.3, attack_s: 0.03, release_s: 0.25, drive: 0.1 }),
+        factory("lead.saw", "Saw lead", &["lead", "saw", "liquid"], "Saw through a resonant filter with a strong envelope: the liquid DnB lead.",
+            InstrumentVoice::Lead { wave: 0, glide_s: 0.03, vibrato_hz: 5.0, vibrato_cents: 8.0, cutoff_hz: 1500.0, resonance: 0.35, env_amount: 0.6, attack_s: 0.005, release_s: 0.15, drive: 0.3 }),
+        factory("lead.hollow", "Hollow lead", &["lead", "pulse", "dark"], "Pulse wave, long glide, deep vibrato, resonant low filter and drive: hollow and vocal.",
+            InstrumentVoice::Lead { wave: 1, glide_s: 0.12, vibrato_hz: 6.0, vibrato_cents: 20.0, cutoff_hz: 900.0, resonance: 0.5, env_amount: 0.5, attack_s: 0.01, release_s: 0.3, drive: 0.5 }),
     ]
 }
 
@@ -373,7 +499,10 @@ mod tests {
     #[test]
     fn factory_presets_are_valid_distinct_and_round_trip() {
         let all = factory_instruments();
-        assert!(all.len() >= 12);
+        assert!(all.len() >= 21);
+        for c in CATEGORIES {
+            assert!(all.iter().filter(|p| p.category == c).count() >= 3, "≥ 3 presets for {c}");
+        }
         let mut ids = std::collections::HashSet::new();
         for p in &all {
             p.validate().unwrap_or_else(|e| panic!("{}: {e}", p.id));
