@@ -383,7 +383,7 @@ export function TrainerPanel({ notes, hz, confidence, a4, notesPosition, onPlayN
           {t.latencyLabel}: <span className="mono-num">{s.prefs.latencyMs !== null ? `${s.prefs.latencyMs.toFixed(0)} ms` : t.latencyUnknown}</span>
           {latencyNote && <span className="mono-num"> ({latencyNote})</span>}
         </span>
-        <button className="ghost small" disabled={measuring || running || s.mode !== "idle"} onClick={() => void measureLatency()}>
+        <button data-coach="latency" className="ghost small" disabled={measuring || running || s.mode !== "idle"} onClick={() => void measureLatency()}>
           {measuring ? t.latencyMeasuring : t.latencyMeasure}
         </button>
         {s.prefs.latencyMs !== null && (

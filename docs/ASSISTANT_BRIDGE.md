@@ -79,6 +79,7 @@ rhythm_status, ambient_status }`
 | `academy_score_rhythm` | `onsets`, `grid`, `level?` | scores claps against the grid (deviations in ms) |
 | `academy_record` | `id`, `score`, `passed` | records an attempt in the local progress |
 | `academy_reset` | `id?` | clears progress for one lesson (or all) |
+| `make_song` | `style?`, `take_id?` | builds the song from a take: scale, tempo/meter + background by style, song map from phrases, melody track, measured balance; returns the decisions |
 | `live_start` | | starts the live accompanist on the microphone with the current intent/harmony prefs (needs a project) |
 | `live_tick` | | the follower's status (context, harmony, counts, recent notes) and new decisions |
 | `live_set` | `locks?`, `bypass?` | locks tonic/mode/chord/drone; emergency bypass |

@@ -33,7 +33,7 @@ let state = null;
 
 function send(cmds) {
   const list = Array.isArray(cmds) ? cmds : [cmds];
-  const out = execFileSync(process.execPath, [EF, "send", ...list.map((c) => JSON.stringify(c))], { encoding: "utf8", timeout: 120_000 });
+  const out = execFileSync(process.execPath, [EF, "send", ...list.map((c) => JSON.stringify(c))], { encoding: "utf8", timeout: 180_000, env: { ...process.env, EF_TIMEOUT_MS: "150000" } });
   return JSON.parse(out);
 }
 function readState() {
@@ -294,6 +294,17 @@ async function main() {
     if (v3.running) throw new Error("tick says running after stop");
     return `status after ${v1.status.seconds.toFixed(2)} s: ${v1.status.notes} notes, ${v1.status.phrases} phrases, mode ${v1.status.mode}`;
   });
+  await step("make the song: one call turns the newest take into scale + tempo + background + map + track (silent)", () => {
+    const r = expectOk(send({ op: "make_song", style: "liquid_dnb" }));
+    if (!Array.isArray(r.facts) || r.facts.length < 5) throw new Error("too few decisions: " + JSON.stringify(r.facts));
+    const st = expectOk(send({ op: "state" }));
+    if (!st.project.timing.bpm) throw new Error("no tempo after make_song");
+    const arr = expectOk(send({ op: "arrangement" })).arrangement;
+    if (!arr.tracks.some((tr) => tr.clips.length > 0 && tr.highpass_hz >= 100)) throw new Error("melody track not set up");
+    // Silent run: switch the background it started back off.
+    expectOk(send({ op: "layers", drone: false, pad: false, ambient: false, rhythm: false }));
+    return `${r.facts.length} decisions, ${st.project.timing.bpm} BPM, sections ${r.sections}`;
+  });
   await step("presets: save, list, load", () => {
     const saved = expectOk(send({ op: "save_preset", kind: "rhythm", name: "smoke rhythm", tags: ["smoke"], notes: "automated" }));
     const list = expectOk(send({ op: "list_presets", kind: "rhythm", query: "smoke" })).entries;
@@ -359,7 +370,13 @@ async function main() {
     const out = path.join(OUT_DIR, "song.wav");
     const r = expectOk(send({ op: "export_song", path: out, seconds: 6 }));
     if (!fs.existsSync(r.path)) throw new Error("no file");
-    return `${path.basename(r.path)} ${wavStats(r.path).seconds.toFixed(1)} s, stems ${r.stems.length}`;
+    // The background must be in the export even while the live layers are off (the live
+    // fade mute and the section overlay are not export state).
+    const drums = r.stems.find((f) => /drums.wav$/.test(f));
+    if (!drums) throw new Error("no drums stem");
+    const dp = wavStats(drums).peak;
+    if (dp < 0.01) throw new Error(`drums stem silent (peak ${dp.toFixed(4)})`);
+    return `${path.basename(r.path)} ${wavStats(r.path).seconds.toFixed(1)} s, stems ${r.stems.length}, drums peak ${dp.toFixed(2)}`;
   });
   if (SOUND) {
     await step("sound: rhythm live for 2 s (meters move)", async () => {

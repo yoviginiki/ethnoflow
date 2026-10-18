@@ -3,6 +3,31 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Make the song + Assistant rail (2026-10-19 night; owner: "Create a song should make the song,
+  not walk me around; an assistant that knows the app, gives tips and lights up what to press").**
+  - `makeSong.ts`: one call from a take to a playing project through the existing rule engines:
+    analysis (notes, pitch classes, key hypotheses, tempo candidates) → scale; starter by style
+    (tempo/meter, drone/pad/rhythm/atmosphere, register) → session; song map from the melody's
+    phrases (intro = first phrase, build/drop/break/outro on bar lines, `sectionsFromPhrases`,
+    vitest); melody on a clean track (aligned to the first onset, HP 140 Hz, send 20 %);
+    **measured balance**: exports 16 s with stems, `wav_stats` (new Rust command: RMS/peak per
+    file) and moves melody clip gain, drums/bass/extras levels and pad/drone levels towards
+    targets. Every decision is a fact the UI and the bridge report.
+  - `CoachPanel` (F6.3 Coach first slice): a rail on every screen with rule-based tips from the
+    real state (key mismatch take vs project, no tempo, background off, melody track lows,
+    no map sections, latency, profile, live follower) — each with a button that does it or
+    navigates and lights up the control (`data-coach` + pulse); the running guided step; the
+    quick "Make the song"; the last build's facts. Toggle 🧭 in the top bar (pref `coach`).
+  - Create-a-song screen: style picker + "Make the song" (starts the guide too, so the steps tick).
+  - **Export fix**: the whole-song export used the live bus gain, so a layer that had been
+    faded out (`muted`) or a section overlay silenced drums/bass/pad in exports made while the
+    background was off — the owner's "my sample does not get better" had no background at all
+    in the export. `bus_gain_offline` (trim only) for exports; the smoke now asserts the drums
+    stem is audible.
+  - Owner's sample (_smoke, "re (1).mp3"): analysed at ≈ 130 BPM, F♯ aeolian/phrygian
+    (C♯ 33 %, E 30 %, F♯ 30 %) against a project in D dorian at 174 — the pad and bass were in
+    the wrong key; set F♯ aeolian, 4/4, song map from the take's structure, melody strip,
+    levels rebalanced through the bridge (ledger has the numbers).
 - **Create a song guide (Phase 5 wizard, 2026-10-18 night; owner: "създай песен е сиво").**
   The home card is live: `CreateSongScreen` runs the Academy's guided engine on lesson
   `l5-06-first-song` (new `packages/lesson-content/lessons/level5.json`, with 5.2 structure):

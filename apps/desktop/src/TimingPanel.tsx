@@ -112,7 +112,7 @@ export function TimingPanel() {
             disabled={busy}
           />
         </label>
-        <button type="submit" disabled={busy || grouping === null}>
+        <button data-coach="timing" type="submit" disabled={busy || grouping === null}>
           {t.apply}
         </button>
         <span className="muted small">{t.bpmUnitNote}</span>

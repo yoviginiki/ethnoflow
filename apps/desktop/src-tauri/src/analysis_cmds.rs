@@ -493,3 +493,53 @@ mod tests {
         assert_eq!(n.notes[0].midi, 69);
     }
 }
+
+// ---------------------------------------------------------------- loudness of rendered files
+
+#[derive(Debug, Clone, Serialize)]
+pub struct WavStat {
+    pub path: String,
+    pub rms_dbfs: f64,
+    pub peak_dbfs: f64,
+    pub seconds: f64,
+}
+
+/// RMS and peak of WAV files over `[from_s, to_s)` (the whole file when omitted): the
+/// numbers the auto-balance and the assistant reason with. Mono-summed.
+#[tauri::command]
+pub async fn wav_stats(
+    paths: Vec<String>,
+    from_s: Option<f64>,
+    to_s: Option<f64>,
+) -> CmdResult<Vec<WavStat>> {
+    if paths.len() > 32 {
+        return Err(err("invalid_argument", "at most 32 files"));
+    }
+    let mut out = Vec::with_capacity(paths.len());
+    for p in paths {
+        let buf = audio_engine::read_wav(std::path::Path::new(&p))?;
+        let mono = buf.to_mono();
+        let sr = mono.sample_rate.max(1) as f64;
+        let a = ((from_s.unwrap_or(0.0).max(0.0)) * sr) as usize;
+        let z = to_s
+            .map(|t| ((t.max(0.0)) * sr) as usize)
+            .unwrap_or(usize::MAX)
+            .min(mono.samples.len());
+        let slice = if a < z {
+            &mono.samples[a..z]
+        } else {
+            &mono.samples[0..0]
+        };
+        let n = slice.len().max(1) as f64;
+        let sum: f64 = slice.iter().map(|x| (*x as f64) * (*x as f64)).sum();
+        let peak = slice.iter().fold(0.0f64, |m, x| m.max(x.abs() as f64));
+        let db = |x: f64| if x > 0.0 { 20.0 * x.log10() } else { -120.0 };
+        out.push(WavStat {
+            path: p,
+            rms_dbfs: db((sum / n).sqrt()),
+            peak_dbfs: db(peak),
+            seconds: slice.len() as f64 / sr,
+        });
+    }
+    Ok(out)
+}

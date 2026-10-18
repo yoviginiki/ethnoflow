@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 import { api, describeError, type Ambient as AmbientRack, type AmbientLayer, type LayerKind, type LayerSource, type LibraryKind, type Scale, type Timing, type Level, type TrainerLogEntry, type FingeringOverride, type Locks } from "./api";
 import { startLive, stopLive } from "./LiveFollowPanel";
+import { makeSong } from "./makeSong";
+import type { StarterId } from "./starters";
 import { defaultSource, makeLayer, MAX_AMBIENT_LAYERS } from "./ambientPresets";
 import { applyLibraryPayload, applySession, collectSession, mergeSessionPrefs, pickSessionPrefs, rackForProject, SESSION_PREF_KEYS } from "./session";
 import { useStore, type LayerName, type Screen } from "./store";
@@ -320,6 +322,11 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
       return await api.academyScoreRhythm(cmd.onsets as number[], cmd.grid as number[], (cmd.level as Level) ?? "beginner");
     case "academy_record":
       return await api.academyRecord(String(cmd.id), Number(cmd.score), Boolean(cmd.passed));
+    case "make_song": {
+      project();
+      const r = await makeSong((cmd.style as StarterId | undefined) ?? useStore.getState().prefs.makeStyle, typeof cmd.take_id === "string" ? cmd.take_id : null);
+      return { ...r, facts: r.facts.map((f) => f.key + (f.detail ? `: ${f.detail}` : "")) };
+    }
     case "live_start": {
       await startLive();
       return { running: useStore.getState().liveRunning };

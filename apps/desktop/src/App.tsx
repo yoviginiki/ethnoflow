@@ -25,6 +25,7 @@ import { AcademyScreen, GuidedBanner } from "./AcademyScreen";
 import { CreateSongScreen } from "./CreateSongScreen";
 import { useAcademyGuided } from "./academyGuided";
 import { useLiveFollow } from "./LiveFollowPanel";
+import { CoachPanel, useCoachHighlight } from "./CoachPanel";
 import { messages, type Lang, type StringMessageKey } from "./i18n";
 import { useStore, type Screen } from "./store";
 
@@ -51,6 +52,7 @@ export default function App() {
   const lang = useStore((s) => s.prefs.lang);
   const setPref = useStore((s) => s.setPref);
   const screen = useStore((s) => s.screen);
+  const coachOn = useStore((s) => s.prefs.coach);
   const setScreen = useStore((s) => s.setScreen);
   const project = useStore((s) => s.project);
   const mode = useStore((s) => s.mode);
@@ -62,6 +64,7 @@ export default function App() {
   useSongTransport();
   useAcademyGuided();
   useLiveFollow();
+  useCoachHighlight();
   useEffect(() => {
     void api
       .fingeringOverridesGet("kaval-d")
@@ -105,6 +108,9 @@ export default function App() {
               <PresetLibrary kind="session" compact getPayload={collectSession} apply={(p) => void applySession(p, true).catch((e) => useStore.getState().setError(String(e)))} />
             </div>
           )}
+          <button className={`ghost small ${coachOn ? "on" : ""}`} onClick={() => setPref("coach", !coachOn)} title={t.coachToggleHint}>
+            🧭 {t.coachTitle}
+          </button>
           <ProjectMenu />
           <label className="inline">
             {t.language}
@@ -125,6 +131,8 @@ export default function App() {
         </div>
       )}
 
+      <div className={`app-body ${coachOn ? "with-coach" : ""}`}>
+      <div className="app-main">
       {screen === "home" && <Home />}
       {screen === "play" && (project ? <Studio /> : <ProjectPicker />)}
       {screen === "compose" && (project ? <Compose /> : <ProjectPicker />)}
@@ -141,6 +149,9 @@ export default function App() {
       {screen === "references" && <ReferencesScreen />}
       {screen === "academy" && <AcademyScreen />}
       {screen === "create" && <CreateSongScreen />}
+      </div>
+      {coachOn && <CoachPanel />}
+      </div>
       {(layers.drone || layers.pad || layers.ambient || layers.rhythm) && (
         <div className="layers-badge small" role="status">
           <BackgroundTransport compact />

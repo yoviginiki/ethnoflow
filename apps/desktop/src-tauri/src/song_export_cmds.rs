@@ -20,7 +20,7 @@ use crate::ambient_cmds::{
     apply_layer_strip, apply_source, offline_sources, pitch_set, LiveParams, AMBIENT_SLOT0,
 };
 use crate::arrangement_cmds::{apply_tracks, build_clips, ARRANGE_SLOT};
-use crate::bus_cmds::{apply_bus_strip, bus_gain, BUS_DRONE, BUS_PAD, BUS_RHYTHM};
+use crate::bus_cmds::{apply_bus_strip, bus_gain_offline, BUS_DRONE, BUS_PAD, BUS_RHYTHM};
 use crate::commands::{err, CmdResult};
 use crate::graph_cmds::{DroneSettings, DRONE_SLOT, PAD_SLOT};
 use crate::pad_cmds::PadSettings;
@@ -110,7 +110,7 @@ pub async fn export_song(
             crate::graph_cmds::apply(&params, &gp.layers[DRONE_SLOT], set, &r);
             gp.layers[DRONE_SLOT]
                 .gain_db
-                .set(bus_gain(&s, BUS_DRONE, set.level_db));
+                .set(bus_gain_offline(&s, BUS_DRONE, set.level_db));
             apply_bus_strip(&s, BUS_DRONE, &gp.layers[DRONE_SLOT], 0.0, 20_000.0, 10.0);
             pending.push((DRONE_SLOT, Box::new(DroneSource::new(params))));
             groups.push(("drone".to_string(), vec![DRONE_SLOT]));
@@ -121,7 +121,7 @@ pub async fn export_song(
             let _ = crate::pad_cmds::apply(&s, &params, set);
             gp.layers[PAD_SLOT]
                 .gain_db
-                .set(bus_gain(&s, BUS_PAD, set.level_db));
+                .set(bus_gain_offline(&s, BUS_PAD, set.level_db));
             apply_bus_strip(&s, BUS_PAD, &gp.layers[PAD_SLOT], 0.0, 20_000.0, 10.0);
             pending.push((
                 PAD_SLOT,
@@ -192,7 +192,7 @@ pub async fn export_song(
             let (live, sources) = offline_parts(&s, set, &ctx)?;
             let lvl = |db: f32| {
                 let own = if db <= -39.5 { -120.0 } else { db };
-                bus_gain(&s, BUS_RHYTHM, own)
+                bus_gain_offline(&s, BUS_RHYTHM, own)
             };
             apply_params(&gp.layers, &live, &lvl);
             for slot in DRUMS_SLOT..audio_engine::MAX_LAYERS {

@@ -31,7 +31,7 @@ async function send(cmds) {
     fs.writeFileSync(tmp, JSON.stringify(cmds[i]));
     fs.renameSync(tmp, path.join(dir, "inbox", `${name}.json`));
     const out = path.join(dir, "outbox", `${name}.json`);
-    const deadline = Date.now() + 15_000;
+    const deadline = Date.now() + (Number(process.env.EF_TIMEOUT_MS) || 15_000);
     let reply = null;
     while (Date.now() < deadline) {
       if (fs.existsSync(out)) {
@@ -45,7 +45,7 @@ async function send(cmds) {
       }
       await new Promise((r) => setTimeout(r, 100));
     }
-    replies.push(reply ?? { ok: false, error: "timeout: no reply in 15 s (app not running, bridge off, or no project open)" });
+    replies.push(reply ?? { ok: false, error: "timeout: no reply (app not running, bridge off, or no project open; EF_TIMEOUT_MS raises the wait)" });
   }
   return replies;
 }

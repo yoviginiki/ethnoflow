@@ -32,7 +32,9 @@ import type {
   WaveformPeaks,
   WavFormat,
 } from "./api";
-import type { AcademyCheck, BusStrip, FingeringOverride, LiveView, Strategy } from "./api";
+import type { AcademyCheck, Arrangement, BusStrip, FingeringOverride, LiveView, Strategy } from "./api";
+import type { MakeSongResult } from "./makeSong";
+import type { StarterId } from "./starters";
 import type { Lang } from "./i18n";
 
 export type Mode = "idle" | "recording" | "playing";
@@ -69,6 +71,10 @@ export interface Prefs {
   midiInput: string | null;
   /** Live accompanist harmony strategy (F8.1). */
   liveStrategy: Strategy;
+  /** The assistant rail on every screen (F6.3 Coach). */
+  coach: boolean;
+  /** Style "Make the song" builds (a starter id). */
+  makeStyle: StarterId;
   /** Measured round-trip latency (ms), subtracted by the trainer and the clap exercises; null = not measured. */
   latencyMs: number | null;
   /** Drone settings (F3.2); `rootMidi` null until the user picks one (no assumed key). */
@@ -210,6 +216,8 @@ export const DEFAULT_PREFS: Prefs = {
   midiInput: null,
   latencyMs: null,
   liveStrategy: "modal_pads",
+  coach: true,
+  makeStyle: "liquid_dnb",
   drone: DEFAULT_DRONE,
   pad: DEFAULT_PAD,
   intent: DEFAULT_INTENT,
@@ -385,6 +393,13 @@ interface Store {
   /** Live accompanist (F8.1): the poll loop runs while true; the last view for the panel. */
   liveRunning: boolean;
   setLiveRunning: (on: boolean) => void;
+  /** Assistant: the control to light up (data-coach id), the last "make the song" result, a light arrangement copy. */
+  coachHighlight: string | null;
+  setCoachHighlight: (id: string | null) => void;
+  lastMake: MakeSongResult | null;
+  setLastMake: (r: MakeSongResult | null) => void;
+  coachArrangement: Arrangement | null;
+  setCoachArrangement: (a: Arrangement | null) => void;
   /** When the whole song was last exported (the Create-a-song guide checks it). */
   lastSongExportMs: number | null;
   setLastSongExportMs: (ms: number | null) => void;
@@ -527,6 +542,12 @@ export const useStore = create<Store>((set, get) => ({
   academyPlayAlong: null,
   setAcademyPlayAlong: (academyPlayAlong) => set({ academyPlayAlong }),
   liveRunning: false,
+  coachHighlight: null,
+  setCoachHighlight: (coachHighlight) => set({ coachHighlight }),
+  lastMake: null,
+  setLastMake: (lastMake) => set({ lastMake }),
+  coachArrangement: null,
+  setCoachArrangement: (coachArrangement) => set({ coachArrangement }),
   lastSongExportMs: null,
   setLastSongExportMs: (lastSongExportMs) => set({ lastSongExportMs }),
   setLiveRunning: (liveRunning) => set({ liveRunning }),

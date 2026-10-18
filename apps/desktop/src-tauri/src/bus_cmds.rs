@@ -82,6 +82,18 @@ pub fn bus_gain(s: &Inner, bus: usize, own_db: f32) -> f32 {
     }
 }
 
+/// Bus gain for offline renders (song export): the user's trim only. The live fade
+/// state (`muted` while a layer fades out) and the section follower's overlay are
+/// moments of the running app and must not silence an export made while the layers
+/// happen to be off.
+pub fn bus_gain_offline(s: &Inner, bus: usize, own_db: f32) -> f32 {
+    if own_db <= -119.0 {
+        -120.0
+    } else {
+        (own_db + s.bus[bus].strip.gain_db).clamp(-120.0, 12.0)
+    }
+}
+
 /// Pan and filters of a member slot through the bus (the stricter filter wins).
 pub fn apply_bus_strip(
     s: &Inner,

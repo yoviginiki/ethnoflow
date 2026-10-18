@@ -222,7 +222,7 @@ export function SongMapPanel({ headSeconds = null, onSeek, compact = false }: Pr
         {project.song_map && <span className="muted small">{project.timing.bpm} BPM · {project.timing.numerator}/{project.timing.unit}</span>}
         <label className="inline small">
           {t.songMapAdd}
-          <select value="" onChange={(e) => e.target.value && addSection(e.target.value)} disabled={saving}>
+          <select data-coach="songmap" value="" onChange={(e) => e.target.value && addSection(e.target.value)} disabled={saving}>
             <option value="">…</option>
             {ROLES.map((r) => (
               <option key={r} value={r}>

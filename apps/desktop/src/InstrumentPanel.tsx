@@ -71,7 +71,7 @@ export function InstrumentPanel() {
 
   const cur = project.instrument;
   return (
-    <details className="panel instrument">
+    <details className="panel instrument" data-coach="instrument">
       <summary>
         {t.instrument}:{" "}
         <b>

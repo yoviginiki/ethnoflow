@@ -98,6 +98,7 @@ pub fn run() {
             analysis_cmds::set_reference,
             analysis_cmds::export_midi,
             analysis_cmds::start_monitor,
+            analysis_cmds::wav_stats,
             analysis_cmds::stop_monitor,
             analysis_cmds::monitor_status,
             midi_cmds::midi_take,

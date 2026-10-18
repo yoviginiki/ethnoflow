@@ -3,6 +3,8 @@ import { startGuided, stopGuided } from "./academyGuided";
 import { api, describeError, type AcademyCheck, type LessonView } from "./api";
 import { messages, type Lang } from "./i18n";
 import { useStore, type Screen } from "./store";
+import { makeSong, STARTER_TITLE } from "./makeSong";
+import { STARTER_IDS, type StarterId } from "./starters";
 
 const WIZARD_ID = "l5-06-first-song";
 
@@ -43,6 +45,11 @@ export function CreateSongScreen() {
   const run = useStore((s) => s.academyGuided);
   const setScreen = useStore((s) => s.setScreen);
   const [lesson, setLesson] = useState<LessonView | null>(null);
+  const [making, setMaking] = useState(false);
+  const makeStyle = useStore((s) => s.prefs.makeStyle);
+  const setPref = useStore((s) => s.setPref);
+  const lastMake = useStore((s) => s.lastMake);
+
   useEffect(() => {
     void api
       .academyLessons()
@@ -53,11 +60,52 @@ export function CreateSongScreen() {
   const mine = run && run.lessonId === WIZARD_ID ? run : null;
   const current = mine ? mine.done.findIndex((d) => !d) : -1;
   const allDone = mine ? mine.done.every(Boolean) : false;
+  const doMake = async () => {
+    setMaking(true);
+    try {
+      if (!mine) startGuided(WIZARD_ID, steps.map((s) => s.check));
+      const r = await makeSong(makeStyle, null);
+      useStore.getState().setMessage(`${t.makeDone}: ${r.facts.length} ${t.makeFactsWord}`);
+    } catch (e) {
+      useStore.getState().setError(describeError(e));
+    } finally {
+      setMaking(false);
+    }
+  };
   return (
     <section className="create-song">
       <div className="panel">
         <h3>{t.createTitle}</h3>
         <p className="muted small">{t.createIntro}</p>
+        <div className="analysis-row make-row">
+          <label className="inline small">
+            {t.makeStyle}
+            <select value={makeStyle} disabled={making} onChange={(e) => setPref("makeStyle", e.target.value as StarterId)}>
+              {STARTER_IDS.map((id) => (
+                <option key={id} value={id}>
+                  {t[STARTER_TITLE[id]] as string}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button disabled={!project || making || project.takes.length === 0} onClick={() => void doMake()} data-coach="make">
+            {making ? t.makeWorking : `▶ ${t.makeButton}`}
+          </button>
+          <span className="muted small">{t.makeHint}</span>
+        </div>
+        {lastMake && (
+          <div className="banner ok small">
+            <b>{t.makeWhatIDid}</b>
+            <ul className="coach-facts">
+              {lastMake.facts.map((f, i) => (
+                <li key={i}>
+                  {t[f.key] as string}
+                  {f.detail ? `: ${f.detail}` : ""}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         {!project && <div className="banner warnb">{t.pickProjectFirst}</div>}
         <div className="analysis-row">
           {!mine ? (

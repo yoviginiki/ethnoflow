@@ -1699,6 +1699,7 @@ export const api = {
   academyReset: (id: string | null) => invoke<void>("academy_reset", { id }),
   academyNewTake: (sinceMs: number, minNotes: number) => invoke<string | null>("academy_new_take", { sinceMs, minNotes }),
   academyPlayAlong: (notes: PlayNote[], label: string) => invoke<ProjectView>("academy_play_along", { notes, label }),
+  wavStats: (paths: string[], fromS: number | null, toS: number | null) => invoke<{ path: string; rms_dbfs: number; peak_dbfs: number; seconds: number }[]>("wav_stats", { paths, fromS, toS }),
   liveStart: (params: LiveStartParams) => invoke<LiveView>("live_start", { params }),
   liveTick: () => invoke<LiveView>("live_tick"),
   liveSet: (set: { locks: Locks | null; bypass: boolean | null }) => invoke<LiveView>("live_set", { set }),

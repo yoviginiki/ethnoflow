@@ -130,7 +130,7 @@ export function LiveFollowPanel() {
   const lastDecision: LiveDecision | null = view?.decisions.length ? view.decisions[view.decisions.length - 1] : null;
   const mode = s.prefs.intent.enabled ? s.prefs.intent.mode : "off";
   return (
-    <details className="panel live-follow" open>
+    <details className="panel live-follow" open data-coach="live">
       <summary>
         {t.liveTitle} · {s.liveRunning ? <span className="badge ok">{t.liveOn}</span> : <span className="badge">{t.liveOff}</span>}
       </summary>

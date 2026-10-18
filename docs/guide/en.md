@@ -130,7 +130,37 @@ track, trainer). These are proposals: on a dense mix the tracker follows the mos
 voice, so it works best on solo passages and an up-front vocal or kaval.
 From the terminal: `reference_add`, `reference_analyze`, `reference_report` (see the bridge).
 
+## Assistant (on every screen)
+
+The rail on the right (the 🧭 "Assistant" button at the top shows/hides it) knows the app's
+state and says what to do: the take is in another key than the project ("Take the take's
+key"), no tempo, the background is off, the melody track lets the lows through ("Apply" cuts
+below 140 Hz), the map has no sections, latency is not measured, no instrument profile, the
+background is running and the Live accompanist could follow. Every tip has a button that
+**does** the thing or takes you to the screen and **lights up** the control (a pulsing frame).
+While a guided lesson or the Create-a-song guide runs, its current step is on top. At the
+bottom: the quick "Make the song" and the "What I did and why" list of the last build.
+
 ## Create a song (step-by-step guide)
+
+**Make the song** (button at the top of the screen and in the assistant): from the latest
+take, in the chosen style (Liquid DnB, Ambient DnB, Quiet ambient, Dark drone, Ethno pulse),
+the app itself:
+1. analyses the take — notes, most frequent tones, **key** (the strongest hypothesis becomes
+   the project scale), the take's **pulse**;
+2. picks a background and tempo/meter by style (the same "starters" as Start from a melody),
+   in the melody's register; if the take's pulse does not divide the style tempo it says the
+   melody is a free phrase over the groove;
+3. builds a **song map from the phrases** (intro = the first phrase, then build / drop / break /
+   outro on bar lines) — the map follower changes density by itself;
+4. puts the take on a clean **"Melody" track**, aligned to the first note, with a cut below
+   140 Hz and a little space;
+5. **balances by measured levels**: renders the first 16 s with stems through the real graph,
+   measures each group's RMS and moves the levels towards the targets (melody −18 dBFS, drums
+   −21, bass −23, pad −28, drone −30, extras −30); the before→after numbers are in the list.
+Then start the background and listen; change the style or key from the assistant; export from
+the studio. Nothing is hidden: every step is the same command the screens use.
+
 
 Home › **Create a song**. Seven steps in the real screens: melody (a take with ≥ 3 notes) →
 scale (a hypothesis) → tempo and meter → song map (≥ 2 sections) → background (drone/pad/
