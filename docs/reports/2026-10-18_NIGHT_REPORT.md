@@ -148,6 +148,19 @@
 
 **Инфраструктура:** дискът стигна 5,8 GB свободни (`target/debug/incremental` 25,7 GB от rebuild-овете на dev watcher-а) — изтрити инкременталните кешове, 29 GB свободни.
 
+## Продължение (≈10:40–11:25): CLAP хост спайк (F4.4, ADR-0018 приет)
+
+| Какво | Къде | Статус |
+|---|---|---|
+| `crates/plugin-host`: зареждане на `.clap` (libloading) или вграден entry, списък инструменти, инстанциране, активиране с предварително заделени буфери, подаване на ноти, `ClapSource` на общия beat clock | `crates/plugin-host/src/lib.rs` | TESTED (3 теста: в процес — Ла4 в тон и отпускане; патерн в графа; динамично зареждане на реалния `.clap`) |
+| `crates/clap-fixture`: синусов инструмент, написан директно срещу CLAP ABI (cdylib + rlib) — същият `clap_entry`, който изнася C++ плъгин | `crates/clap-fixture/src/lib.rs` | TESTED |
+| Shell: `clap_scan`, `clap_render`; мост: същите операции; без UI | `clap_cmds.rs`, `assistant.ts` | FUNCTIONAL |
+| ADR-0018 приет с конкретните crate-ове (clap-sys 0.5 MIT/Apache-2.0, libloading 0.9 ISC); CLAUDE.md, ROADMAP, FEATURE_SPEC, ръководство | `docs/DECISIONS.md` и др. | — |
+
+**Проверка през работещото приложение:** `clap_scan` намира `ethnoflow-fixture.clap` с инструмента „EthnoFlow Fixture Sine“; `clap_render` → `qa/renders/2026-10-18/clap-fixture-demo.wav` (5,36 s, peak −15,7 dBFS, RMS −23,3 dBFS). На машината няма инсталирани външни CLAP плъгини — тест с реален (Surge XT, Vital) остава за собственика.
+
+**Ограничения (записани в ADR):** в процеса на приложението (срив в плъгина спира EthnoFlow); само ноти-ключове (без центове — note expressions следват); без параметри/състояние/GUI; C++ инструмент не се строи в репото.
+
 ## Известни проблеми (допълнение, сутрин)
 
 - (средно) **Относителни ладове**: тоналността от средна хрома не различава D дорийски от
