@@ -159,7 +159,7 @@ fn prune_cache(s: &mut Inner) {
         .retain(|k, _| used.iter().any(|prefix| k.starts_with(prefix)));
 }
 
-fn frames(seconds: f64, rate: u32) -> u64 {
+pub(crate) fn frames(seconds: f64, rate: u32) -> u64 {
     (seconds.max(0.0) * rate as f64).round() as u64
 }
 
@@ -220,7 +220,7 @@ pub(crate) fn apply_tracks(params: &ClipsParams, a: &Arrangement, rate: u32) {
 }
 
 /// (Re)build the clip source on the running graph from the current arrangement.
-fn rebuild_source(s: &mut Inner) -> CmdResult<()> {
+pub(crate) fn rebuild_source(s: &mut Inner) -> CmdResult<()> {
     let Some(params) = s.clips.clone() else {
         return Ok(());
     };
@@ -313,15 +313,14 @@ pub async fn set_arrangement(
     view(&mut s)
 }
 
-/// Start (or resume) the transport; `from_seconds` seeks first.
-#[tauri::command]
-pub async fn arrangement_play(
-    state: State<'_, AppState>,
-    device: Option<String>,
+/// Start (or resume) the timeline; `from_seconds` seeks first. Shared with the song
+/// transport (`transport_cmds`), which also re-anchors the rhythm clock.
+pub(crate) fn play_arrangement(
+    s: &mut Inner,
+    device: Option<&str>,
     from_seconds: Option<f64>,
 ) -> CmdResult<ArrangeStatus> {
-    let mut s = state.lock();
-    ensure_graph(&mut s, device.as_deref())?;
+    ensure_graph(s, device)?;
     let rate = s.graph.as_ref().expect("graph just started").sample_rate();
     let params = match s.clips.clone() {
         Some(p) => p,
@@ -334,13 +333,26 @@ pub async fn arrangement_play(
     if let Some(from) = from_seconds {
         params.transport.seek(frames(from, rate));
     }
-    rebuild_source(&mut s)?;
+    rebuild_source(s)?;
     let layer = &s.graph.as_ref().expect("graph").params().layers[ARRANGE_SLOT];
     layer.pan.set(0.0);
     layer.gain_db.set(0.0);
     params.transport.finished.store(false, Ordering::Relaxed);
     params.transport.playing.store(true, Ordering::Relaxed);
-    status(&mut s).ok_or_else(|| err("no_graph", "The output stream is not running"))
+    status(s).ok_or_else(|| err("no_graph", "The output stream is not running"))
+}
+
+/// Start (or resume) the transport; `from_seconds` seeks first.
+#[tauri::command]
+pub async fn arrangement_play(
+    state: State<'_, AppState>,
+    device: Option<String>,
+    from_seconds: Option<f64>,
+) -> CmdResult<ArrangeStatus> {
+    let mut s = state.lock();
+    let st = play_arrangement(&mut s, device.as_deref(), from_seconds)?;
+    crate::transport_cmds::follow_rhythm(&s);
+    Ok(st)
 }
 
 /// Pause: the position stays, the source stays on the graph.
@@ -362,6 +374,7 @@ pub async fn arrangement_seek(
     if let (Some(p), Some(g)) = (s.clips.as_ref(), s.graph.as_ref()) {
         p.transport.seek(frames(seconds, g.sample_rate()));
     }
+    crate::transport_cmds::follow_rhythm(&s);
     Ok(status(&mut s))
 }
 

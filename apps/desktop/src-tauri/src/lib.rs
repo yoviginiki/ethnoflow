@@ -23,6 +23,7 @@ mod song_export_cmds;
 mod state;
 mod synth_cmds;
 mod trainer_cmds;
+mod transport_cmds;
 
 use state::AppState;
 use tauri::Manager;
@@ -204,6 +205,11 @@ pub fn run() {
             reference_cmds::reference_report,
             reference_cmds::reference_analyze,
             reference_cmds::reference_play,
+            transport_cmds::transport_play,
+            transport_cmds::transport_stop,
+            transport_cmds::transport_seek,
+            transport_cmds::transport_status,
+            transport_cmds::transport_loop,
             song_export_cmds::export_song,
         ])
         .build(tauri::generate_context!())

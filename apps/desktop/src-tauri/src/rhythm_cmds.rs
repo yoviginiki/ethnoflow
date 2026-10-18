@@ -1329,7 +1329,8 @@ pub async fn start_rhythm(
             .as_ref()
             .map(|g| g.params().frame.load(Ordering::Relaxed))
             .unwrap_or(0);
-        clock.start(frame, 0.0);
+        // Join the song where it is when the timeline plays (song transport), else bar 1.
+        clock.start(frame, crate::transport_cmds::song_beat_for_rhythm_start(&s));
         s.rhythm = Some(RhythmLive {
             clock,
             voices: [None, None, None, None],
