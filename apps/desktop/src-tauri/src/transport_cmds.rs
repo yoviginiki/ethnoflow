@@ -294,7 +294,25 @@ pub async fn transport_loop(
     if s.clips.is_none() {
         s.clips = Some(Arc::new(ClipsParams::default()));
     }
-    rebuild_source(&mut s)?;
+    if s.graph.is_some() {
+        rebuild_source(&mut s)?;
+    } else if let Some(p) = s.clips.as_ref() {
+        // Nothing plays yet: keep the loop on the transport so the status shows it; the
+        // first play rebuilds the source from the arrangement (seconds → frames at the
+        // stream rate).
+        match region {
+            Some((a, z)) => {
+                p.transport
+                    .loop_start
+                    .store(frames(a, 48_000), Ordering::Relaxed);
+                p.transport
+                    .loop_end
+                    .store(frames(z, 48_000), Ordering::Relaxed);
+                p.transport.loop_on.store(true, Ordering::Relaxed);
+            }
+            None => p.transport.loop_on.store(false, Ordering::Relaxed),
+        }
+    }
     Ok(status(&s))
 }
 

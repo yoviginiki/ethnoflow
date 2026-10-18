@@ -128,6 +128,11 @@ with Gate A artifacts under `docs/audits`, `docs/traceability`, `docs/design`,
 9. After each step: run `cargo test --workspace`, `npm run typecheck`, `npm test`. Report
    failures as failures. A test that cannot run is reported as "not run: <reason>", never
    as PASS.
+   **And the live smoke test:** with the app running, `node scripts/dev/smoke.mjs`
+   (silent; `--sound` adds short audible checks) drives every screen and feature through the
+   bridge and writes `docs/testing/SMOKE_REPORT.md`. The owner cannot verify "a million
+   things" by hand (2026-10-18): a change is not done until the smoke report is all PASS,
+   and a new feature gets a smoke step (and a bridge op if it needs one).
 10. Ask before: paid APIs, uploads of user audio, destructive file operations, or changing
     the stack (Tauri/React/cpal). Propose an ADR instead of migrating.
 11. UI strings go through `apps/desktop/src/i18n.ts` (BG + EN). No bare literals in JSX.

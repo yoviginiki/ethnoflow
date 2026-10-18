@@ -202,6 +202,14 @@
   import in Atmosphere**: "Import samples…" (multi-file) or drag-and-drop from
   Explorer / a sample manager such as Soundly — each file becomes a take in the
   project (named after the file) and a looped layer.
+- **Live smoke test (2026-10-18)**: `scripts/dev/smoke.mjs` drives the running app through the
+  bridge — every screen, every factory preset rendered and measured, rhythm and rack stems,
+  references (add/analyse/phrases/remove), song map + follower, transport loop, presets,
+  CLAP, whole-song export, optional short sound checks — restores the owner's prefs,
+  project and screen, and writes `docs/testing/SMOKE_REPORT.md`. New bridge ops for it
+  (`error_clear`, `create_project`, `instrument_list/render`, `reference_remove`,
+  `song_map`, `set_song_map`, `export_song`). Fixes it found: loop in bars failed without a
+  running stream; the bridge state lacked the song map. Rule 9 in CLAUDE.md now requires it.
 - **Section follower (P2 E / P3 first slice, 2026-10-18)** — after the owner's "I took a map
   from a reference, start the rhythm, nothing happens": the song map now *drives* the
   background. `section_follow.rs`: role/energy/density → which rhythm parts play (never

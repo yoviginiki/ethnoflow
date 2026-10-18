@@ -74,6 +74,14 @@ rhythm_status, ambient_status }`
 | `transport_loop` | `start_bar`, `bars` (omit both = off) | loop in bars, stored in the arrangement |
 | `reference_phrases` | `id` | extracts melodic phrases (pitch track → notes → phrases) and returns them with compact notes (s, d, m, c, v) |
 | `reference_phrase_to_take` | `id`, `index` | puts phrase `index` into the open project as a MIDI take |
+| `error_clear` | | clears the app's error banner |
+| `create_project` | `name` | closes the current project and creates a new one |
+| `instrument_list` | | instrument presets (id, name, category, factory) |
+| `instrument_render` | `id`, `out`, `seconds?`, `midi?` | renders a preset's audition pattern to a WAV (silent proof per instrument) |
+| `instrument_audition` | `id`, `seconds?` | **plays** a preset through the designer's audition path for a few seconds |
+| `reference_remove` | `id` | removes a reference's library copy |
+| `set_song_map` | `song_map` (whole SongMap) | replaces the project's song map (validated) |
+| `export_song` | `path`, `seconds?`, `drone?`, `pad?`, `ambient?`, `rhythm?`, `stems?` | the studio's whole-song export (mix + stems + markers + manifest) |
 | `reference_add` | `path` (WAV/MP3/FLAC/OGG) | copies the song into the references library (never into a project); reply: id, name, duration |
 | `reference_list` | | the references library (id, name, duration, analyzed) |
 | `reference_report` | `id` | the saved analysis report (tempo candidates, key hypotheses, segments) without the curves |
@@ -108,3 +116,10 @@ arrangement clips, Sample Lab recipes, trainer settings.
 
 Local files under the user's own profile; the app applies only the vocabulary above,
 validated by the same shell commands the UI uses. Audio starts only through `layers`.
+
+## Smoke test
+
+`node scripts/dev/smoke.mjs [--sound] [--quick] [--project <path>]` drives the running app
+through these operations (every screen, renders, references, song map + follower, transport,
+presets, CLAP, export) and writes `docs/testing/SMOKE_REPORT.md` with PASS/FAIL per step.
+Silent by default; `--sound` adds short audible checks (rhythm, drone+pad, audition).

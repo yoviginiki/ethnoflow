@@ -3,6 +3,8 @@ import { api, describeError, type Ambient as AmbientRack, type AmbientLayer, typ
 import { defaultSource, makeLayer, MAX_AMBIENT_LAYERS } from "./ambientPresets";
 import { applyLibraryPayload, applySession, collectSession, mergeSessionPrefs, pickSessionPrefs, rackForProject, SESSION_PREF_KEYS } from "./session";
 import { useStore, type LayerName, type Screen } from "./store";
+import { droneRoot, droneSettings, padRoot, padSettings, voicingNotes } from "./layers";
+import type { SongMap } from "./api";
 
 /**
  * Assistant bridge: commands dropped into `<config>/assistant/inbox/*.json` by a
@@ -158,6 +160,63 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
       const r = s.prefs.rhythm;
       const res = await api.rhythmRender(String(cmd.path), { ...r, chord: s.padChord, root_midi: s.prefs.drone?.rootMidi ?? null, intonation: s.prefs.drone?.intonation ?? "profile" }, typeof cmd.bars === "number" ? cmd.bars : null, cmd.stems !== false);
       return res;
+    }
+    case "error_clear":
+      s.setError(null);
+      return { cleared: true };
+    case "create_project": {
+      if (s.project) {
+        await api.closeProject();
+        s.setLoaded(null, null);
+        s.setProject(null, null);
+        s.setMessage(null);
+      }
+      const pv = await api.createProject(String(cmd.name ?? "smoke"), null);
+      useStore.getState().setProject(pv, null);
+      return { name: pv.name, root: pv.root };
+    }
+    case "instrument_list":
+      return await api.instrumentList(null, null);
+    case "instrument_render": {
+      const preset = await api.instrumentGet(String(cmd.id));
+      return await api.instrumentRender(String(cmd.out), preset.voice, typeof cmd.seconds === "number" ? cmd.seconds : null, typeof cmd.midi === "number" ? cmd.midi : null);
+    }
+    case "reference_remove":
+      await api.referenceRemove(String(cmd.id));
+      return { removed: cmd.id };
+    case "rhythm_status": {
+      // Fresh from the backend (the store copy is only refreshed where meters are shown).
+      const st = await api.rhythmStatus();
+      useStore.getState().setRhythmStatus(st);
+      return st;
+    }
+    case "song_map":
+      return project().song_map;
+    case "set_song_map": {
+      project();
+      const pv = await api.setSongMap(cmd.song_map as SongMap);
+      useStore.getState().setProject(pv);
+      return pv;
+    }
+    case "export_song": {
+      // The same request the studio's "Export mix" builds: the switched-on layers with
+      // their settings, through the one offline graph, with stems.
+      const p = project();
+      const scale = p.scale ?? null;
+      const profile = p.instrument ?? null;
+      const dp = s.prefs.drone;
+      const pp = s.prefs.pad;
+      const dRoot = s.droneRootOverride ?? droneRoot(dp, scale, profile);
+      const pRoot = padRoot(pp, dp, scale, profile);
+      const padNotes = s.padChord ?? (pRoot === null ? null : voicingNotes(pp.voicing, pRoot, scale));
+      const include = {
+        clips: true,
+        drone: dRoot !== null && (cmd.drone ?? true) ? droneSettings(dp, dRoot) : null,
+        pad: padNotes && (cmd.pad ?? true) ? padSettings(pp, padNotes) : null,
+        ambient: cmd.ambient === true,
+        rhythm: cmd.rhythm === false ? null : { ...(s.prefs.rhythm ?? {}), chord: s.padChord, root_midi: dRoot, intonation: dp.intonation },
+      };
+      return await api.exportSong(String(cmd.path), include as never, s.prefs.exportFormat ?? null, null, typeof cmd.seconds === "number" ? cmd.seconds : null, cmd.stems !== false);
     }
     case "instrument_audition": {
       // Plays a preset through the designer's audition path for a few seconds (sound!).
