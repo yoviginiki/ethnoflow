@@ -98,7 +98,18 @@ pub fn ensure_graph(s: &mut Inner, device: Option<&str>) -> CmdResult<()> {
         for l in gp.layers.iter() {
             l.gain_db.set(-60.0);
         }
-        s.graph = Some(GraphPlayer::start(device, gp)?);
+        // A remembered device that is gone (headphones switched off) must not make every
+        // play button fail: fall back to the default output and say so in the log; the UI
+        // clears the stale choice when it next lists the devices.
+        let player = match GraphPlayer::start(device, Arc::clone(&gp)) {
+            Ok(p) => p,
+            Err(audio_engine::AudioError::DeviceNotFound(name)) if device.is_some() => {
+                log::warn!("output device {name:?} not found; using the default output");
+                GraphPlayer::start(None, gp)?
+            }
+            Err(e) => return Err(e.into()),
+        };
+        s.graph = Some(player);
     }
     Ok(())
 }

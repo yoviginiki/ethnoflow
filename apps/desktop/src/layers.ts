@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { messages } from "./i18n";
 import { api, describeError, type DroneSettings, type InstrumentProfile, type PadNote, type PadSettings, type Scale } from "./api";
 import { DEFAULT_DRONE, DEFAULT_MIXER, DEFAULT_PAD, DEFAULT_RHYTHM, useStore, type DronePrefs, type LayerName, type PadPrefs, type Voicing } from "./store";
 
@@ -35,6 +36,23 @@ function busOut(name: LayerName, stop: () => Promise<unknown>): void {
 export function useSongTransport() {
   const projectRoot = useStore((s) => s.project?.root ?? null);
   const running = useStore((s) => (s.transport?.playing ?? false) || s.layers.rhythm);
+  // A remembered output device that is gone (headphones switched off) is forgotten with a
+  // note, so every play button uses the default output instead of failing silently.
+  useEffect(() => {
+    if (!projectRoot) return;
+    const sel = useStore.getState().prefs.selectedOutput;
+    if (!sel) return;
+    api
+      .listOutputDevices()
+      .then((outs) => {
+        if (!outs.some((d) => d.name === sel)) {
+          const st = useStore.getState();
+          st.setPref("selectedOutput", null);
+          st.setMessage(messages[st.prefs.lang].deviceFallback.replace("{name}", sel));
+        }
+      })
+      .catch(() => undefined);
+  }, [projectRoot]);
   // The section follower's switch lives in the rhythm prefs; the backend keeps a copy so
   // the buses follow even while the rhythm section is off.
   const follow = useStore((s) => s.prefs.rhythm?.follow_map ?? true);

@@ -31,6 +31,8 @@ export function snapshot(): Record<string, unknown> {
       ? { name: p.name, root: p.root, scale: p.scale, a4_hz: p.a4_hz, timing: p.timing, markers: p.markers, instrument: p.instrument ?? null, takes: p.takes }
       : null,
     loaded_take: s.loaded?.id ?? null,
+    error: s.error ?? null,
+    message: s.message ?? null,
     prefs: pickSessionPrefs(s.prefs),
     layers: s.layers,
     metronome: s.metronomeOn,
@@ -156,6 +158,15 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
       const r = s.prefs.rhythm;
       const res = await api.rhythmRender(String(cmd.path), { ...r, chord: s.padChord, root_midi: s.prefs.drone?.rootMidi ?? null, intonation: s.prefs.drone?.intonation ?? "profile" }, typeof cmd.bars === "number" ? cmd.bars : null, cmd.stems !== false);
       return res;
+    }
+    case "instrument_audition": {
+      // Plays a preset through the designer's audition path for a few seconds (sound!).
+      const preset = await api.instrumentGet(String(cmd.id));
+      const secs = typeof cmd.seconds === "number" ? Math.min(20, Math.max(0.5, cmd.seconds)) : 3;
+      await api.instrumentAuditionStart(preset.voice, s.prefs.selectedOutput, null, -6);
+      await new Promise((r) => window.setTimeout(r, secs * 1000));
+      await api.instrumentAuditionStop();
+      return { played: preset.name, seconds: secs };
     }
     case "clap_scan": {
       const folders = Array.isArray(cmd.folders) && cmd.folders.length > 0 ? (cmd.folders as string[]) : await api.clapDefaultFolders();

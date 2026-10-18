@@ -48,6 +48,8 @@ export default function App() {
   const mode = useStore((s) => s.mode);
   const layers = useStore((s) => s.layers);
   const t = messages[lang];
+  const error = useStore((s) => s.error);
+  const setError = useStore((s) => s.setError);
   useBackgroundLayers();
   useSongTransport();
   useProjectSession();
@@ -97,6 +99,14 @@ export default function App() {
           </label>
         </div>
       </header>
+      {error && screen !== "studio" && (
+        <div className="banner error" role="alert">
+          {error}{" "}
+          <button className="ghost small" onClick={() => setError(null)} aria-label={t.cancel}>
+            ✕
+          </button>
+        </div>
+      )}
 
       {screen === "home" && <Home />}
       {screen === "play" && (project ? <Studio /> : <ProjectPicker />)}
