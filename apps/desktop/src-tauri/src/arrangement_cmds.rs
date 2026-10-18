@@ -163,7 +163,7 @@ fn frames(seconds: f64, rate: u32) -> u64 {
     (seconds.max(0.0) * rate as f64).round() as u64
 }
 
-fn build_clips(s: &mut Inner, a: &Arrangement, rate: u32) -> CmdResult<Vec<ClipData>> {
+pub(crate) fn build_clips(s: &mut Inner, a: &Arrangement, rate: u32) -> CmdResult<Vec<ClipData>> {
     let mut out = Vec::new();
     for (ti, t) in a.tracks.iter().enumerate().take(MAX_CLIP_TRACKS) {
         for c in &t.clips {
@@ -191,7 +191,7 @@ fn build_clips(s: &mut Inner, a: &Arrangement, rate: u32) -> CmdResult<Vec<ClipD
 }
 
 /// Push track gain/mute/solo, the end and the loop region to the transport.
-fn apply_tracks(params: &ClipsParams, a: &Arrangement, rate: u32) {
+pub(crate) fn apply_tracks(params: &ClipsParams, a: &Arrangement, rate: u32) {
     for (i, tp) in params.tracks.iter().enumerate() {
         match a.tracks.get(i) {
             Some(t) => {

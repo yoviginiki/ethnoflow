@@ -202,6 +202,12 @@
   import in Atmosphere**: "Import samples…" (multi-file) or drag-and-drop from
   Explorer / a sample manager such as Soundly — each file becomes a take in the
   project (named after the file) and a looped layer.
+- **Song export (P2 Phase F start, 2026-10-18, night)**: "Експорт на микса" now renders the
+  whole song through one offline graph (clips + drone + pad + atmosphere with its program
+  + rhythm, buses, master space/shimmer, limiter) with aligned stems per group,
+  `markers.csv` from the song map and `manifest.json` (tempo/meter maps, sections);
+  fixes the audit defect that the export omitted the background. Window title fixed
+  (mis-encoded dash).
 - **Sample browser (backlog #6, 2026-10-18, night)**: screen "Моите семпли": folders
   (Soundly Audio suggested), recursive scan with WAV facts, search/sort, preview through
   the graph's audition slot (auto-stop), import as take / looped layer / cloud; scan test.

@@ -1350,6 +1350,9 @@ export const api = {
   takePeaks: (takeId: string, bins: number) => invoke<WaveformPeaks>("take_peaks", { takeId, bins }),
   exportArrangementMix: (path: string, format: WavFormat | null, sampleRate: number | null) =>
     invoke<ExportResult>("export_arrangement_mix", { path, format, sampleRate }),
+  /** Whole song: clips + chosen background layers through one offline graph; mix + aligned stems + markers + manifest. */
+  exportSong: (path: string, include: { clips: boolean; drone: DroneSettings | null; pad: PadSettings | null; ambient: boolean; rhythm: RhythmSettings | null }, format: WavFormat | null, sampleRate: number | null, seconds: number | null, stems: boolean) =>
+    invoke<{ path: string; stems: string[]; markers: string | null; manifest: string; seconds: number; sample_rate: number; peak: number; bytes: number }>("export_song", { path, include, format, sampleRate, seconds, stems }),
 
   // Preset library
   libraryList: (kind: LibraryKind | null, project: string | null, query: string | null, sortBy: LibrarySortBy) =>

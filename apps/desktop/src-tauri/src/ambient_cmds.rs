@@ -284,7 +284,7 @@ pub fn reapply_strips(s: &Inner) {
     }
 }
 
-fn apply_layer_strip(
+pub(crate) fn apply_layer_strip(
     layer: &audio_engine::LayerParams,
     l: &AmbientLayer,
     m: &Macros,
@@ -336,7 +336,7 @@ fn apply_layer_strip(
 }
 
 /// Push the layer's source parameters (motion macro included) into the live handles.
-fn apply_source(s: &Inner, live: &LiveParams, l: &AmbientLayer, m: &Macros) {
+pub(crate) fn apply_source(s: &Inner, live: &LiveParams, l: &AmbientLayer, m: &Macros) {
     let motion = 2f64.powf((m.motion - 0.5) * 2.0); // ×0.5 … ×2
     match (&l.source, live) {
         (LayerSource::Noise { color }, LiveParams::Noise(p)) => {
@@ -862,7 +862,7 @@ pub struct AmbientExportResult {
 }
 
 /// Build offline sources for every layer at `rate` (loop audio read under the lock).
-fn offline_sources(
+pub(crate) fn offline_sources(
     s: &mut Inner,
     a: &Ambient,
     rate: u32,

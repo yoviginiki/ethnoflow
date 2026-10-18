@@ -18,6 +18,7 @@ mod project_cmds;
 mod rhythm_cmds;
 mod samples_cmds;
 mod settings;
+mod song_export_cmds;
 mod state;
 mod synth_cmds;
 mod trainer_cmds;
@@ -194,6 +195,7 @@ pub fn run() {
             samples_cmds::samples_default_folders,
             samples_cmds::sample_preview,
             samples_cmds::sample_preview_stop,
+            song_export_cmds::export_song,
         ])
         .build(tauri::generate_context!())
         .expect("error while building EthnoFlow Studio")

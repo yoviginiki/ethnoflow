@@ -72,7 +72,7 @@ fn validate(set: &PadSettings) -> CmdResult<()> {
     Ok(())
 }
 
-fn apply(s: &Inner, params: &PadParams, set: &PadSettings) -> (Vec<f32>, Intonation) {
+pub(crate) fn apply(s: &Inner, params: &PadParams, set: &PadSettings) -> (Vec<f32>, Intonation) {
     let mut used = Intonation::Profile;
     let mut hz = Vec::with_capacity(set.notes.len());
     for n in &set.notes {

@@ -163,10 +163,8 @@ first R0 deliverable must add one before any "before/after" listening can be rec
 
 ## 8. Known defects found while auditing
 
-- Window title shows `EthnoFlow Studio вЂ" Phase 0`: the em dash in
-  `tauri.conf.json` `"title"` is mis-encoded (visible in every screenshot). Fix: plain
-  ASCII title or correct UTF-8.
-- "Експорт микс" silently omits the background (see §5): users will expect what they hear.
+- Window title showed `EthnoFlow Studio вЂ" Phase 0` (mis-encoded dash) — **fixed 2026-10-18**.
+- "Експорт микс" silently omitted the background (see §5) — **fixed 2026-10-18** by the song export.
 - The screen title still says "Phase 0" in the window chrome.
 
 ## 9. Gaps against the three programs (summary; details in each audit)

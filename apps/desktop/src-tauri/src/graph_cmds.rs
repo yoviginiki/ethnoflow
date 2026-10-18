@@ -127,7 +127,7 @@ pub fn release_slot(s: &mut Inner, slot: usize) {
     }
 }
 
-struct Resolved {
+pub(crate) struct Resolved {
     root_hz: f32,
     root_cents: f64,
     fifth_cents: f32,
@@ -136,7 +136,7 @@ struct Resolved {
 
 /// Root and fifth frequencies for the settings. Nothing here assumes a key: the root
 /// is whatever the user chose.
-fn resolve(s: &Inner, set: &DroneSettings) -> Resolved {
+pub(crate) fn resolve(s: &Inner, set: &DroneSettings) -> Resolved {
     let (root_hz, used) = note_hz(s, set.root_midi, set.root_cents, set.intonation);
     let (tempered, _) = note_hz(s, set.root_midi, 0.0, Intonation::Tempered);
     let root_cents = 1200.0 * (root_hz as f64 / tempered as f64).log2();
@@ -160,7 +160,7 @@ fn resolve(s: &Inner, set: &DroneSettings) -> Resolved {
     }
 }
 
-fn apply(
+pub(crate) fn apply(
     params: &DroneParams,
     layer: &audio_engine::LayerParams,
     set: &DroneSettings,

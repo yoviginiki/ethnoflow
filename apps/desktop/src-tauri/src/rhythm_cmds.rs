@@ -198,7 +198,7 @@ pub struct RhythmLive {
     pub arp_swap: Option<PatternSwap<NotePatternData>>,
 }
 
-fn timing(s: &Inner) -> CmdResult<(f64, Meter)> {
+pub(crate) fn timing(s: &Inner) -> CmdResult<(f64, Meter)> {
     let m = s
         .project
         .as_ref()
@@ -220,7 +220,7 @@ fn timing(s: &Inner) -> CmdResult<(f64, Meter)> {
 }
 
 /// Root pitch class and chord tones (pc, cents) the tonal parts play.
-fn chord_pcs(s: &Inner, set: &RhythmSettings) -> CmdResult<(u8, Vec<(u8, f64)>)> {
+pub(crate) fn chord_pcs(s: &Inner, set: &RhythmSettings) -> CmdResult<(u8, Vec<(u8, f64)>)> {
     if let Some(chord) = set.chord.as_ref().filter(|c| !c.is_empty()) {
         let root = chord[0].midi % 12;
         let mut pcs: Vec<(u8, f64)> = chord.iter().map(|n| (n.midi % 12, n.cents)).collect();
@@ -522,7 +522,11 @@ pub fn reapply(s: &Inner) {
 
 /// Push the parts' continuous parameters and levels into a set of slot params.
 /// `lvl` maps a part's own level (dB) to the slot gain (floor, bus trim, mute).
-fn apply_params(layers: &[audio_engine::LayerParams], live: &RhythmLive, lvl: &dyn Fn(f32) -> f32) {
+pub(crate) fn apply_params(
+    layers: &[audio_engine::LayerParams],
+    live: &RhythmLive,
+    lvl: &dyn Fn(f32) -> f32,
+) {
     let set = &live.settings;
     let layer = |slot: usize| &layers[slot];
     // Parts that reference an instrument preset take their voice from it.
@@ -981,35 +985,15 @@ pub struct RhythmOffline {
     pub seconds: f64,
 }
 
-/// Render the section exactly as it would play: the same generators, the same sources on
-/// the same kind of clock, `bars` bars at `rate`. Deterministic per seed (no humanize
-/// drift at render time), so it serves as audio evidence and as a test oracle
-/// (Program P1, R0). `s` supplies the project's scale / intonation for pitches; with no
-/// project the pitches are tempered.
-pub struct SectionContext<'a> {
-    pub bpm: f64,
-    pub meter: &'a Meter,
-    pub root: u8,
-    pub pcs: &'a [(u8, f64)],
-}
-
-pub fn render_section(
+/// The section's live handles and sources for an offline graph (shared with the song
+/// export): the generators, the voices (preset or legacy) and a fresh clock at bar 1.
+pub(crate) fn offline_parts(
     s: &Inner,
     settings: &RhythmSettings,
     ctx: &SectionContext,
-    bars: u32,
-    rate: u32,
-    want_stems: bool,
-) -> CmdResult<RhythmOffline> {
-    let (bpm, meter, root, pcs) = (ctx.bpm, ctx.meter, ctx.root, ctx.pcs);
+) -> CmdResult<(RhythmLive, Vec<(usize, Box<dyn audio_engine::Source>)>)> {
     validate(settings)?;
-    if !(8_000..=192_000).contains(&rate) {
-        return Err(err("invalid_argument", "sample rate outside 8..192 kHz"));
-    }
-    let bars = bars.clamp(1, 256);
-    let seconds = bars as f64 * meter.bar_beats() * 60.0 / bpm;
-    let gp = Arc::new(GraphParams::default());
-    gp.master.gain_db.set(0.0);
+    let (bpm, meter, root, pcs) = (ctx.bpm, ctx.meter, ctx.root, ctx.pcs);
     let clock = Arc::new(BeatClock::new(bpm as f32));
     let mut live = RhythmLive {
         clock: Arc::clone(&clock),
@@ -1076,6 +1060,40 @@ pub fn render_section(
         ));
         live.arp = Some(p);
     }
+    Ok((live, sources))
+}
+
+/// Render the section exactly as it would play: the same generators, the same sources on
+/// the same kind of clock, `bars` bars at `rate`. Deterministic per seed (no humanize
+/// drift at render time), so it serves as audio evidence and as a test oracle
+/// (Program P1, R0). `s` supplies the project's scale / intonation for pitches; with no
+/// project the pitches are tempered.
+pub struct SectionContext<'a> {
+    pub bpm: f64,
+    pub meter: &'a Meter,
+    pub root: u8,
+    pub pcs: &'a [(u8, f64)],
+}
+
+pub fn render_section(
+    s: &Inner,
+    settings: &RhythmSettings,
+    ctx: &SectionContext,
+    bars: u32,
+    rate: u32,
+    want_stems: bool,
+) -> CmdResult<RhythmOffline> {
+    let (bpm, meter) = (ctx.bpm, ctx.meter);
+    validate(settings)?;
+    if !(8_000..=192_000).contains(&rate) {
+        return Err(err("invalid_argument", "sample rate outside 8..192 kHz"));
+    }
+    let bars = bars.clamp(1, 256);
+    let seconds = bars as f64 * meter.bar_beats() * 60.0 / bpm;
+    let gp = Arc::new(GraphParams::default());
+    gp.master.gain_db.set(0.0);
+    let (live, sources) = offline_parts(s, settings, ctx)?;
+    let clock = Arc::clone(&live.clock);
     // Levels and voices first, so the graph starts at its settled state (no ramp-in).
     let floor = |db: f32| if db <= -39.5 { -120.0 } else { db };
     apply_params(&gp.layers, &live, &floor);

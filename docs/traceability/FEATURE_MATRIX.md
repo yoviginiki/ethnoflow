@@ -49,7 +49,7 @@ requirement *groups*; each program phase adds its rows when it starts.
 | C blueprint schema + song form timeline (beats, tempo map) | `crates/project/src/songmap.rs`, `SongMapPanel.tsx`, `SongMapScreen.tsx` | 3 Rust tests (round trip, migration, validation/split/merge), vitest helpers | FUNCTIONAL (song map); blueprint extraction NOT STARTED |
 | D first full-song arrangement | `crates/music-core/arranger/` (new): form planner, orchestrator, groove evolution, motif engine, transitions; renderer on the graph | distinctness, locks, determinism, 2–4 min render | NOT STARTED |
 | E Musical Director | `director.rs` heuristics + panel | fixture critiques | NOT STARTED |
-| F DAW export (aligned stems, MIDI, markers) | export service | alignment tests | NOT STARTED (ambient stems exist) |
+| F DAW export (aligned stems, MIDI, markers) | `song_export_cmds.rs` (mix + stems + markers.csv + manifest.json) | alignment by construction (one render); automated alignment test pending; MIDI per track pending | FUNCTIONAL |
 
 ## D. Program P3 — Live Performance Director (spec §11)
 

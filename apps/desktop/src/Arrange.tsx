@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { api, describeError, IMPORT_EXTENSIONS, type Arrangement, type ArrangeStatus, type Clip, type RecordingStatus, type TakeView, type Track, type WaveformPeaks, SECTION_NAMES } from "./api";
 import { BackgroundTransport } from "./BackgroundTransport";
+import { droneRoot, droneSettings, padRoot, padSettings, voicingNotes } from "./layers";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { formatBytes, formatDb, formatTime, isTypingTarget, linearToDb, meterFraction, takeName } from "./format";
 import { messages } from "./i18n";
@@ -903,11 +904,26 @@ export function Arrange() {
     const st = useStore.getState();
     try {
       st.setError(null);
-      const path = await save({ title: t.exportMix, defaultPath: `${project.name}-mix.wav`, filters: [{ name: "WAV", extensions: ["wav"] }] });
+      const path = await save({ title: t.exportMix, defaultPath: `${project.name}-song.wav`, filters: [{ name: "WAV", extensions: ["wav"] }] });
       if (!path) return;
       st.setPending(t.exporting);
-      const r = await api.exportArrangementMix(path, prefs.exportFormat, null);
-      st.setMessage(`${t.mixExported}: ${r.path} (${formatBytes(r.bytes)})`);
+      // The background goes in exactly as it plays: the switched-on layers with their settings.
+      const scale = st.project?.scale ?? null;
+      const profile = st.project?.instrument ?? null;
+      const dp = st.prefs.drone;
+      const pp = st.prefs.pad;
+      const dRoot = st.droneRootOverride ?? droneRoot(dp, scale, profile);
+      const pRoot = padRoot(pp, dp, scale, profile);
+      const padNotes = st.padChord ?? (pRoot === null ? null : voicingNotes(pp.voicing, pRoot, scale));
+      const include = {
+        clips: true,
+        drone: st.layers.drone && dRoot !== null ? droneSettings(dp, dRoot) : null,
+        pad: st.layers.pad && padNotes ? padSettings(pp, padNotes) : null,
+        ambient: st.layers.ambient,
+        rhythm: st.layers.rhythm ? { ...st.prefs.rhythm, chord: st.padChord, root_midi: dRoot, intonation: dp.intonation } : null,
+      };
+      const r = await api.exportSong(path, include, prefs.exportFormat, null, null, true);
+      st.setMessage(`${t.mixExported}: ${r.path} (${formatBytes(r.bytes)}) · ${r.stems.length} ${t.stemsWord}`);
     } catch (e) {
       fail(e);
     } finally {
