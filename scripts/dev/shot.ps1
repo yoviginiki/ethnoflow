@@ -1,4 +1,4 @@
-param([string]$Out)
+param([string]$Out, [string]$Key = "")
 # Screenshot of the primary screen for docs/audits/screenshots (fidelity contract: real
 # screenshots from the running app). Usage, from the repo root:
 #   powershell -ExecutionPolicy Bypass -File scripts/dev/shot.ps1 -Out docs/audits/screenshots/<date>-<screen>.png
@@ -17,9 +17,15 @@ public class Win { [DllImport("user32.dll")] public static extern bool SetProces
 [Win]::SetProcessDPIAware() | Out-Null
 $app = Get-Process -Name ethnoflow-desktop -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1
 if ($app) {
-  [Win]::ShowWindow($app.MainWindowHandle, 9) | Out-Null   # SW_RESTORE if minimised
+  [Win]::ShowWindow($app.MainWindowHandle, 3) | Out-Null   # SW_MAXIMIZE: the contract wants full-size screenshots
   [Win]::SetForegroundWindow($app.MainWindowHandle) | Out-Null
   Start-Sleep -Milliseconds 700
+  if ($Key -ne "") {
+    # e.g. -Key "{END}" scrolls the page to the bottom before the capture
+    Add-Type -AssemblyName System.Windows.Forms
+    [System.Windows.Forms.SendKeys]::SendWait($Key)
+    Start-Sleep -Milliseconds 600
+  }
 }
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
