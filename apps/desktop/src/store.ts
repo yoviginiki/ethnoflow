@@ -98,6 +98,7 @@ export const DEFAULT_RHYTHM: RhythmPrefs = {
   arp: { on: false, direction: "up", octaves: 1, step_beats: 0.25, gate: 0.6, density: 1, swing: 0, seed: 1, level_db: -18, register_low: 60, timbre: 0, release_s: 0.12, locked: false },
   bars: 4,
   instruments: {},
+  extras: [],
 };
 
 export interface HarmonyPrefs {

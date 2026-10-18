@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { save } from "@tauri-apps/plugin-dialog";
-import { api, describeError, type ArpDirection, type GrooveStyle, type InstrumentSummary, type RhythmPrefs } from "./api";
+import { api, describeError, MAX_EXTRAS, type ArpDirection, type ExtraKind, type ExtraPart, type GrooveStyle, type InstrumentSummary, type RhythmPrefs } from "./api";
 import { instrumentName } from "./InstrumentDesigner";
+import { EXTRA_DEFAULT_PRESET, newExtraPart } from "./extraParts";
 import { formatDb, linearToDb, meterFraction, noteParts } from "./format";
 import { Knob } from "./Knob";
 import { messages, type StringMessageKey } from "./i18n";
@@ -15,6 +16,9 @@ const DIRECTIONS: ArpDirection[] = ["up", "down", "up_down", "random"];
 const DIR_LABEL: Record<ArpDirection, StringMessageKey> = { up: "arpUp", down: "arpDown", up_down: "arpUpDown", random: "arpRandom" };
 const BASS_VOICES: StringMessageKey[] = ["bassSub", "bassPluck", "bassReese"];
 const TIMBRES: StringMessageKey[] = ["voiceSine", "voiceTriangle", "voiceFlute"];
+const EXTRA_KIND_LABEL: Record<ExtraKind, StringMessageKey> = { tapan: "rackKindTapan", chord_pad: "rackKindChordPad", lead: "rackKindLead" };
+/** Instrument library category per rack kind (the preset picker filters by it). */
+const EXTRA_CATEGORY: Record<ExtraKind, string> = { tapan: "tapan", chord_pad: "chordpad", lead: "lead" };
 const REGISTER = Array.from({ length: 73 }, (_, i) => 24 + i);
 
 interface SliderSpec {
@@ -81,7 +85,7 @@ export function RhythmPanel() {
   const regenerate = async () => {
     try {
       const next = await api.rhythmRegenerate({ ...r, chord: null, root_midi: null, intonation: s.prefs.drone?.intonation ?? "profile" });
-      set({ drums: next.drums, bass: next.bass, ostinato: next.ostinato, arp: next.arp });
+      set({ drums: next.drums, bass: next.bass, ostinato: next.ostinato, arp: next.arp, extras: next.extras ?? r.extras ?? [] });
     } catch (e) {
       s.setError(describeError(e));
     }
@@ -98,6 +102,43 @@ export function RhythmPanel() {
       </div>
     );
   };
+  const extras = r.extras ?? [];
+  const setExtras = (next: ExtraPart[]) => set({ extras: next });
+  const patchExtra = (id: string, patch: Partial<ExtraPart>) => setExtras(extras.map((e) => (e.id === id ? { ...e, ...patch } : e)));
+  const addExtra = (kind: ExtraKind) => {
+    if (extras.length >= MAX_EXTRAS) return;
+    setExtras([...extras, newExtraPart(kind, extras)]);
+  };
+  const extraMeter = (i: number) => {
+    const db = status ? linearToDb(status.extra_peaks?.[i] ?? 0) : -60;
+    return (
+      <div className="meter" style={{ width: 70 }} aria-hidden="true">
+        <div className={`meter-fill ${db > -3 ? "hot" : db > -12 ? "warm" : ""}`} style={{ width: `${meterFraction(db) * 100}%` }} />
+      </div>
+    );
+  };
+  const extraSpecs = (kind: ExtraKind): SliderSpec[] =>
+    kind === "tapan"
+      ? [
+          { key: "density", label: "rackDensity", min: 0, max: 1, step: 0.01, fmt: pct },
+          { key: "humanize", label: "humanizeLabel", min: 0, max: 1, step: 0.01, fmt: pct },
+          { key: "fill_every_bars", label: "rackFill", min: 0, max: 16, step: 1, fmt: (v) => (v === 0 ? "—" : String(v)) },
+        ]
+      : kind === "chord_pad"
+        ? [
+            { key: "bars_per_chord", label: "rackBarsPerChord", min: 1, max: 8, step: 1, fmt: (v) => String(v) },
+            { key: "gap", label: "rackGap", min: 0, max: 0.9, step: 0.01, fmt: pct },
+            { key: "register_low", label: "rackRegLow", min: 36, max: 84, step: 1, fmt: (v) => noteName(v) },
+            { key: "register_high", label: "rackRegHigh", min: 48, max: 96, step: 1, fmt: (v) => noteName(v) },
+          ]
+        : [
+            { key: "density", label: "rackDensity", min: 0, max: 1, step: 0.01, fmt: pct },
+            { key: "step_beats", label: "stepLength", min: 0.25, max: 1, step: 0.25, fmt: (v) => `1/${Math.round(4 / v)}` },
+            { key: "phrase_bars", label: "rackPhraseBars", min: 1, max: 8, step: 1, fmt: (v) => String(v) },
+            { key: "leaps", label: "rackLeaps", min: 0, max: 1, step: 0.01, fmt: pct },
+            { key: "register_low", label: "rackRegLow", min: 48, max: 96, step: 1, fmt: (v) => noteName(v) },
+            { key: "register_high", label: "rackRegHigh", min: 60, max: 108, step: 1, fmt: (v) => noteName(v) },
+          ];
   const partHead = (part: "drums" | "bass" | "ostinato" | "arp", title: string, index: number) => {
     const p = r[part];
     return (
@@ -494,6 +535,71 @@ export function RhythmPanel() {
           />
         </>
       )}
+
+      <div className="analysis-row rack-head">
+        <h4>{t.rackTitle}</h4>
+        <span className="muted small grow">{t.rackHint}</span>
+        {(["tapan", "chord_pad", "lead"] as ExtraKind[]).map((k) => (
+          <button key={k} className="ghost small" onClick={() => addExtra(k)} disabled={extras.length >= MAX_EXTRAS}>
+            + {t[EXTRA_KIND_LABEL[k]]}
+          </button>
+        ))}
+      </div>
+      {extras.map((x, i) => (
+        <div key={x.id} className="rack-part">
+          <div className="analysis-row part-head">
+            <label className="inline">
+              <input type="checkbox" checked={x.on} onChange={(e) => patchExtra(x.id, { on: e.target.checked })} />
+              <strong>{t[EXTRA_KIND_LABEL[x.kind]]}</strong>
+              <span className="muted small mono-num">{x.id}</span>
+            </label>
+            {stripControl === "knob" ? (
+              <Knob value={x.level_db} min={-40} max={6} step={1} reset={-14} label={`${t.levelLabel}: ${t[EXTRA_KIND_LABEL[x.kind]]}`} text={x.level_db <= -39.5 ? "off" : formatDb(x.level_db)} size={40} onChange={(v) => patchExtra(x.id, { level_db: v })} />
+            ) : (
+              <label className="inline small" title={t.levelLabel}>
+                🔊
+                <input type="range" min={-40} max={6} step={1} value={x.level_db} onChange={(e) => patchExtra(x.id, { level_db: Number(e.target.value) })} onDoubleClick={() => patchExtra(x.id, { level_db: -14 })} style={{ width: 90 }} />
+                <span className="mono-num">{x.level_db <= -39.5 ? "off" : formatDb(x.level_db)}</span>
+              </label>
+            )}
+            {extraMeter(i)}
+            <button className={`ghost small ${x.locked ? "on" : ""}`} title={t.lockPart} aria-pressed={x.locked} onClick={() => patchExtra(x.id, { locked: !x.locked })}>
+              {x.locked ? "🔒" : "🔓"}
+            </button>
+            <button className="ghost small" title={t.rerollSeed} onClick={() => patchExtra(x.id, { seed: 1 + Math.floor(Math.random() * 1_000_000) })} disabled={x.locked}>
+              🎲 {x.seed}
+            </button>
+            <label className="inline small" title={t.igPickHint}>
+              🎛
+              <select value={x.instrument ?? ""} onChange={(e) => patchExtra(x.id, { instrument: e.target.value || null })}>
+                <option value="">{t.igOwnSound}</option>
+                {instruments
+                  .filter((ins) => ins.category === EXTRA_CATEGORY[x.kind])
+                  .map((ins) => (
+                    <option key={ins.id} value={ins.id}>
+                      {instrumentName(ins, t)}
+                      {ins.factory ? "" : " ★"}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <button
+              className="ghost small"
+              title={t.igOpenDesigner}
+              onClick={() => {
+                s.setDesignerId(x.instrument ?? EXTRA_DEFAULT_PRESET[x.kind]);
+                s.setScreen("instrument");
+              }}
+            >
+              ✎
+            </button>
+            <button className="ghost small" title={t.rackRemove} onClick={() => setExtras(extras.filter((e) => e.id !== x.id))}>
+              ✕
+            </button>
+          </div>
+          <Sliders specs={extraSpecs(x.kind)} value={x} onChange={(p) => patchExtra(x.id, p)} disabled={false} />
+        </div>
+      ))}
     </section>
   );
 }

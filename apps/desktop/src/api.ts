@@ -725,6 +725,29 @@ export interface InstrumentRefs {
   arp?: string;
 }
 /** What the user edits (persisted in prefs); chord/root/intonation are added at send time. */
+export type ExtraKind = "tapan" | "chord_pad" | "lead";
+/** An Instrument Rack part (P1 R3): kind, preset, level and the generator's knobs. */
+export interface ExtraPart {
+  id: string;
+  kind: ExtraKind;
+  on: boolean;
+  level_db: number;
+  instrument: string | null;
+  density: number;
+  humanize: number;
+  fill_every_bars: number;
+  gap: number;
+  bars_per_chord: number;
+  step_beats: number;
+  phrase_bars: number;
+  leaps: number;
+  register_low: number;
+  register_high: number;
+  seed: number;
+  locked: boolean;
+}
+export const MAX_EXTRAS = 8;
+
 export interface RhythmPrefs {
   drums: DrumsSettings;
   bass: BassSettings;
@@ -732,6 +755,7 @@ export interface RhythmPrefs {
   arp: ArpSettings;
   bars: number;
   instruments?: InstrumentRefs;
+  extras?: ExtraPart[];
 }
 
 // ---------- References (P2 Phase B) ----------
@@ -831,7 +855,22 @@ export type InstrumentVoice =
       pitch_env_s: number;
       microvar: number;
     }
-  | { engine: "synth"; timbre: number; attack_s: number; release_s: number; tone_hz: number; dynamics: number };
+  | { engine: "synth"; timbre: number; attack_s: number; release_s: number; tone_hz: number; dynamics: number }
+  | { engine: "tapan"; tune_hz: number; decay: number; skin: number; rim_tone: number; levels_db: number[] }
+  | { engine: "chord_pad"; wave: number; attack_s: number; release_s: number; detune_cents: number; cutoff_hz: number; movement: number; dynamics: number }
+  | {
+      engine: "lead";
+      wave: number;
+      glide_s: number;
+      vibrato_hz: number;
+      vibrato_cents: number;
+      cutoff_hz: number;
+      resonance: number;
+      env_amount: number;
+      attack_s: number;
+      release_s: number;
+      drive: number;
+    };
 export interface InstrumentPreset {
   schema_version: number;
   id: string;
@@ -874,6 +913,7 @@ export interface RhythmStatus {
   motif: Motif | null;
   root_pc: number | null;
   chord_pcs: number[];
+  extra_peaks?: number[];
 }
 export interface TempoCandidate {
   bpm: number;

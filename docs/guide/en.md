@@ -117,6 +117,25 @@ The same layers as Atmosphere, one at a time, with big knobs:
 - "→ MIDI takes" writes the parts as MIDI into the project (drums on channel 10). "WAV + stems" renders the section offline exactly as it plays: a mix plus a folder with a stem per part. Sections (intro, verse…) are markers in My studio.
 - Level at the minimum = the part is off.
 
+### More instruments (Instrument Rack)
+
+Under the four parts there is a row **"More instruments"** with **+ Tapan**, **+ Chord pad**,
+**+ Lead** (up to 8 parts). Each new part has on/off, a level with a meter, 🔒, 🎲 seed, a
+preset picker 🎛 (only presets of its kind) and ✎ to the designer; ✕ removes it.
+
+- **Tapan**: a boom on every accent-group start of the meter (in 7/8 = 2+2+3 on the 1st,
+  3rd and 5th eighth), a rim on the group's last eighth, ghosts by **Density**; **Fill** = a
+  rim roll every N bars; **Humanize** shakes the velocities.
+- **Chord pad**: plays the section's chord (or the mode's triad) in the chosen **Register**,
+  one chord per **Bars per chord**, with a **Gap** before the next one (breathing).
+- **Lead**: monophonic phrases from the mode's tones in the register — **Density**,
+  **Step**, **Phrase (bars)** (repeats with a variation), **Leaps**. The preset (kaval-like,
+  saw, hollow) is the sound; the seed is the phrase.
+
+The parts go into the offline render and the song export as separate stems
+(`tapan-1.wav`, `chordpad-2.wav`, `lead-3.wav`). In the instrument designer the new kinds
+have their own knobs and a button **"Add to the rhythm as a new part"**.
+
 ## My studio (tracks)
 
 - Takes are arranged as clips on tracks, with section markers and one transport. Drone, pad, atmosphere and rhythm play together with the clips.

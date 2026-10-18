@@ -202,6 +202,15 @@
   import in Atmosphere**: "Import samples…" (multi-file) or drag-and-drop from
   Explorer / a sample manager such as Soundly — each file becomes a take in the
   project (named after the file) and a looped layer.
+- **Instrument Rack (P1 R3, 2026-10-18 morning)**: three new instruments — **Tapan**
+  (boom/rim/ghost synth; strokes on the meter's accent groups, fills), **Chord pad** (chord
+  pattern through two detuned polyBLEP saws, SVF with movement) and **Lead** (mono, glide,
+  delayed vibrato, filter envelope, drive; phrase generator over the mode) — as extra
+  parts of the rhythm section: up to 8 on graph slots 16..23 (graph widened to 24 slots),
+  each with preset, level, seed, lock and generator knobs; live swaps in place; stems in
+  the rhythm render and the song export; designer knobs, audition and WAV for the three
+  kinds; nine factory presets. Deviation from the plan recorded in
+  `docs/rhythm/IMPLEMENTATION_PLAN.md` (dedicated slots instead of a nested rack source).
 - **References + analyzer (P2 Phase B, 2026-10-18 morning)**: new crate
   `crates/analysis` (rustfft, ADR-0021): STFT features, tempo candidates with ½/2× listed,
   DP beat tracking, novelty boundaries on a 0.25 s self-similarity grid (coarse/medium/

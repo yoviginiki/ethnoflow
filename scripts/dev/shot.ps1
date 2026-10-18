@@ -4,13 +4,23 @@ param([string]$Out)
 #   powershell -ExecutionPolicy Bypass -File scripts/dev/shot.ps1 -Out docs/audits/screenshots/<date>-<screen>.png
 # Navigate the app first through the assistant bridge:  node scripts/assistant/ef.mjs send '{"op":"screen","screen":"references"}'
 #
-# DPI-aware capture: without SetProcessDPIAware the process sees a scaled (1536x864) view
-# of a 1920x1080 screen at 125 % and the right/bottom 20 % of the screen are missing.
+# The app window is brought to the front first (otherwise the terminal that ran the
+# script is what gets captured). DPI-aware capture: without SetProcessDPIAware the process
+# sees a scaled (1536x864) view of a 1920x1080 screen at 125 % and the right/bottom 20 %
+# of the screen are missing.
 Add-Type @"
 using System; using System.Runtime.InteropServices;
-public class Dpi { [DllImport("user32.dll")] public static extern bool SetProcessDPIAware(); }
+public class Win { [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
+  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
+  [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int n); }
 "@
-[Dpi]::SetProcessDPIAware() | Out-Null
+[Win]::SetProcessDPIAware() | Out-Null
+$app = Get-Process -Name ethnoflow-desktop -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1
+if ($app) {
+  [Win]::ShowWindow($app.MainWindowHandle, 9) | Out-Null   # SW_RESTORE if minimised
+  [Win]::SetForegroundWindow($app.MainWindowHandle) | Out-Null
+  Start-Sleep -Milliseconds 700
+}
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds

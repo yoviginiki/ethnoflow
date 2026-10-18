@@ -524,6 +524,9 @@ button.ghost.on { border-color: var(--accent); color: var(--accent); }
 .songmap-screen { display: flex; flex-direction: column; gap: 10px; }
 
 /* Sample browser */
+.rack-head { margin-top: 10px; border-top: 1px solid var(--axis); padding-top: 8px; }
+.rack-head h4 { margin: 0; }
+.rack-part { border: 1px dashed var(--axis); border-radius: 8px; padding: 6px 8px; margin-top: 6px; }
 .references { display: grid; grid-template-columns: 260px 1fr; gap: 12px; align-items: start; }
 .references-list { display: flex; flex-direction: column; gap: 4px; }
 .references-row { display: flex; gap: 8px; align-items: center; text-align: left; width: 100%; }

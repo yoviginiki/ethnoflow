@@ -1,16 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import { save } from "@tauri-apps/plugin-dialog";
-import { api, describeError, type InstrumentPreset, type InstrumentSummary, type InstrumentVoice } from "./api";
+import { api, describeError, type InstrumentPreset, type InstrumentSummary, type InstrumentVoice, MAX_EXTRAS, type ExtraKind } from "./api";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Knob } from "./Knob";
 import { formatDb } from "./format";
 import { messages, type StringMessageKey } from "./i18n";
 import { DEFAULT_RHYTHM, useStore } from "./store";
+import { newExtraPart } from "./extraParts";
 
-type Cat = "drums" | "bass" | "synth";
+type Cat = "drums" | "bass" | "synth" | "tapan" | "chordpad" | "lead";
 const PART_NAME: Record<"drums" | "bass" | "ostinato" | "arp", StringMessageKey> = { drums: "igPartDrums", bass: "igPartBass", ostinato: "igPartOstinato", arp: "igPartArp" };
-const CATS: Cat[] = ["drums", "bass", "synth"];
-const CAT_LABEL: Record<Cat, StringMessageKey> = { drums: "igCatDrums", bass: "igCatBass", synth: "igCatSynth" };
+const CATS: Cat[] = ["drums", "bass", "synth", "tapan", "chordpad", "lead"];
+const CAT_LABEL: Record<Cat, StringMessageKey> = { drums: "igCatDrums", bass: "igCatBass", synth: "igCatSynth", tapan: "igCatTapan", chordpad: "igCatChordPad", lead: "igCatLead" };
+/** Rack kind for the categories that live in the Instrument Rack (P1 R3). */
+const RACK_KIND: Partial<Record<string, ExtraKind>> = { tapan: "tapan", chordpad: "chord_pad", lead: "lead" };
 /** Factory ids → localized names. */
 const FACTORY_NAME: Record<string, StringMessageKey> = {
   "factory:drums.liquid": "ifLiquidKit",
@@ -27,6 +30,15 @@ const FACTORY_NAME: Record<string, StringMessageKey> = {
   "factory:synth.glass": "ifGlass",
   "factory:synth.marimba": "ifMarimba",
   "factory:synth.pad": "ifSoftPad",
+  "factory:tapan.folk": "ifTapanFolk",
+  "factory:tapan.deep": "ifTapanDeep",
+  "factory:tapan.tight": "ifTapanTight",
+  "factory:chordpad.warm": "ifPadWarm",
+  "factory:chordpad.glass": "ifPadGlass",
+  "factory:chordpad.dark": "ifPadDark",
+  "factory:lead.kaval": "ifLeadKaval",
+  "factory:lead.saw": "ifLeadSaw",
+  "factory:lead.hollow": "ifLeadHollow",
 };
 export function instrumentName(p: { id: string; name: string }, t: (typeof messages)["bg"]): string {
   const k = FACTORY_NAME[p.id];
@@ -95,6 +107,58 @@ const SYNTH_GROUPS: { title: StringMessageKey; knobs: KnobSpec[] }[] = [
       { key: "release_s", label: "igRelease", tip: "igReleaseTip", min: 0.01, max: 4, step: 0.005, reset: 0.15, log: true, fmt: ms },
       { key: "tone_hz", label: "igTone", tip: "igToneTip", min: 200, max: 20000, step: 1, reset: 6000, log: true, fmt: hz },
       { key: "dynamics", label: "igDynamics", tip: "igDynamicsTip", min: 0, max: 1, step: 0.01, reset: 0.6, fmt: pct },
+    ],
+  },
+];
+
+const TAPAN_GROUPS: { title: StringMessageKey; knobs: KnobSpec[] }[] = [
+  {
+    title: "igSource",
+    knobs: [
+      { key: "tune_hz", label: "igTune", tip: "igTuneTip", min: 45, max: 110, step: 1, reset: 70, fmt: hz },
+      { key: "decay", label: "igDrumDecay", tip: "igDrumDecayTip", min: 0, max: 1, step: 0.01, reset: 0.5, fmt: pct },
+      { key: "skin", label: "igSkin", tip: "igSkinTip", min: 0, max: 1, step: 0.01, reset: 0.45, fmt: pct },
+      { key: "rim_tone", label: "igRimTone", tip: "igRimToneTip", min: 0, max: 1, step: 0.01, reset: 0.5, fmt: pct },
+    ],
+  },
+];
+const TAPAN_NAMES: StringMessageKey[] = ["igBoom", "igRim", "igGhostStroke"];
+const CHORDPAD_GROUPS: { title: StringMessageKey; knobs: KnobSpec[] }[] = [
+  {
+    title: "igShape",
+    knobs: [
+      { key: "attack_s", label: "igAttack", tip: "igAttackTip", min: 0.005, max: 4, step: 0.005, reset: 0.8, log: true, fmt: ms },
+      { key: "release_s", label: "igRelease", tip: "igReleaseTip", min: 0.05, max: 8, step: 0.01, reset: 1.6, log: true, fmt: ms },
+      { key: "dynamics", label: "igDynamics", tip: "igDynamicsTip", min: 0, max: 1, step: 0.01, reset: 0.4, fmt: pct },
+    ],
+  },
+  {
+    title: "igFilter",
+    knobs: [
+      { key: "detune_cents", label: "igDetune", tip: "igDetuneTip", min: 0, max: 30, step: 0.5, reset: 7, fmt: (v) => `${v.toFixed(1)} ¢` },
+      { key: "cutoff_hz", label: "igCutoff", tip: "igCutoffTip", min: 200, max: 12000, step: 1, reset: 1400, log: true, fmt: hz },
+      { key: "movement", label: "igMovement", tip: "igMovementTip", min: 0, max: 1, step: 0.01, reset: 0.3, fmt: pct },
+    ],
+  },
+];
+const LEAD_GROUPS: { title: StringMessageKey; knobs: KnobSpec[] }[] = [
+  {
+    title: "igShape",
+    knobs: [
+      { key: "attack_s", label: "igAttack", tip: "igAttackTip", min: 0.001, max: 2, step: 0.001, reset: 0.01, log: true, fmt: ms },
+      { key: "release_s", label: "igRelease", tip: "igReleaseTip", min: 0.01, max: 4, step: 0.005, reset: 0.2, log: true, fmt: ms },
+      { key: "glide_s", label: "igGlide", tip: "igGlideTip", min: 0, max: 1, step: 0.005, reset: 0.04, fmt: ms },
+      { key: "vibrato_hz", label: "igVibratoHz", tip: "igVibratoHzTip", min: 0.5, max: 9, step: 0.1, reset: 5.5, fmt: (v) => `${v.toFixed(1)} Hz` },
+      { key: "vibrato_cents", label: "igVibratoDepth", tip: "igVibratoDepthTip", min: 0, max: 100, step: 1, reset: 12, fmt: (v) => `${Math.round(v)} ¢` },
+    ],
+  },
+  {
+    title: "igFilter",
+    knobs: [
+      { key: "cutoff_hz", label: "igCutoff", tip: "igCutoffTip", min: 200, max: 12000, step: 1, reset: 1200, log: true, fmt: hz },
+      { key: "resonance", label: "igResonance", tip: "igResonanceTip", min: 0, max: 0.95, step: 0.01, reset: 0.3, fmt: pct },
+      { key: "env_amount", label: "igFilterEnv", tip: "igFilterEnvTip", min: 0, max: 1, step: 0.01, reset: 0.5, fmt: pct },
+      { key: "drive", label: "igDrive", tip: "igDriveTip", min: 0, max: 1, step: 0.01, reset: 0.2, fmt: pct },
     ],
   },
 ];
@@ -260,9 +324,22 @@ export function InstrumentDesigner() {
   };
 
   const voice = preset?.voice;
-  const groups = voice?.engine === "bass" ? BASS_GROUPS : voice?.engine === "drums" ? DRUM_GROUPS : SYNTH_GROUPS;
+  const groups =
+    voice?.engine === "bass" ? BASS_GROUPS : voice?.engine === "drums" ? DRUM_GROUPS : voice?.engine === "tapan" ? TAPAN_GROUPS : voice?.engine === "chord_pad" ? CHORDPAD_GROUPS : voice?.engine === "lead" ? LEAD_GROUPS : SYNTH_GROUPS;
+  const howTo =
+    voice?.engine === "bass" ? t.howBassDesigner : voice?.engine === "drums" ? t.howDrumDesigner : voice?.engine === "tapan" ? t.howTapanDesigner : voice?.engine === "chord_pad" ? t.howChordPadDesigner : voice?.engine === "lead" ? t.howLeadDesigner : t.howSynthDesigner;
+  const addAsRackPart = () => {
+    if (!preset) return;
+    const kind = RACK_KIND[preset.category];
+    if (!kind) return;
+    const r = s.prefs.rhythm ?? DEFAULT_RHYTHM;
+    const extras = r.extras ?? [];
+    if (extras.length >= MAX_EXTRAS) return;
+    s.setPref("rhythm", { ...r, extras: [...extras, { ...newExtraPart(kind, extras), instrument: preset.id }] });
+    s.setMessage(`${t.igAddedExtra}: ${instrumentName(preset, t)}`);
+  };
   const v = (voice ?? {}) as unknown as Record<string, number>;
-  const partsFor = (c: string): ("drums" | "bass" | "ostinato" | "arp")[] => (c === "drums" ? ["drums"] : c === "bass" ? ["bass"] : ["ostinato", "arp"]);
+  const partsFor = (c: string): ("drums" | "bass" | "ostinato" | "arp")[] => (c === "drums" ? ["drums"] : c === "bass" ? ["bass"] : c === "synth" ? ["ostinato", "arp"] : []);
 
   return (
     <section className="forge">
@@ -341,7 +418,12 @@ export function InstrumentDesigner() {
                 <button className="ghost" onClick={() => void renderWav()} title={t.igRenderTip}>
                   ⬇ {t.igRender}
                 </button>
-                <label className="inline small">
+                {RACK_KIND[preset.category] && (
+                  <button className="small" onClick={addAsRackPart} title={t.igAddAsExtraTip}>
+                    {t.igAddAsExtra}
+                  </button>
+                )}
+                <label className="inline small" hidden={partsFor(preset.category).length === 0}>
                   {t.igUseIn}
                   <select value="" onChange={(e) => e.target.value && useInRhythm(e.target.value as never)}>
                     <option value="">…</option>
@@ -371,7 +453,7 @@ export function InstrumentDesigner() {
                 </form>
               )}
               <div className="ss-howto small">
-                <strong>{t.howToTitle}:</strong> {voice.engine === "bass" ? t.howBassDesigner : voice.engine === "drums" ? t.howDrumDesigner : t.howSynthDesigner}
+                <strong>{t.howToTitle}:</strong> {howTo}
               </div>
 
               {voice.engine === "bass" && (
@@ -392,6 +474,18 @@ export function InstrumentDesigner() {
                           {d === 0 ? t.igWobbleOff : `1/${d}`}
                         </option>
                       ))}
+                    </select>
+                  </label>
+                </div>
+              )}
+              {(voice.engine === "chord_pad" || voice.engine === "lead") && (
+                <div className="analysis-row">
+                  <label className="inline" title={t.igWaveTip}>
+                    {t.igWave}
+                    <select value={voice.wave} onChange={(e) => setVoice({ wave: Number(e.target.value) })}>
+                      <option value={0}>{t.igWaveSaw}</option>
+                      {voice.engine === "lead" && <option value={1}>{t.igWavePulse}</option>}
+                      <option value={voice.engine === "lead" ? 2 : 1}>{t.igWaveTri}</option>
                     </select>
                   </label>
                 </div>
@@ -431,6 +525,19 @@ export function InstrumentDesigner() {
                   </div>
                 </div>
               ))}
+              {voice.engine === "tapan" && (
+                <div className="forge-group">
+                  <h4>{t.igLevels}</h4>
+                  <div className="ss-knobs">
+                    {voice.levels_db.map((l, i) => (
+                      <div className="ss-knob narrow" key={i} title={t.igLevelTip}>
+                        <Knob value={l} min={-60} max={6} step={0.5} reset={i === 2 ? -10 : 0} size={52} label={t[TAPAN_NAMES[i]]} text={l <= -59.5 ? "off" : formatDb(l)} onChange={(x) => setVoice({ levels_db: voice.levels_db.map((y, j) => (j === i ? x : y)) })} />
+                        <span className="small">{t[TAPAN_NAMES[i]]}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               {voice.engine === "drums" && (
                 <div className="forge-group">
                   <h4>{t.igLevels}</h4>

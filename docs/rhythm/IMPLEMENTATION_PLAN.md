@@ -37,6 +37,13 @@ authentic instruments (spec §3).
 
 ### 2.1 Engine: instrument graph inside one slot
 
+> **Deviation recorded 2026-10-18 (R3 as built):** instead of a nested `InstrumentRack`
+> source inside slot 12, the flat graph was widened to 24 slots and slots 16..23 are the
+> rack's extra parts (one per instrument, each with the existing per-slot strip, bus and
+> stem). Same guarantees (lock-free params, pattern swaps, offline stems), far less risk
+> for the four legacy parts; a nested rack remains possible if more than 8 extra parts
+> are ever needed. The sequencer/kit-mixer items of R3 are still open (see the matrix).
+
 Keep the 16-slot flat graph; add an **`InstrumentRack` source** that owns N instruments
 (voices + per-instrument strips + sends) and renders them into one slot (slot 12 for the
 rhythm; the drone/pad/atmosphere stay where they are). This removes the 4-part ceiling

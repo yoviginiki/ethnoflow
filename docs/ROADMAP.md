@@ -143,7 +143,7 @@ one limiter — together with an explicit background play/stop in every screen
 | 2 | Shimmer (transposed reverb) | done 2026-10-18 (macro on the master space) |
 | 3 | Resonator (bells, bowls, strings from the mode) | done 2026-10-18 (layer kind "Резонатор") |
 | 4 | Sound Designer for the rhythm section | **P1 R2 done as the Instrument Designer (bass/drums/synth presets)** |
-| 5 | New rhythm instruments (pad synth, keys, percussion: tapan, darbuka, daire; lead) | P1 R3 (InstrumentRack) |
+| 5 | New rhythm instruments (pad synth, keys, percussion: tapan, darbuka, daire; lead) | **tapan, chord pad, lead shipped 2026-10-18** (Instrument Rack, up to 8 extra parts); darbuka, daire, keys pending |
 | 6 | Sample folder browser (Soundly Audio etc.), search, audition, "+ to Atmosphere" | done 2026-10-18 (screen "Моите семпли"; notes/tags per sample pending) |
 | 7 | Choir drone (vowel), Bloom (generative melody) | pending |
 | 8 | Tape loop with live mic, Spaces (convolution) | need live input / FFT (FFT approved via ADR for P2) |
@@ -155,7 +155,7 @@ one limiter — together with an explicit background play/stop in every screen
 | 14 | Academy | Phase 6 |
 | 15 | Intelligent melody variations | Phase 7 / P2 D |
 | 16 | Live accompanist following the playing | Phase 8 / P3 6 |
-| 17 | CLAP host | needs owner yes (C++ toolchain, deps) |
+| 17 | CLAP host | **owner said yes 2026-10-18 morning** ("da suglasen sum"); spike scheduled after R3 + unified transport; ADR-0018 to be accepted with the concrete crates |
 | 18 | Release 0.5.0 (installer, clean machine, owner's manual tests) | pending |
 
 ## Programs received 2026-10-18 (owner specifications; gated, audits first)

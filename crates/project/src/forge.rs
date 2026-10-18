@@ -501,7 +501,10 @@ mod tests {
         let all = factory_instruments();
         assert!(all.len() >= 21);
         for c in CATEGORIES {
-            assert!(all.iter().filter(|p| p.category == c).count() >= 3, "≥ 3 presets for {c}");
+            assert!(
+                all.iter().filter(|p| p.category == c).count() >= 3,
+                "≥ 3 presets for {c}"
+            );
         }
         let mut ids = std::collections::HashSet::new();
         for p in &all {
