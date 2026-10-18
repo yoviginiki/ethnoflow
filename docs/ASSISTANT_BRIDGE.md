@@ -80,6 +80,9 @@ rhythm_status, ambient_status }`
 | `instrument_render` | `id`, `out`, `seconds?`, `midi?` | renders a preset's audition pattern to a WAV (silent proof per instrument) |
 | `instrument_audition` | `id`, `seconds?` | **plays** a preset through the designer's audition path for a few seconds |
 | `reference_remove` | `id` | removes a reference's library copy |
+| `import_audio` | `path` | imports a WAV/MP3/FLAC/OGG as a take; reply: take_id |
+| `arrangement` | | the studio arrangement (tracks, clips, loop) |
+| `set_arrangement` | `arrangement` | replaces it (validated); track strips: gain_db, pan, lowpass_hz, highpass_hz, send |
 | `set_song_map` | `song_map` (whole SongMap) | replaces the project's song map (validated) |
 | `export_song` | `path`, `seconds?`, `drone?`, `pad?`, `ambient?`, `rhythm?`, `stems?` | the studio's whole-song export (mix + stems + markers + manifest) |
 | `reference_add` | `path` (WAV/MP3/FLAC/OGG) | copies the song into the references library (never into a project); reply: id, name, duration |

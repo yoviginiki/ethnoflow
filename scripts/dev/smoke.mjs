@@ -99,6 +99,34 @@ function wavStats(p) {
   }
   return { peak, seconds: n / fmt.ch / fmt.sr, ch: fmt.ch, sr: fmt.sr };
 }
+/** Per-channel RMS over a time window (seconds). */
+function channelRms(p, fromS = 0, toS = Infinity) {
+  const b = fs.readFileSync(p);
+  let o = 12;
+  let fmt = null;
+  let data = null;
+  while (o + 8 <= b.length) {
+    const id = b.toString("ascii", o, o + 4);
+    const sz = b.readUInt32LE(o + 4);
+    if (id === "fmt ") fmt = { ch: b.readUInt16LE(o + 10), sr: b.readUInt32LE(o + 12), bits: b.readUInt16LE(o + 22) };
+    if (id === "data") data = b.subarray(o + 8, Math.min(b.length, o + 8 + sz));
+    o += 8 + sz + (sz & 1);
+  }
+  if (!fmt || !data || fmt.bits !== 32) throw new Error("expected a float WAV");
+  const sums = new Array(fmt.ch).fill(0);
+  let frames = 0;
+  const total = data.length / 4 / fmt.ch;
+  const a = Math.max(0, Math.floor(fromS * fmt.sr));
+  const z = Math.min(total, Math.floor(toS * fmt.sr));
+  for (let f = a; f < z; f++) {
+    for (let c = 0; c < fmt.ch; c++) {
+      const v = data.readFloatLE((f * fmt.ch + c) * 4);
+      sums[c] += v * v;
+    }
+    frames++;
+  }
+  return sums.map((s) => Math.sqrt(s / Math.max(1, frames)));
+}
 const audible = (p, min = 0.02) => {
   const s = wavStats(p);
   if (!(s.peak > min && s.peak <= 1.0)) throw new Error(`${path.basename(p)} peak ${s.peak.toFixed(3)}`);
@@ -241,6 +269,34 @@ async function main() {
       send({ op: "remove_layer", id: a.id ?? a.layer?.id ?? "smoke choir" });
       send({ op: "remove_layer", name: "smoke bloom" });
       send({ op: "remove_layer", name: "smoke choir" });
+    }
+  });
+  await step("studio: track strip — pan and send are real in the export", () => {
+    const src = path.join(OUT_DIR, "rhythm-four.wav");
+    const imp = expectOk(send({ op: "import_audio", path: src }));
+    if (!imp.take_id) throw new Error("no take after import");
+    const arr = expectOk(send({ op: "arrangement" })).arrangement;
+    const track = (pan, sendAmt) => ({ id: "smoke-t1", name: "smoke", gain_db: 0, pan, mute: false, solo: false, lowpass_hz: 20000, highpass_hz: 10, send: sendAmt, clips: [{ id: "smoke-c1", take_id: imp.take_id, start: 0, offset: 0, length: 2.5, gain_db: 0, fade_in: 0, fade_out: 0, mute: false }] });
+    try {
+      expectOk(send({ op: "set_arrangement", arrangement: { ...arr, tracks: [track(-1, 0)], loop_region: null } }));
+      const left = path.join(OUT_DIR, "strip-left.wav");
+      const r1 = expectOk(send({ op: "export_song", path: left, seconds: 3, rhythm: false, drone: false, pad: false, ambient: false }));
+      const stem = r1.stems.find((p) => /clips/i.test(path.basename(p)));
+      if (!stem) throw new Error("no clips stem");
+      const [l, rr] = channelRms(stem, 0.2, 2.3);
+      if (!(l > rr * 8)) throw new Error(`pan -1 but L ${l.toFixed(4)} vs R ${rr.toFixed(4)}`);
+      expectOk(send({ op: "set_arrangement", arrangement: { ...arr, tracks: [track(0, 1)], loop_region: null } }));
+      const sent = path.join(OUT_DIR, "strip-send.wav");
+      const r2 = expectOk(send({ op: "export_song", path: sent, seconds: 5, rhythm: false, drone: false, pad: false, ambient: false }));
+      const tail = channelRms(r2.path, 3.2, 4.8)[0];
+      expectOk(send({ op: "set_arrangement", arrangement: { ...arr, tracks: [track(0, 0)], loop_region: null } }));
+      const dry = path.join(OUT_DIR, "strip-dry.wav");
+      const r3 = expectOk(send({ op: "export_song", path: dry, seconds: 5, rhythm: false, drone: false, pad: false, ambient: false }));
+      const dryTail = channelRms(r3.path, 3.2, 4.8)[0];
+      if (!(tail > dryTail * 4 && tail > 1e-4)) throw new Error(`send tail ${tail.toExponential(2)} vs dry ${dryTail.toExponential(2)}`);
+      return `L/R ${(l / Math.max(rr, 1e-9)).toFixed(0)}×, reverb tail ${(20 * Math.log10(tail)).toFixed(0)} dBFS`;
+    } finally {
+      send({ op: "set_arrangement", arrangement: { ...arr, tracks: [], loop_region: null } });
     }
   });
   await step("export: whole song offline with stems", () => {

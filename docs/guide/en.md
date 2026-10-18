@@ -160,6 +160,8 @@ have their own knobs and a button **"Add to the rhythm as a new part"**.
 
 ## My studio (tracks)
 
+- **Track strip** (under the name): Pan (left–right), Cut below (HP), Cut above (LP) and **Send to the space** – how much of the track goes to the master reverb regardless of the global "Space". Level, Mute and Solo are on the top row. Everything is stored in the arrangement and goes into the export (the clips stem is stereo with the pans).
+
 - Takes are arranged as clips on tracks, with section markers and one transport. Drone, pad, atmosphere and rhythm play together with the clips.
 - **Import** adds a file as a new take and a clip at the cursor; **Export mix** writes the whole song: the clips plus the switched-on layers (drone, pad, atmosphere with its scenes, rhythm) through the same graph and limiter. Next to the WAV a folder holds one stem per group (same start and length), markers.csv with the song map's sections and manifest.json (tempo, meter, sections) for a DAW.
 - Trimming, silence at the edges ("Silence analysis"), snapping to zero crossings.

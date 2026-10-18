@@ -198,11 +198,19 @@ pub(crate) fn apply_tracks(params: &ClipsParams, a: &Arrangement, rate: u32) {
                 tp.gain_db.set(t.gain_db as f32);
                 tp.mute.store(t.mute, Ordering::Relaxed);
                 tp.solo.store(t.solo, Ordering::Relaxed);
+                tp.pan.set(t.pan as f32);
+                tp.lowpass_hz.set(t.lowpass_hz as f32);
+                tp.highpass_hz.set(t.highpass_hz as f32);
+                tp.send.set(t.send as f32);
             }
             None => {
                 tp.gain_db.set(0.0);
                 tp.mute.store(false, Ordering::Relaxed);
                 tp.solo.store(false, Ordering::Relaxed);
+                tp.pan.set(0.0);
+                tp.lowpass_hz.set(20_000.0);
+                tp.highpass_hz.set(10.0);
+                tp.send.set(0.0);
             }
         }
     }
@@ -224,11 +232,13 @@ pub(crate) fn rebuild_source(s: &mut Inner) -> CmdResult<()> {
     let Some(params) = s.clips.clone() else {
         return Ok(());
     };
-    let rate = s
-        .graph
-        .as_ref()
-        .map(|g| g.sample_rate())
-        .ok_or_else(|| err("no_graph", "The output stream is not running"))?;
+    let Some(rate) = s.graph.as_ref().map(|g| g.sample_rate()) else {
+        // Nothing plays yet: keep the strips (gain/pan/cuts/send) and the loop on the
+        // params so the first play starts right; the source is built then.
+        let a = arrangement_mut(s)?.clone();
+        apply_tracks(&params, &a, 48_000);
+        return Ok(());
+    };
     let a = arrangement_mut(s)?.clone();
     let clips = build_clips(s, &a, rate)?;
     apply_tracks(&params, &a, rate);

@@ -5,6 +5,7 @@ import { BackgroundTransport } from "./BackgroundTransport";
 import { droneRoot, droneSettings, padRoot, padSettings, voicingNotes } from "./layers";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { formatBytes, formatDb, formatTime, isTypingTarget, linearToDb, meterFraction, takeName } from "./format";
+import { Knob } from "./Knob";
 import { messages } from "./i18n";
 import { useStore } from "./store";
 
@@ -312,7 +313,7 @@ export function Arrange() {
         let track = next.tracks.find((tr) => tr.id === start.track);
         if (!track) {
           if (next.tracks.length >= MAX_TRACKS) throw new Error(t.maxTracks);
-          track = { id: uid(), name: `${t.trackDefault} ${next.tracks.length + 1}`, gain_db: 0, pan: 0, mute: false, solo: false, clips: [] };
+          track = { id: uid(), name: `${t.trackDefault} ${next.tracks.length + 1}`, gain_db: 0, pan: 0, mute: false, solo: false, lowpass_hz: 20000, highpass_hz: 10, send: 0, clips: [] };
           next.tracks.push(track);
           setSelectedTrack(track.id);
         }
@@ -338,7 +339,7 @@ export function Arrange() {
     const cur = arrRef.current;
     if (!cur || cur.tracks.length >= MAX_TRACKS) return;
     const next = clone(cur);
-    const tr: Track = { id: uid(), name: `${t.trackDefault} ${next.tracks.length + 1}`, gain_db: 0, pan: 0, mute: false, solo: false, clips: [] };
+    const tr: Track = { id: uid(), name: `${t.trackDefault} ${next.tracks.length + 1}`, gain_db: 0, pan: 0, mute: false, solo: false, lowpass_hz: 20000, highpass_hz: 10, send: 0, clips: [] };
     next.tracks.push(tr);
     commit(next);
     setSelectedTrack(tr.id);
@@ -368,7 +369,7 @@ export function Arrange() {
           setError(t.maxTracks);
           return;
         }
-        tr = { id: uid(), name: `${t.trackDefault} ${next.tracks.length + 1}`, gain_db: 0, pan: 0, mute: false, solo: false, clips: [] };
+        tr = { id: uid(), name: `${t.trackDefault} ${next.tracks.length + 1}`, gain_db: 0, pan: 0, mute: false, solo: false, lowpass_hz: 20000, highpass_hz: 10, send: 0, clips: [] };
         next.tracks.push(tr);
         setSelectedTrack(tr.id);
       }
@@ -1088,6 +1089,12 @@ export function Arrange() {
                 <button className="ghost small" onClick={() => setRemoveTrack(tr)} title={t.removeTrack} aria-label={t.removeTrack}>
                   ✕
                 </button>
+              </div>
+              <div className="track-strip" onClick={(e) => e.stopPropagation()}>
+                <Knob value={tr.pan} min={-1} max={1} step={0.01} reset={0} size={30} label={t.panLabel} text={tr.pan === 0 ? "C" : tr.pan < 0 ? `L${Math.round(-tr.pan * 100)}` : `R${Math.round(tr.pan * 100)}`} onChange={(v) => patchTrack(tr.id, (x) => void (x.pan = v), false)} />
+                <Knob value={Math.log(tr.highpass_hz / 10) / Math.log(800)} min={0} max={1} step={0.005} reset={0} size={30} label={t.highpassLabel} text={tr.highpass_hz <= 10.5 ? "—" : `${Math.round(tr.highpass_hz)} Hz`} onChange={(v) => patchTrack(tr.id, (x) => void (x.highpass_hz = Math.round(10 * Math.pow(800, v))), false)} />
+                <Knob value={Math.log(tr.lowpass_hz / 40) / Math.log(500)} min={0} max={1} step={0.005} reset={1} size={30} label={t.lowpassLabel} text={tr.lowpass_hz >= 19_500 ? "—" : tr.lowpass_hz >= 1000 ? `${(tr.lowpass_hz / 1000).toFixed(1)} kHz` : `${Math.round(tr.lowpass_hz)} Hz`} onChange={(v) => patchTrack(tr.id, (x) => void (x.lowpass_hz = Math.round(40 * Math.pow(500, v))), false)} />
+                <Knob value={tr.send} min={0} max={1} step={0.01} reset={0} size={30} label={t.trackSend} text={`${Math.round(tr.send * 100)}%`} onChange={(v) => patchTrack(tr.id, (x) => void (x.send = v), false)} />
               </div>
             </div>
           ))}

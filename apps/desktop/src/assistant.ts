@@ -190,6 +190,20 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
       useStore.getState().setRhythmStatus(st);
       return st;
     }
+    case "import_audio": {
+      project();
+      const pv = await api.importAudio(String(cmd.path));
+      useStore.getState().setProject(pv);
+      const last = pv.takes.reduce((a, b) => (a && a.number > b.number ? a : b), pv.takes[0]);
+      return { take_id: last?.id ?? null, takes: pv.takes.length };
+    }
+    case "arrangement":
+      project();
+      return await api.arrangementGet();
+    case "set_arrangement": {
+      project();
+      return await api.setArrangement(cmd.arrangement as import("./api").Arrangement);
+    }
     case "song_map":
       return project().song_map;
     case "set_song_map": {

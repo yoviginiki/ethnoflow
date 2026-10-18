@@ -148,7 +148,7 @@ one limiter — together with an explicit background play/stop in every screen
 | 7 | Choir drone (vowel), Bloom (generative melody) | **done 2026-10-18** (Soundscapes kinds "Хор" and "Блум") |
 | 8 | Tape loop with live mic, Spaces (convolution) | need live input / FFT (FFT approved via ADR for P2) |
 | 9 | Genre recipes in the guide (ambient, liquid DnB, ambient DnB step by step) | first version 2026-10-18 (guide § "Рецепти по жанр"); grows with each module |
-| 10 | Track mixer (level, pan, solo, sends) | partial: background buses done; track strips pending (F5.2) |
+| 10 | Track mixer (level, pan, solo, sends) | background buses done; **track strips done 2026-10-18** (pan, HP/LP, send per track); EQ bands / "Auto Studio Engineer" pending |
 | 11 | Phrase & Vocal Chopper | pending (F5.3) |
 | 12 | DAW export (stems, MIDI, tempo map in one package) | WAV stems + markers.csv + manifest.json done 2026-10-18 (song export); MIDI per track pending |
 | 13 | Take fade in/out; shared transport across screens; kaval fingerings (owner's table); trainer to the end | transport = P3 Phase 1; others pending |

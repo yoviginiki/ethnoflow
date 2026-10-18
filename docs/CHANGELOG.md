@@ -202,6 +202,13 @@
   import in Atmosphere**: "Import samples…" (multi-file) or drag-and-drop from
   Explorer / a sample manager such as Soundly — each file becomes a take in the
   project (named after the file) and a looped layer.
+- **Track strips (F5.2 first slice, 2026-10-18)**: the graph gained a stereo source path with
+  a reverb send (`Source::render_stereo`; the layer pan becomes a balance; sends enter the
+  master space at their own level), and the clip source renders every track with its own
+  constant-power pan, one-pole HP/LP cuts and send — the stored track pan is no longer
+  cosmetic. Track strip knobs under each track head, arrangement fields with validation,
+  export stems carry the stereo image; engine test (pan L/R, send tail, cuts) and a smoke
+  step through import → arrangement → export.
 - **Choir drone + Bloom (F1B.5/F1B.6, backlog #7, 2026-10-18)**: two Soundscapes modules —
   `ChoirSource` (glottal pulse → three formants morphing along a–e–i–o–u, breath swells,
   per-voice detune, vowel drift; voices on the pitch set) and `BloomSource` (seeded sparse

@@ -1293,6 +1293,10 @@ export interface Track {
   pan: number;
   mute: boolean;
   solo: boolean;
+  /** Track strip (F5.2): cuts (20 kHz / 10 Hz = off) and send to the master space 0..1. */
+  lowpass_hz: number;
+  highpass_hz: number;
+  send: number;
   clips: Clip[];
 }
 

@@ -36,6 +36,20 @@ pub trait Source: Send {
     }
     /// Called when the graph (re)starts, e.g. to reset phases.
     fn reset(&mut self) {}
+    /// Stereo render with a reverb send (F5.2 track strips): `left`/`right` are the
+    /// source's own stereo image (the layer's pan then acts as a balance), `send` is a
+    /// mono signal for the master space on top of the global "space" amount. Returns
+    /// false when the source is mono — the graph then uses `render_at`.
+    fn render_stereo(
+        &mut self,
+        _left: &mut [f32],
+        _right: &mut [f32],
+        _send: &mut [f32],
+        _sample_rate: u32,
+        _frame: u64,
+    ) -> bool {
+        false
+    }
 }
 
 /// Silence; what an empty slot holds.
@@ -172,7 +186,13 @@ struct LayerState {
     lp_state: f32,
     hp_state_in: f32,
     hp_state_out: f32,
+    /// Right-channel filter states (stereo sources).
+    lp_state_r: f32,
+    hp_state_in_r: f32,
+    hp_state_out_r: f32,
     mono: [f32; BLOCK],
+    right: [f32; BLOCK],
+    send: [f32; BLOCK],
 }
 
 /// The renderer. Lives in the audio callback (or in an offline loop).
@@ -193,6 +213,8 @@ pub struct Graph {
     ramp: f32,
     /// Frames rendered so far.
     frame: u64,
+    /// Sum of the layers' reverb sends for the current block (post-fader, mono).
+    send_bus: [f32; BLOCK],
 }
 
 impl Graph {
@@ -209,7 +231,12 @@ impl Graph {
                     lp_state: 0.0,
                     hp_state_in: 0.0,
                     hp_state_out: 0.0,
+                    lp_state_r: 0.0,
+                    hp_state_in_r: 0.0,
+                    hp_state_out_r: 0.0,
                     mono: [0.0; BLOCK],
+                    right: [0.0; BLOCK],
+                    send: [0.0; BLOCK],
                 }
             })
             .collect();
@@ -229,6 +256,7 @@ impl Graph {
             limiter: Limiter::new(sample_rate, db_to_gain(-0.3), 0.08),
             ramp: ramp_samples(sample_rate),
             frame: 0,
+            send_bus: [0.0; BLOCK],
             params,
             layers,
             sample_rate,
@@ -317,6 +345,7 @@ impl Graph {
             let n = (frames - done).min(BLOCK);
             let block = &mut out[done * channels..(done + n) * channels];
             block.fill(0.0);
+            self.send_bus[..n].fill(0.0);
             for (i, layer) in self.layers.iter_mut().enumerate() {
                 let p = &self.params.layers[i];
                 let muted =
@@ -341,10 +370,23 @@ impl Graph {
                 layer.pan.begin(p.pan.target(), self.ramp);
                 layer.lp.begin(p.lowpass_hz.target(), self.ramp);
                 layer.hp.begin(p.highpass_hz.target(), self.ramp);
-                let mono = &mut layer.mono[..n];
-                layer
-                    .source
-                    .render_at(mono, self.sample_rate, self.frame + done as u64);
+                let at_frame = self.frame + done as u64;
+                let stereo = {
+                    let st = &mut *layer;
+                    st.send[..n].fill(0.0);
+                    st.source.render_stereo(
+                        &mut st.mono[..n],
+                        &mut st.right[..n],
+                        &mut st.send[..n],
+                        self.sample_rate,
+                        at_frame,
+                    )
+                };
+                if !stereo {
+                    let mono = &mut layer.mono[..n];
+                    layer.source.render_at(mono, self.sample_rate, at_frame);
+                }
+                let mono = &layer.mono[..n];
                 let mut peak = 0.0f32;
                 let stem = stems
                     .as_deref_mut()
@@ -366,18 +408,39 @@ impl Graph {
                         undenormal(a_hp * (layer.hp_state_out + y_lp - layer.hp_state_in));
                     layer.hp_state_in = y_lp;
                     let y = layer.hp_state_out * g;
-                    peak = peak.max(y.abs());
-                    // Constant-power pan.
-                    let theta = (pan + 1.0) * 0.25 * std::f32::consts::PI;
-                    let (l, r) = (theta.cos(), theta.sin());
-                    let (yl, yr) = if channels == 1 {
-                        (y, y)
+                    let (yl, yr) = if stereo {
+                        // The source's own right channel through its own filter states;
+                        // the layer pan is a balance on the stereo image.
+                        let xr = layer.right[k];
+                        layer.lp_state_r =
+                            undenormal(layer.lp_state_r + a_lp * (xr - layer.lp_state_r));
+                        let yr_lp = layer.lp_state_r;
+                        layer.hp_state_out_r =
+                            undenormal(a_hp * (layer.hp_state_out_r + yr_lp - layer.hp_state_in_r));
+                        layer.hp_state_in_r = yr_lp;
+                        let yr = layer.hp_state_out_r * g;
+                        peak = peak.max(y.abs()).max(yr.abs());
+                        self.send_bus[k] += layer.send[k] * g;
+                        if channels == 1 {
+                            ((y + yr) * 0.5, (y + yr) * 0.5)
+                        } else {
+                            (y * (1.0 - pan).min(1.0), yr * (1.0 + pan).min(1.0))
+                        }
                     } else {
-                        (
-                            y * l * std::f32::consts::SQRT_2,
-                            y * r * std::f32::consts::SQRT_2,
-                        )
+                        peak = peak.max(y.abs());
+                        // Constant-power pan.
+                        let theta = (pan + 1.0) * 0.25 * std::f32::consts::PI;
+                        let (l, r) = (theta.cos(), theta.sin());
+                        if channels == 1 {
+                            (y, y)
+                        } else {
+                            (
+                                y * l * std::f32::consts::SQRT_2,
+                                y * r * std::f32::consts::SQRT_2,
+                            )
+                        }
                     };
+                    let y = if stereo { (yl + yr) * 0.5 } else { y };
                     if channels == 1 {
                         frame[0] += yl;
                     } else {
@@ -406,7 +469,11 @@ impl Graph {
             let size = self.params.master.space_size.target();
             let shimmer = self.params.master.shimmer.target();
             let shimmer_ratio = 2f32.powf(self.params.master.shimmer_st.target() / 12.0);
-            let wet_on = target_space > 0.0 || self.space.current > 0.0 || self.reverb_tail > 0;
+            let send_active = self.send_bus[..n].iter().any(|v| v.abs() > 1e-7);
+            let wet_on = target_space > 0.0
+                || self.space.current > 0.0
+                || self.reverb_tail > 0
+                || send_active;
             if wet_on {
                 for r in self.reverb.iter_mut() {
                     r.set(size, 0.35 + 0.2 * shimmer);
@@ -414,7 +481,7 @@ impl Graph {
                 for sh in self.shimmer.iter_mut() {
                     sh.set_ratio(shimmer_ratio);
                 }
-                if target_space > 0.0 || self.space.current > 0.0 {
+                if target_space > 0.0 || self.space.current > 0.0 || send_active {
                     self.reverb_tail = self.sample_rate * 6; // ring out up to 6 s
                 } else {
                     self.reverb_tail = self.reverb_tail.saturating_sub(n as u32);
@@ -429,9 +496,11 @@ impl Graph {
                     }
                 }
             }
-            for frame in block.chunks_mut(channels) {
+            for (k, frame) in block.chunks_mut(channels).enumerate() {
                 let g = self.master_gain.next(target_master);
                 let mix = self.space.next(target_space);
+                // Track sends enter the reverb at their own level, after the master gain.
+                let send_in = self.send_bus[k] * g;
                 for s in frame.iter_mut() {
                     *s *= g;
                 }
@@ -447,11 +516,11 @@ impl Graph {
                         } else {
                             0.0
                         };
-                        let w = self.reverb[0].process(frame[0] + fb);
+                        let w = self.reverb[0].process(frame[0] * mix + send_in + fb);
                         self.shimmer_fb[0] = w;
-                        frame[0] += w * mix * 0.8;
+                        frame[0] += w * 0.8;
                     } else {
-                        let input = (frame[0] + frame[1]) * 0.5;
+                        let input = (frame[0] + frame[1]) * 0.5 * mix + send_in;
                         let (fl, fr) = if shimmer > 0.0 {
                             (
                                 sources::gen::soft(
@@ -467,8 +536,8 @@ impl Graph {
                         let wl = self.reverb[0].process(input + fl);
                         let wr = self.reverb[1].process(input + fr);
                         self.shimmer_fb = [wl, wr];
-                        frame[0] += wl * mix * 0.8;
-                        frame[1] += wr * mix * 0.8;
+                        frame[0] += wl * 0.8;
+                        frame[1] += wr * 0.8;
                     }
                 }
                 self.limiter.process_frame(frame);

@@ -44,8 +44,23 @@ pub struct Track {
     pub mute: bool,
     #[serde(default)]
     pub solo: bool,
+    /// Track strip (F5.2): one-pole cuts (20 kHz / 10 Hz = off) and the send to the
+    /// master space, 0..1.
+    #[serde(default = "lp_off")]
+    pub lowpass_hz: f64,
+    #[serde(default = "hp_off")]
+    pub highpass_hz: f64,
+    #[serde(default)]
+    pub send: f64,
     #[serde(default)]
     pub clips: Vec<Clip>,
+}
+
+fn lp_off() -> f64 {
+    20_000.0
+}
+fn hp_off() -> f64 {
+    10.0
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -107,6 +122,12 @@ impl Arrangement {
             if !(-1.0..=1.0).contains(&t.pan) || !t.gain_db.is_finite() {
                 return Err(ProjectError::InvalidState("track pan/gain".into()));
             }
+            if !(40.0..=20_000.0).contains(&t.lowpass_hz)
+                || !(10.0..=8_000.0).contains(&t.highpass_hz)
+                || !(0.0..=1.0).contains(&t.send)
+            {
+                return Err(ProjectError::InvalidState("track strip (cuts/send)".into()));
+            }
             for c in &t.clips {
                 if !(c.start >= 0.0 && c.offset >= 0.0 && c.length > 0.0)
                     || !c.start.is_finite()
@@ -155,6 +176,9 @@ mod tests {
             pan: 0.2,
             mute: false,
             solo: false,
+            lowpass_hz: 20_000.0,
+            highpass_hz: 10.0,
+            send: 0.0,
             clips: vec![Clip {
                 id: "c1".into(),
                 take_id: "take-1".into(),
