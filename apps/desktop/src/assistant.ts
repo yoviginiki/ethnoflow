@@ -157,6 +157,35 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
       const res = await api.rhythmRender(String(cmd.path), { ...r, chord: s.padChord, root_midi: s.prefs.drone?.rootMidi ?? null, intonation: s.prefs.drone?.intonation ?? "profile" }, typeof cmd.bars === "number" ? cmd.bars : null, cmd.stems !== false);
       return res;
     }
+    case "reference_add": {
+      const info = await api.referenceAdd(String(cmd.path));
+      return { id: info.id, name: info.name, duration_s: info.duration_s };
+    }
+    case "reference_list":
+      return { references: await api.referenceList() };
+    case "reference_report": {
+      const r = await api.referenceReport(String(cmd.id));
+      return r ? { ...r, energy: undefined, density: undefined, low: undefined } : { analyzed: false };
+    }
+    case "reference_analyze": {
+      const r = await api.referenceAnalyze(String(cmd.id));
+      return { ...r, energy: undefined, density: undefined, low: undefined };
+    }
+    case "open_project": {
+      // Opens a project by its folder path (the Project menu does the same): closes the
+      // current one first so nothing of it leaks into the next.
+      if (s.project) {
+        await api.closeProject();
+        s.setLoaded(null, null);
+        s.setProject(null, null);
+        s.setMessage(null);
+      }
+      const r = await api.openProject(String(cmd.path));
+      useStore.getState().setProject(r.project, r.report);
+      return { name: r.project.name, root: r.project.root, takes: r.project.takes.length };
+    }
+    case "recent_projects":
+      return { recent: await api.recentProjects() };
     case "set_scale": {
       project();
       const pv = await api.setScale((cmd.scale as Scale | null) ?? null);
@@ -178,6 +207,9 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
 export function useAssistantBridge() {
   const enabled = useStore((s) => s.prefs.assistantBridge ?? true);
   const last = useRef("");
+  // Always the latest runner, so a hot-reloaded module (new ops) is picked up without a restart.
+  const run = useRef(runAssistantCommand);
+  run.current = runAssistantCommand;
 
   useEffect(() => {
     if (!enabled) return;
@@ -190,7 +222,7 @@ export function useAssistantBridge() {
         for (const c of cmds) {
           let reply: unknown;
           try {
-            reply = { ok: true, result: await runAssistantCommand(c.body as AssistantCmd) };
+            reply = { ok: true, result: await run.current(c.body as AssistantCmd) };
           } catch (e) {
             reply = { ok: false, error: describeError(e) };
           }

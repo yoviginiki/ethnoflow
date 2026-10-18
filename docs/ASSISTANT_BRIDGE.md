@@ -52,7 +52,7 @@ rhythm_status, ambient_status }`
 | `ping` | | `{pong:true, schema}` |
 | `state` | | the snapshot, in the reply |
 | `message` | `text` | shows a line in the app's status bar (say what you did) |
-| `screen` | `screen`: home/play/compose/studio/ambient/soundscapes/rhythm/library | navigates |
+| `screen` | `screen`: home/play/compose/studio/ambient/soundscapes/rhythm/library/instrument/songmap/samples/references/start/help | navigates |
 | `set_prefs` | `prefs`: any of the pref keys, partial objects merge | drone/pad/rhythm/harmony/intent/master |
 | `layers` | `drone`/`pad`/`ambient`/`rhythm`/`metronome`: bool | **starts or stops sound** — tell the user first |
 | `set_ambient` | `ambient`: a whole rack | replaces the rack (loop layers of missing takes are dropped) |
@@ -65,6 +65,12 @@ rhythm_status, ambient_status }`
 | `load_preset` | `id`, `go?` (default true: open its screen) | applies it |
 | `session` | `payload` (a session payload), `restore_layers?` | applies all settings at once |
 | `rhythm_render` | `path`, `bars?`, `stems?` (default true) | offline WAV + stems of the current rhythm settings (audio evidence) |
+| `reference_add` | `path` (WAV/MP3/FLAC/OGG) | copies the song into the references library (never into a project); reply: id, name, duration |
+| `reference_list` | | the references library (id, name, duration, analyzed) |
+| `reference_report` | `id` | the saved analysis report (tempo candidates, key hypotheses, segments) without the curves |
+| `reference_analyze` | `id` | runs the analysis (on request only) and returns the report |
+| `open_project` | `path` (the `.ethnoflow` folder) | closes the current project and opens that one; reply: name, root, takes |
+| `recent_projects` | | the recent list (name, path) |
 | `set_scale` | `scale` or null | project tonic/mode |
 | `set_timing` | `timing` | project tempo/meter |
 

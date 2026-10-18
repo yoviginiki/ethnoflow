@@ -202,6 +202,20 @@
   import in Atmosphere**: "Import samples…" (multi-file) or drag-and-drop from
   Explorer / a sample manager such as Soundly — each file becomes a take in the
   project (named after the file) and a looped layer.
+- **References + analyzer (P2 Phase B, 2026-10-18 morning)**: new crate
+  `crates/analysis` (rustfft, ADR-0021): STFT features, tempo candidates with ½/2× listed,
+  DP beat tracking, novelty boundaries on a 0.25 s self-similarity grid (coarse/medium/
+  fine), segment statistics and role *hypotheses* with evidence. New "Референции" screen:
+  whole songs copied into their own library outside the projects, analysed only on request
+  (worker thread), waveform + structure lane + curves, tempo/key chips, "take tempo",
+  "take key", "copy structure into the song map" (bar counts at the chosen tempo);
+  playback of any section through the audition slot. Bridge ops `reference_*`,
+  `open_project`, `recent_projects`.
+- **Fixes (2026-10-18 morning)**: offline rhythm render was silent for parts that use an
+  instrument preset (level never set) — levels now follow the part's slider whatever the
+  voice, test added; bridge `set_prefs` merges nested objects at every depth (a partial
+  `rhythm.ostinato` no longer wipes the other fields), test added; stale Vite on port
+  5173 after a killed dev run documented.
 - **Song export (P2 Phase F start, 2026-10-18, night)**: "Експорт на микса" now renders the
   whole song through one offline graph (clips + drone + pad + atmosphere with its program
   + rhythm, buses, master space/shimmer, limiter) with aligned stems per group,

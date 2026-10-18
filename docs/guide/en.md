@@ -58,6 +58,30 @@ The pad and the textures always sit **below** the melody (about two octaves unde
 - "+ Take" imports it into the project; "+ Loop" and "+ Cloud" import it and immediately make a layer in the atmosphere. From there it is a take like any other.
 - Soundly workflow: pick and download sounds in Soundly → "Rescan" here → listen → "+".
 
+## References (whole songs to learn from)
+
+A separate, isolated place for songs you want to take something from — **outside the
+projects**. "Add song…" (WAV, MP3, FLAC, OGG) copies the file into the references library;
+the project is untouched. Nothing is analysed by itself: press "Analyse" and you get three
+things, each with a confidence and a "why":
+
+- **Tempo — candidates.** BPM chips; the half and the double are listed too, because the
+  ear decides between 174 and 87. Pick the one you count, choose a meter and "Take the
+  tempo into the project".
+- **Key — hypotheses.** From the song's mean chroma. "Take the key" sets the tonic and
+  mode in the project (drone, pad and rhythm follow).
+- **Structure.** A lane of sections over the waveform (click one to hear it) and a table:
+  start–end, role (drop/build/break/unclear) with confidence, length in bars at the chosen
+  tempo, energy, density, bass and evidence ("repeats #1"). Boundaries come from novelty
+  (self-similarity of timbre, chroma, energy) at three resolutions; roles come only from
+  the sound, never from the position in the song. "Copy the structure into the song map"
+  carries the same bar count per section into your project — then move and rename them
+  in the Song map.
+
+The notes under the song are for you ("I like how the bass enters in section 2").
+Melodic phrases are **not** extracted yet (next stage: pitch track per section).
+From the terminal: `reference_add`, `reference_analyze`, `reference_report` (see the bridge).
+
 ## Soundscapes
 
 The same layers as Atmosphere, one at a time, with big knobs:

@@ -15,6 +15,7 @@ mod midi_in_cmds;
 mod pad_cmds;
 mod preset_cmds;
 mod project_cmds;
+mod reference_cmds;
 mod rhythm_cmds;
 mod samples_cmds;
 mod settings;
@@ -195,6 +196,14 @@ pub fn run() {
             samples_cmds::samples_default_folders,
             samples_cmds::sample_preview,
             samples_cmds::sample_preview_stop,
+            reference_cmds::reference_add,
+            reference_cmds::reference_list,
+            reference_cmds::reference_set_meta,
+            reference_cmds::reference_remove,
+            reference_cmds::reference_peaks,
+            reference_cmds::reference_report,
+            reference_cmds::reference_analyze,
+            reference_cmds::reference_play,
             song_export_cmds::export_song,
         ])
         .build(tauri::generate_context!())

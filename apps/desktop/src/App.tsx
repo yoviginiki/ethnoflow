@@ -18,6 +18,7 @@ import { InstrumentDesigner } from "./InstrumentDesigner";
 import { SongMapScreen } from "./SongMapScreen";
 import { SamplesScreen } from "./SamplesScreen";
 import { Studio } from "./Studio";
+import { ReferencesScreen } from "./ReferencesScreen";
 import { messages, type Lang, type StringMessageKey } from "./i18n";
 import { useStore, type Screen } from "./store";
 
@@ -33,6 +34,7 @@ const SCREEN_TITLE: Record<Exclude<Screen, "home">, StringMessageKey> = {
   instrument: "areaForge",
   songmap: "areaSongMap",
   samples: "areaSamples",
+  references: "areaReferences",
   start: "areaStart",
   help: "areaHelp",
 };
@@ -108,6 +110,7 @@ export default function App() {
       {screen === "instrument" && (project ? <InstrumentDesigner /> : <ProjectPicker />)}
       {screen === "songmap" && (project ? <SongMapScreen /> : <ProjectPicker />)}
       {screen === "samples" && <SamplesScreen />}
+      {screen === "references" && <ReferencesScreen />}
       {(layers.drone || layers.pad || layers.ambient || layers.rhythm) && (
         <div className="layers-badge small" role="status">
           <BackgroundTransport compact />

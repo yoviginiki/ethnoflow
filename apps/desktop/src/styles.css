@@ -524,6 +524,25 @@ button.ghost.on { border-color: var(--accent); color: var(--accent); }
 .songmap-screen { display: flex; flex-direction: column; gap: 10px; }
 
 /* Sample browser */
+.references { display: grid; grid-template-columns: 260px 1fr; gap: 12px; align-items: start; }
+.references-list { display: flex; flex-direction: column; gap: 4px; }
+.references-row { display: flex; gap: 8px; align-items: center; text-align: left; width: 100%; }
+.references-row.selected { outline: 1px solid var(--accent); }
+.references-main { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.references-report { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.references-report > .panel:last-child { grid-column: 1 / -1; }
+.references-lane { position: relative; height: 26px; margin-top: 6px; background: var(--panel); border: 1px solid var(--axis); border-radius: 6px; overflow: hidden; }
+.references-lane-seg { position: absolute; top: 0; bottom: 0; border: none; border-right: 1px solid rgba(0,0,0,0.4); color: #111; font-size: 11px; padding: 0; cursor: pointer; }
+.references-lane-tick { position: absolute; top: 0; bottom: 0; width: 1px; background: #fff; pointer-events: none; }
+.references-curves { display: block; margin-top: 4px; background: var(--panel); border: 1px solid var(--axis); border-radius: 6px; }
+.references-table { width: 100%; border-collapse: collapse; }
+.references-table th, .references-table td { text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--axis); vertical-align: top; }
+.references-seg { cursor: pointer; }
+.references-seg:hover { background: var(--selection); }
+.references-bar { display: inline-block; width: 60px; height: 8px; background: var(--axis); border-radius: 4px; overflow: hidden; vertical-align: middle; }
+.references-bar > span { display: block; height: 100%; background: var(--accent); }
+.chip.selected { outline: 1px solid var(--accent); }
+@media (max-width: 1100px) { .references { grid-template-columns: 1fr; } .references-report { grid-template-columns: 1fr; } }
 .samples { display: flex; flex-direction: column; gap: 10px; }
 .samples-folders { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
 .samples-folders li { display: flex; gap: 8px; align-items: center; }

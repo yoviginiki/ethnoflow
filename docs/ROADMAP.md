@@ -150,7 +150,7 @@ one limiter — together with an explicit background play/stop in every screen
 | 9 | Genre recipes in the guide (ambient, liquid DnB, ambient DnB step by step) | first version 2026-10-18 (guide § "Рецепти по жанр"); grows with each module |
 | 10 | Track mixer (level, pan, solo, sends) | partial: background buses done; track strips pending (F5.2) |
 | 11 | Phrase & Vocal Chopper | pending (F5.3) |
-| 12 | DAW export (stems, MIDI, tempo map in one package) | P2 F / F5.4 |
+| 12 | DAW export (stems, MIDI, tempo map in one package) | WAV stems + markers.csv + manifest.json done 2026-10-18 (song export); MIDI per track pending |
 | 13 | Take fade in/out; shared transport across screens; kaval fingerings (owner's table); trainer to the end | transport = P3 Phase 1; others pending |
 | 14 | Academy | Phase 6 |
 | 15 | Intelligent melody variations | Phase 7 / P2 D |
@@ -166,7 +166,7 @@ phase gates and the rule "no code before the audit/plan is approved":
 | Program | Spec | First gate | Audit / plan |
 |---|---|---|---|
 | **P1 Rhythm Laboratory & Instrument Forge** (R0–R8) | `docs/ETHNOFLOW_RHYTHM_INSTRUMENT_FORGE_MASTER_SPEC.md` | R0 audit + plan → approval → R1 registry → R2 Instrument Designer MVP (PoC: one instrument in its own page, real DSP, Save As, back into the rhythm section, save/reopen, WAV) | `docs/rhythm/AUDIT.md`, `docs/rhythm/IMPLEMENTATION_PLAN.md` |
-| **P2 Music DNA Analyzer, Arrangement Composer, Musical Director** (A–G) | `docs/ETHNOFLOW_MUSIC_DNA_ARRANGEMENT_COMPOSER_MASTER_SPEC.md` | Phase A audit only → approval | `docs/music-dna/` |
+| **P2 Music DNA Analyzer, Arrangement Composer, Musical Director** (A–G) | `docs/ETHNOFLOW_MUSIC_DNA_ARRANGEMENT_COMPOSER_MASTER_SPEC.md` | A done; **B started 2026-10-18** (`crates/analysis`, References screen: tempo/key/structure on request, take into project); C slice = Song map; F slice = song export | `docs/music-dna/` |
 | **P3 Live Performance Director & Interactive Song Map** (0–7) | `docs/ETHNOFLOW_LIVE_PERFORMANCE_DIRECTOR_SPEC.md` | Phase 0 audit + UI blueprint → approval | `docs/performance-director/` |
 
 Shared artifacts required by the quality contract: `docs/audits/CURRENT_STATE.md`

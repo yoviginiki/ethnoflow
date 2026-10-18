@@ -45,7 +45,7 @@ requirement *groups*; each program phase adds its rows when it starts.
 | Req | Target component | Tests | Status |
 |---|---|---|---|
 | A audit | `docs/music-dna/*` | — | IMPLEMENTING (docs) |
-| B analyzer foundation (import, tempo candidates with ½/2×, features, novelty/recurrence, editable map) | `crates/analysis` (new, Rust FFT — ADR needed), `DnaAnalyzer.tsx` | synthetic 174/87 fixture, boundary tolerance fixtures | NOT STARTED |
+| B analyzer foundation (import, tempo candidates with ½/2×, features, novelty/recurrence, editable map) | `crates/analysis` (rustfft, ADR-0021), `reference_cmds.rs`, `ReferencesScreen.tsx` | 3 crate tests (174 click track → 174 + 87 listed, beats < 25 ms; quiet/busy/quiet → boundaries at 20/40 s, roles from density, repetition), 2 shell tests; real-song listening pending | FUNCTIONAL |
 | C blueprint schema + song form timeline (beats, tempo map) | `crates/project/src/songmap.rs`, `SongMapPanel.tsx`, `SongMapScreen.tsx` | 3 Rust tests (round trip, migration, validation/split/merge), vitest helpers | FUNCTIONAL (song map); blueprint extraction NOT STARTED |
 | D first full-song arrangement | `crates/music-core/arranger/` (new): form planner, orchestrator, groove evolution, motif engine, transitions; renderer on the graph | distinctness, locks, determinism, 2–4 min render | NOT STARTED |
 | E Musical Director | `director.rs` heuristics + panel | fixture critiques | NOT STARTED |

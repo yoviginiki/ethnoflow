@@ -734,6 +734,67 @@ export interface RhythmPrefs {
   instruments?: InstrumentRefs;
 }
 
+// ---------- References (P2 Phase B) ----------
+export interface ReferenceInfo {
+  id: string;
+  name: string;
+  source_path: string;
+  ext: string;
+  bytes: number;
+  added_ms: number;
+  duration_s: number;
+  sample_rate: number;
+  channels: number;
+  notes: string;
+  analyzed: boolean;
+}
+export interface TempoCandidate {
+  bpm: number;
+  confidence: number;
+  relation: "peak" | "half" | "double";
+}
+export interface Boundary {
+  seconds: number;
+  confidence: number;
+  resolution: "coarse" | "medium" | "fine";
+}
+export interface SegmentHypothesis {
+  start_s: number;
+  end_s: number;
+  energy: number;
+  density: number;
+  low: number;
+  role: string;
+  confidence: number;
+  evidence: string[];
+  similar_to: number | null;
+}
+export interface KeyHypothesis {
+  tonic_pc: number;
+  kind: ScaleKind;
+  score: number;
+  probability: number;
+}
+export interface Curve {
+  step_s: number;
+  values: number[];
+}
+export interface ReferenceReport {
+  id: string;
+  analyzer_version: number;
+  analyzed_ms: number;
+  duration_s: number;
+  tempo: TempoCandidate[];
+  beats: number;
+  key: KeyHypothesis[];
+  chroma_mean: number[];
+  boundaries: Boundary[];
+  segments: SegmentHypothesis[];
+  energy: Curve;
+  density: Curve;
+  low: Curve;
+}
+
 // ---------- Sample browser ----------
 export interface SampleEntry {
   path: string;
@@ -1367,6 +1428,14 @@ export const api = {
   // Sample browser (samples_cmds.rs)
   samplesScan: (folders: string[], max: number | null) => invoke<{ entries: SampleEntry[]; folders_scanned: number; truncated: boolean }>("samples_scan", { folders, max }),
   samplesDefaultFolders: () => invoke<string[]>("samples_default_folders"),
+  referenceAdd: (path: string) => invoke<ReferenceInfo>("reference_add", { path }),
+  referenceList: () => invoke<ReferenceInfo[]>("reference_list"),
+  referenceSetMeta: (id: string, name: string | null, notes: string | null) => invoke<ReferenceInfo>("reference_set_meta", { id, name, notes }),
+  referenceRemove: (id: string) => invoke<void>("reference_remove", { id }),
+  referencePeaks: (id: string) => invoke<WaveformPeaks>("reference_peaks", { id }),
+  referenceReport: (id: string) => invoke<ReferenceReport | null>("reference_report", { id }),
+  referenceAnalyze: (id: string) => invoke<ReferenceReport>("reference_analyze", { id }),
+  referencePlay: (id: string, fromS: number, seconds: number | null, device: string | null) => invoke<number>("reference_play", { id, fromS, seconds, device }),
   samplePreview: (path: string, device: string | null) => invoke<number>("sample_preview", { path, device }),
   samplePreviewStop: () => invoke<void>("sample_preview_stop"),
   // Instrument Forge
