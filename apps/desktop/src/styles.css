@@ -541,6 +541,10 @@ button.ghost.on { border-color: var(--accent); color: var(--accent); }
 .references-seg:hover { background: var(--selection); }
 .references-bar { display: inline-block; width: 60px; height: 8px; background: var(--axis); border-radius: 4px; overflow: hidden; vertical-align: middle; }
 .references-bar > span { display: block; height: 100%; background: var(--accent); }
+.references .panel-head { flex-wrap: wrap; }
+.references-name { width: 320px; max-width: 100%; flex: 0 1 320px; }
+.references .waveform-wrap { flex: 0 0 auto; height: 150px; min-height: 150px; }
+.references-main > .panel { min-width: 0; }
 .chip.selected { outline: 1px solid var(--accent); }
 @media (max-width: 1100px) { .references { grid-template-columns: 1fr; } .references-report { grid-template-columns: 1fr; } }
 .samples { display: flex; flex-direction: column; gap: 10px; }

@@ -258,7 +258,7 @@ export function ReferencesScreen() {
         <section className="references-main">
           <div className="panel">
             <div className="panel-head">
-              <input className="strip-name-input" value={name} onChange={(e) => setName(e.target.value)} onBlur={saveMeta} aria-label={t.refName} />
+              <input className="references-name" value={name} onChange={(e) => setName(e.target.value)} onBlur={saveMeta} aria-label={t.refName} />
               <span className="muted small mono-num">
                 {formatTime(duration)} · {current.sample_rate} Hz · {current.channels === 1 ? "mono" : "stereo"} · {current.ext.toUpperCase()}
               </span>
@@ -400,7 +400,7 @@ export function ReferencesScreen() {
                           <Bar v={Math.min(1, seg.low * 2)} />
                         </td>
                         <td className="muted">
-                          {seg.evidence.join("; ")}
+                          {seg.evidence.filter((e) => !e.startsWith("repeats segment")).join("; ")}
                           {seg.similar_to !== null && seg.similar_to !== undefined ? ` · ${t.refRepeats} #${seg.similar_to + 1}` : ""}
                         </td>
                       </tr>
