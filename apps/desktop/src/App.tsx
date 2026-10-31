@@ -8,6 +8,7 @@ import { Help } from "./Help";
 import { Home } from "./Home";
 import { Library } from "./Library";
 import { PresetLibrary } from "./PresetLibrary";
+import { ScreenBoundary } from "./ScreenBoundary";
 import { useAssistantBridge } from "./assistant";
 import { applySession, collectSession, useProjectSession } from "./session";
 import { useBackgroundLayers, useSongTransport } from "./layers";
@@ -135,6 +136,7 @@ export default function App() {
 
       <div className={`app-body ${coachOn ? "with-coach" : ""}`}>
       <div className="app-main">
+      <ScreenBoundary screen={screen}>
       {screen === "home" && <Home />}
       {screen === "play" && (project ? <Studio /> : <ProjectPicker />)}
       {screen === "tuner" && <TunerScreen />}
@@ -152,6 +154,7 @@ export default function App() {
       {screen === "references" && <ReferencesScreen />}
       {screen === "academy" && <AcademyScreen />}
       {screen === "create" && <CreateSongScreen />}
+      </ScreenBoundary>
       </div>
       {coachOn && <CoachPanel />}
       </div>

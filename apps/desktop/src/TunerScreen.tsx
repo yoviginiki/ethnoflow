@@ -11,20 +11,21 @@ import {
   A4_MIN,
   clampA4,
   GAUGE_CENTS,
+  type HeldTone,
+  holdTone,
   IN_TUNE_CENTS,
   lockRange,
   monitorMinHz,
   needleAngle,
   needsLock,
   readTuner,
-  smooth,
+  smoothPitch,
   targetsFor,
   TUNER_INSTRUMENTS,
   type TunerInstrument,
 } from "./tunerTargets";
 
 const POLL_MS = 50;
-const MIN_CONFIDENCE = 0.5;
 
 /** Analog needle: ±GAUGE_CENTS over ±45°, green zone ±IN_TUNE_CENTS. */
 function Gauge({ cents, inTune }: { cents: number | null; inTune: boolean }) {
@@ -84,7 +85,11 @@ export function TunerScreen() {
   const a4 = s.prefs.tunerA4 ?? project?.a4_hz ?? 440;
   const inst = s.prefs.tunerInstrument;
   const lock = s.prefs.tunerLock;
-  const [needle, setNeedle] = useState<number | null>(null);
+  // The tone as shown (held across dropped frames, with hysteresis: no blinking) and its
+  // smoothed fractional MIDI, which the note name and the needle both use. One state so
+  // the two never disagree for a render (a tone of null with a note still set crashed
+  // the screen on 2026-10-31).
+  const [view, setView] = useState<{ tone: HeldTone | null; midi: number | null }>({ tone: null, midi: null });
   const [a4Draft, setA4Draft] = useState(String(a4));
   useEffect(() => setA4Draft(String(a4)), [a4]);
   const fail = useCallback((e: unknown) => useStore.getState().setError(describeError(e)), []);
@@ -124,15 +129,23 @@ export function TunerScreen() {
     };
   }, [s.mode, s.prefs.selectedInput, s.prefs.sampleRate, minHz, fail]);
 
-  const hz = s.monitor?.pitch_hz ?? null;
-  const confidence = s.monitor?.pitch_confidence ?? 0;
-  const midiFrac = hz !== null && confidence >= MIN_CONFIDENCE ? hzToMidi(hz, a4) : null;
+  // Every monitor poll (50 ms) updates the held tone and the smoothing of its pitch.
+  useEffect(() => {
+    const m = s.monitor;
+    setView((prev) => {
+      const tone = m === null ? null : holdTone(prev.tone, m.pitch_hz, m.pitch_confidence, performance.now());
+      const midi = tone === null ? null : smoothPitch(prev.midi, hzToMidi(tone.hz, a4));
+      return { tone, midi };
+    });
+  }, [s.monitor, a4]);
+
+  const tone = view.tone;
+  const hz = tone?.hz ?? null;
+  const confidence = tone?.confidence ?? 0;
+  const midiFrac = tone === null ? null : view.midi;
   const targets = targetsFor(inst, lock);
   const reading = midiFrac !== null ? readTuner(midiFrac, targets) : null;
-  const readingCents = reading?.cents ?? null;
-  useEffect(() => {
-    setNeedle((prev) => (readingCents === null ? null : smooth(prev, readingCents)));
-  }, [s.monitor, readingCents]);
+  const needle = reading?.cents ?? null;
 
   const parts = midiFrac !== null ? noteParts(midiFrac) : null;
   const targetParts = reading ? noteParts(reading.target.midi) : null;
@@ -240,18 +253,18 @@ export function TunerScreen() {
         </label>
       </section>
 
-      <section className={`panel tuner-reading ${inTune ? "in" : reading ? "out" : ""}`} aria-live="polite">
+      <section className={`panel tuner-reading ${inTune ? "in" : reading ? "out" : ""} ${tone && !tone.live ? "held" : ""}`} aria-live="polite">
         <div className="tuner-big">
           {s.mode !== "idle" ? (
             <span className="muted">{t.tunerBusy}</span>
-          ) : parts ? (
+          ) : parts && hz !== null ? (
             <>
               <span className="tuner-name xl">
                 {t.noteNames[parts.pc]}
                 <sub>{parts.octave}</sub>
               </span>
               <span className="mono-num small">
-                {hz!.toFixed(1)} Hz · {t.confidence} {Math.round(confidence * 100)} %
+                {hz.toFixed(1)} Hz · {t.confidence} {Math.round(confidence * 100)} %
               </span>
             </>
           ) : (
@@ -274,7 +287,11 @@ export function TunerScreen() {
           )}
           <span className={`tuner-verdict ${reading ? (inTune ? "ok" : "bad") : ""}`}>{direction ?? ""}</span>
         </div>
-        {chart && parts && <FingeringDiagram chart={chart} midi={parts.midi} compact showAlternatives={false} />}
+        {chart && (
+          <div className="tuner-fingering">
+            {parts && <FingeringDiagram chart={chart} midi={parts.midi} compact showAlternatives={false} />}
+          </div>
+        )}
       </section>
       <div className="muted small">{t.tunerHint}</div>
       {minHz !== null && (

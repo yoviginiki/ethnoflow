@@ -58,6 +58,9 @@ The pad and the textures always sit **below** the melody (about two octaves unde
 - The microphone can be chosen here too. The tuner pauses while you record or play.
   Settings are remembered. From the terminal: `tuner` (also returns the live reading:
   note, cents, direction).
+- **No blinking**: the last tone heard is held for about 0.7 s after it stops (shown
+  dimmed), the note and the needle are smoothed, and the blocks keep their size, so the
+  screen does not jump between "silent" and a note on every breath or weak frame.
 
 ## Gate: a lesson game that waits for the right note
 
@@ -416,3 +419,9 @@ from "Start from a melody", because that is where key and tempo come from your t
 - **Preset**: saved settings of one panel. **Session**: saved settings of everything.
 - **Sidechain**: the bass "breathes" with every kick. **Wobble**: a slow, tempo-synced sweep of the bass filter.
 - **Stem**: a separate track on export (drums only, pad only…).
+
+## If a screen crashes
+
+If a screen shows "This screen crashed" with the error text, the rest of the app (the
+background, the assistant bridge, the transport) keeps working. "Try again" renders the
+screen again; "← Home" takes you back to Home. Copy the error text and send it so we can fix it.

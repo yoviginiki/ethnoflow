@@ -3,6 +3,22 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Screen error boundary (2026-10-31 night).** The first build of the anti-blink tuner
+  crashed for one frame (a tone of null with a note still set) and React unmounted the
+  whole tree: blank window, assistant bridge dead, smoke timeouts. `ScreenBoundary` now
+  wraps the screen area in `App.tsx`: a crashed screen shows the error with "Try again"
+  and "Home", the rest of the app (bridge, transport, coach) keeps running; it resets on
+  a screen change. The tuner keeps tone and smoothed pitch in one state so they cannot
+  disagree.
+- **Tuner: no blinking, no resizing (2026-10-31 night; owner: "it blinks a lot and
+  shrinks / expands").** The raw reading flipped between a tone and "silent" every 50 ms
+  (dropped frames, confidence around one threshold), and the big note, the target line
+  and the kaval fingering appeared and vanished with it, so the panel changed height.
+  `holdTone` keeps the last tone for 700 ms (dimmed via `.held`) with confidence
+  hysteresis (enter 0.5, stay 0.3); `smoothPitch` filters the fractional MIDI for both
+  the name and the needle and snaps on a real jump (> 0.6 semitone); CSS reserves the
+  heights (`.tuner-big`, `.tuner-direction`, `.tuner-fingering`). Vitest for both
+  helpers; guide BG/EN.
 - **Tuner: bass range for the monochord sound bed (2026-10-31 evening; owner: "the
   monochord is retuned, but it is a low bass sound, 34–40 Hz").** The input monitor
   tracked from 70 Hz, so the bed was invisible to the tuner. `PitchConfig::for_min_hz`

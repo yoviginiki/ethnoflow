@@ -145,6 +145,45 @@ export function smooth(prev: number | null, next: number, alpha = 0.35): number 
   return prev === null ? next : prev + (next - prev) * alpha;
 }
 
+/**
+ * Steady display of the microphone's tone (owner 31.10: "it blinks a lot and shrinks /
+ * expands"). The tracker drops a frame or two between breaths and at the start of a
+ * string, and its confidence hovers around any single threshold, so the raw reading
+ * flips between a tone and "silent" every 50 ms. The tuner therefore keeps the last
+ * tone for HOLD_MS after it vanishes (shown dimmed), enters on CONF_ENTER and stays
+ * while the confidence is still above CONF_STAY (hysteresis).
+ */
+export const HOLD_MS = 700;
+export const CONF_ENTER = 0.5;
+export const CONF_STAY = 0.3;
+
+export interface HeldTone {
+  hz: number;
+  confidence: number;
+  /** When the tone was last heard (ms, any monotonic clock). */
+  at: number;
+  /** True while the microphone still hears it; false while it is only being held. */
+  live: boolean;
+}
+
+export function holdTone(prev: HeldTone | null, hz: number | null, confidence: number, now: number): HeldTone | null {
+  const gate = prev !== null && prev.live ? CONF_STAY : CONF_ENTER;
+  if (hz !== null && confidence >= gate) return { hz, confidence, at: now, live: true };
+  if (prev !== null && now - prev.at < HOLD_MS) return prev.live ? { ...prev, live: false } : prev;
+  return null;
+}
+
+/**
+ * Smoothed pitch in fractional MIDI for the note name and the needle: small motion is
+ * filtered, a real jump (another note, an octave) snaps at once so the name never
+ * slides through the notes in between.
+ */
+export const SNAP_SEMITONES = 0.6;
+export function smoothPitch(prev: number | null, next: number, alpha = 0.35): number {
+  if (prev === null || Math.abs(next - prev) > SNAP_SEMITONES) return next;
+  return prev + (next - prev) * alpha;
+}
+
 const NAMES_EN = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"];
 function noteLabel(midi: number): string {
   return `${NAMES_EN[((midi % 12) + 12) % 12]}${Math.floor(midi / 12) - 1}`;

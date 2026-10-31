@@ -644,15 +644,19 @@ button.ghost.on { border-color: var(--accent); color: var(--accent); }
 .coach-lit { animation: coach-pulse 1.2s ease-out 3; outline: 2px solid var(--warn); outline-offset: 2px; border-radius: 6px; }
 
 /* Tuner screen (F2.3b): needle gauge, instrument targets, reference pitch */
+.screen-crash pre { white-space: pre-wrap; background: var(--axis); padding: 8px; border-radius: 6px; }
 .tuner-screen { display: flex; flex-direction: column; gap: 12px; }
 .tuner-controls { display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: center; }
 .tuner-a4 { display: inline-flex; gap: 6px; align-items: center; }
-.tuner-reading { display: grid; grid-template-columns: 1fr minmax(260px, 420px) 1fr; gap: 16px; align-items: center; justify-items: center; min-height: 260px; }
-.tuner-big { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.tuner-reading { display: grid; grid-template-columns: 1fr minmax(260px, 420px) 1fr; grid-template-rows: auto auto; gap: 16px; align-items: center; justify-items: center; min-height: 260px; }
+.tuner-reading .tuner-fingering { grid-column: 1 / -1; }
+.tuner-big { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 100px; }
+.tuner-reading.held .tuner-big, .tuner-reading.held .tuner-direction { opacity: 0.55; }
+.tuner-fingering { min-height: 196px; display: flex; align-items: center; }
 .tuner-name.xl { font-size: 56px; }
 .tuner-reading.in .tuner-name { color: var(--accent); }
 .tuner-reading.out .tuner-name { color: var(--warn); }
-.tuner-direction { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.tuner-direction { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 56px; }
 .tuner-verdict { font-size: 20px; font-weight: 600; min-height: 26px; }
 .tuner-verdict.ok { color: var(--accent); }
 .tuner-verdict.bad { color: var(--rec); }
