@@ -30,7 +30,7 @@
 html, body, #root { height: 100%; margin: 0; }
 body { background: var(--bg); color: var(--text); }
 
-.app { display: flex; flex-direction: column; gap: 12px; padding: 16px 20px; height: 100%; }
+.app { display: flex; flex-direction: column; gap: 12px; padding: 16px 20px 72px; height: 100%; box-sizing: border-box; }
 .topbar { display: flex; justify-content: space-between; align-items: flex-start; }
 .topbar h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: 0.3px; }
 .topbar-right { display: flex; gap: 16px; align-items: center; }
@@ -268,20 +268,18 @@ button.small { font-size: 12px; padding: 3px 7px; }
 .compose h3 { margin: 0 0 6px; font-size: 1em; }
 .style-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .style-row .area { padding: 6px 10px; display: inline-flex; gap: 6px; align-items: center; }
-.layers-badge {
-  position: fixed;
-  right: 16px;
-  bottom: 16px;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  padding: 6px 10px;
-  border-radius: 8px;
-  background: var(--panel, #222);
-  border: 1px solid var(--axis);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  z-index: 20;
-}
+/* "Now playing" bar (UX audit 2026-10-31, stage 2): every source of sound on every screen. */
+.now-playing { position: fixed; left: 0; right: 0; bottom: 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 6px 20px; background: var(--panel); border-top: 1px solid var(--axis); box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.25); z-index: 30; min-height: 44px; box-sizing: border-box; }
+.now-playing .np-title { letter-spacing: 0.3px; text-transform: uppercase; font-size: 11px; }
+.now-playing .spacer { flex: 1; }
+.np-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 16px; border: 1px solid var(--axis); background: transparent; color: var(--text); font: inherit; }
+button.np-chip { cursor: pointer; }
+button.np-chip:disabled { opacity: 0.5; cursor: default; }
+.np-chip.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.np-chip.rec.on { border-color: var(--rec); box-shadow: inset 0 0 0 1px var(--rec); color: var(--rec); }
+.np-chip.np-bg { padding: 2px 8px; }
+.np-chip .bg-transport.compact { gap: 6px; }
+.now-playing .danger { font-weight: 600; }
 
 /* error-tolerant performance intelligence (F2.11) */
 .intent-badge { display: inline-flex; gap: 8px; align-items: center; padding: 2px 8px; border-radius: 10px; border: 1px solid var(--axis); font-weight: 400; }

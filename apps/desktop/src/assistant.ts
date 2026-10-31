@@ -7,6 +7,7 @@ import { defaultSource, makeLayer, MAX_AMBIENT_LAYERS } from "./ambientPresets";
 import { applyLibraryPayload, applySession, collectSession, mergeSessionPrefs, pickSessionPrefs, rackForProject, SESSION_PREF_KEYS } from "./session";
 import { useStore, type LayerName, type Screen } from "./store";
 import { latestTake, loadTake, playLoaded, stopPlaying } from "./takeActions";
+import { readNowPlaying, stopAll } from "./nowPlaying";
 import { hzToMidi as tunerHzToMidi } from "./format";
 import { clampA4, readTuner, targetsFor, TUNER_INSTRUMENTS, type TunerInstrument } from "./tunerTargets";
 import { droneRoot, droneSettings, padRoot, padSettings, voicingNotes } from "./layers";
@@ -219,6 +220,15 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
         confidence,
         reading: reading ? { target_midi: reading.target.midi, label: reading.target.label, cents: Math.round(reading.cents * 10) / 10, direction: reading.direction } : null,
       };
+    }
+    case "now_playing":
+      // Every source of sound as the bottom bar shows it (take, notes, background, song, metronome, live).
+      return readNowPlaying();
+    case "stop_all": {
+      // Silence: stops every engine except a running recording.
+      await stopAll();
+      await new Promise((r) => setTimeout(r, 150));
+      return readNowPlaying();
     }
     case "load_take": {
       // The ▶ path of the take list without sound: load the take (default: the latest).

@@ -3,6 +3,19 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **"Now playing" bar: stage 2 of the UX audit (2026-10-31 night; owner: "давай").**
+  `NowPlayingBar.tsx` sits at the bottom of every screen and replaces the floating
+  layers badge: chips for the take (▶/■ with position, red "Recording" while a take is
+  recorded), the notes player (♪), the background (the compact BackgroundTransport with
+  its switches, level and mixer), the song transport (bar.beat) and the metronome, plus
+  "Stop all" and a "Silence" state. `nowPlaying.ts` holds the app-wide polling of the
+  take and notes players (they used to be polled only while "Play & record" was mounted,
+  so leaving the screen froze their status while the sound continued), `stopAll` (take,
+  notes, layers remembered for "play background", song transport, metronome, live
+  follower, sample preview, instrument audition; never a running recording) and
+  `readNowPlaying`. Studio.tsx lost its second background transport. Bridge ops
+  `now_playing` / `stop_all`; smoke: silent snapshot + stop_all step, sound step
+  (take + drone → stop_all) under `--sound`. Guide BG/EN, bridge doc, audit §6 status.
 - **"Play & record" stage 1 of the UX audit (2026-10-31 night; owner: "go ahead").**
   Only `Studio.tsx` / `TakeList.tsx`, no new structure: the main transport (record,
   play, loop, clock, metronome, background) is the first block and sticky

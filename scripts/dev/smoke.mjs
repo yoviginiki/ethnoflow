@@ -310,6 +310,13 @@ async function main() {
     if (!r.loaded_id) throw new Error(JSON.stringify(r));
     return `take ${r.name}, ${r.duration_s?.toFixed(1)} s, analysed ${r.analysed} (${r.notes} notes)`;
   });
+  await step("now playing: the bar's snapshot has every source, stop_all leaves silence", async () => {
+    const np = expectOk(send({ op: "now_playing" }));
+    for (const k of ["recording", "take", "notes", "background", "song", "metronome", "live", "any"]) if (!(k in np)) throw new Error(`missing ${k}`);
+    const after = expectOk(send({ op: "stop_all" }));
+    if (after.any !== false) throw new Error(JSON.stringify(after));
+    return `before: any=${np.any}; after stop_all: silence`;
+  });
   await step("tuner: settings round trip (432 Hz, guitar, locked A2) and the reading shape", () => {
     const before = expectOk(send({ op: "tuner" }));
     const r = expectOk(send({ op: "tuner", a4: 432, instrument: "guitar", lock: 45 }));
@@ -451,6 +458,16 @@ async function main() {
       const st = expectOk(send({ op: "stop_take" }));
       if (st.mode !== "idle" || !(st.cursor_s > 0.5)) throw new Error(JSON.stringify(st));
       return `played ${st.cursor_s.toFixed(2)} s of ${r.duration_s?.toFixed(1)} s`;
+    });
+    await step("sound: stop_all silences a playing take and the background at once", async () => {
+      expectOk(send({ op: "play_take" }));
+      expectOk(send({ op: "layers", drone: true }));
+      await sleep(700);
+      const np = expectOk(send({ op: "now_playing" }));
+      if (!np.take || !np.background.drone) throw new Error(JSON.stringify(np));
+      const after = expectOk(send({ op: "stop_all" }));
+      if (after.any) throw new Error(JSON.stringify(after));
+      return "take + drone → stop_all → silence";
     });
     await step("sound: rhythm live for 2 s (meters move)", async () => {
       expectOk(send({ op: "layers", rhythm: true }));

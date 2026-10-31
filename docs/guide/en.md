@@ -27,6 +27,16 @@ The quickest path from an idea to a background:
 
 The pad and the textures always sit **below** the melody (about two octaves under its median note) so they never fight it.
 
+## "Now playing" bar (bottom of every screen)
+
+An always-visible bar with everything that can sound, as chips: **Take** (the loaded
+take: ▶ plays, ■ stops, shows the position; while recording the chip is red and leads to
+"Play & record"), **Notes** (♪ plays the analysed take's notes), **Background** (▶/■
+drone, pad, atmosphere, rhythm, the level 🔊 and the mixer 🎚), **Song** (the song
+transport, shows bar.beat), **Metronome**. A lit chip is sounding. **■ Stop all** stops
+all of them at once (not a running recording, which is stopped from its screen). When
+nothing sounds it says "Silence". From the terminal: `now_playing` and `stop_all`.
+
 ## Play & record
 
 - **The transport is on top and stays there while you scroll**: ● Record, ▶ Play, loop,

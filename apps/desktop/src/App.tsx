@@ -2,11 +2,11 @@ import { api } from "./api";
 import { useEffect } from "react";
 import { Ambient } from "./Ambient";
 import { Arrange } from "./Arrange";
-import { BackgroundTransport } from "./BackgroundTransport";
 import { Compose } from "./Compose";
 import { Help } from "./Help";
 import { Home } from "./Home";
 import { Library } from "./Library";
+import { NowPlayingBar } from "./NowPlayingBar";
 import { PresetLibrary } from "./PresetLibrary";
 import { ScreenBoundary } from "./ScreenBoundary";
 import { useAssistantBridge } from "./assistant";
@@ -59,7 +59,6 @@ export default function App() {
   const setScreen = useStore((s) => s.setScreen);
   const project = useStore((s) => s.project);
   const mode = useStore((s) => s.mode);
-  const layers = useStore((s) => s.layers);
   const t = messages[lang];
   const error = useStore((s) => s.error);
   const setError = useStore((s) => s.setError);
@@ -158,34 +157,7 @@ export default function App() {
       </div>
       {coachOn && <CoachPanel />}
       </div>
-      {(layers.drone || layers.pad || layers.ambient || layers.rhythm) && (
-        <div className="layers-badge small" role="status">
-          <BackgroundTransport compact />
-          <button className="ghost small" disabled={mode !== "idle"} onClick={() => setScreen(screen === "compose" ? "play" : "compose")}>
-            {screen === "compose" ? t.toStudio : t.areaAccomp}
-          </button>
-          {screen !== "studio" && (
-            <button className="ghost small" disabled={mode !== "idle"} onClick={() => setScreen("studio")}>
-              {t.areaStudio}
-            </button>
-          )}
-          {screen !== "ambient" && (
-            <button className="ghost small" disabled={mode !== "idle"} onClick={() => setScreen("ambient")}>
-              {t.areaAmbient}
-            </button>
-          )}
-          {screen !== "soundscapes" && (
-            <button className="ghost small" disabled={mode !== "idle"} onClick={() => setScreen("soundscapes")}>
-              {t.areaSoundscapes}
-            </button>
-          )}
-          {screen !== "rhythm" && (
-            <button className="ghost small" disabled={mode !== "idle"} onClick={() => setScreen("rhythm")}>
-              {t.rhythmShort}
-            </button>
-          )}
-        </div>
-      )}
+      <NowPlayingBar />
     </div>
   );
 }

@@ -6,7 +6,6 @@ import { IntentPanel, usePerformanceAnalysis } from "./IntentPanel";
 import { AnalysisPanel } from "./AnalysisPanel";
 import { SampleLab } from "./SampleLab";
 import { MetronomeButton } from "./MetronomeButton";
-import { BackgroundTransport } from "./BackgroundTransport";
 import { DronePanel } from "./DronePanel";
 import { FallingNotes } from "./FallingNotes";
 import { GateView } from "./GateView";
@@ -309,32 +308,6 @@ export function Studio() {
     useStore.getState().setNotesPlayer(null);
   }, []);
 
-  useEffect(() => {
-    if (!s.notesPlayer) return;
-    let cancelled = false;
-    const tick = async () => {
-      if (cancelled) return;
-      try {
-        const p = await api.notesPlaybackStatus();
-        if (!p || p.finished) {
-          useStore.getState().setNotesPlayer(null);
-          return;
-        }
-        useStore.getState().setNotesPlayer(p);
-      } catch (e) {
-        fail(e);
-        useStore.getState().setNotesPlayer(null);
-        return;
-      }
-      setTimeout(tick, STATUS_POLL_MS);
-    };
-    void tick();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [s.notesPlayer !== null, fail]);
-
   /** After a MIDI re-render: refresh waveform, analysis and MIDI view. */
   const reloadRendered = useCallback(async () => {
     const st = useStore.getState();
@@ -476,8 +449,10 @@ export function Studio() {
 
   // ---------- status polling ----------
 
+  // Recording status (the take player and the notes player are polled app-wide by the
+  // Now-playing bar, see nowPlaying.ts).
   useEffect(() => {
-    if (s.mode === "idle") return;
+    if (s.mode !== "recording") return;
     let cancelled = false;
     let tick = 0;
     const loop = async () => {
@@ -498,15 +473,6 @@ export function Studio() {
                 .setError(r.device_lost ? tt.deviceLost : r.write_failed ? tt.writeFailed : `${tt.limitReached} (${Math.round(r.max_seconds / 60)} min)`);
               return;
             }
-          }
-        } else if (st.mode === "playing") {
-          const p = await api.playbackStatus();
-          st.setPlayer(p);
-          if (!p || p.finished) {
-            st.setMode("idle");
-            st.setPlayer(null);
-            st.setCursor(0);
-            return;
           }
         }
       } catch (e) {
@@ -712,9 +678,6 @@ export function Studio() {
               <input type="checkbox" checked={s.prefs.loop} onChange={(e) => s.setPref("loop", e.target.checked)} />
               {t.loop}
             </label>
-            <span className="bg-inline">
-              <BackgroundTransport compact />
-            </span>
             {barSeconds && (
               <label className="inline">
                 <input type="checkbox" checked={s.prefs.snapBar} onChange={(e) => s.setPref("snapBar", e.target.checked)} />
