@@ -3,6 +3,15 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **UX audit (2026-10-31; owner: "everything became very hard, I no longer know how to play
+  my take").** `docs/audits/UX_AUDIT_2026-10-31.md`: functional inventory of the 16 screens,
+  block-by-block anatomy of "Play & record" (transport is the 18th of 24 blocks; the take list
+  loads on a click that does not look like a button; the empty-state text lies), ten play
+  buttons over four clocks, panels repeated on four screens; proposal of five areas
+  (Play / Background / Song / Learn / Library) + one "now playing" bar, design rules, staged
+  plan, owner decisions. Screenshots `docs/audits/screenshots/2026-10-31-play-*.png`.
+  No code changed. Also: installed 0.2.8 could not open projects migrated to schema 3 by the
+  dev build (`newer_schema`); built and installed 0.4.0 from the current tree.
 - **Make the song + Assistant rail (2026-10-19 night; owner: "Create a song should make the song,
   not walk me around; an assistant that knows the app, gives tips and lights up what to press").**
   - `makeSong.ts`: one call from a take to a playing project through the existing rule engines:
