@@ -6,6 +6,7 @@ import type { StarterId } from "./starters";
 import { defaultSource, makeLayer, MAX_AMBIENT_LAYERS } from "./ambientPresets";
 import { applyLibraryPayload, applySession, collectSession, mergeSessionPrefs, pickSessionPrefs, rackForProject, SESSION_PREF_KEYS } from "./session";
 import { useStore, type LayerName, type Screen } from "./store";
+import { latestTake, loadTake, playLoaded, stopPlaying } from "./takeActions";
 import { hzToMidi as tunerHzToMidi } from "./format";
 import { clampA4, readTuner, targetsFor, TUNER_INSTRUMENTS, type TunerInstrument } from "./tunerTargets";
 import { droneRoot, droneSettings, padRoot, padSettings, voicingNotes } from "./layers";
@@ -218,6 +219,31 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
         confidence,
         reading: reading ? { target_midi: reading.target.midi, label: reading.target.label, cents: Math.round(reading.cents * 10) / 10, direction: reading.direction } : null,
       };
+    }
+    case "load_take": {
+      // The ▶ path of the take list without sound: load the take (default: the latest).
+      const pv = project();
+      const id = typeof cmd.id === "string" ? cmd.id : latestTake(pv.takes)?.id;
+      if (!id) throw new Error("no takes in the project");
+      await loadTake(id);
+      const st = useStore.getState();
+      const tk = pv.takes.find((x) => x.id === id);
+      return { loaded_id: st.loaded?.id ?? null, name: tk ? `${tk.number}${tk.label ? ` ${tk.label}` : ""}` : null, duration_s: st.loaded?.duration_seconds ?? null, analysed: st.analysis !== null, notes: st.analysis?.notes.length ?? 0 };
+    }
+    case "play_take": {
+      // Sound! Load (if needed) and play a take from its start (or `from_s`); `stop_take` stops it.
+      const pv = project();
+      const id = typeof cmd.id === "string" ? cmd.id : latestTake(pv.takes)?.id;
+      if (!id) throw new Error("no takes in the project");
+      if (useStore.getState().loaded?.id !== id) await loadTake(id);
+      await playLoaded(typeof cmd.from_s === "number" ? cmd.from_s : 0, false);
+      const st = useStore.getState();
+      return { loaded_id: st.loaded?.id ?? null, mode: st.mode, position_s: st.player?.position_seconds ?? null, duration_s: st.loaded?.duration_seconds ?? null };
+    }
+    case "stop_take": {
+      await stopPlaying();
+      const st = useStore.getState();
+      return { mode: st.mode, cursor_s: st.cursor };
     }
     case "import_audio": {
       project();

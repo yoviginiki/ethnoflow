@@ -29,7 +29,16 @@ The pad and the textures always sit **below** the melody (about two octaves unde
 
 ## Play & record
 
-- Pick the microphone and headphones in the device settings. The metronome has its own ▶/■ next to "Tempo & meter".
+- **The transport is on top and stays there while you scroll**: ● Record, ▶ Play, loop,
+  clock, metronome and the background. The take's waveform sits under it. With nothing
+  loaded but takes present, there is a "Load the latest" button and the waveform says
+  "Pick a take on the left or press ● Record".
+- **Every row of "Takes" has a ▶**: it loads the take and plays it from the start; the
+  same button becomes ■ while it plays. The row's name only loads (waveform, notes,
+  analysis), without sound.
+- **Devices, Keyboard, Drone and Pad are folded** into collapsible rows at the bottom with
+  a short summary ("Drone: playing · D3", "Devices: <microphone>"); what you open stays open.
+- Pick the microphone and headphones under "Devices". The metronome has its own ▶/■ next to "Tempo & meter".
 - **Record** makes a new take in the project. The background (drone, pad, atmosphere, rhythm) is heard while you play but **is not recorded**: only the microphone is. For a mixed result use My studio → Export mix.
 - The tuner shows the note, the cents and whether it is in the project's mode. The full
   tuner with a needle, instruments and 440/432 Hz is its own screen: "Tuner" from Home.

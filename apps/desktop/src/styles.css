@@ -67,6 +67,18 @@ button.danger { background: var(--rec); color: #fff; border-color: var(--rec); f
 .transport { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .transport .time { min-width: 140px; }
 .transport .spacer { flex: 1; }
+/* "Play & record" stage 1 (UX audit 2026-10-31): the transport stays on top while the page scrolls. */
+.main-transport { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 8px 0; border-bottom: 1px solid var(--axis); }
+.fold > summary { cursor: pointer; padding: 8px 12px; border: 1px solid var(--axis); border-radius: 8px; background: var(--panel); list-style: revert; }
+.fold[open] > summary { border-radius: 8px 8px 0 0; }
+.fold[open] > .panel, .fold[open] > .devices { border-top-left-radius: 0; border-top-right-radius: 0; }
+.fold > .devices { background: var(--panel); border: 1px solid var(--axis); border-radius: 0 0 8px 8px; padding: 12px 14px; }
+.take-row { display: flex; gap: 6px; align-items: flex-start; }
+.take-play { min-width: 34px; padding: 6px 0; font-size: 14px; }
+.take-play.on { background: var(--accent); color: #111; border-color: var(--accent); }
+/* The take list keeps its own height and stays in view; a long list must not stretch the grid row (the waveform used to grow with it). */
+.studio .takes { align-self: start; position: sticky; top: 0; max-height: calc(100vh - 120px); }
+.studio .waveform-wrap { flex: 0 0 auto; height: 240px; }
 .status { font-size: 12px; padding: 2px 8px; border-radius: 10px; background: var(--axis); }
 .status.recording { background: var(--rec); color: #fff; }
 .status.playing { background: var(--playhead); color: #111; }

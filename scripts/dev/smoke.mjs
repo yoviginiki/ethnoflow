@@ -305,6 +305,11 @@ async function main() {
     expectOk(send({ op: "layers", drone: false, pad: false, ambient: false, rhythm: false }));
     return `${r.facts.length} decisions, ${st.project.timing.bpm} BPM, sections ${r.sections}`;
   });
+  await step("take: the ▶ path — load the latest take through load_take (no sound) and see it loaded", () => {
+    const r = expectOk(send({ op: "load_take" }));
+    if (!r.loaded_id) throw new Error(JSON.stringify(r));
+    return `take ${r.name}, ${r.duration_s?.toFixed(1)} s, analysed ${r.analysed} (${r.notes} notes)`;
+  });
   await step("tuner: settings round trip (432 Hz, guitar, locked A2) and the reading shape", () => {
     const before = expectOk(send({ op: "tuner" }));
     const r = expectOk(send({ op: "tuner", a4: 432, instrument: "guitar", lock: 45 }));
@@ -439,6 +444,14 @@ async function main() {
     return `${path.basename(r.path)} ${wavStats(r.path).seconds.toFixed(1)} s, stems ${r.stems.length}, drums peak ${dp.toFixed(2)}`;
   });
   if (SOUND) {
+    await step("sound: play_take plays the latest take for 1 s, stop_take stops it", async () => {
+      const r = expectOk(send({ op: "play_take" }));
+      if (r.mode !== "playing") throw new Error(JSON.stringify(r));
+      await sleep(1000);
+      const st = expectOk(send({ op: "stop_take" }));
+      if (st.mode !== "idle" || !(st.cursor_s > 0.5)) throw new Error(JSON.stringify(st));
+      return `played ${st.cursor_s.toFixed(2)} s of ${r.duration_s?.toFixed(1)} s`;
+    });
     await step("sound: rhythm live for 2 s (meters move)", async () => {
       expectOk(send({ op: "layers", rhythm: true }));
       await sleep(2500);

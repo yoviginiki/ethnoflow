@@ -13,11 +13,13 @@ import { GateView } from "./GateView";
 import { InstrumentPanel } from "./InstrumentPanel";
 import { KeyboardPiano } from "./KeyboardPiano";
 import { MidiPanel } from "./MidiPanel";
-import { formatBytes, formatDb, formatTime, isTypingTarget, linearToDb, meterFraction, snapToBars, takeName } from "./format";
+import { formatBytes, formatDb, formatTime, isTypingTarget, linearToDb, meterFraction, noteParts, snapToBars, takeName } from "./format";
 import { messages } from "./i18n";
 import { PadPanel } from "./PadPanel";
 import { NEW_NOTE_S, PianoRoll } from "./PianoRoll";
 import { TakeList } from "./TakeList";
+import { Fold } from "./Fold";
+import { latestTake, loadTake, playLoaded, stopPlaying, WAVEFORM_BINS } from "./takeActions";
 import { TimingPanel } from "./TimingPanel";
 import { TrainerPanel } from "./TrainerPanel";
 import { LiveFollowPanel } from "./LiveFollowPanel";
@@ -29,7 +31,6 @@ import { Waveform } from "./Waveform";
 
 const MONITOR_POLL_MS = 50;
 
-const WAVEFORM_BINS = 1600;
 const STATUS_POLL_MS = 50;
 /** Live waveform refresh while recording, in status ticks (4 × 50 ms = 5 Hz). */
 const LIVE_WAVE_EVERY = 4;
@@ -100,17 +101,8 @@ export function Studio() {
     async (id: string) => {
       const st = useStore.getState();
       st.setError(null);
-      if (st.mode === "playing") {
-        await api.stopPlayback().catch(fail);
-        st.setMode("idle");
-        st.setPlayer(null);
-      }
       const ok = await withPending(messages[st.prefs.lang].loading, async () => {
-        const info = await api.loadTake(id);
-        const peaks = await api.getWaveform(WAVEFORM_BINS);
-        useStore.getState().setLoaded(info, peaks);
-        useStore.getState().setAnalysis(await api.getAnalysis());
-        useStore.getState().setMidi(await api.midiTake());
+        await loadTake(id);
         return true;
       });
       if (!ok) {
@@ -188,20 +180,7 @@ export function Studio() {
       if (!st.loaded) return;
       try {
         st.setError(null);
-        const dur = st.loaded.duration_seconds;
-        const sel = st.selection;
-        let start = from ?? st.cursor;
-        // With a selection, play it: start inside it unless told otherwise.
-        if (from === undefined && sel && (start < sel[0] || start >= sel[1])) start = sel[0];
-        if (start >= dur - 0.01) start = sel ? sel[0] : 0;
-        const ps = await api.startPlayback({
-          device: st.prefs.selectedOutput,
-          start_seconds: start,
-          loop_seconds: st.prefs.loop ? (sel ?? [0, dur]) : null,
-          click: hasClick && st.prefs.clickPlay,
-        });
-        st.setPlayer(ps);
-        st.setMode("playing");
+        await playLoaded(from, hasClick && st.prefs.clickPlay);
       } catch (e) {
         fail(e);
       }
@@ -210,15 +189,23 @@ export function Studio() {
   );
 
   const onStopPlay = useCallback(async () => {
-    const st = useStore.getState();
-    try {
-      await api.stopPlayback();
-    } finally {
-      if (st.player) st.setCursor(Math.min(st.player.position_seconds, st.loaded?.duration_seconds ?? 0));
-      st.setMode("idle");
-      st.setPlayer(null);
-    }
+    await stopPlaying();
   }, []);
+
+  /** ▶ on a take row: stop what plays, load the take if it is not the loaded one, play from its start. */
+  const playTake = useCallback(
+    async (id: string) => {
+      const st = useStore.getState();
+      if (st.mode === "playing") await onStopPlay();
+      if (st.loaded?.id !== id) await selectTake(id);
+      if (useStore.getState().loaded?.id === id) await onPlay(0);
+    },
+    [onPlay, onStopPlay, selectTake],
+  );
+  const loadLast = useCallback(() => {
+    const last = latestTake(useStore.getState().project?.takes ?? []);
+    if (last) void selectTake(last.id);
+  }, [selectTake]);
 
   // Loop / click toggles while playing.
   useEffect(() => {
@@ -693,104 +680,70 @@ export function Studio() {
       )}
 
       <div className="studio-body">
-        <TakeList onSelect={(id) => void selectTake(id)} />
+        <TakeList onSelect={(id) => void selectTake(id)} onPlay={(id) => void playTake(id)} onStop={() => void onStopPlay()} playingId={s.mode === "playing" ? (s.loaded?.id ?? null) : null} />
 
         <main className="studio-main">
-          <section className="devices">
-            <label>
-              {t.inputDevice}
-              <select value={s.prefs.selectedInput ?? ""} disabled={busy} onChange={(e) => {
-                s.setPref("selectedInput", e.target.value || null);
-                s.setPref("sampleRate", null);
-              }}>
-                <option value="">{t.defaultDevice}</option>
-                {s.inputDevices.map((d) => (
-                  <option key={d.name} value={d.name}>
-                    {d.name}
-                    {d.default_channels ? ` · ${chLabel(d.default_channels)}` : ""}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              {t.sampleRate}
-              <select value={s.prefs.sampleRate ?? ""} disabled={busy || rates.length <= 1} onChange={(e) => s.setPref("sampleRate", e.target.value ? Number(e.target.value) : null)}>
-                <option value="">
-                  {inputDev?.default_sample_rate ? `${inputDev.default_sample_rate} Hz (${t.deviceDefault})` : t.defaultDevice}
-                </option>
-                {rates
-                  .filter((r) => r !== inputDev?.default_sample_rate)
-                  .map((r) => (
-                    <option key={r} value={r}>
-                      {r} Hz
-                    </option>
-                  ))}
-              </select>
-            </label>
-            <label>
-              {t.outputDevice}
-              <select value={s.prefs.selectedOutput ?? ""} disabled={busy} onChange={(e) => s.setPref("selectedOutput", e.target.value || null)}>
-                <option value="">{t.defaultDevice}</option>
-                {s.outputDevices.map((d) => (
-                  <option key={d.name} value={d.name}>
-                    {d.name}
-                    {d.default_sample_rate ? ` · ${d.default_sample_rate} Hz` : ""}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button className="ghost" onClick={() => void api.playTestTone(s.prefs.selectedOutput).catch(fail)} disabled={busy}>
-              {t.testTone}
-            </button>
-            <label>
-              {t.midiInputLabel}
-              <select value={s.prefs.midiInput ?? ""} onChange={(e) => s.setPref("midiInput", e.target.value || null)}>
-                <option value="">{t.midiNone}</option>
-                {s.midiPorts.map((p) => (
-                  <option key={p} value={p}>
-                    {p}
-                  </option>
-                ))}
-              </select>
-            </label>
+          <section className="transport main-transport" data-coach="transport">
+            <MetronomeButton />
+            {s.mode === "recording" ? (
+              <button className="danger" onClick={onStopRecord} aria-keyshortcuts="R Escape">
+                ■ {t.stop}
+              </button>
+            ) : (
+              <button className="rec" onClick={onRecord} disabled={busy} aria-keyshortcuts="R">
+                ● {t.record}
+              </button>
+            )}
+            {s.mode === "playing" ? (
+              <button onClick={onStopPlay} aria-keyshortcuts="Space Escape">
+                ■ {t.pause}
+              </button>
+            ) : (
+              <button onClick={() => onPlay()} disabled={busy || !s.loaded} aria-keyshortcuts="Space">
+                ▶ {t.play}
+              </button>
+            )}
+            {!s.loaded && project.takes.length > 0 && (
+              <button className="ghost" onClick={loadLast} disabled={busy}>
+                {t.loadLast}
+              </button>
+            )}
             <label className="inline">
-              <input type="checkbox" checked={s.prefs.tuner} onChange={(e) => s.setPref("tuner", e.target.checked)} />
-              {t.tuner}
+              <input type="checkbox" checked={s.prefs.loop} onChange={(e) => s.setPref("loop", e.target.checked)} />
+              {t.loop}
             </label>
-            <button className="ghost" onClick={refreshDevices} disabled={busy}>
-              {t.refresh}
-            </button>
-          </section>
-
-          <TimingPanel />
-
-          {(s.prefs.tuner || s.mode === "recording") && (
-            <Tuner
-              active={s.mode === "recording" ? rec !== null : s.monitor !== null}
-              hz={s.mode === "recording" ? (rec?.pitch_hz ?? null) : (s.monitor?.pitch_hz ?? null)}
-              confidence={s.mode === "recording" ? (rec?.pitch_confidence ?? 0) : (s.monitor?.pitch_confidence ?? 0)}
-              a4={project.a4_hz}
-              scale={project.scale}
-              profile={project.instrument}
-            />
-          )}
-          <InstrumentPanel />
-          <KeyboardPiano scale={project.scale} />
-          <DronePanel scale={project.scale} profile={project.instrument} />
-          <PadPanel scale={project.scale} profile={project.instrument} />
-
-          <section className="meter-row" aria-label={t.level}>
-            <span className="muted small">{t.level}</span>
-            <div className="meter" role="meter" aria-valuemin={-60} aria-valuemax={0} aria-valuenow={Math.round(s.meterDb)} aria-label={t.level}>
-              <div className={`meter-fill ${s.meterDb > -3 ? "hot" : s.meterDb > -12 ? "warm" : ""}`} style={{ width: `${meterFraction(s.meterDb) * 100}%` }} />
-            </div>
-            <span className="mono-num">{formatDb(s.meterDb)}</span>
-            {rec && rec.clipped_samples > 0 && <span className="clip">{t.clip}</span>}
-            {rec?.noise_floor != null && (
-              <span className="muted small mono-num">
-                {t.noiseFloor}: {formatDb(linearToDb(rec.noise_floor))}
+            <span className="bg-inline">
+              <BackgroundTransport compact />
+            </span>
+            {barSeconds && (
+              <label className="inline">
+                <input type="checkbox" checked={s.prefs.snapBar} onChange={(e) => s.setPref("snapBar", e.target.checked)} />
+                {t.snapToBar}
+              </label>
+            )}
+            <span className="mono-num time">
+              {s.mode === "recording" && rec
+                ? formatTime(rec.seconds_captured)
+                : s.mode === "playing" && s.player
+                  ? `${formatTime(s.player.position_seconds)} / ${formatTime(s.player.duration_seconds)}`
+                  : s.loaded
+                    ? `${formatTime(s.cursor)} / ${formatTime(s.loaded.duration_seconds)}`
+                    : "0:00.0"}
+            </span>
+            {s.pending && (
+              <span className="pending" role="status" aria-live="polite">
+                {s.pending}
               </span>
             )}
+            <span className={`status ${countingIn ? "countin" : s.mode}`}>
+              {countingIn
+                ? `${t.countingIn} ${rec?.metronome?.position ? `${rec.metronome.position.bar}.${rec.metronome.position.beat}` : ""}`
+                : s.mode === "recording"
+                  ? t.recording
+                  : s.mode === "playing"
+                    ? t.playing
+                    : t.idle}
+            </span>
           </section>
 
           <Waveform
@@ -804,9 +757,35 @@ export function Studio() {
               if (s.mode === "playing") void onPlay(sec);
             }}
             onSelect={(sel) => s.setSelection(sel && barSeconds && s.prefs.snapBar ? snapToBars(sel, barSeconds, s.loaded?.duration_seconds ?? 0) : sel)}
-            emptyText={t.noTakes}
-            label={loadedTake ? takeName(loadedTake, t.take) : t.noTakes}
+            emptyText={project.takes.length === 0 ? t.noTakes : t.pickTake}
+            label={loadedTake ? takeName(loadedTake, t.take) : project.takes.length === 0 ? t.noTakes : t.pickTake}
           />
+
+          <TimingPanel />
+
+          {(s.prefs.tuner || s.mode === "recording") && (
+            <Tuner
+              active={s.mode === "recording" ? rec !== null : s.monitor !== null}
+              hz={s.mode === "recording" ? (rec?.pitch_hz ?? null) : (s.monitor?.pitch_hz ?? null)}
+              confidence={s.mode === "recording" ? (rec?.pitch_confidence ?? 0) : (s.monitor?.pitch_confidence ?? 0)}
+              a4={project.a4_hz}
+              scale={project.scale}
+              profile={project.instrument}
+            />
+          )}
+          <section className="meter-row" aria-label={t.level}>
+            <span className="muted small">{t.level}</span>
+            <div className="meter" role="meter" aria-valuemin={-60} aria-valuemax={0} aria-valuenow={Math.round(s.meterDb)} aria-label={t.level}>
+              <div className={`meter-fill ${s.meterDb > -3 ? "hot" : s.meterDb > -12 ? "warm" : ""}`} style={{ width: `${meterFraction(s.meterDb) * 100}%` }} />
+            </div>
+            <span className="mono-num">{formatDb(s.meterDb)}</span>
+            {rec && rec.clipped_samples > 0 && <span className="clip">{t.clip}</span>}
+            {rec?.noise_floor != null && (
+              <span className="muted small mono-num">
+                {t.noiseFloor}: {formatDb(linearToDb(rec.noise_floor))}
+              </span>
+            )}
+          </section>
 
           {s.loaded && <MidiPanel onRerendered={reloadRendered} />}
           {s.loaded && s.analysis && (
@@ -949,64 +928,6 @@ export function Studio() {
           )}
           {s.loaded && <AnalysisPanel withPending={withPending} selectTake={selectTake} />}
 
-          <section className="transport">
-            <MetronomeButton />
-            {s.mode === "recording" ? (
-              <button className="danger" onClick={onStopRecord} aria-keyshortcuts="R Escape">
-                ■ {t.stop}
-              </button>
-            ) : (
-              <button className="rec" onClick={onRecord} disabled={busy} aria-keyshortcuts="R">
-                ● {t.record}
-              </button>
-            )}
-            {s.mode === "playing" ? (
-              <button onClick={onStopPlay} aria-keyshortcuts="Space Escape">
-                ■ {t.pause}
-              </button>
-            ) : (
-              <button onClick={() => onPlay()} disabled={busy || !s.loaded} aria-keyshortcuts="Space">
-                ▶ {t.play}
-              </button>
-            )}
-            <label className="inline">
-              <input type="checkbox" checked={s.prefs.loop} onChange={(e) => s.setPref("loop", e.target.checked)} />
-              {t.loop}
-            </label>
-            <span className="bg-inline">
-              <BackgroundTransport compact />
-            </span>
-            {barSeconds && (
-              <label className="inline">
-                <input type="checkbox" checked={s.prefs.snapBar} onChange={(e) => s.setPref("snapBar", e.target.checked)} />
-                {t.snapToBar}
-              </label>
-            )}
-            <span className="mono-num time">
-              {s.mode === "recording" && rec
-                ? formatTime(rec.seconds_captured)
-                : s.mode === "playing" && s.player
-                  ? `${formatTime(s.player.position_seconds)} / ${formatTime(s.player.duration_seconds)}`
-                  : s.loaded
-                    ? `${formatTime(s.cursor)} / ${formatTime(s.loaded.duration_seconds)}`
-                    : "0:00.0"}
-            </span>
-            {s.pending && (
-              <span className="pending" role="status" aria-live="polite">
-                {s.pending}
-              </span>
-            )}
-            <span className={`status ${countingIn ? "countin" : s.mode}`}>
-              {countingIn
-                ? `${t.countingIn} ${rec?.metronome?.position ? `${rec.metronome.position.bar}.${rec.metronome.position.beat}` : ""}`
-                : s.mode === "recording"
-                  ? t.recording
-                  : s.mode === "playing"
-                    ? t.playing
-                    : t.idle}
-            </span>
-          </section>
-
           <section className="transport selection-row">
             <span className="muted small">
               {t.selection}:{" "}
@@ -1084,6 +1005,84 @@ export function Studio() {
             )}
             <span className="muted small">{s.loaded && s.mode === "idle" ? `${t.selectHint} ${t.trimHint}` : t.headphonesHint}</span>
           </section>
+          <Fold id="devices" label={t.foldDevices} chip={inputDev?.name ?? t.defaultDevice}>
+          <section className="devices">
+            <label>
+              {t.inputDevice}
+              <select value={s.prefs.selectedInput ?? ""} disabled={busy} onChange={(e) => {
+                s.setPref("selectedInput", e.target.value || null);
+                s.setPref("sampleRate", null);
+              }}>
+                <option value="">{t.defaultDevice}</option>
+                {s.inputDevices.map((d) => (
+                  <option key={d.name} value={d.name}>
+                    {d.name}
+                    {d.default_channels ? ` · ${chLabel(d.default_channels)}` : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              {t.sampleRate}
+              <select value={s.prefs.sampleRate ?? ""} disabled={busy || rates.length <= 1} onChange={(e) => s.setPref("sampleRate", e.target.value ? Number(e.target.value) : null)}>
+                <option value="">
+                  {inputDev?.default_sample_rate ? `${inputDev.default_sample_rate} Hz (${t.deviceDefault})` : t.defaultDevice}
+                </option>
+                {rates
+                  .filter((r) => r !== inputDev?.default_sample_rate)
+                  .map((r) => (
+                    <option key={r} value={r}>
+                      {r} Hz
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <label>
+              {t.outputDevice}
+              <select value={s.prefs.selectedOutput ?? ""} disabled={busy} onChange={(e) => s.setPref("selectedOutput", e.target.value || null)}>
+                <option value="">{t.defaultDevice}</option>
+                {s.outputDevices.map((d) => (
+                  <option key={d.name} value={d.name}>
+                    {d.name}
+                    {d.default_sample_rate ? ` · ${d.default_sample_rate} Hz` : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button className="ghost" onClick={() => void api.playTestTone(s.prefs.selectedOutput).catch(fail)} disabled={busy}>
+              {t.testTone}
+            </button>
+            <label>
+              {t.midiInputLabel}
+              <select value={s.prefs.midiInput ?? ""} onChange={(e) => s.setPref("midiInput", e.target.value || null)}>
+                <option value="">{t.midiNone}</option>
+                {s.midiPorts.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="inline">
+              <input type="checkbox" checked={s.prefs.tuner} onChange={(e) => s.setPref("tuner", e.target.checked)} />
+              {t.tuner}
+            </label>
+            <button className="ghost" onClick={refreshDevices} disabled={busy}>
+              {t.refresh}
+            </button>
+          </section>
+
+          </Fold>
+          <InstrumentPanel />
+          <Fold id="keyboard" label={t.foldKeyboard}>
+            <KeyboardPiano scale={project.scale} />
+          </Fold>
+          <Fold id="drone" label={t.foldDrone} chip={s.layers.drone ? `${t.chipOn}${s.prefs.drone.rootMidi !== null ? ` · ${t.noteNames[noteParts(s.prefs.drone.rootMidi).pc]}${noteParts(s.prefs.drone.rootMidi).octave}` : ""}` : t.chipOff}>
+            <DronePanel scale={project.scale} profile={project.instrument} />
+          </Fold>
+          <Fold id="pad" label={t.foldPad} chip={s.layers.pad ? `${t.chipOn}${s.prefs.pad.rootMidi !== null ? ` · ${t.noteNames[noteParts(s.prefs.pad.rootMidi).pc]}${noteParts(s.prefs.pad.rootMidi).octave}` : ""}` : t.chipOff}>
+            <PadPanel scale={project.scale} profile={project.instrument} />
+          </Fold>
           <div className="muted small">
             {t.shortcuts} · {t.audioHost}: {s.host || "…"}
           </div>

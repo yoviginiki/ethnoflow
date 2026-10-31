@@ -65,6 +65,8 @@ export interface Prefs {
   tuner: boolean;
   /** Notes view in "Play & record": piano roll, falling notes, or the gate game (F2.12). */
   notesView: "roll" | "falling" | "gate";
+  /** Secondary blocks of "Play & record" the user has opened (devices, keyboard, drone, pad). */
+  studioOpen: string[];
   keyNames: boolean;
   /** Tuner screen: reference pitch in Hz (400..480), null = the project's A4. */
   tunerA4: number | null;
@@ -218,6 +220,7 @@ export const DEFAULT_PREFS: Prefs = {
   loop: false,
   tuner: false,
   notesView: "roll",
+  studioOpen: [],
   tunerA4: null,
   tunerInstrument: "free",
   tunerLock: null,

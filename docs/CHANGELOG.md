@@ -3,6 +3,19 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **"Play & record" stage 1 of the UX audit (2026-10-31 night; owner: "go ahead").**
+  Only `Studio.tsx` / `TakeList.tsx`, no new structure: the main transport (record,
+  play, loop, clock, metronome, background) is the first block and sticky
+  (`.main-transport`), the waveform sits right under it, the level meter under that;
+  with takes but nothing loaded the transport offers "Load the latest" and the waveform
+  says "Pick a take on the left or press ● Record" instead of "No takes" (the empty text
+  no longer lies); every take row has its own ▶ (■ while it plays) next to the name;
+  Devices, Keyboard, Drone and Pad are folded at the bottom (`Fold.tsx`, open state in
+  `prefs.studioOpen`) with read-only chips (input device name; drone / pad "playing ·
+  note" or "off"); "To the studio" is now "To Play & record". Loading and playing a take
+  live in `takeActions.ts`, shared by the screen and the new bridge ops `load_take` /
+  `play_take` / `stop_take`, so the smoke test drives exactly the owner's ▶ path (silent
+  load step always, play step under `--sound`). Guide BG/EN, bridge doc, audit §6 status.
 - **Screen error boundary (2026-10-31 night).** The first build of the anti-blink tuner
   crashed for one frame (a tone of null with a note still set) and React unmounted the
   whole tree: blank window, assistant bridge dead, smoke timeouts. `ScreenBoundary` now

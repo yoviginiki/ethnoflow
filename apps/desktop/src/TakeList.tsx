@@ -8,9 +8,14 @@ import { useStore } from "./store";
 
 interface Props {
   onSelect: (id: string) => void;
+  /** ▶ on the row: load (if needed) and play this take. */
+  onPlay: (id: string) => void;
+  onStop: () => void;
+  /** Id of the take that is playing now, if any. */
+  playingId: string | null;
 }
 
-export function TakeList({ onSelect }: Props) {
+export function TakeList({ onSelect, onPlay, onStop, playingId }: Props) {
   const t = messages[useStore((s) => s.prefs.lang)];
   const project = useStore((s) => s.project)!;
   const loaded = useStore((s) => s.loaded);
@@ -31,6 +36,8 @@ export function TakeList({ onSelect }: Props) {
     return hay.includes(q);
   };
   const busy = mode !== "idle" || pending !== null;
+  // The ▶ stays usable while a take plays (it becomes ■ on that row); only pending blocks it.
+  const playBusy = pending !== null || mode === "recording";
 
   const run = async (f: () => Promise<void>, label?: string) => {
     try {
@@ -91,6 +98,7 @@ export function TakeList({ onSelect }: Props) {
           .map((tk) => {
             const name = takeName(tk, t.take);
             const selected = loaded?.id === tk.id;
+            const playing = playingId === tk.id;
             const missing = tk.health === "missing";
             const changed = tk.health === "checksum_mismatch";
             return (
@@ -114,6 +122,16 @@ export function TakeList({ onSelect }: Props) {
                     <button type="submit">{t.save}</button>
                   </form>
                 ) : (
+                  <div className="take-row">
+                    <button
+                      className={`take-play ${playing ? "on" : ""}`}
+                      disabled={playBusy || missing}
+                      onClick={() => (playing ? onStop() : onPlay(tk.id))}
+                      aria-label={`${playing ? t.stopTake : t.playTake}: ${name}`}
+                      title={playing ? t.stopTake : t.playTake}
+                    >
+                      {playing ? "■" : "▶"}
+                    </button>
                   <button
                     className="take-main ghost"
                     disabled={busy || missing}
@@ -132,6 +150,7 @@ export function TakeList({ onSelect }: Props) {
                             : t.microphone}
                     </span>
                   </button>
+                  </div>
                 )}
                 <div className="take-badges">
                   {tk.state === "recovered" && <span className="badge warn">{t.recovered}</span>}

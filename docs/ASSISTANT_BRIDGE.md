@@ -68,6 +68,8 @@ rhythm_status, ambient_status }`
 | `clap_scan` | `folders?` (default: the CLAP standard folders) | `.clap` files and the instruments they export |
 | `clap_render` | `path`, `plugin_id`, `out`, `midi?` | renders a two-bar demo phrase through the CLAP instrument into a WAV (proof it plays in the graph) |
 | `transport_status` | | song position: playing, source, seconds, tick, bar, beat, bpm, meter, loop_bars |
+| `load_take` | `id?` (default: the latest take) | loads a take the way the ▶ on the take list does (waveform, analysis, MIDI view), no sound; returns `loaded_id`, `name`, `duration_s`, `analysed`, `notes` |
+| `play_take` | `id?`, `from_s?` (default: the latest take from its start) | **sound**: loads if needed and plays the take on the chosen output; `stop_take` stops it and returns the cursor |
 | `transport_play` | `from_s?` | **starts the song timeline (sound)**; a running rhythm is re-anchored to the same bar |
 | `transport_stop` | | pauses the timeline (background switches stay) |
 | `transport_seek` | `seconds` | moves the song position (rhythm follows) |
