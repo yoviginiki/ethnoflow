@@ -13,6 +13,7 @@ import {
   GAUGE_CENTS,
   IN_TUNE_CENTS,
   lockRange,
+  monitorMinHz,
   needleAngle,
   needsLock,
   readTuner,
@@ -97,12 +98,14 @@ export function TunerScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // The input monitor runs while this screen is open and nothing records or plays.
+  // The input monitor runs while this screen is open and nothing records or plays. The
+  // bass range (30 Hz) is requested for the sound bed and for a locked low note.
+  const minHz = monitorMinHz(s.prefs.tunerInstrument, s.prefs.tunerLock, a4);
   useEffect(() => {
     if (s.mode !== "idle") return;
     let cancelled = false;
     const p = useStore.getState().prefs;
-    void api.startMonitor(p.selectedInput, p.sampleRate).catch(fail);
+    void api.startMonitor(p.selectedInput, p.sampleRate, minHz).catch(fail);
     const tick = async () => {
       if (cancelled) return;
       try {
@@ -119,7 +122,7 @@ export function TunerScreen() {
       void api.stopMonitor().catch(() => undefined);
       useStore.getState().setMonitor(null);
     };
-  }, [s.mode, s.prefs.selectedInput, s.prefs.sampleRate, fail]);
+  }, [s.mode, s.prefs.selectedInput, s.prefs.sampleRate, minHz, fail]);
 
   const hz = s.monitor?.pitch_hz ?? null;
   const confidence = s.monitor?.pitch_confidence ?? 0;
@@ -274,6 +277,9 @@ export function TunerScreen() {
         {chart && parts && <FingeringDiagram chart={chart} midi={parts.midi} compact showAlternatives={false} />}
       </section>
       <div className="muted small">{t.tunerHint}</div>
+      {minHz !== null && (
+        <div className="muted small">{t.tunerBassRange(minHz, s.monitor?.min_hz ?? null)}</div>
+      )}
     </div>
   );
 }

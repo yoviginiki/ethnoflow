@@ -94,7 +94,7 @@ rhythm_status, ambient_status }`
 | `instrument_audition` | `id`, `seconds?` | **plays** a preset through the designer's audition path for a few seconds |
 | `reference_remove` | `id` | removes a reference's library copy |
 | `import_audio` | `path` | imports a WAV/MP3/FLAC/OGG, a `.mid`, or a MusicXML sheet (`.musicxml`/`.xml`, uncompressed) as a take; reply: take_id |
-| `tuner` | `a4?` (Hz 400–480 or null = the project's), `instrument?` (free/kaval-d/shakuhachi-d/guitar/monochord), `lock?` (MIDI or null) | sets the Tuner screen prefs and returns them plus the live reading (hz, confidence, target, cents, direction) while the tuner listens |
+| `tuner` | `a4?` (Hz 400–480 or null = the project's), `instrument?` (free/kaval-d/shakuhachi-d/guitar/monochord), `lock?` (MIDI or null) | sets the Tuner screen prefs and returns them plus the live reading (hz, confidence, target, cents, direction) while the tuner listens; `min_hz` = the microphone's current range floor (70, or 30 in the bass range the screen requests for the monochord bed / a locked note under 100 Hz) |
 | `arrangement` | | the studio arrangement (tracks, clips, loop) |
 | `set_arrangement` | `arrangement` | replaces it (validated); track strips: gain_db, pan, lowpass_hz, highpass_hz, send |
 | `set_song_map` | `song_map` (whole SongMap) | replaces the project's song map (validated) |

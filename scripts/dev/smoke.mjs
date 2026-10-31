@@ -315,6 +315,26 @@ async function main() {
     expectOk(send({ op: "tuner", a4: before.a4_pref, instrument: before.instrument, lock: before.lock }));
     return `a4 ${r.a4} Hz, ${r.instrument}, lock ${r.lock}, listening ${r.listening}`;
   });
+  await step("tuner: the sound bed switches the microphone to the bass range (30 Hz) and back", async () => {
+    const before = expectOk(send({ op: "tuner" }));
+    expectOk(send({ op: "screen", screen: "tuner" }));
+    await sleep(600);
+    expectOk(send({ op: "tuner", instrument: "kaval-d", lock: null }));
+    await sleep(900);
+    const k = expectOk(send({ op: "tuner" }));
+    if (!k.listening) {
+      expectOk(send({ op: "tuner", instrument: before.instrument, lock: before.lock }));
+      return "no input device, range not checked";
+    }
+    if (k.min_hz !== 70) throw new Error(`kaval range ${k.min_hz}`);
+    expectOk(send({ op: "tuner", instrument: "monochord", lock: 26 }));
+    await sleep(900); // the screen restarts the monitor with the new range
+    const bed = expectOk(send({ op: "tuner" }));
+    if (bed.min_hz !== 30 || !bed.listening) throw new Error(`bed ${JSON.stringify({ min_hz: bed.min_hz, listening: bed.listening })}`);
+    expectOk(send({ op: "tuner", instrument: before.instrument, lock: before.lock }));
+    await sleep(600);
+    return "kaval 70 Hz → bed 30 Hz (lock D1 = 36.7 Hz) → restored";
+  });
   await step("sheet: MusicXML import becomes a MIDI take (tie, chord, rest, 7/8, 60 BPM)", async () => {
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <score-partwise version="4.0"><work><work-title>Smoke sheet</work-title></work>

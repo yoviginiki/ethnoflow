@@ -3,6 +3,19 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Tuner: bass range for the monochord sound bed (2026-10-31 evening; owner: "the
+  monochord is retuned, but it is a low bass sound, 34–40 Hz").** The input monitor
+  tracked from 70 Hz, so the bed was invisible to the tuner. `PitchConfig::for_min_hz`
+  builds a YIN config whose window holds ≈2.5 periods of the floor (30 Hz at 48 kHz:
+  window 4000, frame ≈117 ms); `InputMonitor::start(.., min_hz)` / `start_monitor(min_hz)`
+  (20–200 Hz, validated) use it with a 40 ms hop below 50 Hz; `MonitorStatus.min_hz`
+  reports the active floor. The Tuner screen requests 30 Hz for the monochord and for any
+  locked note under 100 Hz (`monitorMinHz`), restarts the microphone when the setting
+  changes and says so under the needle. Tests: a synthetic 36.7 Hz bass string (weak
+  fundamental, 8 harmonics) reads within 3 c in the bass range and never as itself in the
+  default range; a kaval D5 still reads in the bass range; vitest for the range rule;
+  smoke step kaval 70 Hz → bed 30 Hz → restored; bridge `tuner` returns `min_hz`; guide
+  BG/EN. Not verified with the real bed yet.
 - **Tuner screen + Gate game + MusicXML sheets (2026-10-31; owner: "a tuner with a needle
   for kaval, the sound bed, guitar and shakuhachi at 440 and 432; lessons where the song
   stops and waits until the right note passes through the note's door; give it notes as a

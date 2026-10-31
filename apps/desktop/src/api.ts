@@ -1105,6 +1105,8 @@ export interface MonitorStatus {
   device_lost: boolean;
   pitch_hz: number | null;
   pitch_confidence: number;
+  /** Lowest fundamental the tracker reports (Hz): 70 by default, 30 in the tuner's bass range. */
+  min_hz: number;
 }
 
 export type Voice = "sine" | "triangle" | "flute";
@@ -1722,8 +1724,9 @@ export const api = {
   removeProfileNote: (id: string, midi: number) => invoke<ProfileView>("remove_profile_note", { id, midi }),
   playProfileNote: (id: string, midi: number, device: string | null, exact: boolean) =>
     invoke<void>("play_profile_note", { id, midi, device, exact }),
-  startMonitor: (device: string | null, sampleRate: number | null) =>
-    invoke<void>("start_monitor", { device, sampleRate }),
+  /** `minHz`: lowest fundamental to track (null = the engine's 70 Hz; 30 for a bass bed). */
+  startMonitor: (device: string | null, sampleRate: number | null, minHz: number | null = null) =>
+    invoke<void>("start_monitor", { device, sampleRate, minHz }),
   stopMonitor: () => invoke<void>("stop_monitor"),
   monitorStatus: () => invoke<MonitorStatus | null>("monitor_status"),
 

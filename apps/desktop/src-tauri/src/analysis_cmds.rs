@@ -416,7 +416,17 @@ pub async fn start_monitor(
     state: State<'_, AppState>,
     device: Option<String>,
     sample_rate: Option<u32>,
+    min_hz: Option<f64>,
 ) -> CmdResult<()> {
+    if let Some(m) = min_hz {
+        let (lo, hi) = audio_engine::MONITOR_MIN_HZ_RANGE;
+        if !m.is_finite() || m < lo || m > hi {
+            return Err(err(
+                "bad_min_hz",
+                format!("min_hz must be between {lo} and {hi} Hz, got {m}"),
+            ));
+        }
+    }
     let mut s = state.lock();
     if s.recording.is_some() {
         return Err(err(
@@ -431,7 +441,7 @@ pub async fn start_monitor(
         sample_rate,
         channels: None,
     };
-    s.monitor = Some(InputMonitor::start(device.as_deref(), req)?);
+    s.monitor = Some(InputMonitor::start(device.as_deref(), req, min_hz)?);
     Ok(())
 }
 

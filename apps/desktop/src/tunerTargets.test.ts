@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clampA4, lockRange, needleAngle, needsLock, readTuner, smooth, targetsFor } from "./tunerTargets";
+import { BASS_MIN_HZ, clampA4, lockRange, midiToHz, monitorMinHz, needleAngle, needsLock, readTuner, smooth, targetsFor } from "./tunerTargets";
 
 describe("tuner targets", () => {
   it("guitar has six strings low E2 to high E4, labelled by string number", () => {
@@ -29,6 +29,28 @@ describe("tuner targets", () => {
     expect(targetsFor("guitar", 50)).toEqual([{ midi: 50, label: null }]);
     const [lo, hi] = lockRange("monochord");
     expect(lo).toBeLessThan(hi);
+  });
+});
+
+describe("monitorMinHz (bass range for the sound bed)", () => {
+  it("the monochord bed always listens from 30 Hz; its lock range covers the owner's 34–40 Hz", () => {
+    expect(monitorMinHz("monochord", null, 440)).toBe(BASS_MIN_HZ);
+    expect(monitorMinHz("monochord", 26, 440)).toBe(BASS_MIN_HZ);
+    const [lo] = lockRange("monochord");
+    expect(midiToHz(lo, 440)).toBeLessThan(34);
+  });
+  it("other instruments use the engine's default unless a low note is locked", () => {
+    expect(monitorMinHz("kaval-d", null, 440)).toBeNull();
+    expect(monitorMinHz("guitar", 40, 440)).toBe(BASS_MIN_HZ); // low E2 = 82 Hz: under 100, the longer window helps
+    expect(monitorMinHz("guitar", 50, 440)).toBeNull(); // D3 = 147 Hz
+    expect(monitorMinHz("guitar", null, 440)).toBeNull();
+    expect(monitorMinHz("free", 26, 440)).toBe(BASS_MIN_HZ); // D1 = 36.7 Hz
+    expect(monitorMinHz("free", 26, 432)).toBe(BASS_MIN_HZ);
+  });
+  it("midiToHz follows the chosen A4", () => {
+    expect(midiToHz(69, 440)).toBe(440);
+    expect(midiToHz(26, 440)).toBeCloseTo(36.71, 1);
+    expect(midiToHz(26, 432)).toBeCloseTo(36.04, 1);
   });
 });
 

@@ -13,6 +13,26 @@ export const A4_CHOICES = [440, 432] as const;
 export const A4_MIN = 400;
 export const A4_MAX = 480;
 
+/**
+ * The engine's input monitor tracks from 70 Hz by default (flutes, voice, guitar). A
+ * monochord bass bed sits at 34–40 Hz (the owner's, 2026-10-31), so the tuner asks for
+ * the bass range (30 Hz, a 117 ms frame) for the bed and for any locked note below
+ * BASS_RANGE_BELOW_HZ; the needle then reacts a little slower.
+ */
+export const BASS_MIN_HZ = 30;
+export const BASS_RANGE_BELOW_HZ = 100;
+
+export function midiToHz(midi: number, a4: number): number {
+  return a4 * Math.pow(2, (midi - 69) / 12);
+}
+
+/** Lowest fundamental the monitor must track for this setting, or null for the engine's default. */
+export function monitorMinHz(inst: TunerInstrument, lockMidi: number | null, a4: number): number | null {
+  if (inst === "monochord") return BASS_MIN_HZ;
+  if (lockMidi !== null && midiToHz(lockMidi, a4) < BASS_RANGE_BELOW_HZ) return BASS_MIN_HZ;
+  return null;
+}
+
 /** The green zone of the gauge: within this the needle reads "in tune" (cents). */
 export const IN_TUNE_CENTS = 5;
 /** The gauge spans ±GAUGE_CENTS. */

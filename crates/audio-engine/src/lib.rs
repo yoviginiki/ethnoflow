@@ -62,7 +62,7 @@ pub use midi_in::{
     list_inputs as list_midi_inputs, parse_message as parse_midi_message, MidiEvent, MidiIn,
     MidiPortInfo,
 };
-pub use monitor::{InputMonitor, MonitorStatus};
+pub use monitor::{InputMonitor, MonitorStatus, MONITOR_DEFAULT_MIN_HZ, MONITOR_MIN_HZ_RANGE};
 pub use peaks::{compute_peaks, LivePeaks, WaveformPeaks};
 pub use pitch::{
     contour, estimate as estimate_pitch, held_tone, ContourPoint, HeldTone, PitchConfig,

@@ -58,6 +58,7 @@ fn ensure_monitor(s: &mut Inner, device: Option<&str>, sample_rate: Option<u32>)
                 sample_rate,
                 channels: None,
             },
+            None,
         )?);
     }
     Ok(())

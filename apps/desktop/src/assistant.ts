@@ -213,6 +213,7 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
         instrument: st.prefs.tunerInstrument,
         lock: st.prefs.tunerLock,
         listening: st.monitor !== null,
+        min_hz: st.monitor?.min_hz ?? null,
         hz,
         confidence,
         reading: reading ? { target_midi: reading.target.midi, label: reading.target.label, cents: Math.round(reading.cents * 10) / 10, direction: reading.direction } : null,

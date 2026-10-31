@@ -36,6 +36,20 @@ impl PitchConfig {
         }
     }
 
+    /// A config whose lowest detectable fundamental is `min_hz`, with an integration
+    /// window that still holds ≈2.5 periods of it (YIN needs more than one period in
+    /// the window, otherwise a 36 Hz bass string reads as its octave or as nothing).
+    /// 30 Hz at 48 kHz: window 4000 samples, frame ≈ 117 ms.
+    pub fn for_min_hz(sample_rate: u32, min_hz: f64) -> Self {
+        let min_hz = min_hz.clamp(20.0, 2000.0);
+        let window = ((2.5 * sample_rate as f64 / min_hz).ceil() as usize).max(1024);
+        Self {
+            min_hz,
+            window,
+            ..Self::new(sample_rate)
+        }
+    }
+
     /// Longest lag searched.
     pub fn tau_max(&self) -> usize {
         (self.sample_rate as f64 / self.min_hz).ceil() as usize
@@ -304,6 +318,65 @@ pub fn held_tone(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A plucked bass string: fundamental plus eight harmonics, the fundamental weaker
+    /// than the second harmonic (what a microphone hears from a low monochord bed).
+    fn bass_string(sr: u32, hz: f64, secs: f64) -> Vec<f32> {
+        let n = (sr as f64 * secs) as usize;
+        (0..n)
+            .map(|i| {
+                let t = i as f64 / sr as f64;
+                let mut v = 0.0;
+                for k in 1..=8u32 {
+                    let amp = if k == 1 { 0.25 } else { 0.5 / k as f64 };
+                    v += amp * (2.0 * std::f64::consts::PI * hz * k as f64 * t).sin();
+                }
+                (v * 0.4) as f32
+            })
+            .collect()
+    }
+
+    #[test]
+    fn low_range_config_reads_a_36_hz_bass_string_within_three_cents() {
+        let sr = 48_000u32;
+        let hz = 36.7; // D1 at A4 = 440
+        let frame = bass_string(sr, hz, 0.5);
+        let low = PitchConfig::for_min_hz(sr, 30.0);
+        assert!(low.window >= 4000 && low.tau_max() == 1600, "{low:?}");
+        let e = estimate(&frame[..low.frame_len()], &low);
+        let got = e.hz.expect("bass string is voiced in the low range");
+        let cents = 1200.0 * (got / hz).log2();
+        assert!(
+            cents.abs() < 3.0,
+            "got {got} Hz ({cents:.1} c), conf {}",
+            e.confidence
+        );
+        assert!(e.confidence > 0.8, "confidence {}", e.confidence);
+
+        // The monitor's default range (70 Hz) cannot see this fundamental at all: it
+        // reports an octave or nothing, never the string itself.
+        let hi = PitchConfig {
+            min_hz: 70.0,
+            ..PitchConfig::new(sr)
+        };
+        let e = estimate(&frame[..hi.frame_len()], &hi);
+        if let Some(h) = e.hz {
+            assert!(
+                1200.0 * (h / hz).log2() > 50.0,
+                "default range found {h} Hz"
+            );
+        }
+    }
+
+    #[test]
+    fn low_range_config_still_reads_a_kaval_tone() {
+        let sr = 48_000u32;
+        let low = PitchConfig::for_min_hz(sr, 30.0);
+        let b = AudioBuffer::sine(sr, 587.33, 0.3, 0.3);
+        let e = estimate(&b.samples[..low.frame_len()], &low);
+        let got = e.hz.expect("voiced");
+        assert!((1200.0 * (got / 587.33).log2()).abs() < 2.0, "{got}");
+    }
 
     #[test]
     fn held_tone_picks_the_longest_stable_run_and_reports_stability() {

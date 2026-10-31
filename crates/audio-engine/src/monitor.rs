@@ -21,6 +21,13 @@ use crate::recorder::{build_input, Shared, CHUNK, RING_CAPACITY_SAMPLES};
 use crate::stream_thread::{StreamInfo, StreamThread};
 
 const PITCH_HOP_SECONDS: f64 = 0.02;
+/// Below this `min_hz` the frame is ≥ 5× longer (YIN cost grows with window × lag), so
+/// the hop doubles; the tuner polls every 50 ms anyway.
+const LOW_RANGE_HOP_SECONDS: f64 = 0.04;
+/// Lowest fundamental the monitor tracks unless the caller asks for less (bass beds).
+pub const MONITOR_DEFAULT_MIN_HZ: f64 = 70.0;
+/// Range accepted for `min_hz`: a 20 Hz floor needs a 150 ms frame, 200 Hz is a piccolo.
+pub const MONITOR_MIN_HZ_RANGE: (f64, f64) = (20.0, 200.0);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MonitorStatus {
@@ -33,6 +40,8 @@ pub struct MonitorStatus {
     pub device_lost: bool,
     pub pitch_hz: Option<f64>,
     pub pitch_confidence: f64,
+    /// Lowest fundamental the tracker can report (Hz); 70 unless started lower.
+    pub min_hz: f64,
 }
 
 pub struct InputMonitor {
@@ -41,6 +50,7 @@ pub struct InputMonitor {
     shared: Arc<Shared>,
     info: StreamInfo,
     device_name: String,
+    min_hz: f64,
     /// Every pitch frame the drain thread produced, for the live follower (F8.1).
     pitch_rx: HeapCons<ContourPoint>,
 }
@@ -49,7 +59,16 @@ pub struct InputMonitor {
 const PITCH_RING: usize = 8192;
 
 impl InputMonitor {
-    pub fn start(device_name: Option<&str>, request: StreamRequest) -> Result<Self> {
+    /// `min_hz`: lowest fundamental to track (`None` = 70 Hz, enough for flutes, voice
+    /// and guitar; a monochord bass bed at 34–40 Hz needs 30).
+    pub fn start(
+        device_name: Option<&str>,
+        request: StreamRequest,
+        min_hz: Option<f64>,
+    ) -> Result<Self> {
+        let min_hz = min_hz
+            .unwrap_or(MONITOR_DEFAULT_MIN_HZ)
+            .clamp(MONITOR_MIN_HZ_RANGE.0, MONITOR_MIN_HZ_RANGE.1);
         let device = find_device(Direction::Input, device_name)?;
         let resolved_name = device.name().unwrap_or_else(|_| "unknown".into());
         let supported = choose_config(&device, Direction::Input, request)?;
@@ -62,12 +81,14 @@ impl InputMonitor {
         let shared = Arc::new(Shared::default());
         let (prod, mut cons) = HeapRb::<f32>::new(RING_CAPACITY_SAMPLES).split();
         let (mut pitch_tx, pitch_rx) = HeapRb::<ContourPoint>::new(PITCH_RING).split();
+        let hop_secs = if min_hz < 50.0 {
+            LOW_RANGE_HOP_SECONDS
+        } else {
+            PITCH_HOP_SECONDS
+        };
         let mut tracker = PitchTracker::new(
-            PitchConfig {
-                min_hz: 70.0,
-                ..PitchConfig::new(info.sample_rate)
-            },
-            (PITCH_HOP_SECONDS * info.sample_rate as f64) as usize,
+            PitchConfig::for_min_hz(info.sample_rate, min_hz),
+            (hop_secs * info.sample_rate as f64) as usize,
         );
         let channels = info.channels.max(1) as usize;
         let drain_shared = Arc::clone(&shared);
@@ -152,6 +173,7 @@ impl InputMonitor {
             shared,
             info,
             device_name: resolved_name,
+            min_hz,
             pitch_rx,
         })
     }
@@ -182,6 +204,7 @@ impl InputMonitor {
             },
             pitch_confidence: f32::from_bits(self.shared.pitch_conf_bits.load(Ordering::Relaxed))
                 as f64,
+            min_hz: self.min_hz,
         }
     }
 
@@ -211,7 +234,7 @@ mod tests {
     /// Real device: opens, reports frames and stops cleanly (skips without an input).
     #[test]
     fn monitor_runs_without_writing_anything() {
-        match InputMonitor::start(None, StreamRequest::default()) {
+        match InputMonitor::start(None, StreamRequest::default(), None) {
             Ok(m) => {
                 // Device start-up can take a while when other streams open at once.
                 let deadline = std::time::Instant::now() + Duration::from_secs(2);

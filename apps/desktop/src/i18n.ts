@@ -770,6 +770,8 @@ const bg = {
   tunerTooHigh: "Високо: свали",
   tunerBusy: "Тунерът спира, докато има запис или възпроизвеждане.",
   tunerHint: "Стрелката показва отклонението в центове (±50); зелената зона е ±5 c. Кавал и шакухачи: целта е най-близкият тон на инструмента; китара: най-близката струна; легло: избраната нота. Настройките се помнят.",
+  tunerBassRange: (minHz: number, active: number | null) =>
+    `Басов обхват: слуша от ${minHz} Hz (леглото е 34–40 Hz). Прозорецът е по-дълъг (≈0.12 s), затова стрелката реагира малко по-бавно; изчакай струната да зазвучи равно.${active !== null && active > minHz ? " Микрофонът още е в обикновения обхват, рестартирам го…" : ""}`,
   inScale: "в скалата",
   outOfScale: "извън скалата",
   noScaleChosen: "скала не е избрана",
@@ -2248,6 +2250,8 @@ const en: typeof bg = {
   tunerTooHigh: "Too high: come down",
   tunerBusy: "The tuner pauses while recording or playing.",
   tunerHint: "The needle shows the deviation in cents (±50); the green zone is ±5 c. Kaval and shakuhachi: the target is the instrument's nearest tone; guitar: the nearest string; bed: the chosen note. Settings are remembered.",
+  tunerBassRange: (minHz: number, active: number | null) =>
+    `Bass range: listening from ${minHz} Hz (the bed sits at 34–40 Hz). The analysis window is longer (≈0.12 s), so the needle reacts a little slower; let the string ring steadily.${active !== null && active > minHz ? " The microphone is still in the normal range, restarting…" : ""}`,
   tunerSilent: "Silence",
   inScale: "in scale",
   outOfScale: "outside the scale",

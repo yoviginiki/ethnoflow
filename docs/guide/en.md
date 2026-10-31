@@ -45,7 +45,11 @@ The pad and the textures always sit **below** the melody (about two octaves unde
   the fingering next to the needle), *Shakuhachi 1.8 (D)* (holes ロ Ro, ツ Tsu, レ Re, チ Chi,
   リ Ri and the upper kan octave, named), *Guitar* (the six strings E A D G B E, with the
   string number), *Monochord / sound bed* (all strings on one tone: pick the note under
-  "Target note", then tune string by string).
+  "Target note", then tune string by string). The bed is a bass instrument (34–40 Hz,
+  about C♯1–E1): for it, and for any locked note under 100 Hz, the tuner switches the
+  microphone to the **bass range** by itself (listening from 30 Hz; the screen says so).
+  The window is longer, so the needle reacts a little slower: let the string ring steadily
+  and read then. The other instruments listen from 70 Hz.
 - **Target note**: "nearest" or a locked note. Lock it when you tune one string or hole
   and do not want the needle to jump to the neighbouring tone.
 - **A4**: 440 (standard), 432, or a typed value 400–480 Hz. The default is the project's
