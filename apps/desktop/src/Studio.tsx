@@ -9,6 +9,7 @@ import { MetronomeButton } from "./MetronomeButton";
 import { BackgroundTransport } from "./BackgroundTransport";
 import { DronePanel } from "./DronePanel";
 import { FallingNotes } from "./FallingNotes";
+import { GateView } from "./GateView";
 import { InstrumentPanel } from "./InstrumentPanel";
 import { KeyboardPiano } from "./KeyboardPiano";
 import { MidiPanel } from "./MidiPanel";
@@ -642,6 +643,8 @@ export function Studio() {
   // ---------- render ----------
 
   const [trainerTarget, setTrainerTarget] = useState<{ index: number; wrong: boolean } | null>(null);
+  // Gate view (F2.12): the trainer's running flag and level tolerance size the openings.
+  const [trainerStatus, setTrainerStatus] = useState<{ running: boolean; tolCents: number }>({ running: false, tolCents: 30 });
   // F2.6: the owner's kaval chart follows the falling notes when the profile is a kaval.
   const fingeringChart = chartFor(project?.instrument?.instrument, s.fingeringOverrides);
   // Bar length in playback seconds for a MIDI take with a known tempo and meter.
@@ -817,6 +820,10 @@ export function Studio() {
                   <input type="radio" name="notesView" checked={s.prefs.notesView === "falling"} onChange={() => s.setPref("notesView", "falling")} />
                   {t.viewFalling}
                 </label>
+                <label className="inline" title={t.gateIdle}>
+                  <input type="radio" name="notesView" checked={s.prefs.notesView === "gate"} onChange={() => s.setPref("notesView", "gate")} />
+                  {t.viewGate}
+                </label>
                 {s.prefs.notesView === "falling" && (
                   <label className="inline">
                     <input type="checkbox" checked={s.prefs.keyNames} onChange={(e) => s.setPref("keyNames", e.target.checked)} />
@@ -876,7 +883,7 @@ export function Studio() {
                     {t.pianoRollHint} {t.addNoteHint}
                   </div>
                 </>
-              ) : (
+              ) : s.prefs.notesView === "falling" ? (
                 <FallingNotes
                   notes={s.analysis.notes}
                   position={
@@ -898,8 +905,23 @@ export function Studio() {
                   target={trainerTarget}
                   classes={noteClasses}
                 />
+              ) : (
+                <GateView
+                  notes={s.analysis.notes}
+                  position={s.notesPlayer ? s.notesPlayer.position_seconds : s.mode === "playing" && s.player ? s.player.position_seconds : s.cursor}
+                  target={trainerTarget}
+                  hz={s.monitor?.pitch_hz ?? null}
+                  confidence={s.monitor?.pitch_confidence ?? 0}
+                  a4={project.a4_hz}
+                  tolCents={trainerStatus.tolCents}
+                  noteNames={t.noteNames}
+                  label={t.viewGate}
+                  running={trainerStatus.running}
+                  texts={{ pass: t.gatePass, high: t.gateHigh, low: t.gateLow, silent: t.gateSilent, idle: t.gateIdle, done: t.gateDone }}
+                  onSeek={(sec) => s.setCursor(sec)}
+                />
               )}
-              {s.prefs.notesView === "falling" && fingeringChart && (
+              {(s.prefs.notesView === "falling" || s.prefs.notesView === "gate") && fingeringChart && (
                 <FallingFingering chart={fingeringChart} notes={s.analysis.notes} target={trainerTarget} position={s.notesPlayer ? s.notesPlayer.position_seconds : s.mode === "playing" && s.player ? s.player.position_seconds : s.cursor} />
               )}
               <IntentPanel />
@@ -918,6 +940,7 @@ export function Studio() {
                   s.setCursor(sec);
                 }}
                 onTarget={(index, wrong) => setTrainerTarget(index === null ? null : { index, wrong })}
+                onStatus={setTrainerStatus}
                 cursor={s.cursor}
                 barSeconds={project.timing.bpm && project.timing.numerator && project.timing.unit ? (60 / project.timing.bpm) * project.timing.numerator * (4 / project.timing.unit) : null}
                 takeId={s.loaded?.id ?? null}

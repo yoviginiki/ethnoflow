@@ -721,10 +721,43 @@ pub async fn import_audio(state: State<'_, AppState>, path: String) -> CmdResult
         }
         return crate::midi_cmds::import_midi(&mut s, &src);
     }
+    if ext == "musicxml" || ext == "xml" {
+        // A sheet (MuseScore, Audiveris OMR…): MusicXML → notes in seconds → a MIDI take,
+        // through the same path as a .mid so playback, trainer and gate work unchanged.
+        let text = std::fs::read_to_string(&src).map_err(|e| err("io", e.to_string()))?;
+        let mut s = state.lock();
+        if s.recording.is_some() {
+            return Err(err("recording", "Stop recording first"));
+        }
+        let default_bpm = s
+            .project
+            .as_ref()
+            .and_then(|p| Timing::from_manifest(p.manifest()).bpm);
+        let score = music_core::musicxml::parse_musicxml(&text, default_bpm)
+            .map_err(|e| err("musicxml", e.to_string()))?;
+        let opts = music_core::SmfOptions {
+            tempo_bpm: score.tempo_bpm,
+            time_signature: score.time_signature,
+            ..Default::default()
+        };
+        let bytes = music_core::write_smf(&score.notes, &opts);
+        let stem = src
+            .file_stem()
+            .map(|st| st.to_string_lossy().to_string())
+            .unwrap_or_else(|| "score".to_string());
+        let tmp = std::env::temp_dir().join(format!("{stem}.mid"));
+        std::fs::write(&tmp, &bytes).map_err(|e| err("io", e.to_string()))?;
+        let out = crate::midi_cmds::import_midi(&mut s, &tmp);
+        let _ = std::fs::remove_file(&tmp);
+        return out;
+    }
     if !IMPORT_EXTENSIONS.contains(&ext.as_str()) {
         return Err(err(
             "unsupported_format",
-            format!("Supported: {}, mid", IMPORT_EXTENSIONS.join(", ")),
+            format!(
+                "Supported: {}, mid, musicxml, xml",
+                IMPORT_EXTENSIONS.join(", ")
+            ),
         ));
     }
     // Decode before copying: a file we cannot read never enters the project.

@@ -13,6 +13,7 @@ pub mod intent;
 pub mod key;
 pub mod live;
 pub mod midi;
+pub mod musicxml;
 pub mod notes;
 pub mod ostinato;
 pub mod pattern;

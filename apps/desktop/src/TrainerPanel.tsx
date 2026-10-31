@@ -22,6 +22,8 @@ interface Props {
   onPosition: (seconds: number) => void;
   /** Called with the index of the note being waited for (lit), or null. */
   onTarget: (index: number | null, wrong: boolean) => void;
+  /** Running flag and the level's tolerance (cents) for views that draw the openings (gate). */
+  onStatus?: (st: { running: boolean; tolCents: number }) => void;
   /** Drill range start (the studio cursor) and the length of one bar when the project has a tempo. */
   cursor: number;
   barSeconds: number | null;
@@ -41,7 +43,7 @@ const DRILL_FALLBACK_S = 4;
 const DRILL_PAUSE_MS = 1200;
 
 /** Trainer modes driven by the microphone pitch (F2.8.2); evaluation is in Rust. */
-export function TrainerPanel({ notes, hz, confidence, a4, notesPosition, onPlayNotes, onStopNotes, onPosition, onTarget, cursor, barSeconds, takeId }: Props) {
+export function TrainerPanel({ notes, hz, confidence, a4, notesPosition, onPlayNotes, onStopNotes, onPosition, onTarget, onStatus, cursor, barSeconds, takeId }: Props) {
   const s = useStore();
   const t = messages[s.prefs.lang];
   const [mode, setMode] = useState<Mode>("wait");
@@ -127,6 +129,10 @@ export function TrainerPanel({ notes, hz, confidence, a4, notesPosition, onPlayN
   useEffect(() => {
     void api.academyTrainerHistory(5).then(setHistory).catch(() => setHistory(null));
   }, []);
+  useEffect(() => {
+    onStatus?.({ running, tolCents: tol });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [running, tol]);
 
   const stop = async () => {
     setRunning(false);

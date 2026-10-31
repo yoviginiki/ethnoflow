@@ -20,6 +20,7 @@ import { InstrumentDesigner } from "./InstrumentDesigner";
 import { SongMapScreen } from "./SongMapScreen";
 import { SamplesScreen } from "./SamplesScreen";
 import { Studio } from "./Studio";
+import { TunerScreen } from "./TunerScreen";
 import { ReferencesScreen } from "./ReferencesScreen";
 import { AcademyScreen, GuidedBanner } from "./AcademyScreen";
 import { CreateSongScreen } from "./CreateSongScreen";
@@ -32,6 +33,7 @@ import { useStore, type Screen } from "./store";
 /** Title of each area, shown in the top bar so the user always sees where they are. */
 const SCREEN_TITLE: Record<Exclude<Screen, "home">, StringMessageKey> = {
   play: "areaPlay",
+  tuner: "areaTuner",
   compose: "areaAccomp",
   studio: "areaStudio",
   ambient: "areaAmbient",
@@ -135,6 +137,7 @@ export default function App() {
       <div className="app-main">
       {screen === "home" && <Home />}
       {screen === "play" && (project ? <Studio /> : <ProjectPicker />)}
+      {screen === "tuner" && <TunerScreen />}
       {screen === "compose" && (project ? <Compose /> : <ProjectPicker />)}
       {screen === "studio" && (project ? <Arrange /> : <ProjectPicker />)}
       {screen === "ambient" && (project ? <Ambient /> : <ProjectPicker />)}

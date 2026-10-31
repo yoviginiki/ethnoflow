@@ -3,6 +3,7 @@
 // localStorage; project data lives in the project on disk.
 
 import { create } from "zustand";
+import type { TunerInstrument } from "./tunerTargets";
 import type {
   TransportStatus,
   Ambient,
@@ -38,7 +39,7 @@ import type { StarterId } from "./starters";
 import type { Lang } from "./i18n";
 
 export type Mode = "idle" | "recording" | "playing";
-export type Screen = "home" | "play" | "compose" | "studio" | "ambient" | "rhythm" | "library" | "soundscapes" | "start" | "help" | "instrument" | "songmap" | "samples" | "references" | "academy" | "create";
+export type Screen = "home" | "play" | "compose" | "studio" | "ambient" | "rhythm" | "library" | "soundscapes" | "start" | "help" | "instrument" | "songmap" | "samples" | "references" | "academy" | "create" | "tuner";
 export type LayerName = "drone" | "pad" | "ambient" | "rhythm";
 
 /** Background mixer strip per layer: the bus (trim, pan, cuts) plus fade times in seconds. */
@@ -62,8 +63,15 @@ export interface Prefs {
   clickPlay: boolean;
   loop: boolean;
   tuner: boolean;
-  notesView: "roll" | "falling";
+  /** Notes view in "Play & record": piano roll, falling notes, or the gate game (F2.12). */
+  notesView: "roll" | "falling" | "gate";
   keyNames: boolean;
+  /** Tuner screen: reference pitch in Hz (400..480), null = the project's A4. */
+  tunerA4: number | null;
+  /** Tuner screen: which instrument's targets to tune against. */
+  tunerInstrument: TunerInstrument;
+  /** Tuner screen: a locked target note (MIDI), null = nearest target. */
+  tunerLock: number | null;
   voice: Voice;
   /** Snap the selection (loop) to bar boundaries on MIDI takes with a known meter. */
   snapBar: boolean;
@@ -210,6 +218,9 @@ export const DEFAULT_PREFS: Prefs = {
   loop: false,
   tuner: false,
   notesView: "roll",
+  tunerA4: null,
+  tunerInstrument: "free",
+  tunerLock: null,
   keyNames: true,
   voice: "flute",
   snapBar: true,

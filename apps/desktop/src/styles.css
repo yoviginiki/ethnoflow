@@ -642,3 +642,34 @@ button.ghost.on { border-color: var(--accent); color: var(--accent); }
 .make-row { flex-wrap: wrap; }
 @keyframes coach-pulse { 0% { box-shadow: 0 0 0 0 rgba(255,180,84,0.9); } 70% { box-shadow: 0 0 0 10px rgba(255,180,84,0); } 100% { box-shadow: 0 0 0 0 rgba(255,180,84,0); } }
 .coach-lit { animation: coach-pulse 1.2s ease-out 3; outline: 2px solid var(--warn); outline-offset: 2px; border-radius: 6px; }
+
+/* Tuner screen (F2.3b): needle gauge, instrument targets, reference pitch */
+.tuner-screen { display: flex; flex-direction: column; gap: 12px; }
+.tuner-controls { display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: center; }
+.tuner-a4 { display: inline-flex; gap: 6px; align-items: center; }
+.tuner-reading { display: grid; grid-template-columns: 1fr minmax(260px, 420px) 1fr; gap: 16px; align-items: center; justify-items: center; min-height: 260px; }
+.tuner-big { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.tuner-name.xl { font-size: 56px; }
+.tuner-reading.in .tuner-name { color: var(--accent); }
+.tuner-reading.out .tuner-name { color: var(--warn); }
+.tuner-direction { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.tuner-verdict { font-size: 20px; font-weight: 600; min-height: 26px; }
+.tuner-verdict.ok { color: var(--accent); }
+.tuner-verdict.bad { color: var(--rec); }
+.gauge { width: 100%; max-width: 420px; }
+.gauge-arc { fill: none; stroke: var(--axis); stroke-width: 10; }
+.gauge-zone { fill: none; stroke: var(--accent); stroke-width: 10; opacity: 0.8; }
+.gauge-tick { stroke: var(--muted); stroke-width: 1; }
+.gauge-tick.major { stroke: var(--text); stroke-width: 2; }
+.gauge-label { fill: var(--muted); font-size: 8px; }
+.gauge-needle { stroke: var(--playhead); stroke-width: 3; stroke-linecap: round; }
+.gauge.in .gauge-needle { stroke: var(--accent); }
+.gauge.out .gauge-needle { stroke: var(--rec); }
+.gauge.idle .gauge-needle { stroke: var(--muted); }
+.gauge-pivot { fill: var(--text); }
+.gauge-cents { fill: var(--text); font-size: 10px; font-family: ui-monospace, Consolas, monospace; }
+@media (max-width: 1100px) { .tuner-reading { grid-template-columns: 1fr; } }
+
+/* Gate game (F2.12): walls with openings, the ball is the live pitch */
+.gate-wrap { background: var(--panel); border: 1px solid var(--axis); border-radius: 8px; overflow: hidden; height: 340px; }
+.gate { width: 100%; height: 100%; display: block; }

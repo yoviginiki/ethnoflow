@@ -1574,7 +1574,7 @@ export function describeError(e: unknown): string {
   return String(e);
 }
 
-export const IMPORT_EXTENSIONS = ["wav", "mp3", "flac", "ogg", "mid"];
+export const IMPORT_EXTENSIONS = ["wav", "mp3", "flac", "ogg", "mid", "musicxml", "xml"];
 
 /** One background bus strip (drone, pad, atmosphere, rhythm): trim, pan, cuts. */
 export interface BusStrip {

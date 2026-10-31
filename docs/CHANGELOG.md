@@ -3,6 +3,33 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Tuner screen + Gate game + MusicXML sheets (2026-10-31; owner: "a tuner with a needle
+  for kaval, the sound bed, guitar and shakuhachi at 440 and 432; lessons where the song
+  stops and waits until the right note passes through the note's door; give it notes as a
+  song or a sheet").**
+  - `TunerScreen.tsx` (Home › Тунер): analog needle ±50 c with a ±5 c green zone, direction
+    text ("Ниско: вдигни / Високо: свали" with cents), instrument targets from
+    `tunerTargets.ts` (kaval D chromatic D4–A6 with the fingering; shakuhachi 1.8 holes Ro
+    Tsu Re Chi Ri + kan, named; guitar strings E A D G B E with string numbers; monochord bed
+    = pick the strings' note; free chromatic), locked target note, A4 440 / 432 / typed
+    400–480 Hz defaulting to the project's, "Save to the project" (set_reference), input
+    device picker, the monitor runs only on this screen while idle. Prefs `tunerA4`,
+    `tunerInstrument`, `tunerLock`. vitest (targets, readings, gauge). Bridge op `tuner`
+    (settings + live reading). Smoke step.
+  - `GateView.tsx` + `gate.ts` (view "Врата (игра)" in Play & record next to piano roll and
+    falling notes): time → right, pitch → up, every note a wall with an opening of ± the
+    trainer level's tolerance, the ball is the live pitch (smoothed, with a trail); in the
+    trainer's Wait mode the song waits at each gate, blocked high/low shows a red ball and an
+    arrow with the cents; TrainerPanel reports `onStatus` (running, tolerance). Academy
+    "Play along" lessons open in this view. vitest (geometry, verdicts).
+  - MusicXML import: `music-core/src/musicxml.rs` (roxmltree, ADR-0022) reads pitches,
+    durations, rests, ties, chords, grace (skipped), tempo incl. changes, time signature,
+    transposing parts, backup/forward; the shell's `import_audio` accepts `.musicxml`/`.xml`
+    and makes a MIDI take through the existing SMF path (tempo from the sheet, else the
+    project's, else 120). 4 Rust tests; smoke step imports a sheet with a tie, a chord, 7/8
+    and 60 BPM. `.mxl` NOT IMPLEMENTED (unzip).
+  - Guide BG/EN (Тунер, Врата, sheet import), FEATURE_SPEC F2.12/F2.13, bridge doc. The
+    Home card "Тунер" is the 16th card; it folds into the five-area layout of the UX audit.
 - **UX audit (2026-10-31; owner: "everything became very hard, I no longer know how to play
   my take").** `docs/audits/UX_AUDIT_2026-10-31.md`: functional inventory of the 16 screens,
   block-by-block anatomy of "Play & record" (transport is the 18th of 24 blocks; the take list

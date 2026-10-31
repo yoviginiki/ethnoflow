@@ -31,8 +31,53 @@ The pad and the textures always sit **below** the melody (about two octaves unde
 
 - Pick the microphone and headphones in the device settings. The metronome has its own ▶/■ next to "Tempo & meter".
 - **Record** makes a new take in the project. The background (drone, pad, atmosphere, rhythm) is heard while you play but **is not recorded**: only the microphone is. For a mixed result use My studio → Export mix.
-- The tuner shows the note, the cents and whether it is in the project's mode.
+- The tuner shows the note, the cents and whether it is in the project's mode. The full
+  tuner with a needle, instruments and 440/432 Hz is its own screen: "Tuner" from Home.
+- "Import…" accepts WAV, MP3, FLAC, OGG, MIDI and a MusicXML sheet (see "Gate").
 - "Analyse" here does the same as in Start from a melody but without the variants: contour, notes (editable), key proposals.
+
+## Tuner (the "Tuner" screen from Home)
+
+- **Needle**: the deviation from the target note in cents, ±50 on the dial; the green
+  zone is ±5 c ("In tune"). Below the needle it says what to do: "▲ Too low: go up" or
+  "▼ Too high: come down", and by how many cents.
+- **Instrument**: *Free* (nearest chromatic note), *Kaval in D* (every tone D4–A6, with
+  the fingering next to the needle), *Shakuhachi 1.8 (D)* (holes ロ Ro, ツ Tsu, レ Re, チ Chi,
+  リ Ri and the upper kan octave, named), *Guitar* (the six strings E A D G B E, with the
+  string number), *Monochord / sound bed* (all strings on one tone: pick the note under
+  "Target note", then tune string by string).
+- **Target note**: "nearest" or a locked note. Lock it when you tune one string or hole
+  and do not want the needle to jump to the neighbouring tone.
+- **A4**: 440 (standard), 432, or a typed value 400–480 Hz. The default is the project's
+  reference. "Save to the project" makes the chosen reference the project's (analysis,
+  falling notes and the trainer use it); "from the project" goes back to it.
+- The microphone can be chosen here too. The tuner pauses while you record or play.
+  Settings are remembered. From the terminal: `tuner` (also returns the live reading:
+  note, cents, direction).
+
+## Gate: a lesson game that waits for the right note
+
+In "Play & record", with a loaded and analysed take, the **Gate (game)** view (next to
+"Piano roll" and "Falling notes") shows the song as a corridor: time runs right, pitch
+runs up. Every note is a **wall with an opening** at its pitch; the ball is your tone
+from the microphone.
+
+- Pick the **Wait** mode in the "Trainer" panel and press ▶ Start. The song stops in
+  front of every gate and **waits**: too high or too low and the ball is blocked (red)
+  with an arrow showing which way, "▲ Too low: go up (−23 c)". Hold the right note for
+  ~150 ms and you pass; the song continues to the next gate. There is no tempo: as slow
+  as you need.
+- The **Level** in "Trainer" sets how wide the opening is: beginner ±30 c, intermediate
+  ±20 c, advanced ±10 c.
+- Academy lessons with "Play along" open straight into this view. Notes for a song come
+  from a MIDI file, from a take (Analyse), from a reference (phrase) or from a sheet
+  (below).
+- **Sheet music**: "Import…" also accepts MusicXML (`.musicxml`, `.xml`, uncompressed).
+  MuseScore exports it directly; from a PDF or a photo the free Audiveris makes it
+  (export → MusicXML, uncompressed). Pitches, durations, rests, ties, chords, tempo
+  (including changes), time signature and transposing parts are read; without a tempo in
+  the sheet the project's tempo is used, and without one, 120. Compressed `.mxl` is not
+  read: unzip it (it is a ZIP).
 
 ## Trainer to the end: latency, drill, history, fingerings
 

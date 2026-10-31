@@ -235,3 +235,23 @@ yes; everything in Phase 4 is Rust-native on the graph. Spike at end of Phase 4;
 third-party plugins stays "Later". Licence review needed before the spike: CLAP (MIT),
 clap-helpers (MIT), nih-plug (ISC), clap-wrapper (MIT), JUCE (GPLv3 or commercial —
 only if a C++ instrument actually uses it).
+
+## ADR-0022 roxmltree 0.20 for reading MusicXML sheets (MIT OR Apache-2.0)
+
+Context: the owner wants to hand the app a sheet ("нотен лист") and have it take the
+notes (2026-10-31). MuseScore and Audiveris (free OMR from a PDF or a photo) export
+MusicXML; the app already turns MIDI into a take. A MusicXML reader needs an XML parser;
+the WebView's `DOMParser` is not available in the unit tests (vitest runs in node) and
+would put a file format in the UI layer, against the "engine owns formats" boundary.
+Decision: `roxmltree` 0.20 (MIT OR Apache-2.0), pure Rust, read-only DOM, no unsafe, no
+build-time tools, Windows/macOS/Linux, in `crates/music-core` (`musicxml.rs`: pitches,
+durations, rests, ties, chords, grace, tempo incl. changes, time signature, transposing
+parts, backup/forward; errors named). The shell's `import_audio` accepts `.musicxml` /
+`.xml`, writes a temporary SMF and imports it through the existing MIDI path, so a sheet
+becomes a MIDI take with nothing new downstream. Compressed `.mxl` (ZIP) is NOT
+IMPLEMENTED: unzip it or export uncompressed.
+Alternatives: `quick-xml` (already a transitive dependency of the Tauri stack; streaming
+API, more code for a tree-shaped format), `xml-rs` (older, slower), parsing in the UI
+(see above).
+Supply chain: crates.io, pinned at the 0.20 line; maintained (RazrFalcon, also author of
+`resvg`), ~30 M downloads, no dependencies.

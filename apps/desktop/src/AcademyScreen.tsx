@@ -616,6 +616,8 @@ function PlayAlongEx({ inst, lesson }: ExProps) {
       const pv = await api.academyPlayAlong(i.notes, lesson.id);
       st.setProject(pv);
       st.setAcademyPlayAlong(lesson.id);
+      // Lessons are played as the gate game: the song waits at every note (F2.12).
+      st.setPref("notesView", "gate");
       st.setScreen("play");
     } catch (e) {
       st.setError(describeError(e));

@@ -133,7 +133,7 @@ const audible = (p, min = 0.02) => {
   return `${path.basename(p)} ${s.seconds.toFixed(1)} s peak ${s.peak.toFixed(2)}`;
 };
 
-const SCREENS = ["home", "play", "compose", "studio", "ambient", "soundscapes", "rhythm", "library", "instrument", "songmap", "samples", "references", "academy", "create", "start", "help"];
+const SCREENS = ["home", "play", "tuner", "compose", "studio", "ambient", "soundscapes", "rhythm", "library", "instrument", "songmap", "samples", "references", "academy", "create", "start", "help"];
 
 async function main() {
   await step("bridge: ping", () => expectOk(send({ op: "ping" })).pong === true || Promise.reject(new Error("no pong")));
@@ -304,6 +304,46 @@ async function main() {
     // Silent run: switch the background it started back off.
     expectOk(send({ op: "layers", drone: false, pad: false, ambient: false, rhythm: false }));
     return `${r.facts.length} decisions, ${st.project.timing.bpm} BPM, sections ${r.sections}`;
+  });
+  await step("tuner: settings round trip (432 Hz, guitar, locked A2) and the reading shape", () => {
+    const before = expectOk(send({ op: "tuner" }));
+    const r = expectOk(send({ op: "tuner", a4: 432, instrument: "guitar", lock: 45 }));
+    if (r.a4 !== 432 || r.instrument !== "guitar" || r.lock !== 45) throw new Error(JSON.stringify(r));
+    if (!("hz" in r) || !("reading" in r) || !("listening" in r)) throw new Error("reading fields missing");
+    const bad = send({ op: "tuner", a4: 10 })[0];
+    if (!bad.ok || bad.result.a4 !== 400) throw new Error(`A4 not clamped: ${JSON.stringify(bad)}`);
+    expectOk(send({ op: "tuner", a4: before.a4_pref, instrument: before.instrument, lock: before.lock }));
+    return `a4 ${r.a4} Hz, ${r.instrument}, lock ${r.lock}, listening ${r.listening}`;
+  });
+  await step("sheet: MusicXML import becomes a MIDI take (tie, chord, rest, 7/8, 60 BPM)", async () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<score-partwise version="4.0"><work><work-title>Smoke sheet</work-title></work>
+<part-list><score-part id="P1"><part-name>Kaval</part-name></score-part></part-list>
+<part id="P1"><measure number="1">
+  <attributes><divisions>2</divisions><time><beats>7</beats><beat-type>8</beat-type></time></attributes>
+  <direction><direction-type><metronome><beat-unit>quarter</beat-unit><per-minute>60</per-minute></metronome></direction-type></direction>
+  <note><pitch><step>D</step><octave>4</octave></pitch><duration>2</duration></note>
+  <note><pitch><step>E</step><octave>4</octave></pitch><duration>1</duration></note>
+  <note><rest/><duration>1</duration></note>
+  <note><pitch><step>F</step><alter>1</alter><octave>4</octave></pitch><duration>2</duration><tie type="start"/></note>
+</measure><measure number="2">
+  <note><pitch><step>F</step><alter>1</alter><octave>4</octave></pitch><duration>2</duration><tie type="stop"/></note>
+  <note><pitch><step>G</step><octave>4</octave></pitch><duration>2</duration></note>
+  <note><chord/><pitch><step>B</step><octave>4</octave></pitch><duration>2</duration></note>
+  <note><pitch><step>A</step><octave>4</octave></pitch><duration>2</duration></note>
+</measure></part></score-partwise>`;
+    const p = path.join(OUT_DIR, "smoke-sheet.musicxml");
+    fs.writeFileSync(p, xml);
+    const r = expectOk(send({ op: "import_audio", path: p }));
+    if (!r.take_id) throw new Error("no take_id");
+    await sleep(2200); // the state snapshot is rewritten ~1.5 s after a change
+    const st = readState();
+    const tk = st.project.takes.find((t) => t.id === r.take_id);
+    if (!tk || tk.source !== "midi_file") throw new Error(`take ${JSON.stringify(tk)}`);
+    const secs = tk.frames && tk.sample_rate ? tk.frames / tk.sample_rate : null;
+    // 6 s of music at 60 BPM (plus the synth's release tail).
+    if (secs !== null && (secs < 5.9 || secs > 8)) throw new Error(`length ${secs.toFixed(2)} s`);
+    return `take ${tk.number} (${tk.source})${secs !== null ? `, ${secs.toFixed(1)} s` : ""}`;
   });
   await step("presets: save, list, load", () => {
     const saved = expectOk(send({ op: "save_preset", kind: "rhythm", name: "smoke rhythm", tags: ["smoke"], notes: "automated" }));

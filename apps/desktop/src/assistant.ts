@@ -6,6 +6,8 @@ import type { StarterId } from "./starters";
 import { defaultSource, makeLayer, MAX_AMBIENT_LAYERS } from "./ambientPresets";
 import { applyLibraryPayload, applySession, collectSession, mergeSessionPrefs, pickSessionPrefs, rackForProject, SESSION_PREF_KEYS } from "./session";
 import { useStore, type LayerName, type Screen } from "./store";
+import { hzToMidi as tunerHzToMidi } from "./format";
+import { clampA4, readTuner, targetsFor, TUNER_INSTRUMENTS, type TunerInstrument } from "./tunerTargets";
 import { droneRoot, droneSettings, padRoot, padSettings, voicingNotes } from "./layers";
 import type { SongMap } from "./api";
 
@@ -192,6 +194,29 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
       const st = await api.rhythmStatus();
       useStore.getState().setRhythmStatus(st);
       return st;
+    }
+    case "tuner": {
+      // Tuner screen settings (persisted prefs) + the live reading, so the assistant can
+      // answer "how close am I" without a screenshot.
+      if (cmd.a4 !== undefined) s.setPref("tunerA4", cmd.a4 === null ? null : clampA4(Number(cmd.a4)));
+      if (typeof cmd.instrument === "string" && TUNER_INSTRUMENTS.includes(cmd.instrument as TunerInstrument)) s.setPref("tunerInstrument", cmd.instrument as TunerInstrument);
+      if (cmd.lock !== undefined) s.setPref("tunerLock", cmd.lock === null ? null : Math.round(Number(cmd.lock)));
+      const st = useStore.getState();
+      const a4 = st.prefs.tunerA4 ?? st.project?.a4_hz ?? 440;
+      const hz = st.monitor?.pitch_hz ?? null;
+      const confidence = st.monitor?.pitch_confidence ?? 0;
+      const midiFrac = hz !== null && confidence >= 0.5 ? tunerHzToMidi(hz, a4) : null;
+      const reading = midiFrac !== null ? readTuner(midiFrac, targetsFor(st.prefs.tunerInstrument, st.prefs.tunerLock)) : null;
+      return {
+        a4,
+        a4_pref: st.prefs.tunerA4,
+        instrument: st.prefs.tunerInstrument,
+        lock: st.prefs.tunerLock,
+        listening: st.monitor !== null,
+        hz,
+        confidence,
+        reading: reading ? { target_midi: reading.target.midi, label: reading.target.label, cents: Math.round(reading.cents * 10) / 10, direction: reading.direction } : null,
+      };
     }
     case "import_audio": {
       project();
