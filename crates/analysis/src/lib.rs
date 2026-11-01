@@ -5,6 +5,9 @@
 //! derived from a section's position alone (spec §3.3), and nothing here claims to be
 //! ground truth: the user corrects everything in the map.
 
+pub mod denoise;
+pub use denoise::{denoise, noise_profile, NoiseProfile};
+
 use rustfft::num_complex::Complex;
 use rustfft::FftPlanner;
 use serde::{Deserialize, Serialize};

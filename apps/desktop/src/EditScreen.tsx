@@ -27,9 +27,12 @@ const OP_LABEL: Record<string, StringMessageKey> = {
   eq: "opEq",
   compress: "opCompress",
   limit: "opLimit",
+  noise_profile: "opNoiseProfile",
+  denoise: "opDenoise",
 };
 
-type FxKind = "eq" | "compress" | "limit";
+type FxKind = "eq" | "compress" | "limit" | "denoise";
+const DEFAULT_DENOISE = { reduction_db: 12, sensitivity: 1.5 };
 const DEFAULT_BANDS: EqBand[] = [
   { kind: "low_shelf", hz: 200, gain_db: 0, q: 1 },
   { kind: "peak", hz: 1000, gain_db: 0, q: 1 },
@@ -64,6 +67,7 @@ export function EditScreen() {
   const [bands, setBands] = useState<EqBand[]>(DEFAULT_BANDS);
   const [comp, setComp] = useState(DEFAULT_COMP);
   const [lim, setLim] = useState(DEFAULT_LIMIT);
+  const [dn, setDn] = useState(DEFAULT_DENOISE);
   const statusRef = useRef(status);
   statusRef.current = status;
   const viewRef = useRef(view);
@@ -237,6 +241,7 @@ export function EditScreen() {
     if (fx === "eq") return { op: "eq", a: r[0], b: r[1], bands };
     if (fx === "compress") return { op: "compress", a: r[0], b: r[1], ...comp };
     if (fx === "limit") return { op: "limit", a: r[0], b: r[1], ...lim };
+    if (fx === "denoise") return { op: "denoise", a: r[0], b: r[1], ...dn };
     return null;
   };
   const previewFx = async () => {
@@ -506,9 +511,9 @@ export function EditScreen() {
         <section className="panel" aria-label={t.editFx}>
           <div className="analysis-row">
             <h3>{t.editFx}</h3>
-            {(["eq", "compress", "limit"] as FxKind[]).map((k) => (
+            {(["eq", "compress", "limit", "denoise"] as FxKind[]).map((k) => (
               <button key={k} className={`small ${fx === k ? "primary" : ""}`} onClick={() => setFx(fx === k ? null : k)}>
-                {k === "eq" ? t.fxEq : k === "compress" ? t.fxCompress : t.fxLimit}
+                {k === "eq" ? t.fxEq : k === "compress" ? t.fxCompress : k === "limit" ? t.fxLimit : t.fxDenoise}
               </button>
             ))}
             <span className="muted small">{t.editFxHint}</span>
@@ -569,12 +574,30 @@ export function EditScreen() {
               </label>
             </div>
           )}
+          {fx === "denoise" && (
+            <div className="fx-form analysis-row">
+              <button className="small" onClick={() => { const r = needSel(); if (r) void run({ op: "noise_profile", a: r[0], b: r[1] }); }} disabled={busy || !selection} title={t.fxProfileHint}>
+                {t.fxProfile}
+              </button>
+              <span className={`badge ${status?.noise_profile ? "ok" : "warn"}`}>{status?.noise_profile ? t.fxProfileReady : t.fxProfileNone}</span>
+              <label className="inline small">
+                {t.fxReduction}
+                <input type="range" min={0} max={40} step={1} value={dn.reduction_db} onChange={(e) => setDn({ ...dn, reduction_db: Number(e.target.value) })} />
+                <span className="mono-num">{dn.reduction_db} dB</span>
+              </label>
+              <label className="inline small">
+                {t.fxSensitivity}
+                <input type="range" min={0.5} max={4} step={0.1} value={dn.sensitivity} onChange={(e) => setDn({ ...dn, sensitivity: Number(e.target.value) })} />
+                <span className="mono-num">{dn.sensitivity.toFixed(1)}</span>
+              </label>
+            </div>
+          )}
           {fx && (
             <div className="analysis-row">
-              <button onClick={() => void previewFx()} disabled={busy}>
+              <button onClick={() => void previewFx()} disabled={busy || (fx === "denoise" && !status?.noise_profile)}>
                 ▶ {t.fxPreview}
               </button>
-              <button className="primary" onClick={applyFx} disabled={busy}>
+              <button className="primary" onClick={applyFx} disabled={busy || (fx === "denoise" && !status?.noise_profile)}>
                 ✓ {t.fxApply}
               </button>
               <span className="muted small">{selection ? t.editOnSelection : t.editOnWhole}</span>

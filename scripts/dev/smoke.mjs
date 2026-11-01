@@ -717,6 +717,12 @@ async function main() {
       const eqd = expectOk(send({ op: "edit", edit: { op: "eq", a: 0, b: len, bands: [{ kind: "low_shelf", hz: 200, gain_db: -12, q: 1 }, { kind: "peak", hz: 1000, gain_db: 3, q: 1 }, { kind: "high_shelf", hz: 4000, gain_db: 0, q: 1 }] } }));
       near(eqd.seconds, len, "eq keeps the length");
       if (eqd.versions.length !== 7) throw new Error(`history after effects: ${eqd.versions.length}`);
+      // A5: a noise profile from the silent head (0..0.5 s) and a denoise pass keep the length and never raise the peak.
+      const prof = expectOk(send({ op: "edit", edit: { op: "noise_profile", a: 0, b: 0.5 } }));
+      if (!prof.noise_profile) throw new Error("no noise profile after taking one");
+      const dn = expectOk(send({ op: "edit", edit: { op: "denoise", a: 0, b: len, reduction_db: 12, sensitivity: 1.5 } }));
+      near(dn.seconds, len, "denoise keeps the length");
+      if (dn.peak_dbfs > eqd.peak_dbfs + 0.5) throw new Error(`denoise raised the peak ${eqd.peak_dbfs} → ${dn.peak_dbfs}`);
       near(expectOk(send({ op: "edit_jump", step: 1 })).seconds, len - 1, "jump to step 1");
       const saved = expectOk(send({ op: "edit_save", label: "smoke edit" }));
       const tk = saved.project.takes.find((x) => x.id === saved.take_id);

@@ -3,6 +3,13 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Noise reduction — A5 first slice (2026-11-01 evening).** `crates/analysis/src/denoise.rs`:
+  noise profile (mean STFT magnitude per bin of a noise-only selection) and spectral
+  subtraction with a soft knee, 3-bin frequency smoothing and fast-open / slow-close time
+  smoothing (test: a 440 Hz tone in white noise loses > 10 dB of noise and keeps the tone).
+  Editor ops `noise_profile` (session state, reported as `noise_profile` in the status) and
+  `denoise` (history step, preview); "Noise reduction" in the effects panel; bridge; smoke.
+  Guide BG/EN.
 - **Clip gain envelope — A3 first slice (2026-11-01 evening).** `ClipData.envelope` (frame,
   gain) with `envelope_gain` linear interpolation inside `clip_sample` (test: a clip fading
   to silence over its second half); project `Clip.envelope: Vec<EnvPoint {at, db}>`

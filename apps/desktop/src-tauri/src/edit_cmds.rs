@@ -40,6 +40,8 @@ pub struct EditSession {
     pub dropped: usize,
     /// Index of the version last saved as a take (None = never).
     pub saved_index: Option<usize>,
+    /// A5: the noise profile taken from a noise-only selection, for `Denoise`.
+    pub noise: Option<Arc<analysis::NoiseProfile>>,
 }
 
 impl EditSession {
@@ -110,6 +112,16 @@ pub enum EditOp {
     },
     /// Brick-wall limiter on [a, b) (A7 = E2).
     Limit { a: f64, b: f64, ceiling_db: f32 },
+    /// A5: take [a, b) (noise only) as the noise profile; no audio change.
+    NoiseProfile { a: f64, b: f64 },
+    /// A5: spectral subtraction on [a, b) against the profile (reduction 0..40 dB,
+    /// sensitivity 0.5..4).
+    Denoise {
+        a: f64,
+        b: f64,
+        reduction_db: f32,
+        sensitivity: f32,
+    },
 }
 
 impl EditOp {
@@ -130,6 +142,8 @@ impl EditOp {
             EditOp::Eq { .. } => "eq",
             EditOp::Compress { .. } => "compress",
             EditOp::Limit { .. } => "limit",
+            EditOp::NoiseProfile { .. } => "noise_profile",
+            EditOp::Denoise { .. } => "denoise",
         }
     }
 }
@@ -157,6 +171,8 @@ pub struct EditStatus {
     pub can_redo: bool,
     /// True when the current version differs from the opened one and was not saved.
     pub dirty: bool,
+    /// A5: a noise profile is ready for Denoise.
+    pub noise_profile: bool,
 }
 
 fn status_of(e: &EditSession) -> EditStatus {
@@ -182,6 +198,7 @@ fn status_of(e: &EditSession) -> EditStatus {
         can_undo: e.index > 0,
         can_redo: e.index + 1 < e.versions.len(),
         dirty: e.index + e.dropped > 0 && e.saved_index != Some(e.index),
+        noise_profile: e.noise.is_some(),
     }
 }
 
@@ -308,6 +325,7 @@ pub async fn edit_open(state: State<'_, AppState>, take_id: String) -> CmdResult
         clipboard: None,
         dropped: 0,
         saved_index: None,
+        noise: None,
     };
     let st = status_of(&e);
     s.edit = Some(e);
@@ -473,6 +491,49 @@ fn compute(e: &mut EditSession, op: &EditOp) -> CmdResult<Option<AudioBuffer>> {
             }
             Some(out)
         }
+        EditOp::NoiseProfile { a, b } => {
+            let (fa, fb) = region(&cur, *a, *b)?;
+            let piece = cur.slice_frames(fa, fb);
+            if piece.frames() < analysis::denoise::FRAME {
+                return Err(err("invalid_argument", "select at least 50 ms of noise"));
+            }
+            e.noise = Some(Arc::new(analysis::noise_profile(
+                &piece.samples,
+                ch as usize,
+                sr,
+            )));
+            None
+        }
+        EditOp::Denoise {
+            a,
+            b,
+            reduction_db,
+            sensitivity,
+        } => {
+            if !(0.0..=40.0).contains(reduction_db) || !(0.5..=4.0).contains(sensitivity) {
+                return Err(err(
+                    "invalid_argument",
+                    "denoise: reduction 0..40 dB, sensitivity 0.5..4",
+                ));
+            }
+            let profile = e.noise.clone().ok_or_else(|| {
+                err(
+                    "invalid_state",
+                    "Take a noise profile first (select noise only)",
+                )
+            })?;
+            let (fa, fb) = region(&cur, *a, *b)?;
+            Some(replace_region(&cur, fa, fb, |m| {
+                let y = analysis::denoise(
+                    &m.samples,
+                    ch as usize,
+                    &profile,
+                    *reduction_db,
+                    *sensitivity,
+                );
+                AudioBuffer::new(sr, ch, y)
+            }))
+        }
         EditOp::Limit { a, b, ceiling_db } => {
             let (fa, fb) = region(&cur, *a, *b)?;
             let mut err_out = None;
@@ -520,6 +581,7 @@ pub async fn edit_preview(
             (*a, *b)
         }
         EditOp::Gain { a, b, .. } | EditOp::Normalize { a, b, .. } => (*a, *b),
+        EditOp::Denoise { a, b, .. } => (*a, *b),
         EditOp::FadeIn { a, b } | EditOp::FadeOut { a, b } | EditOp::Reverse { a, b } => (*a, *b),
         _ => {
             return Err(err(
@@ -674,6 +736,7 @@ mod tests {
             clipboard: None,
             dropped: 0,
             saved_index: None,
+            noise: None,
         }
     }
 

@@ -120,7 +120,7 @@ rhythm_status, ambient_status }`
 | `note` | `midi`, `on?` (default true), `velocity?` | **sound**: one key where the dock points (the project's voice or the instrument being edited) |
 | `notes_off` | | releases everything the keyboard holds |
 | `edit_open` | `id?` (default: the latest take) | opens a take in the audio editor (working copy + history); returns the editor status (`seconds`, `versions`, `index`, `clipboard_seconds`, `dirty`) |
-| `edit` | `edit`: `{op, a, b, at, seconds, db, target_dbfs, bands, threshold_db, ratio, attack_ms, release_ms, makeup_db, ceiling_db}` with `op` = cut, copy, delete, paste, silence, trim, insert_silence, gain, normalize, fade_in, fade_out, reverse, **eq** (bands: `{kind: low_shelf\|peak\|high_shelf, hz, gain_db, q}`), **compress**, **limit** |
+| `edit` | `edit`: `{op, a, b, at, seconds, db, target_dbfs, bands, threshold_db, ratio, attack_ms, release_ms, makeup_db, ceiling_db}` with `op` = cut, copy, delete, paste, silence, trim, insert_silence, gain, normalize, fade_in, fade_out, reverse, **eq** (bands: `{kind: low_shelf\|peak\|high_shelf, hz, gain_db, q}`), **compress**, **limit**, **noise_profile** (a, b = noise only), **denoise** (reduction_db 0..40, sensitivity 0.5..4; needs a profile) |
 | `edit_preview` | `edit` (an effect op), `seconds?` | **sound**: the effect on its region before applying it | one operation on the working copy (seconds absolute); returns the status |
 | `edit_undo` / `edit_redo` / `edit_jump` | `step` for jump | walk the history |
 | `edit_snap` | `seconds` | the nearest zero crossing (±10 ms) |

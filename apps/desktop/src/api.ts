@@ -1598,7 +1598,9 @@ export type EditOp =
   | { op: "reverse"; a: number; b: number }
   | { op: "eq"; a: number; b: number; bands: EqBand[] }
   | { op: "compress"; a: number; b: number; threshold_db: number; ratio: number; attack_ms: number; release_ms: number; makeup_db: number }
-  | { op: "limit"; a: number; b: number; ceiling_db: number };
+  | { op: "limit"; a: number; b: number; ceiling_db: number }
+  | { op: "noise_profile"; a: number; b: number }
+  | { op: "denoise"; a: number; b: number; reduction_db: number; sensitivity: number };
 
 /** One band of the editor's EQ (A7 = E3). */
 export interface EqBand {
@@ -1626,6 +1628,8 @@ export interface EditStatus {
   can_undo: boolean;
   can_redo: boolean;
   dirty: boolean;
+  /** A5: a noise profile is ready. */
+  noise_profile: boolean;
 }
 
 export interface SongExportResult {
