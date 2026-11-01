@@ -3,6 +3,17 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Home with five areas: stage 3 of the UX audit (2026-11-01 morning; owner: "давай напред").**
+  `Home.tsx` shows "▶ Continue" (opens Play & record with the latest take loaded, or
+  "● Record the first" when the project has no takes; `continueLast` in
+  `takeActions.ts`), "I have a melody →" (Start from a melody) and one card per area:
+  Play / Background / Song / Learn / Library (`areas.ts`: each of the 16 screens keeps
+  its `Screen` id and belongs to exactly one area, as "Also here:" links until stages 4–5
+  make them tabs; vitest checks the partition). The top bar reads "Home › <area> ›
+  <screen>" and gets a "? Help" button (Help is no longer a card). Bridge ops `area`
+  (list / open) and `continue`; smoke step for the five areas + continue. Guide BG/EN
+  ("Home and projects" rewritten; stale floating-bar bullet replaced), bridge doc, audit
+  §6 status, screenshot.
 - **"Now playing" bar: stage 2 of the UX audit (2026-10-31 night; owner: "давай").**
   `NowPlayingBar.tsx` sits at the bottom of every screen and replaces the floating
   layers badge: chips for the take (▶/■ with position, red "Recording" while a take is

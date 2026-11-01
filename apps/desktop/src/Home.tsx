@@ -1,48 +1,68 @@
+import { useState } from "react";
+import { AREAS } from "./areas";
+import { describeError } from "./api";
+import { takeName } from "./format";
 import { messages, type StringMessageKey } from "./i18n";
 import { ProjectPicker } from "./ProjectPicker";
 import { useStore, type Screen } from "./store";
+import { continueLast, latestTake } from "./takeActions";
 
-interface Area {
-  title: StringMessageKey;
-  desc: StringMessageKey;
-  /** Phase in which the area becomes available; null = available now. */
-  phase: number | null;
-  screen?: Screen;
-}
+/** Title of each screen for the "also here" links (same keys as the top-bar breadcrumb). */
+const SCREEN_TITLE: Partial<Record<Screen, StringMessageKey>> = {
+  play: "areaPlay",
+  tuner: "areaTuner",
+  compose: "areaAccomp",
+  studio: "areaStudio",
+  ambient: "areaAmbient",
+  rhythm: "areaRhythm",
+  library: "areaLibrary",
+  soundscapes: "areaSoundscapes",
+  instrument: "areaForge",
+  songmap: "areaSongMap",
+  samples: "areaSamples",
+  references: "areaReferences",
+  academy: "areaLearn",
+  create: "areaCreate",
+  start: "areaStart",
+};
 
-// Master plan §9. "Atmosphere" (Phase 1A), "Play & record" (Phase 1), the
-// accompanist's Compose First (Phase 3) and "My studio" (tracks, F5.1) exist; the
-// rest are shown as planned,
-// disabled — never as buttons that pretend to do something.
-const AREAS: Area[] = [
-  { title: "areaAmbient", desc: "areaAmbientDesc", phase: null, screen: "ambient" },
-  { title: "areaSoundscapes", desc: "areaSoundscapesDesc", phase: null, screen: "soundscapes" },
-  { title: "areaPlay", desc: "areaPlayDesc", phase: null, screen: "play" },
-  { title: "areaTuner", desc: "areaTunerDesc", phase: null, screen: "tuner" },
-  { title: "areaAccomp", desc: "areaAccompDesc", phase: null, screen: "compose" },
-  { title: "areaRhythm", desc: "areaRhythmDesc", phase: null, screen: "rhythm" },
-  { title: "areaForge", desc: "areaForgeDesc", phase: null, screen: "instrument" },
-  { title: "areaLearn", desc: "areaLearnDesc", phase: null, screen: "academy" },
-  { title: "areaCreate", desc: "areaCreateDesc", phase: null, screen: "create" },
-  { title: "areaStudio", desc: "areaStudioDesc", phase: null, screen: "studio" },
-  { title: "areaSongMap", desc: "areaSongMapDesc", phase: null, screen: "songmap" },
-  { title: "areaLibrary", desc: "areaLibraryDesc", phase: null, screen: "library" },
-  { title: "areaSamples", desc: "areaSamplesDesc", phase: null, screen: "samples" },
-  { title: "areaReferences", desc: "areaReferencesDesc", phase: null, screen: "references" },
-  { title: "areaHelp", desc: "areaHelpDesc", phase: null, screen: "help" },
-];
-
+/**
+ * Home: "Continue: <project>" (opens Play with the latest take loaded), "I have a melody →"
+ * (Start from a melody) and one card per area — Play / Background / Song / Learn / Library
+ * (UX audit 2026-10-31, stage 3). The 16 screens are still here, as "also here" links
+ * under their area, until stages 4–5 turn them into tabs. Help lives in the top bar.
+ */
 export function Home() {
   const t = messages[useStore((s) => s.prefs.lang)];
   const setScreen = useStore((s) => s.setScreen);
   const project = useStore((s) => s.project);
+  const mode = useStore((s) => s.mode);
+  const [busy, setBusy] = useState(false);
+  const latest = project ? latestTake(project.takes) : null;
+
+  const onContinue = () => {
+    setBusy(true);
+    continueLast()
+      .catch((e) => useStore.getState().setError(describeError(e)))
+      .finally(() => setBusy(false));
+  };
+
   return (
-    <>
+    <div className="home">
       {project ? (
-        <div className="home-project">
-          📁 <strong>{project.name}</strong>
-          <span className="muted small path">{project.root}</span>
-          <span className="muted small">{t.switchProjectHint}</span>
+        <div className="home-continue" data-coach="home-continue">
+          <div className="home-continue-text">
+            📁 <strong>{project.name}</strong>
+            <span className="muted small">
+              {project.takes.length === 0 ? t.homeNoTakesYet : latest ? t.homeContinueHint(takeName(latest, t.take)) : ""}
+            </span>
+          </div>
+          <button className="primary" onClick={onContinue} disabled={busy || mode !== "idle"} title={t.homeContinueTitle}>
+            {latest ? `▶ ${t.homeContinue}` : `● ${t.homeRecordFirst}`}
+          </button>
+          <button className="ghost" onClick={() => setScreen("start")} title={t.areaStartDesc}>
+            {t.homeHaveMelody}
+          </button>
         </div>
       ) : (
         <>
@@ -50,28 +70,28 @@ export function Home() {
           <ProjectPicker />
         </>
       )}
-    <button className="area active start-card-home" onClick={() => setScreen("start")}>
-      <span className="area-title">▶ {t.areaStart}</span>
-      <span className="small">{t.areaStartDesc}</span>
-    </button>
-    <nav className="home-grid" aria-label={t.appTitle}>
-      {AREAS.map((a) =>
-        a.phase === null ? (
-          <button key={a.title} className="area active" onClick={() => setScreen(a.screen ?? "play")}>
-            <span className="area-title">{t[a.title]}</span>
-            <span className="muted small">{t[a.desc]}</span>
-          </button>
-        ) : (
-          <div key={a.title} className="area" aria-disabled="true">
-            <span className="area-title">{t[a.title]}</span>
-            <span className="muted small">{t[a.desc]}</span>
-            <span className="badge">
-              {t.availableFromPhase} {a.phase}
-            </span>
+
+      <nav className="home-areas" aria-label={t.phase}>
+        {AREAS.map((a) => (
+          <div key={a.id} className="home-area" data-area={a.id}>
+            <button className="home-area-main" onClick={() => setScreen(a.main)} data-coach={`home-${a.id}`}>
+              <span className="home-area-title">{t[a.title]}</span>
+              <span className="muted small">{t[a.desc]}</span>
+            </button>
+            <div className="home-area-also">
+              <span className="muted small">{t.homeAlso}</span>
+              {a.also.map((sc) => {
+                const key = SCREEN_TITLE[sc];
+                return key ? (
+                  <button key={sc} className="ghost small" onClick={() => setScreen(sc)}>
+                    {t[key]}
+                  </button>
+                ) : null;
+              })}
+            </div>
           </div>
-        ),
-      )}
-    </nav>
-    </>
+        ))}
+      </nav>
+    </div>
   );
 }

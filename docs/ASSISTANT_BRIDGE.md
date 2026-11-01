@@ -53,6 +53,8 @@ rhythm_status, ambient_status }`
 | `state` | | the snapshot, in the reply |
 | `message` | `text` | shows a line in the app's status bar (say what you did) |
 | `screen` | `screen`: home/play/tuner/compose/studio/ambient/soundscapes/rhythm/library/instrument/songmap/samples/references/start/help | navigates |
+| `area` | `area?`: play/background/song/learn/library | without `area`: lists the five Home areas and the current one; with it: opens the area's main screen (play → play, background → compose, song → studio, learn → academy, library → library), returns `{area, screen}` |
+| `continue` | — | Home's "▶ Continue": opens Play & record with the latest take loaded (no takes: empty, ready to record), no sound; returns `screen`, `loaded_id`, `latest_id` |
 | `set_prefs` | `prefs`: any of the pref keys, partial objects merge | drone/pad/rhythm/harmony/intent/master |
 | `layers` | `drone`/`pad`/`ambient`/`rhythm`/`metronome`: bool | **starts or stops sound** — tell the user first |
 | `set_ambient` | `ambient`: a whole rack | replaces the rack (loop layers of missing takes are dropped) |

@@ -310,6 +310,19 @@ async function main() {
     if (!r.loaded_id) throw new Error(JSON.stringify(r));
     return `take ${r.name}, ${r.duration_s?.toFixed(1)} s, analysed ${r.analysed} (${r.notes} notes)`;
   });
+  await step("home: the five areas open their main screens, Continue opens Play with the latest take", () => {
+    const list = expectOk(send({ op: "area" }));
+    const want = ["play", "background", "song", "learn", "library"];
+    if (JSON.stringify(list.areas) !== JSON.stringify(want)) throw new Error(JSON.stringify(list));
+    const opened = [];
+    for (const id of want) {
+      const r = expectOk(send({ op: "area", area: id }));
+      opened.push(`${id}→${r.screen}`);
+    }
+    const c = expectOk(send({ op: "continue" }));
+    if (c.screen !== "play" || !c.loaded_id || c.loaded_id !== c.latest_id) throw new Error(JSON.stringify(c));
+    return `${opened.join(", ")}; continue → play with the latest take loaded`;
+  });
   await step("now playing: the bar's snapshot has every source, stop_all leaves silence", async () => {
     const np = expectOk(send({ op: "now_playing" }));
     for (const k of ["recording", "take", "notes", "background", "song", "metronome", "live", "any"]) if (!(k in np)) throw new Error(`missing ${k}`);

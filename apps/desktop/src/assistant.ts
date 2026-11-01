@@ -5,8 +5,9 @@ import { makeSong } from "./makeSong";
 import type { StarterId } from "./starters";
 import { defaultSource, makeLayer, MAX_AMBIENT_LAYERS } from "./ambientPresets";
 import { applyLibraryPayload, applySession, collectSession, mergeSessionPrefs, pickSessionPrefs, rackForProject, SESSION_PREF_KEYS } from "./session";
+import { AREA_IDS, areaMainScreen, areaOf } from "./areas";
 import { useStore, type LayerName, type Screen } from "./store";
-import { latestTake, loadTake, playLoaded, stopPlaying } from "./takeActions";
+import { latestTake, loadTake, playLoaded, stopPlaying, continueLast } from "./takeActions";
 import { readNowPlaying, stopAll } from "./nowPlaying";
 import { hzToMidi as tunerHzToMidi } from "./format";
 import { clampA4, readTuner, targetsFor, TUNER_INSTRUMENTS, type TunerInstrument } from "./tunerTargets";
@@ -96,6 +97,21 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
     case "screen":
       s.setScreen(String(cmd.screen) as Screen);
       return { screen: useStore.getState().screen };
+    case "area": {
+      // Home's five areas (UX audit stage 3): open an area's main screen, or list them.
+      if (cmd.area === undefined) return { areas: AREA_IDS, current: s.screen === "home" ? null : (areaOf(s.screen)?.id ?? null) };
+      const main = areaMainScreen(String(cmd.area));
+      if (!main) throw new Error(`unknown area ${String(cmd.area)}; one of ${AREA_IDS.join(", ")}`);
+      s.setScreen(main);
+      return { area: cmd.area, screen: useStore.getState().screen };
+    }
+    case "continue": {
+      // Home's "Continue": Play & record with the latest take loaded (none: ready to record).
+      project();
+      const id = await continueLast();
+      const st = useStore.getState();
+      return { screen: st.screen, loaded_id: st.loaded?.id ?? null, latest_id: id };
+    }
     case "set_prefs": {
       const merged = mergeSessionPrefs(s.prefs, cmd.prefs);
       for (const k of SESSION_PREF_KEYS) if (merged[k] !== s.prefs[k]) s.setPref(k, merged[k]);

@@ -49,6 +49,18 @@ export async function playLoaded(from: number | undefined, click: boolean): Prom
   st.setMode("playing");
 }
 
+/**
+ * Home's "Continue": open "Play & record" with the latest take loaded, or empty and ready
+ * to record when the project has no takes yet. Shared with the bridge op `continue`.
+ */
+export async function continueLast(): Promise<string | null> {
+  const st = useStore.getState();
+  const latest = st.project ? latestTake(st.project.takes) : null;
+  st.setScreen("play");
+  if (latest && st.loaded?.id !== latest.id) await loadTake(latest.id);
+  return latest?.id ?? null;
+}
+
 /** Stop playback and leave the cursor where it stopped. */
 export async function stopPlaying(): Promise<void> {
   const st = useStore.getState();

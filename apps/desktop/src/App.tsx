@@ -29,6 +29,7 @@ import { useAcademyGuided } from "./academyGuided";
 import { useLiveFollow } from "./LiveFollowPanel";
 import { CoachPanel, useCoachHighlight } from "./CoachPanel";
 import { messages, type Lang, type StringMessageKey } from "./i18n";
+import { areaOf } from "./areas";
 import { useStore, type Screen } from "./store";
 
 /** Title of each area, shown in the top bar so the user always sees where they are. */
@@ -61,6 +62,7 @@ export default function App() {
   const mode = useStore((s) => s.mode);
   const t = messages[lang];
   const error = useStore((s) => s.error);
+  const area = screen === "home" ? null : areaOf(screen);
   const setError = useStore((s) => s.setError);
   useBackgroundLayers();
   useSongTransport();
@@ -97,7 +99,8 @@ export default function App() {
                 t.phase
               ) : (
                 <>
-                  {t.back} › <strong>{t[SCREEN_TITLE[screen]]}</strong>
+                  {t.back} › {area && area.main !== screen && <>{t[area.title]} › </>}
+                  <strong>{t[SCREEN_TITLE[screen]]}</strong>
                 </>
               )}
             </div>
@@ -112,6 +115,9 @@ export default function App() {
           )}
           <button className={`ghost small ${coachOn ? "on" : ""}`} onClick={() => setPref("coach", !coachOn)} title={t.coachToggleHint}>
             🧭 {t.coachTitle}
+          </button>
+          <button className={`ghost small ${screen === "help" ? "on" : ""}`} onClick={() => setScreen("help")} title={t.areaHelpDesc}>
+            ? {t.helpButton}
           </button>
           <ProjectMenu />
           <label className="inline">

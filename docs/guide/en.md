@@ -1,13 +1,16 @@
 # How to use EthnoFlow Studio
 
-This guide is also shown inside the app (Home → Help, with search). It lives in one place: `docs/guide/bg.md` (Bulgarian) and `docs/guide/en.md` (English). Every new feature adds its paragraph here.
+This guide is also shown inside the app (the **? Help** button top right, with search). It lives in one place: `docs/guide/bg.md` (Bulgarian) and `docs/guide/en.md` (English). Every new feature adds its paragraph here.
 
 ## Home and projects
 
+- **Home has five areas**, one verb each: **Play** (I play and record: microphone, tuner, metronome, takes), **Background** (I sound behind: drone, pad, atmosphere, rhythm, instruments, live accompanist), **Song** (I arrange: tracks, song map, guide, export), **Learn** (academy, trainer, gate, references), **Library** (presets, sessions, samples). The big card opens the area's main screen; "Also here:" under it leads to its other screens (Tuner, Atmosphere, Soundscapes, Rhythm section, Instruments, Song map, Create a song, Start from a melody, References, My samples). Nothing was removed, only arranged.
+- At the top of Home is **▶ Continue**: it opens Play with the latest take loaded (with no takes the button reads "● Record the first" and opens Play ready to record). Next to it, **I have a melody →** opens Start from a melody.
+- The top bar says where you are: "Home › Background › Atmosphere". **? Help** is top right, next to the assistant.
 - Top right is the **📁 Project** menu: new, open, recent, close. Everything in a project saves itself; there is no Save button.
 - A project is a folder `Documents\EthnoFlow\<name>.ethnoflow` with the takes (originals are never modified), the analysis, the atmosphere and the remembered settings (`session.json`).
 - Every project **remembers its own settings**: drone, pad, rhythm, harmony, atmosphere. Open another project and its settings come back.
-- The floating bar at the bottom appears when something plays in the background: play/stop, switches for drone, pad, atmosphere and rhythm, the level, and quick buttons to the screens.
+- At the bottom of every screen is the "Now playing" bar (see its section below): what sounds, and "Stop all".
 
 ## Background mixer
 
@@ -51,11 +54,11 @@ nothing sounds it says "Silence". From the terminal: `now_playing` and `stop_all
 - Pick the microphone and headphones under "Devices". The metronome has its own ▶/■ next to "Tempo & meter".
 - **Record** makes a new take in the project. The background (drone, pad, atmosphere, rhythm) is heard while you play but **is not recorded**: only the microphone is. For a mixed result use My studio → Export mix.
 - The tuner shows the note, the cents and whether it is in the project's mode. The full
-  tuner with a needle, instruments and 440/432 Hz is its own screen: "Tuner" from Home.
+  tuner with a needle, instruments and 440/432 Hz is its own screen: Home › Play › Also here: "Tuner".
 - "Import…" accepts WAV, MP3, FLAC, OGG, MIDI and a MusicXML sheet (see "Gate").
 - "Analyse" here does the same as in Start from a melody but without the variants: contour, notes (editable), key proposals.
 
-## Tuner (the "Tuner" screen from Home)
+## Tuner (Home › Play › "Tuner")
 
 - **Needle**: the deviation from the target note in cents, ±50 on the dial; the green
   zone is ±5 c ("In tune"). Below the needle it says what to do: "▲ Too low: go up" or
@@ -167,7 +170,7 @@ safe drone on the tonic. Audio never waits for the analysis.
 
 ## My samples
 
-- From Home → **My samples**. Add folders ("Soundly Audio" is offered on first open if it exists): the app scans them recursively for WAV, MP3, FLAC, OGG without copying anything.
+- From Home → Library → **My samples**. Add folders ("Soundly Audio" is offered on first open if it exists): the app scans them recursively for WAV, MP3, FLAC, OGG without copying anything.
 - Search by name and path, sort by name, date or length; ▶ plays the file through the shared output (stops by itself, or with ■).
 - "+ Take" imports it into the project; "+ Loop" and "+ Cloud" import it and immediately make a layer in the atmosphere. From there it is a take like any other.
 - Soundly workflow: pick and download sounds in Soundly → "Rescan" here → listen → "+".
@@ -233,7 +236,7 @@ Then start the background and listen; change the style or key from the assistant
 the studio. Nothing is hidden: every step is the same command the screens use.
 
 
-Home › **Create a song**. Seven steps in the real screens: melody (a take with ≥ 3 notes) →
+Home › Song › **Create a song**. Seven steps in the real screens: melody (a take with ≥ 3 notes) →
 scale (a hypothesis) → tempo and meter → song map (≥ 2 sections) → background (drone/pad/
 rhythm) → studio (a clip on a track) → export of the whole song. "Start the guide" and each
 step ticks itself when the app sees it done; "Go" takes you to the screen; the order is not
@@ -242,7 +245,7 @@ guided engine is lesson 5.6 in the Academy (Level 5), so passing it is recorded 
 
 ## Academy (Learn music)
 
-Home › **Learn music**. Lessons of 5–10 minutes: a short explanation (three sentences at
+Home › **Learn** (Academy). Lessons of 5–10 minutes: a short explanation (three sentences at
 most), a demonstration the app plays itself, an exercise with a real check, and a quiz.
 Progress is a local file (no points, streaks or notifications); "passed" means a threshold
 was met. The whole programme is planned in `docs/academy/CURRICULUM.md`.
@@ -296,7 +299,7 @@ The same layers as Atmosphere, one at a time, with big knobs:
 
 ## Song map
 
-- From Home → **Song map** or from 🗺 in My studio. Sections (intro, establish, build, drop, variation, break, bridge, outro) sit on a bar ruler; edges drag by whole bars, "Split at position" cuts on a bar line, ⇥ merges with the next, 🔒 locks.
+- From Home → Song → **Song map** or from 🗺 in My studio. Sections (intro, establish, build, drop, variation, break, bridge, outro) sit on a bar ruler; edges drag by whole bars, "Split at position" cuts on a bar line, ⇥ merges with the next, 🔒 locks.
 - Every section has **energy** and **density** (0..1): the targets the Composer and the Director will read. The map is stored in the project in ticks (with tempo and meter maps); the studio's markers are updated from it.
 - Clicking the ruler moves the song transport; the current bar and the bars until the next section are shown.
 - **Follow the map** (on by default): the sections drive the background. While the rhythm or the song runs, the current section decides which rhythm parts play, how dense the figures are and how loud the buses are (drone/pad/atmosphere/rhythm). Your settings are the base — a section only removes and softens, it never switches on what you turned off. The badge next to the switch says what it does right now (e.g. "3. Build 2 (build, 40%) · drums ✓ bass ✓ ostinato ✓ arpeggio ✗ · rhythm −3 dB, pad −2 dB").
@@ -317,7 +320,7 @@ The same layers as Atmosphere, one at a time, with big knobs:
 
 ## Instruments (designer)
 
-- From Home → **Instruments** or from ✎ next to each part in the rhythm section. Left: factory and your presets by category (drums, bass, synth) with search. Right: the chosen instrument with knobs.
+- From Home → Background → **Instruments** or from ✎ next to each part in the rhythm section. Left: factory and your presets by category (drums, bass, synth) with search. Right: the chosen instrument with knobs.
 - **Audition** plays a short pattern through exactly this sound at the project tempo; knobs are heard at once. **WAV** renders the same pattern to a file for comparison.
 - The knobs are real sound parameters: for the bass voice (sub/pluck/Reese), attack/decay/sustain/release, pitch sweep, microvariation, cutoff/resonance/filter envelope, wobble, drive, warmth, glide, sidechain; for the drums kick fundamental, decay, brightness and a level per drum; for the synth timbre, attack, release, tone, dynamics. Every knob has a tooltip saying what it changes in the sound.
 - **Save as…** makes your preset (factory ones never change; the copy remembers its parent). **Update** overwrites your preset. 🗑 deletes yours.
