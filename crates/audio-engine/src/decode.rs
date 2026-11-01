@@ -19,7 +19,7 @@ use crate::error::{AudioError, Result};
 
 /// Audio file extensions the importer accepts (lower case). MIDI (`mid`) is handled
 /// separately by the project layer (parsed, not decoded).
-pub const IMPORT_EXTENSIONS: &[&str] = &["wav", "mp3", "flac", "ogg"];
+pub const IMPORT_EXTENSIONS: &[&str] = &["wav", "mp3", "flac", "ogg", "m4a", "aac", "mp4"];
 
 fn sym(e: SymError) -> AudioError {
     match e {

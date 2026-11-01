@@ -146,6 +146,10 @@ downloads (bundled SQLite source ships inside the crate).
 
 ## ADR-0017 symphonia 0.6 for import decoding (MPL-2.0), decode only
 
+> Amendment 2026-11-01 (Audacity programme A10): features `aac` and `isomp4` switched on
+> (pure Rust, same crate, same licence) so `.m4a` / `.aac` / `.mp4` audio imports; no new
+> dependency. Encoding to AAC / Ogg / MP3 stays NOT IMPLEMENTED (owner decision, §5.3).
+
 Implements ADR-0004's candidate. Features enabled: `mp3`, `flac`, `ogg`, `vorbis`, `wav`,
 `pcm` (no AAC/ALAC/MP4 until needed). Pure Rust, no system codecs, builds on MSVC
 (verified). MPL-2.0 is file-level copyleft: using the unmodified crate as a dependency

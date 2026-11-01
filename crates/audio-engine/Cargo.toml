@@ -16,7 +16,7 @@ ringbuf = { workspace = true }
 thiserror = { workspace = true }
 serde = { workspace = true }
 log = { workspace = true }
-symphonia = { version = "0.6", default-features = false, features = ["mp3", "flac", "ogg", "vorbis", "wav", "pcm"] }
+symphonia = { version = "0.6", default-features = false, features = ["mp3", "flac", "ogg", "vorbis", "wav", "pcm", "aac", "isomp4"] }
 midir = "0.11"
 flacenc = { version = "0.5", default-features = false }
 

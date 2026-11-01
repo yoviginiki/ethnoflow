@@ -82,6 +82,7 @@ pub async fn export_song(
     seconds: Option<f64>,
     stems: Option<bool>,
     target_lufs: Option<f64>,
+    start_s: Option<f64>,
 ) -> CmdResult<SongExportResult> {
     if let Some(t) = target_lufs {
         if !(-30.0..=-6.0).contains(&t) {
@@ -409,6 +410,15 @@ pub async fn export_song(
     }
 
     // ---- files ----
+    // A10 multiple export: render from 0 (the layers' state is a function of time) and keep
+    // only [start_s, end) of the mix and the stems.
+    let start_frames =
+        ((start_s.unwrap_or(0.0).max(0.0) * rate as f64).round() as usize).min(frames);
+    let out: Vec<f32> = out[start_frames * ch..].to_vec();
+    for sb in stem_bufs.iter_mut() {
+        sb.drain(..start_frames * ch);
+    }
+    let duration = duration - start_frames as f64 / rate as f64;
     let format = format.unwrap_or_default();
     let mut p = std::path::PathBuf::from(&path);
     let ext = format.extension();

@@ -768,6 +768,17 @@ async function main() {
     if (!(r.bytes < w.bytes * 0.9)) throw new Error(`flac ${r.bytes} B vs wav ${w.bytes} B`);
     return `${(r.bytes / 1024).toFixed(0)} kB FLAC vs ${(w.bytes / 1024).toFixed(0)} kB WAV 24, ${r.stems.length} stems`;
   });
+  await step("export: one file per song-map section (A10 multiple export)", () => {
+    const markers = readState().project?.markers ?? [];
+    if (markers.length === 0) throw new Error("the smoke project has no markers");
+    const dir = path.join(OUT_DIR, "sections");
+    fs.mkdirSync(dir, { recursive: true });
+    const r = expectOk(send({ op: "export_sections", dir, seconds: 6, rhythm: false, drone: false, pad: false, ambient: true, target_lufs: null, format: "pcm16" }));
+    if (!r.files.length) throw new Error("no section files");
+    for (const f of r.files) if (!fs.existsSync(f)) throw new Error(`missing ${f}`);
+    const first = wavStats(r.files[0]);
+    return `${r.files.length} files, first ${first.seconds.toFixed(2)} s`;
+  });
   await step("what next: the header hint follows the path (takes → background → export)", () => {
     const n = expectOk(send({ op: "what_next" }));
     if (!n.key || !n.screen || !n.text) throw new Error(JSON.stringify(n));

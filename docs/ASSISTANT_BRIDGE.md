@@ -131,7 +131,8 @@ rhythm_status, ambient_status }`
 | `edit_play` | `from_s?`, `to_s?` | **sound**: plays the working copy; `stop_take` stops |
 | `edit_save` | `label?` | writes the current version as a new take derived from the original; returns `{project, take_id}` |
 | `edit_status` / `edit_close` | | the editor's status / close the session |
-| `export_song` | `path`, `seconds?`, `drone?`, `pad?`, `ambient?`, `rhythm?`, `stems?`, `target_lufs?` (number = normalise to it, `null` = as rendered, absent = the studio's setting, default −14), `format?` (float32 \| pcm24 \| pcm16 \| flac24 \| flac16; FLAC writes `.flac` for the mix and the stems) | the studio's whole-song export (mix + stems + markers + manifest); the result carries `lufs`, `lufs_after`, `gain_db` |
+| `export_song` | `path`, `seconds?`, `drone?`, `pad?`, `ambient?`, `rhythm?`, `stems?`, `target_lufs?` (number = normalise to it, `null` = as rendered, absent = the studio's setting, default −14), `format?` (float32 \| pcm24 \| pcm16 \| flac24 \| flac16; FLAC writes `.flac` for the mix and the stems), `start_s?` (keep only from this second: the song is rendered from 0) |
+| `export_sections` | `dir`, `seconds?` (end of the last section), the `export_song` options | A10: one file per song-map section (marker to marker) into `dir`; returns `{files}` | the studio's whole-song export (mix + stems + markers + manifest); the result carries `lufs`, `lufs_after`, `gain_db` |
 | `reference_add` | `path` (WAV/MP3/FLAC/OGG) | copies the song into the references library (never into a project); reply: id, name, duration |
 | `reference_list` | | the references library (id, name, duration, analyzed) |
 | `reference_report` | `id` | the saved analysis report (tempo candidates, key hypotheses, segments) without the curves |

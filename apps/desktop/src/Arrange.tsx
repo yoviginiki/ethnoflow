@@ -1041,6 +1041,53 @@ export function Arrange() {
 
   // ---------- export ----------
 
+  /** A10: one file per section of the song map (consecutive markers), into a folder. */
+  const onExportSections = async () => {
+    const st = useStore.getState();
+    const markers = [...project.markers].sort((a, b) => a.at_seconds - b.at_seconds);
+    if (markers.length === 0) {
+      st.setMessage(t.exportSectionsNone);
+      return;
+    }
+    try {
+      st.setError(null);
+      const dir = await open({ title: t.exportSections, directory: true, multiple: false });
+      if (!dir || Array.isArray(dir)) return;
+      st.setPending(t.exporting);
+      const scale = st.project?.scale ?? null;
+      const profile = st.project?.instrument ?? null;
+      const dp = st.prefs.drone;
+      const pp = st.prefs.pad;
+      const dRoot = st.droneRootOverride ?? droneRoot(dp, scale, profile);
+      const pRoot = padRoot(pp, dp, scale, profile);
+      const padNotes = st.padChord ?? (pRoot === null ? null : voicingNotes(pp.voicing, pRoot, scale));
+      const include = {
+        clips: true,
+        drone: st.layers.drone && dRoot !== null ? droneSettings(dp, dRoot) : null,
+        pad: st.layers.pad && padNotes ? padSettings(pp, padNotes) : null,
+        ambient: st.layers.ambient,
+        scapes: st.layers.scapes,
+        rhythm: st.layers.rhythm ? { ...st.prefs.rhythm, chord: st.padChord, root_midi: dRoot, intonation: dp.intonation } : null,
+      };
+      const ext = formatExtension(prefs.exportFormat);
+      let n = 0;
+      for (let i = 0; i < markers.length; i++) {
+        const start = markers[i].at_seconds;
+        const end = i + 1 < markers.length ? markers[i + 1].at_seconds : Math.max(duration, start + 1);
+        if (end - start < 0.5) continue;
+        const safe = markers[i].name.replace(/[<>:"/\\|?*]/g, "_");
+        const path = `${dir}/${project.name}-${String(i + 1).padStart(2, "0")}-${safe}.${ext}`;
+        await api.exportSong(path, include, prefs.exportFormat, null, end, false, prefs.exportLoudness, start);
+        n++;
+      }
+      st.setMessage(`${t.exportSectionsDone}: ${n} · ${dir}`);
+    } catch (e) {
+      fail(e);
+    } finally {
+      useStore.getState().setPending(null);
+    }
+  };
+
   const onExportMix = async () => {
     const st = useStore.getState();
     try {
@@ -1489,6 +1536,9 @@ export function Arrange() {
           </div>
           <button onClick={() => void onExportMix()} disabled={busy || duration <= 0 || recording}>
             {t.exportMix}
+          </button>
+          <button className="ghost" onClick={() => void onExportSections()} disabled={busy || duration <= 0 || recording || project.markers.length === 0} title={t.exportSectionsHint}>
+            {t.exportSections}
           </button>
           <label className="inline small">
             {t.format}

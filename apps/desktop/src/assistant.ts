@@ -538,7 +538,24 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
       const targetLufs = cmd.target_lufs === undefined ? (s.prefs.exportLoudness ?? null) : typeof cmd.target_lufs === "number" ? cmd.target_lufs : null;
       // `format`: float32 | pcm24 | pcm16 | flac24 | flac16 (default: the studio's setting).
       const format = (typeof cmd.format === "string" ? cmd.format : s.prefs.exportFormat) as WavFormat;
-      return await api.exportSong(String(cmd.path), include as never, format ?? null, null, typeof cmd.seconds === "number" ? cmd.seconds : null, cmd.stems !== false, targetLufs);
+      return await api.exportSong(String(cmd.path), include as never, format ?? null, null, typeof cmd.seconds === "number" ? cmd.seconds : null, cmd.stems !== false, targetLufs, typeof cmd.start_s === "number" ? cmd.start_s : null);
+    }
+    case "export_sections": {
+      // A10: one file per song-map section into `dir` (same options as export_song).
+      const p = project();
+      const markers = [...p.markers].sort((a, b) => a.at_seconds - b.at_seconds);
+      if (markers.length === 0) throw new Error("no markers in the song map");
+      const endOf = typeof cmd.seconds === "number" ? cmd.seconds : null;
+      const files: string[] = [];
+      for (let i = 0; i < markers.length; i++) {
+        const start = markers[i].at_seconds;
+        const end = i + 1 < markers.length ? markers[i + 1].at_seconds : (endOf ?? start + 4);
+        if (end - start < 0.5) continue;
+        const safe = markers[i].name.replace(/[<>:"/\\|?*]/g, "_");
+        const r = (await runAssistantCommand({ ...cmd, op: "export_song", path: `${String(cmd.dir)}/${p.name}-${String(i + 1).padStart(2, "0")}-${safe}`, seconds: end, start_s: start, stems: false })) as { path: string };
+        files.push(r.path);
+      }
+      return { files };
     }
     case "instrument_audition": {
       // Plays a preset through the designer's audition path for a few seconds (sound!).

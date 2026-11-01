@@ -1961,8 +1961,8 @@ export const api = {
   exportArrangementMix: (path: string, format: WavFormat | null, sampleRate: number | null) =>
     invoke<ExportResult>("export_arrangement_mix", { path, format, sampleRate }),
   /** Whole song: clips + chosen background layers through one offline graph; mix + aligned stems + markers + manifest. */
-  exportSong: (path: string, include: { clips: boolean; drone: DroneSettings | null; pad: PadSettings | null; ambient: boolean; scapes: boolean; rhythm: RhythmSettings | null }, format: WavFormat | null, sampleRate: number | null, seconds: number | null, stems: boolean, targetLufs: number | null = null) =>
-    invoke<SongExportResult>("export_song", { path, include, format, sampleRate, seconds, stems, targetLufs }),
+  exportSong: (path: string, include: { clips: boolean; drone: DroneSettings | null; pad: PadSettings | null; ambient: boolean; scapes: boolean; rhythm: RhythmSettings | null }, format: WavFormat | null, sampleRate: number | null, seconds: number | null, stems: boolean, targetLufs: number | null = null, startS: number | null = null) =>
+    invoke<SongExportResult>("export_song", { path, include, format, sampleRate, seconds, stems, targetLufs, startS }),
 
   // Audio editor (home-studio item 5 = E1): a take as a working copy with history.
   editOpen: (takeId: string) => invoke<EditStatus>("edit_open", { takeId }),
