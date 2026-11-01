@@ -3,6 +3,14 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Soundscapes merged into Atmosphere as the "Modules" view (2026-11-01; owner: "обедини ги", after
+  "the Soundscapes checkbox is missing in the bar, it is mixed with Atmosphere").** Both screens
+  edited the same rack, so the bar had one "Atm." switch for two tabs. Atmosphere's top row gets a
+  Layers / Modules switch (`prefs.ambientView`); "Modules" mounts the former Soundscapes body
+  (one module, big knobs, how-to) under Atmosphere's own play / fade / sleep / level row. The screen
+  id `soundscapes` stays as an alias: `setScreen("soundscapes")` opens Atmosphere in the modules
+  view, so presets (`go`), the bridge, the smoke test and the "Start from a melody" links keep
+  working. Smoke: alias step; the areas step lists five Background tabs. Guide BG/EN, bridge doc.
 - **Song, Learn, Library (and Play) as screens with tabs: stage 5 of the UX audit (2026-11-01; owner: "давай напред").**
   `AreaScreen.tsx` replaces `BackgroundScreen.tsx` and serves all five areas: Play =
   Play & record · Tuner; Background = the six tabs of stage 4; Song = My studio · Song map

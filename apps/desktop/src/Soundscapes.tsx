@@ -128,18 +128,6 @@ export function Soundscapes() {
 
   return (
     <section className="soundscapes">
-      <div className="analysis-row">
-        <h2 className="arrange-title">{t.areaSoundscapes}</h2>
-        {s.layers.ambient ? (
-          <button className="primary" onClick={() => s.setLayer("ambient", false)}>
-            ■ {t.rackStop}
-          </button>
-        ) : (
-          <button className="primary" onClick={() => s.setLayer("ambient", true)} disabled={layers.length === 0} title={layers.length > 0 ? t.rackPlay : t.rackEmpty}>
-            ▶ {t.rackPlay}
-          </button>
-        )}
-      </div>
       <div className="muted small">{t.ssIntro}</div>
       <div className="analysis-row">
         <label className="inline">

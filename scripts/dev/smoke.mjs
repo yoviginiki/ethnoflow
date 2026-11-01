@@ -133,7 +133,7 @@ const audible = (p, min = 0.02) => {
   return `${path.basename(p)} ${s.seconds.toFixed(1)} s peak ${s.peak.toFixed(2)}`;
 };
 
-const SCREENS = ["home", "play", "tuner", "compose", "studio", "ambient", "soundscapes", "rhythm", "live", "library", "instrument", "songmap", "samples", "references", "academy", "create", "start", "help"];
+const SCREENS = ["home", "play", "tuner", "compose", "studio", "ambient", "rhythm", "live", "library", "instrument", "songmap", "samples", "references", "academy", "create", "start", "help"];
 
 async function main() {
   await step("bridge: ping", () => expectOk(send({ op: "ping" })).pong === true || Promise.reject(new Error("no pong")));
@@ -323,9 +323,16 @@ async function main() {
     if (c.screen !== "play" || !c.loaded_id || c.loaded_id !== c.latest_id) throw new Error(JSON.stringify(c));
     return `${opened.join(", ")}; continue → play with the latest take loaded`;
   });
+  await step("soundscapes: the old screen id opens Atmosphere in the modules view (alias)", () => {
+    const r = expectOk(send({ op: "screen", screen: "soundscapes" }));
+    if (r.screen !== "ambient") throw new Error(`screen is ${r.screen}`);
+    const st = readState();
+    if (st.prefs?.ambientView !== undefined && st.prefs.ambientView !== "modules") throw new Error(`ambientView ${st.prefs.ambientView}`);
+    return `screen soundscapes → ambient (modules view)`;
+  });
   await step("areas: every tab of Play / Background / Song / Learn / Library is a screen of its area", () => {
     const list = expectOk(send({ op: "area" }));
-    const want = { play: ["play", "tuner"], background: ["compose", "ambient", "soundscapes", "rhythm", "instrument", "live"], song: ["studio", "songmap", "create", "start"], learn: ["academy", "references"], library: ["library", "samples"] };
+    const want = { play: ["play", "tuner"], background: ["compose", "ambient", "rhythm", "instrument", "live"], song: ["studio", "songmap", "create", "start"], learn: ["academy", "references"], library: ["library", "samples"] };
     for (const id of Object.keys(want)) if (JSON.stringify(list.tabs?.[id]) !== JSON.stringify(want[id])) throw new Error(`${id}: ${JSON.stringify(list.tabs?.[id])}`);
     let n = 0;
     for (const [id, tabs] of Object.entries(want)) {

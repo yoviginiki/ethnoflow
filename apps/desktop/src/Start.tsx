@@ -308,8 +308,8 @@ export function Start() {
             <button className="ghost small" onClick={() => s.setScreen("compose")}>
               {t.areaAccomp}
             </button>
-            <button className="ghost small" onClick={() => s.setScreen("soundscapes")}>
-              {t.areaSoundscapes}
+            <button className="ghost small" onClick={() => s.setScreen("ambient")}>
+              {t.areaAmbient}
             </button>
             <button className="ghost small" onClick={() => s.setScreen("rhythm")}>
               {t.areaRhythm}

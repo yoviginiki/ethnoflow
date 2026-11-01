@@ -24,7 +24,7 @@ export interface HomeArea {
 
 export const AREAS: HomeArea[] = [
   { id: "play", title: "hPlay", desc: "hPlayDesc", main: "play", also: ["tuner"] },
-  { id: "background", title: "hBackground", desc: "hBackgroundDesc", main: "compose", also: ["ambient", "soundscapes", "rhythm", "instrument", "live"] },
+  { id: "background", title: "hBackground", desc: "hBackgroundDesc", main: "compose", also: ["ambient", "rhythm", "instrument", "live"] },
   { id: "song", title: "hSong", desc: "hSongDesc", main: "studio", also: ["songmap", "create", "start"] },
   { id: "learn", title: "hLearn", desc: "hLearnDesc", main: "academy", also: ["references"] },
   { id: "library", title: "hLibrary", desc: "hLibraryDesc", main: "library", also: ["samples"] },
@@ -32,9 +32,13 @@ export const AREAS: HomeArea[] = [
 
 export const AREA_IDS: AreaId[] = AREAS.map((a) => a.id);
 
+/** Screen ids kept only as aliases: "soundscapes" = Atmosphere in the modules view (store.setScreen maps it). */
+export const ALIAS_SCREENS: Record<string, AreaScreenId> = { soundscapes: "ambient" };
+
 /** The area a screen belongs to; Home and Help belong to none. */
 export function areaOf(screen: Screen): HomeArea | null {
   if (screen === "home") return null;
+  if (screen in ALIAS_SCREENS) screen = ALIAS_SCREENS[screen];
   return AREAS.find((a) => a.main === screen || a.also.includes(screen)) ?? null;
 }
 

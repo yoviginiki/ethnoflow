@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
+import { Soundscapes } from "./Soundscapes";
 import { open } from "@tauri-apps/plugin-dialog";
 import { AMBIENT_TAGS, api, describeError, IMPORT_EXTENSIONS, type Ambient as AmbientRack, type AmbientLayer, type AmbientTag, type LayerKind, type LayerSource, type Macros, type PresetSummary } from "./api";
 import { DEFAULT_MACROS, KIND_LABEL, MAX_AMBIENT_LAYERS, defaultSource, makeLayer } from "./ambientPresets";
@@ -335,6 +336,7 @@ export function Ambient() {
 
   const masterDb = s.prefs.masterDb ?? 0;
   const stripControl = s.prefs.stripControl ?? "slider";
+  const ambientView = s.prefs.ambientView ?? "layers";
   const masterPeakDb = status ? linearToDb(status.master_peak) : -60;
   const sleepLeft = s.sleepAt === null ? null : Math.max(0, Math.round((s.sleepAt - Date.now()) / 60000));
   const canPlay = layers.length > 0;
@@ -402,6 +404,14 @@ export function Ambient() {
               <option value="knob">{t.viewKnobs}</option>
             </select>
           </label>
+          <span className="seg" role="tablist" aria-label={t.ambientViewLabel} data-coach="ambient-view">
+            <button role="tab" aria-selected={ambientView === "layers"} className={`ghost small ${ambientView === "layers" ? "on" : ""}`} onClick={() => s.setPref("ambientView", "layers")}>
+              {t.ambientViewLayers}
+            </button>
+            <button role="tab" aria-selected={ambientView === "modules"} className={`ghost small ${ambientView === "modules" ? "on" : ""}`} onClick={() => s.setPref("ambientView", "modules")}>
+              {t.ambientViewModules}
+            </button>
+          </span>
           <div className="meter" style={{ width: 120 }} role="meter" aria-valuemin={-60} aria-valuemax={0} aria-valuenow={Math.round(masterPeakDb)} aria-label={t.mixTitle}>
             <div className={`meter-fill ${masterPeakDb > -3 ? "hot" : masterPeakDb > -12 ? "warm" : ""}`} style={{ width: `${meterFraction(masterPeakDb) * 100}%` }} />
           </div>
@@ -417,7 +427,8 @@ export function Ambient() {
         <div className="muted small">{t.ambientIntro}</div>
       </section>
 
-      <div className={`ambient-body ${showLeft ? "" : "left-collapsed"} ${showRight ? "" : "right-collapsed"}`}>
+      {ambientView === "modules" && <Soundscapes />}
+      <div className={`ambient-body ${showLeft ? "" : "left-collapsed"} ${showRight ? "" : "right-collapsed"}`} style={ambientView === "modules" ? { display: "none" } : undefined}>
         <aside className="panel ambient-left">
           <div className="panel-head">
             {showLeft && <h3>{t.presetsTitle}</h3>}

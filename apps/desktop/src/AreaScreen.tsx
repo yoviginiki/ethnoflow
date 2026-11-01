@@ -1,6 +1,6 @@
 import { AcademyScreen } from "./AcademyScreen";
 import { Ambient } from "./Ambient";
-import { areaOf, areaTabs, SCREEN_TITLE, type AreaScreenId } from "./areas";
+import { ALIAS_SCREENS, areaOf, areaTabs, SCREEN_TITLE, type AreaScreenId } from "./areas";
 import { Arrange } from "./Arrange";
 import { Compose } from "./Compose";
 import { CreateSongScreen } from "./CreateSongScreen";
@@ -12,7 +12,6 @@ import { ReferencesScreen } from "./ReferencesScreen";
 import { RhythmScreen } from "./RhythmScreen";
 import { SamplesScreen } from "./SamplesScreen";
 import { SongMapScreen } from "./SongMapScreen";
-import { Soundscapes } from "./Soundscapes";
 import { Start } from "./Start";
 import { useStore } from "./store";
 import { Studio } from "./Studio";
@@ -32,6 +31,7 @@ export function AreaScreen({ screen }: { screen: AreaScreenId }) {
   const setScreen = useStore((s) => s.setScreen);
   const area = areaOf(screen);
   if (!area) return null;
+  if (screen in ALIAS_SCREENS) screen = ALIAS_SCREENS[screen];
   return (
     <div className="area-screen" data-area={area.id}>
       <nav className="tabs" role="tablist" aria-label={t[area.title]} data-coach={`${area.id}-tabs`}>
@@ -46,7 +46,6 @@ export function AreaScreen({ screen }: { screen: AreaScreenId }) {
       {screen === "tuner" && <TunerScreen />}
       {screen === "compose" && <Compose />}
       {screen === "ambient" && <Ambient />}
-      {screen === "soundscapes" && <Soundscapes />}
       {screen === "rhythm" && <RhythmScreen />}
       {screen === "instrument" && <InstrumentDesigner />}
       {screen === "live" && (

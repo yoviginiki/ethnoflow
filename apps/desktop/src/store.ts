@@ -67,6 +67,8 @@ export interface Prefs {
   notesView: "roll" | "falling" | "gate";
   /** Secondary blocks of "Play & record" the user has opened (devices, keyboard, drone, pad). */
   studioOpen: string[];
+  /** Atmosphere: "layers" (the rack with scenes and automation) or "modules" (one module with big knobs; the former Soundscapes screen). */
+  ambientView: "layers" | "modules";
   keyNames: boolean;
   /** Tuner screen: reference pitch in Hz (400..480), null = the project's A4. */
   tunerA4: number | null;
@@ -221,6 +223,7 @@ export const DEFAULT_PREFS: Prefs = {
   tuner: false,
   notesView: "roll",
   studioOpen: [],
+  ambientView: "layers",
   tunerA4: null,
   tunerInstrument: "free",
   tunerLock: null,
@@ -438,7 +441,14 @@ export const useStore = create<Store>((set, get) => ({
   },
 
   screen: "home",
-  setScreen: (screen) => set({ screen }),
+  setScreen: (screen) => {
+    // "soundscapes" stays a valid id for presets, the bridge and old links: it is
+    // Atmosphere in the "modules" view (merged 2026-11-01, owner: "обедини ги").
+    if (screen === "soundscapes") {
+      get().setPref("ambientView", "modules");
+      set({ screen: "ambient" });
+    } else set({ screen });
+  },
   designerId: null,
   setDesignerId: (designerId) => set({ designerId }),
 

@@ -4,7 +4,7 @@ This guide is also shown inside the app (the **? Help** button top right, with s
 
 ## Home and projects
 
-- **Home has five areas**, one verb each: **Play** (I play and record: microphone, tuner, metronome, takes), **Background** (I sound behind: drone, pad, atmosphere, rhythm, instruments, live accompanist), **Song** (I arrange: tracks, song map, guide, export), **Learn** (academy, trainer, gate, references), **Library** (presets, sessions, samples). Every area is one screen with tabs (a tab is remembered as a screen: a preset's "Load", the assistant and the bridge open the right tab directly): Play = Play & record · Tuner; Background = Drone & pad · Atmosphere · Soundscapes · Rhythm section · Instruments · Live accompanist; Song = My studio · Song map · Create a song · Start from a melody; Learn = Academy · References; Library = Library · My samples. The big card opens the first tab, the "Tabs:" buttons under it open the others. Nothing was removed, only arranged.
+- **Home has five areas**, one verb each: **Play** (I play and record: microphone, tuner, metronome, takes), **Background** (I sound behind: drone, pad, atmosphere, rhythm, instruments, live accompanist), **Song** (I arrange: tracks, song map, guide, export), **Learn** (academy, trainer, gate, references), **Library** (presets, sessions, samples). Every area is one screen with tabs (a tab is remembered as a screen: a preset's "Load", the assistant and the bridge open the right tab directly): Play = Play & record · Tuner; Background = Drone & pad · Atmosphere · Rhythm section · Instruments · Live accompanist; Song = My studio · Song map · Create a song · Start from a melody; Learn = Academy · References; Library = Library · My samples. The big card opens the first tab, the "Tabs:" buttons under it open the others. Nothing was removed, only arranged.
 - At the top of Home is **▶ Continue**: it opens Play with the latest take loaded (with no takes the button reads "● Record the first" and opens Play ready to record). Next to it, **I have a melody →** opens Start from a melody.
 - The top bar says where you are: "Home › Background › Atmosphere". **? Help** is top right, next to the assistant.
 - Top right is the **📁 Project** menu: new, open, recent, close. Everything in a project saves itself; there is no Save button.
@@ -26,7 +26,7 @@ The quickest path from an idea to a background:
 1. **Melody**: record with the microphone (🎙 Record), import a file (📂 Import: WAV, MP3, FLAC, OGG, MIDI) or pick an existing take.
 2. **🔍 Analyse**. Nothing changes by itself; the analysis only proposes: a key with percentages (pick another or "no key"), a tempo with percentages (or the project's), and the melody's register (lowest, highest and median note).
 3. **Variants**: five complete starting points tuned to the melody: *Quiet ambient*, *Dark drone*, *Liquid DnB*, *Ambient DnB*, *Ethno pulse*. Each card says what it assumes for key, tempo and meter and where that comes from (analysis, project, or suggested). **▶ Try** writes the key and tempo into the project and starts everything; **💾 Save as session** stores it in the Library with notes; **↶ Undo** restores what was there before the first try.
-4. Then go to Compose, Soundscapes or the Rhythm section and shape it.
+4. Then go to Drone & pad, Atmosphere or the Rhythm section and shape it.
 
 The pad and the textures always sit **below** the melody (about two octaves under its median note) so they never fight it.
 
@@ -131,9 +131,10 @@ In Play & record › **Trainer** (the panel under the falling notes):
 
 ## Background: one screen with tabs
 
-Home › **Background**. Everything that sounds behind the melody is one screen with six
-tabs: **Drone & pad** (mode, tempo, styles, drone, pad, intent), **Atmosphere**,
-**Soundscapes**, **Rhythm section**, **Instruments** and **Live accompanist**. A tab is
+Home › **Background**. Everything that sounds behind the melody is one screen with five
+tabs: **Drone & pad** (mode, tempo, styles, drone, pad, intent), **Atmosphere** (with a
+"Layers" or "Modules" view, the former Soundscapes), **Rhythm section**, **Instruments**
+and **Live accompanist**. A tab is
 remembered as a screen: a preset's "Load", the assistant and the bridge open the right tab
 directly. Play, stop and the level of the background are not in the tabs but in the "Now
 playing" bar at the bottom (🎚 opens the mixer).
@@ -292,11 +293,10 @@ new variant (seed) of the same exercise.
 From the terminal: `academy_lessons`, `academy_instance`, `academy_score_rhythm`,
 `academy_record`, `academy_reset` (see the bridge).
 
-## Background › Soundscapes
+## Background › Atmosphere › "Modules" view (the former Soundscapes)
 
-The same layers as Atmosphere, one at a time, with big knobs:
+Atmosphere's top row has a **Layers / Modules** switch. "Modules" shows the same rack one module at a time with big knobs. Until 1.11 this was a separate "Soundscapes" screen; now it is one screen and one "Atm." switch in the "Now playing" bar, because the sound is the same. Old presets and links that led to Soundscapes open Atmosphere in this view.
 
-- **▶ Play / ■ Stop** at the top starts and stops the atmosphere (the same as "Atm." in the "Now playing" bar). Level and mixer are in the bar.
 - Pick a **Module** (layer) at the top or add a new one by kind. Under the title is "How to use it" for that module.
 - **Resonator** (modal synthesis): a struck body in the mode, from string/tube (Structure 0) to bowl/bell (1); Strike, Brightness, Decay, Density. Good for sparse bell hits over the pad or a wooden pulse under the melody.
 - **Choir** (vocal drone): vowels a–e–i–o–u through formants on the mode, Breath for slow swells, Spread for width, Voices = how many tones sing; a low register = a men's choir. Under the kaval with a big Space.

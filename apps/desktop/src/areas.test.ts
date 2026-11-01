@@ -13,13 +13,14 @@ describe("home areas", () => {
   it("places every screen except home and help in exactly one area", () => {
     for (const sc of SCREENS) {
       const owners = AREAS.filter((a) => sc !== "home" && (a.main === sc || a.also.includes(sc)));
-      if (sc === "home" || sc === "help") expect(owners).toHaveLength(0);
+      if (sc === "home" || sc === "help" || sc === "soundscapes") expect(owners).toHaveLength(0);
       else expect(owners, sc).toHaveLength(1);
     }
     expect(areaOf("home")).toBeNull();
     expect(areaOf("tuner")?.id).toBe("play");
     expect(areaOf("ambient")?.id).toBe("background");
     expect(areaOf("live")?.id).toBe("background");
+    expect(areaOf("soundscapes")?.id).toBe("background"); // alias of Atmosphere
   });
 
   it("never lists a main screen under 'also' and resolves area ids to their main screen", () => {

@@ -116,6 +116,8 @@ h2 { font-size: 15px; margin: 0 0 8px; font-weight: 600; }
 .tab { padding: 8px 14px; border: 1px solid var(--axis); border-bottom: none; border-radius: 8px 8px 0 0; background: var(--panel); opacity: 0.75; cursor: pointer; font-size: 15px; }
 .tab.on { opacity: 1; border-color: var(--accent); border-bottom: 2px solid var(--accent); font-weight: 600; }
 .tabs-hint { margin-left: auto; }
+.seg { display: inline-flex; gap: 2px; }
+.seg button.on { background: var(--accent); color: #111; border-color: var(--accent); }
 .area {
   display: flex; flex-direction: column; gap: 6px; text-align: left; padding: 16px;
   background: var(--panel); border: 1px solid var(--axis); border-radius: 10px; min-height: 96px;
