@@ -220,6 +220,9 @@ impl Source for BassSource {
     fn render_at(&mut self, out: &mut [f32], sample_rate: u32, frame: u64) {
         let sr = sample_rate.max(1) as f32;
         let p = Arc::clone(&self.params);
+        // K4: pitch bend ratio and mod wheel (brightness) from the keyboard.
+        let bend = p.live.bend_ratio();
+        let modw = p.live.modulation();
         let ramp = ramp_samples(sample_rate);
         self.cutoff.begin(p.cutoff_hz.target(), ramp);
         self.resonance.begin(p.resonance.target(), ramp);
@@ -336,7 +339,7 @@ impl Source for BassSource {
                     self.gate = false;
                 }
             }
-            let cutoff = self.cutoff.next(p.cutoff_hz.target());
+            let cutoff = (self.cutoff.next(p.cutoff_hz.target()) * (1.0 + modw)).min(12_000.0);
             let q = 0.6 + self.resonance.next(p.resonance.target()) * 8.0;
             let drive = self.drive.next(p.drive.target());
             let sc = self.sidechain.next(p.sidechain.target());
@@ -360,7 +363,7 @@ impl Source for BassSource {
             self.filt_env *= k_filt;
             self.pitch_env *= k_pitch;
             let semis = pitch_st * self.pitch_env + self.note_cents / 100.0;
-            let inc = self.hz * 2f32.powf(semis / 12.0) / sr;
+            let inc = self.hz * bend * 2f32.powf(semis / 12.0) / sr;
             self.phase += inc;
             if self.phase >= 1.0 {
                 self.phase -= 1.0;

@@ -3,6 +3,13 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Keyboard K4 finished: pitch bend and mod wheel (2026-11-01).** `LiveNotes` carries a bend
+  ratio and a mod amount; bass, lead, pattern synth and chord pad multiply their pitch by the
+  bend and open their filter / tone with the wheel; the live synth gets `Cmd::Bend` /
+  `Cmd::Modulation` (vibrato up to ±50 cents at 5.5 Hz). The MIDI thread routes pitch bend
+  (±2 semitones) and CC 1 to the keyboard's target; `keyboard_control` does the same from
+  the UI / bridge (`keyboard {bend, mod}`); tests: an octave of bend doubles the zero
+  crossings on the live synth and on a factory bass. Smoke checks the round trip.
 - **Templates, FLAC export, "What next" (home-studio item 8, 2026-11-01).** New project
   form: "Template (style)" picks one of the nine starters and applies it through
   `applyStyle` once the rack is loaded (`templates.ts`; bridge `create_project.style`).

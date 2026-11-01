@@ -496,6 +496,10 @@ async function main() {
         const h = expectOk(send({ op: "note", midi: 62, on: false }));
         if (h.held.length !== 0) throw new Error("note still held");
       }
+      // K4: the wheels' values reach the target through the same command the MIDI thread uses.
+      const w = expectOk(send({ op: "keyboard", bend: 2, mod: 0.5 }));
+      if (w.bend !== 2 || w.mod !== 0.5) throw new Error(`bend/mod ${JSON.stringify([w.bend, w.mod])}`);
+      expectOk(send({ op: "keyboard", bend: 0, mod: 0 }));
       const inst = expectOk(send({ op: "keyboard", source: "instrument" }));
       if (inst.source !== "instrument" || inst.synth_running) throw new Error(`instrument ${JSON.stringify(inst)}`);
       const off = expectOk(send({ op: "keyboard", on: false, source: "voice" }));

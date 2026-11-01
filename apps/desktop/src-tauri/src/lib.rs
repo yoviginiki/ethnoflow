@@ -239,6 +239,7 @@ pub fn run() {
             forge_cmds::instrument_note,
             forge_cmds::instrument_notes_off,
             synth_cmds::set_keyboard_target,
+            synth_cmds::keyboard_control,
             forge_cmds::instrument_render,
             samples_cmds::samples_scan,
             samples_cmds::samples_default_folders,

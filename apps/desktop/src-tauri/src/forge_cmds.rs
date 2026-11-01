@@ -973,7 +973,7 @@ mod tests {
             .into_iter()
             .find(|p| p.category == "bass")
             .expect("a factory bass");
-        let render = |note: Option<u8>| {
+        let render_bent = |note: Option<u8>, bend: f32| {
             let gp = Arc::new(GraphParams::default());
             gp.master.gain_db.set(0.0);
             gp.layers[AUDITION_SLOT].gain_db.set(-6.0);
@@ -982,11 +982,13 @@ mod tests {
             if let Some(n) = note {
                 params.live().note(n, true, 0.8);
             }
+            params.live().set_bend(bend);
             let mut g = Graph::new(gp, 48_000);
             g.set_source(AUDITION_SLOT, src);
             clock.start(0, 0.0);
             g.render_offline(1.0, 1)
         };
+        let render = |note: Option<u8>| render_bent(note, 0.0);
         assert!(rms(&render(None)) < 1e-4, "silent without a note");
         let played = render(Some(45));
         assert!(rms(&played) > 0.01, "a held A2 sounds");
@@ -998,6 +1000,14 @@ mod tests {
             .filter(|w| (w[0] >= 0.0) != (w[1] >= 0.0))
             .count();
         assert!((60..=600).contains(&zc), "zero crossings {zc}");
+        // K4: a bend of an octave doubles the crossings.
+        let bent = render_bent(Some(45), 12.0);
+        let zc2 = bent.samples[24_000..]
+            .windows(2)
+            .filter(|w| (w[0] >= 0.0) != (w[1] >= 0.0))
+            .count();
+        let ratio = zc2 as f64 / zc.max(1) as f64;
+        assert!((1.7..=2.3).contains(&ratio), "bend: {zc} → {zc2} crossings");
     }
 
     #[test]

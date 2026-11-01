@@ -1784,6 +1784,8 @@ export const api = {
   /** A keyboard note into the auditioned instrument (K2); false = nothing is auditioned. */
   instrumentNote: (midi: number, on: boolean, velocity: number | null) => invoke<boolean>("instrument_note", { midi, on, velocity }),
   instrumentNotesOff: () => invoke<void>("instrument_notes_off"),
+  /** K4: pitch bend (semitones) and / or mod wheel (0..1) to the keyboard's target. */
+  keyboardControl: (bendSemitones: number | null, modulation: number | null) => invoke<[number | null, number | null]>("keyboard_control", { bendSemitones, modulation }),
   startDrone: (device: string | null, settings: DroneSettings) => invoke<DroneStatus>("start_drone", { device, settings }),
   setDrone: (settings: DroneSettings) => invoke<DroneStatus>("set_drone", { settings }),
   stopDrone: () => invoke<void>("stop_drone"),

@@ -419,9 +419,12 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
       if (typeof cmd.velocity === "number") st.setPref("keyboardVelocity", Math.max(0.05, Math.min(1, cmd.velocity)));
       if (cmd.midi_input === null || typeof cmd.midi_input === "string") st.setPref("midiInput", cmd.midi_input);
       await new Promise((r) => setTimeout(r, 250));
+      // K4: `bend` (semitones) / `mod` (0..1) go straight to the target, like the wheels.
+      let control: [number | null, number | null] | null = null;
+      if (typeof cmd.bend === "number" || typeof cmd.mod === "number") control = await api.keyboardControl(typeof cmd.bend === "number" ? cmd.bend : null, typeof cmd.mod === "number" ? cmd.mod : null);
       const p = useStore.getState();
       const synth = await api.liveSynthStatus().catch(() => null);
-      return { on: p.prefs.keyboardOn, source: p.prefs.keyboardSource, octave: p.prefs.keyboardOctave, lock: p.prefs.keyboardLock, velocity: p.prefs.keyboardVelocity, midi_input: p.prefs.midiInput, midi_ports: p.midiPorts, synth_running: synth !== null, designer_voice: p.designerVoice !== null, held: heldNotes() };
+      return { on: p.prefs.keyboardOn, source: p.prefs.keyboardSource, octave: p.prefs.keyboardOctave, lock: p.prefs.keyboardLock, velocity: p.prefs.keyboardVelocity, midi_input: p.prefs.midiInput, midi_ports: p.midiPorts, synth_running: synth !== null, designer_voice: p.designerVoice !== null, held: heldNotes(), bend: control?.[0] ?? null, mod: control?.[1] ?? null };
     }
     case "note": {
       // Sound! One keyboard note where the dock points: { midi, on, velocity? }; "notes_off" releases all.

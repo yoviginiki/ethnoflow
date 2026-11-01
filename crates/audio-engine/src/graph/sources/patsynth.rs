@@ -173,6 +173,9 @@ impl Source for PatternSynthSource {
     fn render_at(&mut self, out: &mut [f32], sample_rate: u32, frame: u64) {
         let sr = sample_rate.max(1) as f64;
         let p = Arc::clone(&self.params);
+        // K4: pitch bend ratio and mod wheel (brightness) from the keyboard.
+        let bend = p.live.bend_ratio();
+        let modw = p.live.modulation();
         self.tone
             .begin(p.tone_hz.target(), ramp_samples(sample_rate));
         let timbre = match p.timbre.load(Ordering::Relaxed) {
@@ -257,13 +260,13 @@ impl Source for PatternSynthSource {
                     }
                 }
                 acc += v.gain * v.env * crate::synth::wave(timbre, v.phase, v.t) as f32;
-                v.phase += v.hz as f64 / sr;
+                v.phase += v.hz as f64 * bend as f64 / sr;
                 if v.phase >= 1.0 {
                     v.phase -= 1.0;
                 }
                 v.t += 1.0 / sr;
             }
-            let tone = self.tone.next(p.tone_hz.target());
+            let tone = (self.tone.next(p.tone_hz.target()) * (1.0 + modw)).min(20_000.0);
             let a = 1.0 - (-2.0 * std::f32::consts::PI * tone / sample_rate as f32).exp();
             self.lp = undenormal(self.lp + a * (acc - self.lp));
             *s = super::gen::soft(self.lp);

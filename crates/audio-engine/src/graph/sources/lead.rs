@@ -149,6 +149,9 @@ impl Source for LeadSource {
     fn render_at(&mut self, out: &mut [f32], sample_rate: u32, frame: u64) {
         let sr = sample_rate.max(1) as f32;
         let p = Arc::clone(&self.params);
+        // K4: pitch bend ratio and mod wheel (brightness) from the keyboard.
+        let bend = p.live.bend_ratio();
+        let modw = p.live.modulation();
         self.cutoff
             .begin(p.cutoff_hz.target(), ramp_samples(sample_rate));
         let wave = p.wave.load(Ordering::Relaxed);
@@ -228,7 +231,10 @@ impl Source for LeadSource {
             }
             let vib_on = (self.note_t - 0.12).clamp(0.0, 0.25) * 4.0;
             let hz = self.hz
-                * (1.0 + vib_depth * vib_on * (self.vib_phase * std::f32::consts::TAU).sin());
+                * bend
+                * (1.0
+                    + (vib_depth * vib_on + modw * 0.015)
+                        * (self.vib_phase * std::f32::consts::TAU).sin());
             let dt = (hz / sr).clamp(0.0, 0.5);
             let y = match wave {
                 0 => saw_blep(self.phase, dt),
@@ -240,8 +246,9 @@ impl Source for LeadSource {
                 self.phase -= 1.0;
             }
             self.fenv *= k_fenv;
-            let cutoff =
-                self.cutoff.next(p.cutoff_hz.target()) * (3.0 * env_amount * self.fenv).exp2();
+            let cutoff = self.cutoff.next(p.cutoff_hz.target())
+                * (1.0 + modw)
+                * (3.0 * env_amount * self.fenv).exp2();
             self.lp
                 .set(cutoff.clamp(80.0, 16_000.0), 0.7 + res * 8.0, sr);
             let driven = soft(y * drive * (0.35 + 0.65 * self.vel));

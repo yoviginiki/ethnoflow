@@ -244,6 +244,9 @@ impl Source for ChordPadSource {
     fn render_at(&mut self, out: &mut [f32], sample_rate: u32, frame: u64) {
         let sr = sample_rate.max(1) as f32;
         let p = Arc::clone(&self.params);
+        // K4: pitch bend ratio and mod wheel (brightness) from the keyboard.
+        let bend = p.live.bend_ratio();
+        let modw = p.live.modulation();
         self.cutoff
             .begin(p.cutoff_hz.target(), ramp_samples(sample_rate));
         let wave = p.wave.load(Ordering::Relaxed);
@@ -317,8 +320,8 @@ impl Source for ChordPadSource {
                         continue;
                     }
                 }
-                let dt_a = v.hz / sr;
-                let dt_b = v.hz * detune / sr;
+                let dt_a = v.hz * bend / sr;
+                let dt_b = v.hz * bend * detune / sr;
                 let y = if wave == 0 {
                     saw_blep(v.phase_a, dt_a) + saw_blep(v.phase_b, dt_b)
                 } else {
@@ -339,7 +342,8 @@ impl Source for ChordPadSource {
                 self.lfo_phase -= 1.0;
             }
             let lfo = (self.lfo_phase * std::f32::consts::TAU).sin();
-            let cutoff = self.cutoff.next(p.cutoff_hz.target()) * (movement * lfo).exp2();
+            let cutoff =
+                self.cutoff.next(p.cutoff_hz.target()) * (1.0 + modw) * (movement * lfo).exp2();
             self.lp.set(cutoff.clamp(80.0, 16_000.0), 0.8, sr);
             *s = undenormal(soft(self.lp.process(acc).lp));
         }

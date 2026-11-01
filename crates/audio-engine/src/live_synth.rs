@@ -23,9 +23,22 @@ const GAIN: f64 = 0.28;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Cmd {
-    On { midi: u8, velocity: f32 },
-    Off { midi: u8 },
+    On {
+        midi: u8,
+        velocity: f32,
+    },
+    Off {
+        midi: u8,
+    },
     AllOff,
+    /// Pitch bend in semitones (K4; the keyboard's wheel is ±2).
+    Bend {
+        semitones: f32,
+    },
+    /// Mod wheel 0..1: vibrato on the live voice.
+    Modulation {
+        amount: f32,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -70,6 +83,10 @@ pub struct LiveEngine {
     timbre: Timbre,
     voices: [VoiceState; VOICES],
     clock: u64,
+    /// Pitch bend as a ratio (1 = none) and mod-wheel vibrato depth 0..1 with its phase.
+    bend: f64,
+    modulation: f64,
+    lfo: f64,
 }
 
 impl LiveEngine {
@@ -80,6 +97,9 @@ impl LiveEngine {
             timbre,
             voices: [VoiceState::silent(); VOICES],
             clock: 0,
+            bend: 1.0,
+            modulation: 0.0,
+            lfo: 0.0,
         }
     }
 
@@ -120,6 +140,12 @@ impl LiveEngine {
                     }
                 }
             }
+            Cmd::Bend { semitones } => {
+                self.bend = 2f64.powf((semitones.clamp(-24.0, 24.0) as f64) / 12.0);
+            }
+            Cmd::Modulation { amount } => {
+                self.modulation = amount.clamp(0.0, 1.0) as f64;
+            }
             Cmd::AllOff => {
                 for v in self.voices.iter_mut() {
                     if v.stage != Stage::Off {
@@ -140,8 +166,16 @@ impl LiveEngine {
         let sr = self.sample_rate;
         let att = 1.0 / (ATTACK_S * sr);
         let rel = 1.0 / (RELEASE_S * sr);
+        let bend = self.bend;
+        let vib_depth = self.modulation * 0.03; // up to ±50 cents at full wheel
+        let lfo_inc = 5.5 / sr;
         for frame in out.chunks_mut(channels.max(1)) {
             let mut s = 0.0f64;
+            self.lfo += lfo_inc;
+            if self.lfo >= 1.0 {
+                self.lfo -= 1.0;
+            }
+            let vib = 1.0 + vib_depth * (self.lfo * std::f64::consts::TAU).sin();
             for v in self.voices.iter_mut() {
                 if v.stage == Stage::Off {
                     continue;
@@ -165,7 +199,7 @@ impl LiveEngine {
                     _ => {}
                 }
                 s += v.gain * v.env * crate::synth::wave(self.timbre, v.phase, v.t);
-                v.phase += v.freq / sr;
+                v.phase += v.freq * bend * vib / sr;
                 if v.phase >= 1.0 {
                     v.phase -= 1.0;
                 }
@@ -391,5 +425,32 @@ mod tests {
             }
             Err(e) => eprintln!("no output device in this environment: {e}"),
         }
+    }
+
+    #[test]
+    fn a_bend_of_an_octave_doubles_the_pitch() {
+        let zc = |b: &AudioBuffer| {
+            b.samples[24_000..]
+                .windows(2)
+                .filter(|w| (w[0] >= 0.0) != (w[1] >= 0.0))
+                .count()
+        };
+        let mut e = LiveEngine::new(48_000, 440.0, Timbre::Sine);
+        e.handle(Cmd::On {
+            midi: 69,
+            velocity: 0.8,
+        });
+        let plain = zc(&render(&mut e, 1.0));
+        e.handle(Cmd::Bend { semitones: 12.0 });
+        let bent = zc(&render(&mut e, 1.0));
+        let ratio = bent as f64 / plain.max(1) as f64;
+        assert!((1.9..=2.1).contains(&ratio), "{plain} → {bent} crossings");
+        e.handle(Cmd::Bend { semitones: 0.0 });
+        e.handle(Cmd::Modulation { amount: 1.0 });
+        let wobbly = zc(&render(&mut e, 1.0));
+        assert!(
+            (wobbly as f64 / plain as f64 - 1.0).abs() < 0.05,
+            "vibrato keeps the mean pitch"
+        );
     }
 }

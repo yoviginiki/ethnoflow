@@ -96,9 +96,16 @@ pub async fn open_midi_input(
                                 }
                                 sustain = down;
                             }
-                            MidiEvent::Control { .. }
-                            | MidiEvent::PitchBend { .. }
-                            | MidiEvent::Other { .. } => {}
+                            MidiEvent::Control {
+                                controller: 1,
+                                value,
+                                ..
+                            } => send_control(&mut s, None, Some(value as f32 / 127.0)),
+                            MidiEvent::PitchBend { value, .. } => {
+                                // The wheel spans ±2 semitones (the common default).
+                                send_control(&mut s, Some(value as f32 / 8192.0 * 2.0), None)
+                            }
+                            MidiEvent::Control { .. } | MidiEvent::Other { .. } => {}
                         }
                     }
                     drop(s);
@@ -138,6 +145,30 @@ fn send_note(s: &mut Inner, midi: u8, on: bool, velocity: f32) {
         } else {
             SynthCmd::Off { midi }
         });
+    }
+}
+
+/// Pitch bend (semitones) and / or mod wheel (0..1) to wherever the keyboard points
+/// (K4): the auditioned instrument's live block, or the live synth.
+pub(crate) fn send_control(s: &mut Inner, bend: Option<f32>, modulation: Option<f32>) {
+    if s.keyboard_target == KeyboardTarget::Instrument {
+        if let Some(a) = s.audition.as_ref() {
+            if let Some(b) = bend {
+                a.params.live().set_bend(b);
+            }
+            if let Some(m) = modulation {
+                a.params.live().set_modulation(m);
+            }
+            return;
+        }
+    }
+    if let Some(synth) = s.live_synth.as_mut() {
+        if let Some(b) = bend {
+            synth.send(SynthCmd::Bend { semitones: b });
+        }
+        if let Some(m) = modulation {
+            synth.send(SynthCmd::Modulation { amount: m });
+        }
     }
 }
 

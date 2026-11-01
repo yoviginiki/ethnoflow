@@ -19,6 +19,10 @@ pub struct LiveNotes {
     slots: [AtomicU32; SLOTS],
     head: AtomicUsize,
     tail: AtomicUsize,
+    /// Pitch bend as a frequency ratio (f32 bits; 1.0 = none). K4.
+    bend_bits: AtomicU32,
+    /// Mod wheel 0..1 (f32 bits): brightness (filter) and, on the live synth, vibrato.
+    mod_bits: AtomicU32,
 }
 
 impl Default for LiveNotes {
@@ -33,7 +37,31 @@ impl LiveNotes {
             slots: std::array::from_fn(|_| AtomicU32::new(0)),
             head: AtomicUsize::new(0),
             tail: AtomicUsize::new(0),
+            bend_bits: AtomicU32::new(1.0f32.to_bits()),
+            mod_bits: AtomicU32::new(0),
         }
+    }
+
+    /// Pitch bend in semitones (±24 clamped); 0 = none.
+    pub fn set_bend(&self, semitones: f32) {
+        let r = 2f32.powf(semitones.clamp(-24.0, 24.0) / 12.0);
+        self.bend_bits.store(r.to_bits(), Ordering::Relaxed);
+    }
+
+    /// Current bend as a frequency ratio (1.0 = none).
+    #[inline]
+    pub fn bend_ratio(&self) -> f32 {
+        f32::from_bits(self.bend_bits.load(Ordering::Relaxed))
+    }
+
+    pub fn set_modulation(&self, amount: f32) {
+        self.mod_bits
+            .store(amount.clamp(0.0, 1.0).to_bits(), Ordering::Relaxed);
+    }
+
+    #[inline]
+    pub fn modulation(&self) -> f32 {
+        f32::from_bits(self.mod_bits.load(Ordering::Relaxed))
     }
 
     fn pack(n: LiveNote) -> u32 {
@@ -127,5 +155,12 @@ mod tests {
         assert!(!q.note(1, true, 1.0), "full");
         assert_eq!(q.pop().unwrap().midi, 0);
         assert!((midi_hz(69) - 440.0).abs() < 1e-3);
+        assert_eq!(q.bend_ratio(), 1.0);
+        q.set_bend(12.0);
+        assert!((q.bend_ratio() - 2.0).abs() < 1e-6);
+        q.set_bend(-2.0);
+        assert!((q.bend_ratio() - 2f32.powf(-2.0 / 12.0)).abs() < 1e-6);
+        q.set_modulation(1.5);
+        assert_eq!(q.modulation(), 1.0);
     }
 }

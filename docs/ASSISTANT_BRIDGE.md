@@ -116,7 +116,7 @@ rhythm_status, ambient_status }`
 | `set_arrangement` | `arrangement` | replaces it (validated); track strips: gain_db, pan, lowpass_hz, highpass_hz, send |
 | `set_song_map` | `song_map` (whole SongMap) | replaces the project's song map (validated) |
 | `what_next` | | the "What next" hint of the header: `{key, screen, text}` |
-| `keyboard` | `on?`, `source?` (voice \| instrument), `octave?` (24..96), `lock?`, `velocity?`, `midi_input?` | the keyboard dock above the Now-playing bar: reads / sets it; returns `on, source, octave, lock, velocity, midi_input, midi_ports, synth_running, designer_voice, held` |
+| `keyboard` | `on?`, `source?` (voice \| instrument), `octave?` (24..96), `lock?`, `velocity?`, `midi_input?`, `bend?` (semitones ±24), `mod?` (0..1) | the keyboard dock above the Now-playing bar: reads / sets it; returns `on, source, octave, lock, velocity, midi_input, midi_ports, synth_running, designer_voice, held` |
 | `note` | `midi`, `on?` (default true), `velocity?` | **sound**: one key where the dock points (the project's voice or the instrument being edited) |
 | `notes_off` | | releases everything the keyboard holds |
 | `edit_open` | `id?` (default: the latest take) | opens a take in the audio editor (working copy + history); returns the editor status (`seconds`, `versions`, `index`, `clipboard_seconds`, `dirty`) |

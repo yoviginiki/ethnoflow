@@ -93,6 +93,29 @@ pub async fn set_keyboard_target(
     Ok(target)
 }
 
+/// Pitch bend (semitones, ±24) and / or mod wheel (0..1) from the UI or the bridge,
+/// to the current keyboard target (K4). Returns what was applied.
+#[tauri::command]
+pub async fn keyboard_control(
+    state: State<'_, AppState>,
+    bend_semitones: Option<f32>,
+    modulation: Option<f32>,
+) -> CmdResult<(Option<f32>, Option<f32>)> {
+    if let Some(b) = bend_semitones {
+        if !(-24.0..=24.0).contains(&b) {
+            return Err(err("invalid_argument", "bend outside ±24 semitones"));
+        }
+    }
+    if let Some(m) = modulation {
+        if !(0.0..=1.0).contains(&m) {
+            return Err(err("invalid_argument", "modulation outside 0..1"));
+        }
+    }
+    let mut s = state.lock();
+    crate::midi_in_cmds::send_control(&mut s, bend_semitones, modulation);
+    Ok((bend_semitones, modulation))
+}
+
 #[tauri::command]
 pub async fn live_synth_status(state: State<'_, AppState>) -> CmdResult<Option<LiveSynthStatus>> {
     Ok(state.lock().live_synth.as_ref().map(|s| s.status()))
