@@ -4,10 +4,10 @@ import { api, describeError, type DroneSettings, type InstrumentProfile, type Pa
 import { DEFAULT_DRONE, DEFAULT_MIXER, DEFAULT_PAD, DEFAULT_RHYTHM, useStore, type DronePrefs, type LayerName, type PadPrefs, type Voicing } from "./store";
 
 // ---------- background mixer: fades around every layer's start and stop ----------
-const BUS_NAMES: LayerName[] = ["drone", "pad", "ambient", "rhythm"];
+const BUS_NAMES: LayerName[] = ["drone", "pad", "ambient", "rhythm", "scapes"];
 const pendingStops: Partial<Record<LayerName, number>> = {};
 function fadeMs(name: LayerName, which: "fadeIn" | "fadeOut"): number {
-  const m = (useStore.getState().prefs.mixer ?? DEFAULT_MIXER)[name];
+  const m = (useStore.getState().prefs.mixer ?? DEFAULT_MIXER)[name] ?? DEFAULT_MIXER[name];
   return Math.round(Math.max(0, m?.[which] ?? 0) * 1000);
 }
 /** Before a layer starts: cancel a pending stop, set its fade-in and unmute its bus. */
@@ -150,7 +150,7 @@ export function padSettings(p: PadPrefs, notes: PadNote[]): PadSettings {
 /** Fade the whole background (rack, drone, pad) out over `seconds` and switch it off. */
 export async function fadeOutBackground(seconds: number): Promise<void> {
   const st = useStore.getState();
-  if (!st.layers.drone && !st.layers.pad && !st.layers.ambient && !st.layers.rhythm) return;
+  if (!st.layers.drone && !st.layers.pad && !st.layers.ambient && !st.layers.rhythm && !st.layers.scapes) return;
   st.setLastLayers({ ...st.layers });
   try {
     await api.backgroundFadeOut(seconds);
@@ -164,6 +164,7 @@ export async function fadeOutBackground(seconds: number): Promise<void> {
     s.setLayer("pad", false);
     s.setLayer("ambient", false);
     s.setLayer("rhythm", false);
+    s.setLayer("scapes", false);
   }, seconds * 1000 + 150);
 }
 
@@ -187,6 +188,7 @@ export function useBackgroundLayers() {
   const fail = (e: unknown) => useStore.getState().setError(describeError(e));
 
   const ambientOn = useStore((s) => s.layers.ambient);
+  const scapesOn = useStore((s) => s.layers.scapes);
   const rhythmOn = useStore((s) => s.layers.rhythm);
   const rhythmPrefs = useStore((s) => s.prefs.rhythm ?? DEFAULT_RHYTHM);
   const timing = project?.timing ?? null;
@@ -201,8 +203,10 @@ export function useBackgroundLayers() {
       if (st.layers.pad) useStore.getState().setLayer("pad", false);
       if (st.layers.ambient) useStore.getState().setLayer("ambient", false);
       if (st.layers.rhythm) useStore.getState().setLayer("rhythm", false);
+      if (st.layers.scapes) useStore.getState().setLayer("scapes", false);
       if (st.metronomeOn) useStore.getState().setMetronomeOn(false);
       useStore.getState().setAmbient(null);
+      useStore.getState().setScapes(null);
       useStore.getState().setSleepAt(null);
     }
   }, [project]);
@@ -215,7 +219,30 @@ export function useBackgroundLayers() {
       .ambientGet()
       .then((v) => useStore.getState().setAmbient(v.ambient))
       .catch(() => undefined);
+    api
+      .scapesGet()
+      .then((v) => useStore.getState().setScapes(v.ambient))
+      .catch(() => undefined);
   }, [projectRoot]);
+
+  // Soundscapes rack lifecycle: the same as the atmosphere's, on its own switch.
+  useEffect(() => {
+    if (!scapesOn || !project) return;
+    let cancelled = false;
+    busIn("scapes")
+      .then(() => api.scapesPlay(output))
+      .then((st) => !cancelled && useStore.getState().setScapesStatus(st))
+      .catch((e) => {
+        fail(e);
+        useStore.getState().setLayer("scapes", false);
+      });
+    return () => {
+      cancelled = true;
+      useStore.getState().setScapesStatus(null);
+      busOut("scapes", () => api.scapesStop());
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scapesOn, output, !!project]);
 
   // Ambient rack lifecycle (F1A.1): start/stop on its switch or an output change.
   useEffect(() => {
@@ -361,7 +388,7 @@ export function useBackgroundLayers() {
   const mixer = useStore((s) => s.prefs.mixer ?? DEFAULT_MIXER);
   useEffect(() => {
     for (const n of BUS_NAMES) {
-      const m = mixer[n];
+      const m = mixer[n] ?? DEFAULT_MIXER[n];
       api.busSet(n, { gain_db: m.gain_db, pan: m.pan, lowpass_hz: m.lowpass_hz, highpass_hz: m.highpass_hz }).catch(() => undefined);
     }
   }, [mixer]);
@@ -371,13 +398,14 @@ export function useBackgroundLayers() {
   const droneStarted = useStore((s) => s.droneStatus !== null);
   const padStarted = useStore((s) => s.padStatus !== null);
   const ambientStarted = useStore((s) => s.ambientStatus !== null);
+  const scapesStarted = useStore((s) => s.scapesStatus !== null);
   const rhythmStarted = useStore((s) => s.rhythmStatus !== null);
   useEffect(() => {
-    if (!droneStarted && !padStarted && !ambientStarted && !rhythmStarted) return;
+    if (!droneStarted && !padStarted && !ambientStarted && !rhythmStarted && !scapesStarted) return;
     // The master slider's floor (−40) is silence.
     api.setGraphMaster(masterDb <= -39.5 ? -120 : masterDb).catch(fail);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [masterDb, droneStarted, padStarted, ambientStarted, rhythmStarted]);
+  }, [masterDb, droneStarted, padStarted, ambientStarted, rhythmStarted, scapesStarted]);
 
   // Meters while anything plays.
   useEffect(() => {

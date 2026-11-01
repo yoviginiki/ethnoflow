@@ -31,10 +31,11 @@ export function BackgroundTransport({ compact = false }: Props) {
   const canDrone = droneRoot(dronePrefs, scale, profile) !== null;
   const canPad = padRoot(padPrefs, dronePrefs, scale, profile) !== null;
   const canAmbient = (useStore((s) => s.ambient?.layers.length) ?? 0) > 0;
+  const canScapes = (useStore((s) => s.scapes?.layers.length) ?? 0) > 0;
   const timing = project?.timing;
   const canRhythm = !!timing && timing.bpm !== null && timing.numerator !== null && timing.unit !== null && (scale !== null || canDrone);
-  const on = layers.drone || layers.pad || layers.ambient || layers.rhythm;
-  const canPlay = canDrone || canPad || canAmbient || canRhythm;
+  const on = layers.drone || layers.pad || layers.ambient || layers.rhythm || layers.scapes;
+  const canPlay = canDrone || canPad || canAmbient || canRhythm || canScapes;
   const [showMixer, setShowMixer] = useState(false);
   const ref = useRef<HTMLSpanElement>(null);
   useEffect(() => {
@@ -51,21 +52,24 @@ export function BackgroundTransport({ compact = false }: Props) {
 
   const play = () => {
     const want = {
-      drone: (lastLayers.drone || (!lastLayers.pad && !lastLayers.ambient && !lastLayers.rhythm)) && canDrone,
+      drone: (lastLayers.drone || (!lastLayers.pad && !lastLayers.ambient && !lastLayers.rhythm && !lastLayers.scapes)) && canDrone,
       pad: lastLayers.pad && canPad,
       ambient: lastLayers.ambient && canAmbient,
       rhythm: lastLayers.rhythm && canRhythm,
+      scapes: lastLayers.scapes && canScapes,
     };
-    if (!want.drone && !want.pad && !want.ambient && !want.rhythm) {
+    if (!want.drone && !want.pad && !want.ambient && !want.rhythm && !want.scapes) {
       if (canDrone) want.drone = true;
       else if (canPad) want.pad = true;
       else if (canAmbient) want.ambient = true;
       else if (canRhythm) want.rhythm = true;
+      else if (canScapes) want.scapes = true;
     }
     setLayer("drone", want.drone);
     setLayer("pad", want.pad);
     setLayer("ambient", want.ambient);
     setLayer("rhythm", want.rhythm);
+    setLayer("scapes", want.scapes);
   };
   const stop = () => {
     setLastLayers({ ...layers });
@@ -73,6 +77,7 @@ export function BackgroundTransport({ compact = false }: Props) {
     setLayer("pad", false);
     setLayer("ambient", false);
     setLayer("rhythm", false);
+    setLayer("scapes", false);
   };
 
   return (
@@ -109,6 +114,10 @@ export function BackgroundTransport({ compact = false }: Props) {
       <label className="inline">
         <input type="checkbox" checked={layers.rhythm} disabled={!canRhythm} onChange={(e) => setLayer("rhythm", e.target.checked)} />
         {compact ? t.rhythmShort : t.rhythmTitle}
+      </label>
+      <label className="inline" title={t.scapesTitle}>
+        <input type="checkbox" checked={layers.scapes} disabled={!canScapes} onChange={(e) => setLayer("scapes", e.target.checked)} />
+        {compact ? t.scapesShort : t.scapesTitle}
       </label>
       <label className="inline" title={t.backgroundLevel}>
         🔊

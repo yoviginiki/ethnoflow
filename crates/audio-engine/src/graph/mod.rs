@@ -21,7 +21,7 @@ use sources::Reverb;
 
 /// 0 drone, 1 pad, 2 clips, 3 audition, 4..11 atmosphere, 12..15 rhythm parts,
 /// 16..23 the Instrument Rack's extra parts (tapan, chord pad, lead …).
-pub const MAX_LAYERS: usize = 24;
+pub const MAX_LAYERS: usize = 32;
 /// Frames rendered per inner block (parameter ramps are recomputed per block).
 pub const BLOCK: usize = 64;
 

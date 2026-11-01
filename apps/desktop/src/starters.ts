@@ -131,7 +131,7 @@ export function proposeStarters(ctx: StarterContext): Starter[] {
         ],
         { space: 0.6, space_size: 0.8, motion: 0.4, brightness: 0.5 },
       ),
-      layers: { drone: tonal, pad: tonal, ambient: true, rhythm: false },
+      layers: { drone: tonal, pad: tonal, ambient: true, rhythm: false, scapes: false },
     },
   });
 
@@ -158,7 +158,7 @@ export function proposeStarters(ctx: StarterContext): Starter[] {
         ],
         { space: 0.5, space_size: 0.9, motion: 0.3, brightness: 0.3 },
       ),
-      layers: { drone: tonal, pad: tonal, ambient: true, rhythm: false },
+      layers: { drone: tonal, pad: tonal, ambient: true, rhythm: false, scapes: false },
     },
   });
 
@@ -192,7 +192,7 @@ export function proposeStarters(ctx: StarterContext): Starter[] {
         ],
         { space: 0.4, space_size: 0.6, motion: 0.5, brightness: 0.6 },
       ),
-      layers: { drone: false, pad: tonal, ambient: true, rhythm: true },
+      layers: { drone: false, pad: tonal, ambient: true, rhythm: true, scapes: false },
     },
   });
 
@@ -225,7 +225,7 @@ export function proposeStarters(ctx: StarterContext): Starter[] {
         ],
         { space: 0.7, space_size: 0.9, motion: 0.4, brightness: 0.45, width: 0.8 },
       ),
-      layers: { drone: tonal, pad: tonal, ambient: true, rhythm: true },
+      layers: { drone: tonal, pad: tonal, ambient: true, rhythm: true, scapes: false },
     },
   });
 
@@ -267,7 +267,7 @@ export function proposeStarters(ctx: StarterContext): Starter[] {
         ],
         { space: 0.35, space_size: 0.5, motion: 0.4, brightness: 0.5 },
       ),
-      layers: { drone: tonal, pad: tonal, ambient: true, rhythm: true },
+      layers: { drone: tonal, pad: tonal, ambient: true, rhythm: true, scapes: false },
     },
   });
 

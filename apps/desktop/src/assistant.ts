@@ -26,7 +26,7 @@ import type { SongMap } from "./api";
 export const BRIDGE_SCHEMA = 1;
 const POLL_MS = 500;
 const STATE_MS = 1500;
-const LAYER_NAMES: LayerName[] = ["drone", "pad", "ambient", "rhythm"];
+const LAYER_NAMES: LayerName[] = ["drone", "pad", "ambient", "rhythm", "scapes"];
 
 export type AssistantCmd = Record<string, unknown> & { op?: string };
 
@@ -120,16 +120,17 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
     case "scapes": {
       // Soundscapes 2 (stage S1): the worlds and the journey in the rack now.
       const st = useStore.getState();
-      const world = journeyWorld(st.ambient);
-      const ph = world ? phaseAt(st.ambient, st.ambientStatus?.program_position ?? 0) : null;
-      return { worlds: WORLD_IDS, current: world, phase: ph, playing: !!st.ambientStatus?.program_playing && st.layers.ambient, position_s: st.ambientStatus?.program_position ?? 0 };
+      const world = journeyWorld(st.scapes);
+      const ph = world ? phaseAt(st.scapes, st.scapesStatus?.program_position ?? 0) : null;
+      return { worlds: WORLD_IDS, current: world, phase: ph, on: st.layers.scapes, playing: !!st.scapesStatus?.program_playing && st.layers.scapes, position_s: st.scapesStatus?.program_position ?? 0, layers: st.scapes?.layers.length ?? 0 };
     }
     case "scapes_build": {
       // Build a world's journey into the rack (replaces it; `previous` comes back for a
       // restore). `play: true` starts the atmosphere and the program — sound!
       const w = worldById(String(cmd.world));
       if (!w) throw new Error(`unknown world ${String(cmd.world)}; one of ${WORLD_IDS.join(", ")}`);
-      const previous = rack();
+      project();
+      const previous = useStore.getState().scapes;
       const built = await startJourney(w, { minutes: typeof cmd.minutes === "number" ? cmd.minutes : 8, seed: typeof cmd.seed === "number" ? cmd.seed : 1 + Math.floor(Math.random() * 1_000_000), loop: cmd.loop === true, play: cmd.play === true });
       const end = built.program.scenes.reduce((m, sc) => Math.max(m, sc.start_s + sc.duration_s), 0);
       return { world: w.id, layers: built.layers.length, scenes: built.program.scenes.map((sc) => ({ name: sc.name, start_s: sc.start_s, duration_s: sc.duration_s, transition_s: sc.transition_s })), lanes: built.automation.length, end_s: end, loop: built.program.loop_region !== null, playing: cmd.play === true, previous };
@@ -137,6 +138,20 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
     case "scapes_stop": {
       await stopJourney();
       return { playing: false };
+    }
+    case "set_scapes": {
+      // Replace the Soundscapes rack (same shape as set_ambient; used to restore after scapes_build).
+      const p = project();
+      const next = rackForProject(cmd.ambient as AmbientRack, new Set(p.takes.map((t) => t.id)));
+      const v = await api.setScapes(next);
+      useStore.getState().setScapes(v.ambient);
+      return { layers: v.ambient.layers.length, scenes: v.ambient.program.scenes.length };
+    }
+    case "scapes_seek": {
+      // Jump the journey to `position_s` and/or run / pause its program (`playing`).
+      const st = await api.scapesProgramSet(typeof cmd.playing === "boolean" ? cmd.playing : null, typeof cmd.position_s === "number" ? cmd.position_s : null);
+      useStore.getState().setScapesStatus(st);
+      return { position_s: st.program_position, playing: st.program_playing, end_s: st.program_end };
     }
     case "continue": {
       // Home's "Continue": Play & record with the latest take loaded (none: ready to record).
@@ -342,6 +357,7 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
         drone: dRoot !== null && (cmd.drone ?? true) ? droneSettings(dp, dRoot) : null,
         pad: padNotes && (cmd.pad ?? true) ? padSettings(pp, padNotes) : null,
         ambient: cmd.ambient === true,
+        scapes: cmd.scapes === true,
         rhythm: cmd.rhythm === false ? null : { ...(s.prefs.rhythm ?? {}), chord: s.padChord, root_midi: dRoot, intonation: dp.intonation },
       };
       return await api.exportSong(String(cmd.path), include as never, s.prefs.exportFormat ?? null, null, typeof cmd.seconds === "number" ? cmd.seconds : null, cmd.stems !== false);

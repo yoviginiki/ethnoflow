@@ -127,7 +127,9 @@ h2 { font-size: 15px; margin: 0 0 8px; font-weight: 600; }
 .journey-bar { position: relative; display: flex; gap: 2px; height: 34px; margin: 6px 0; }
 .journey-seg { display: flex; align-items: center; justify-content: center; flex-basis: 0; background: var(--axis); border-radius: 6px; font-size: 13px; opacity: 0.7; }
 .journey-seg.on { background: var(--accent); color: #111; opacity: 1; font-weight: 600; }
-.journey-cursor { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--fg, #fff); }
+.journey-cursor { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--fg, #fff); pointer-events: none; }
+.journey-bar.seekable { cursor: pointer; }
+.scapes-transport .analysis-row { justify-content: flex-start; }
 .area {
   display: flex; flex-direction: column; gap: 6px; text-align: left; padding: 16px;
   background: var(--panel); border: 1px solid var(--axis); border-radius: 10px; min-height: 96px;

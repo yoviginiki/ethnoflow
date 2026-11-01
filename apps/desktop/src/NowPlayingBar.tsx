@@ -28,7 +28,7 @@ export function NowPlayingBar() {
   const notesOn = s.notesPlayer !== null;
   const songOn = !!s.transport?.playing;
   const bg = s.layers;
-  const anySound = recording || takePlaying || notesOn || songOn || bg.drone || bg.pad || bg.ambient || bg.rhythm || s.metronomeOn || s.liveRunning;
+  const anySound = recording || takePlaying || notesOn || songOn || bg.drone || bg.pad || bg.ambient || bg.rhythm || bg.scapes || s.metronomeOn || s.liveRunning;
 
   const onTake = () => {
     if (takePlaying) return void stopPlaying().catch(fail);
@@ -79,7 +79,7 @@ export function NowPlayingBar() {
         {notesOn && s.notesPlayer && <span className="mono-num"> {formatTime(s.notesPlayer.position_seconds)}</span>}
       </button>
 
-      <span className={`np-chip np-bg ${bg.drone || bg.pad || bg.ambient || bg.rhythm ? "on" : ""}`}>
+      <span className={`np-chip np-bg ${bg.drone || bg.pad || bg.ambient || bg.rhythm || bg.scapes ? "on" : ""}`}>
         <BackgroundTransport compact />
       </span>
 

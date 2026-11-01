@@ -5,7 +5,7 @@ import { formatDb, linearToDb, meterFraction } from "./format";
 import { messages } from "./i18n";
 import { DEFAULT_MIXER, useStore, type LayerName, type MixerStrip } from "./store";
 
-const LAYERS: LayerName[] = ["drone", "pad", "ambient", "rhythm"];
+const LAYERS: LayerName[] = ["drone", "pad", "ambient", "rhythm", "scapes"];
 const HZ_MIN = 40;
 const HZ_MAX = 20_000;
 const hzToPos = (hz: number) => Math.log2(Math.max(HZ_MIN, hz) / HZ_MIN) / Math.log2(HZ_MAX / HZ_MIN);
@@ -26,8 +26,8 @@ export function BackgroundMixer() {
   const layers = s.layers;
   const masterDb = s.prefs.masterDb ?? 0;
   const [peaks, setPeaks] = useState<number[]>([0, 0, 0, 0]);
-  const anyOn = layers.drone || layers.pad || layers.ambient || layers.rhythm;
-  const names: Record<LayerName, string> = { drone: t.drone, pad: t.pad, ambient: t.areaAmbient, rhythm: t.rhythmTitle };
+  const anyOn = layers.drone || layers.pad || layers.ambient || layers.rhythm || layers.scapes;
+  const names: Record<LayerName, string> = { drone: t.drone, pad: t.pad, ambient: t.areaAmbient, rhythm: t.rhythmTitle, scapes: t.scapesTitle };
 
   useEffect(() => {
     if (!anyOn) {
@@ -48,8 +48,8 @@ export function BackgroundMixer() {
   return (
     <div className="bg-mixer" role="group" aria-label={t.bgMixer}>
       {LAYERS.map((name, i) => {
-        const m = mixer[name];
-        const on = layers[name];
+        const m = mixer[name] ?? DEFAULT_MIXER[name];
+        const on = layers[name] ?? false;
         const pk = linearToDb(peaks[i] ?? 0);
         return (
           <div key={name} className={`bg-strip ${on ? "" : "off"}`}>

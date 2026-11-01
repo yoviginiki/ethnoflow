@@ -148,7 +148,10 @@ fn prune_cache(s: &mut Inner) {
         .unwrap_or_default();
     // Audio loops of the ambient rack share this cache.
     let mut used = used;
-    if let Some(a) = s.ambient.as_ref() {
+    if let Some(a) = s.racks[crate::ambient_cmds::RackId::Ambient.idx()]
+        .rack
+        .as_ref()
+    {
         for l in &a.layers {
             if let Some(take_id) = l.source.take_id() {
                 used.push(format!("{take_id}:"));

@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 
 use crate::ambient_cmds::{
-    apply_layer_strip, apply_source, offline_sources, pitch_set, LiveParams, AMBIENT_SLOT0,
+    apply_layer_strip, apply_source, offline_sources, pitch_set, LiveParams, RackId,
 };
 use crate::arrangement_cmds::{apply_tracks, build_clips, ARRANGE_SLOT};
 use crate::bus_cmds::{apply_bus_strip, bus_gain_offline, BUS_DRONE, BUS_PAD, BUS_RHYTHM};
@@ -30,6 +30,10 @@ use crate::rhythm_cmds::{
 };
 use crate::state::{AppState, Inner};
 
+/// One rack prepared for the offline render: its id, the rack, the live handles and
+/// the pitch set of every layer.
+type RackPack = (RackId, project::Ambient, Vec<LiveParams>, Vec<Vec<f32>>);
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct SongExportInclude {
     #[serde(default = "yes")]
@@ -38,6 +42,9 @@ pub struct SongExportInclude {
     pub pad: Option<PadSettings>,
     #[serde(default)]
     pub ambient: bool,
+    /// The Soundscapes rack (its own slots and stem).
+    #[serde(default)]
+    pub scapes: bool,
     pub rhythm: Option<RhythmSettings>,
 }
 
@@ -77,7 +84,7 @@ pub async fn export_song(
     let mut groups: Vec<(String, Vec<usize>)> = Vec::new();
 
     // ---- everything that needs the app state, under one lock ----
-    let (duration, ambient_pack, rhythm_live, markers_rows, manifest_json) = {
+    let (duration, rack_packs, rhythm_live, markers_rows, manifest_json) = {
         let mut s = state.lock();
         let p = s
             .project
@@ -129,56 +136,64 @@ pub async fn export_song(
             ));
             groups.push(("pad".to_string(), vec![PAD_SLOT]));
         }
-        // Atmosphere (rack + its program): sources now, parameters per block below.
-        let ambient_pack = if include.ambient {
-            let a = s.ambient.clone().filter(|a| !a.layers.is_empty());
-            match a {
-                Some(a) => {
-                    let sources = offline_sources(&mut s, &a, rate)?;
-                    let pitch_sets: Vec<Vec<f32>> = a
-                        .layers
-                        .iter()
-                        .map(|l| match &l.source {
-                            LayerSource::Texture {
-                                tonal, register, ..
-                            }
-                            | LayerSource::Bells {
-                                tonal, register, ..
-                            }
-                            | LayerSource::Pluck {
-                                tonal, register, ..
-                            }
-                            | LayerSource::Resonator {
-                                tonal, register, ..
-                            }
-                            | LayerSource::Choir {
-                                tonal, register, ..
-                            }
-                            | LayerSource::Bloom {
-                                tonal, register, ..
-                            } => pitch_set(&s, *tonal, *register, l.seed),
-                            _ => Vec::new(),
-                        })
-                        .collect();
-                    let mut live = Vec::new();
-                    let mut slots = Vec::new();
-                    for (i, (params, source)) in sources.into_iter().enumerate() {
-                        pending.push((AMBIENT_SLOT0 + i, source));
-                        live.push(params);
-                        slots.push(AMBIENT_SLOT0 + i);
-                    }
-                    groups.push(("atmosphere".to_string(), slots));
-                    let end = a.program.end();
-                    if end > 0.0 {
-                        duration = duration.max(end);
-                    }
-                    Some((a, live, pitch_sets))
-                }
-                None => None,
+        // The racks (atmosphere, Soundscapes; each with its program): sources now,
+        // parameters per block below.
+        let mut rack_packs: Vec<RackPack> = Vec::new();
+        for id in RackId::ALL {
+            let wanted = match id {
+                RackId::Ambient => include.ambient,
+                RackId::Scapes => include.scapes,
+            };
+            if !wanted {
+                continue;
             }
-        } else {
-            None
-        };
+            let Some(a) = s.racks[id.idx()]
+                .rack
+                .clone()
+                .filter(|a| !a.layers.is_empty())
+            else {
+                continue;
+            };
+            let sources = offline_sources(&mut s, &a, rate)?;
+            let pitch_sets: Vec<Vec<f32>> = a
+                .layers
+                .iter()
+                .map(|l| match &l.source {
+                    LayerSource::Texture {
+                        tonal, register, ..
+                    }
+                    | LayerSource::Bells {
+                        tonal, register, ..
+                    }
+                    | LayerSource::Pluck {
+                        tonal, register, ..
+                    }
+                    | LayerSource::Resonator {
+                        tonal, register, ..
+                    }
+                    | LayerSource::Choir {
+                        tonal, register, ..
+                    }
+                    | LayerSource::Bloom {
+                        tonal, register, ..
+                    } => pitch_set(&s, *tonal, *register, l.seed),
+                    _ => Vec::new(),
+                })
+                .collect();
+            let mut live = Vec::new();
+            let mut slots = Vec::new();
+            for (i, (params, source)) in sources.into_iter().enumerate() {
+                pending.push((id.slot0() + i, source));
+                live.push(params);
+                slots.push(id.slot0() + i);
+            }
+            groups.push((id.stem().to_string(), slots));
+            let end = a.program.end();
+            if end > 0.0 {
+                duration = duration.max(end);
+            }
+            rack_packs.push((id, a, live, pitch_sets));
+        }
         // Rhythm.
         let rhythm_live = if let Some(set) = include.rhythm.as_ref() {
             let (bpm, meter) = crate::rhythm_cmds::timing(&s)?;
@@ -195,7 +210,7 @@ pub async fn export_song(
                 bus_gain_offline(&s, BUS_RHYTHM, own)
             };
             apply_params(&gp.layers, &live, &lvl);
-            for slot in DRUMS_SLOT..audio_engine::MAX_LAYERS {
+            for slot in DRUMS_SLOT..crate::rhythm_cmds::EXTRA_END {
                 apply_bus_strip(&s, BUS_RHYTHM, &gp.layers[slot], 0.0, 20_000.0, 10.0);
             }
             pending.extend(sources);
@@ -250,7 +265,7 @@ pub async fn export_song(
         });
         (
             duration,
-            ambient_pack,
+            rack_packs,
             rhythm_live,
             markers_rows,
             manifest_json,
@@ -275,59 +290,65 @@ pub async fn export_song(
     };
     let offline = Inner::default();
     let apply_ambient = |done: usize| {
-        let Some((a, live, pitch_sets)) = ambient_pack.as_ref() else {
-            return;
-        };
-        let t = done as f64 / rate as f64;
-        let program_end = a.program.end();
-        let program_t = if program_end > 0.0 {
-            Some(a.program.wrap(t).min(program_end))
-        } else {
-            None
-        };
-        let (layers, macros) = effective_rack(a, program_t, t);
-        let any_solo = layers.iter().any(|l| l.solo);
-        for (i, l) in layers.iter().enumerate() {
-            if let Some(p) = live.get(i) {
-                apply_source(&offline, p, l, &macros);
-                match p {
-                    LiveParams::Texture(x) => x.pitches.set(&pitch_sets[i]),
-                    LiveParams::Bells(x) => x.pitches.set(&pitch_sets[i]),
-                    LiveParams::Pluck(x) => x.pitches.set(&pitch_sets[i]),
-                    LiveParams::Resonator(x) => x.pitches.set(&pitch_sets[i]),
-                    LiveParams::Choir(x) => x.pitches.set(&pitch_sets[i]),
-                    LiveParams::Bloom(x) => x.pitches.set(&pitch_sets[i]),
-                    LiveParams::Loop(x) => {
-                        if let LayerSource::Loop {
-                            start,
-                            end,
-                            crossfade,
-                            ..
-                        } = &l.source
-                        {
-                            x.start_frames
-                                .store((start * rate as f64).round() as u64, Ordering::Relaxed);
-                            x.end_frames
-                                .store((end * rate as f64).round() as u64, Ordering::Relaxed);
-                            x.crossfade_frames
-                                .store((crossfade * rate as f64).round() as u32, Ordering::Relaxed);
+        for (id, a, live, pitch_sets) in rack_packs.iter() {
+            let id = *id;
+            let t = done as f64 / rate as f64;
+            let program_end = a.program.end();
+            let program_t = if program_end > 0.0 {
+                Some(a.program.wrap(t).min(program_end))
+            } else {
+                None
+            };
+            let (layers, macros) = effective_rack(a, program_t, t);
+            let any_solo = layers.iter().any(|l| l.solo);
+            for (i, l) in layers.iter().enumerate() {
+                if let Some(p) = live.get(i) {
+                    apply_source(&offline, p, l, &macros);
+                    match p {
+                        LiveParams::Texture(x) => x.pitches.set(&pitch_sets[i]),
+                        LiveParams::Bells(x) => x.pitches.set(&pitch_sets[i]),
+                        LiveParams::Pluck(x) => x.pitches.set(&pitch_sets[i]),
+                        LiveParams::Resonator(x) => x.pitches.set(&pitch_sets[i]),
+                        LiveParams::Choir(x) => x.pitches.set(&pitch_sets[i]),
+                        LiveParams::Bloom(x) => x.pitches.set(&pitch_sets[i]),
+                        LiveParams::Loop(x) => {
+                            if let LayerSource::Loop {
+                                start,
+                                end,
+                                crossfade,
+                                ..
+                            } = &l.source
+                            {
+                                x.start_frames
+                                    .store((start * rate as f64).round() as u64, Ordering::Relaxed);
+                                x.end_frames
+                                    .store((end * rate as f64).round() as u64, Ordering::Relaxed);
+                                x.crossfade_frames.store(
+                                    (crossfade * rate as f64).round() as u32,
+                                    Ordering::Relaxed,
+                                );
+                            }
                         }
+                        _ => {}
                     }
-                    _ => {}
                 }
+                apply_layer_strip(
+                    &gp.layers[id.slot0() + i],
+                    l,
+                    &macros,
+                    any_solo,
+                    &offline,
+                    id.bus(),
+                );
             }
-            apply_layer_strip(
-                &gp.layers[AMBIENT_SLOT0 + i],
-                l,
-                &macros,
-                any_solo,
-                &offline,
-            );
+            // The master reverb follows the atmosphere when it is in the mix, else the journey.
+            if id == RackId::Ambient || rack_packs.len() == 1 {
+                gp.master.space.set(macros.space as f32);
+                gp.master.space_size.set(macros.space_size as f32);
+                gp.master.shimmer.set(macros.shimmer as f32);
+                gp.master.shimmer_st.set(macros.shimmer_st as f32);
+            }
         }
-        gp.master.space.set(macros.space as f32);
-        gp.master.space_size.set(macros.space_size as f32);
-        gp.master.shimmer.set(macros.shimmer as f32);
-        gp.master.shimmer_st.set(macros.shimmer_st as f32);
     };
     // Every parameter is at its first state before the graph is built: no ramp-in.
     apply_ambient(0);

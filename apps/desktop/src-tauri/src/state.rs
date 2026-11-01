@@ -66,8 +66,8 @@ pub struct Inner {
     pub presets_dir: Option<std::path::PathBuf>,
     /// Assistant bridge folder (inbox/outbox/state.json), next to the presets.
     pub assistant_dir: Option<std::path::PathBuf>,
-    /// Background mixer buses (drone, pad, atmosphere, rhythm): trim/pan/filters/fade.
-    pub bus: [crate::bus_cmds::BusState; 4],
+    /// Background mixer buses (drone, pad, atmosphere, rhythm, soundscapes): trim/pan/filters/fade.
+    pub bus: [crate::bus_cmds::BusState; 5],
     /// Instrument Forge audition on slot 3 while a designer plays a voice.
     pub audition: Option<crate::forge_cmds::AuditionLive>,
     /// Sample browser preview on slot 3 (token tells a late stop which preview it was).
@@ -109,14 +109,9 @@ pub struct Inner {
     pub clips: Option<Arc<audio_engine::ClipsParams>>,
     /// Takes' playable audio for clips (mono, at the stream rate), by take/trim/rate.
     pub clip_cache: HashMap<String, Arc<AudioBuffer>>,
-    /// The project's ambient rack (F1A.1), loaded on first use.
-    pub ambient: Option<project::Ambient>,
-    /// Whether the rack is on the graph (slots 4..12).
-    pub ambient_on: bool,
-    /// Live handles per rack layer while it plays (None = slot not built).
-    pub ambient_live: Vec<Option<crate::ambient_cmds::LiveLayer>>,
-    /// Automation / program clock while the rack plays (F1A.4/F1A.5).
-    pub ambient_clock: Option<crate::ambient_cmds::Clock>,
+    /// The two racks: the atmosphere (F1A.1, slots 4..12) and the Soundscapes journey
+    /// (slots 24..32), each with its rack, on-switch, live handles and clock.
+    pub racks: [crate::ambient_cmds::RackState; 2],
     /// Rhythm section (Phase 4) on slots 12..16 while it plays.
     pub rhythm: Option<crate::rhythm_cmds::RhythmLive>,
 }
@@ -159,7 +154,7 @@ impl Inner {
         self.drone.is_none()
             && self.pad.is_none()
             && self.clips.is_none()
-            && !self.ambient_on
+            && !self.racks.iter().any(|r| r.on)
             && self.rhythm.is_none()
             && self.audition.is_none()
             && !self.previewing
@@ -181,10 +176,12 @@ impl Inner {
         self.pad = None;
         self.pad_settings = None;
         self.clips = None;
-        self.ambient_on = false;
-        self.ambient_live.clear();
-        if let Some(c) = self.ambient_clock.take() {
-            c.stop();
+        for r in self.racks.iter_mut() {
+            r.on = false;
+            r.live.clear();
+            if let Some(c) = r.clock.take() {
+                c.stop();
+            }
         }
         self.rhythm = None;
     }

@@ -24,8 +24,81 @@ use crate::commands::{err, CmdResult};
 use crate::graph_cmds::{ensure_graph, note_hz, Intonation};
 use crate::state::{AppState, Inner};
 
-/// First graph slot of the rack; layer `i` sits in `AMBIENT_SLOT0 + i`.
+/// First graph slot of the atmosphere rack; layer `i` sits in `AMBIENT_SLOT0 + i`.
 pub const AMBIENT_SLOT0: usize = 4;
+/// First graph slot of the Soundscapes rack (its own eight slots after the rhythm extras).
+pub const SCAPES_SLOT0: usize = 24;
+/// The Soundscapes rack's file in the project folder (same format as `ambient.json`).
+pub const SCAPES_FILE: &str = "scapes.json";
+
+/// Which of the two racks a command or helper works on. The atmosphere and the
+/// Soundscapes journey are the same engine on different slots, buses and files, so
+/// every rack function takes a `RackId` instead of assuming "the" rack.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RackId {
+    Ambient,
+    Scapes,
+}
+
+impl RackId {
+    pub const ALL: [RackId; 2] = [RackId::Ambient, RackId::Scapes];
+    pub fn idx(self) -> usize {
+        match self {
+            RackId::Ambient => 0,
+            RackId::Scapes => 1,
+        }
+    }
+    pub fn slot0(self) -> usize {
+        match self {
+            RackId::Ambient => AMBIENT_SLOT0,
+            RackId::Scapes => SCAPES_SLOT0,
+        }
+    }
+    pub fn bus(self) -> usize {
+        match self {
+            RackId::Ambient => crate::bus_cmds::BUS_AMBIENT,
+            RackId::Scapes => crate::bus_cmds::BUS_SCAPES,
+        }
+    }
+    pub fn file(self) -> &'static str {
+        match self {
+            RackId::Ambient => project::AMBIENT_FILE,
+            RackId::Scapes => SCAPES_FILE,
+        }
+    }
+    /// Stem / group name in exports.
+    pub fn stem(self) -> &'static str {
+        match self {
+            RackId::Ambient => "atmosphere",
+            RackId::Scapes => "soundscapes",
+        }
+    }
+    fn other(self) -> RackId {
+        match self {
+            RackId::Ambient => RackId::Scapes,
+            RackId::Scapes => RackId::Ambient,
+        }
+    }
+}
+
+/// Everything the app keeps per rack while it is loaded / playing.
+#[derive(Default)]
+pub struct RackState {
+    /// The rack (loaded from the project folder on first use).
+    pub rack: Option<Ambient>,
+    /// Whether the rack is on the graph.
+    pub on: bool,
+    /// Live handles per layer while it plays (None = slot not built).
+    pub live: Vec<Option<LiveLayer>>,
+    /// Automation / program clock while the rack plays.
+    pub clock: Option<Clock>,
+}
+
+/// The master reverb / shimmer are shared by both racks: the atmosphere owns them while
+/// it plays, otherwise the Soundscapes rack does.
+fn owns_master(s: &Inner, id: RackId) -> bool {
+    id == RackId::Ambient || !s.racks[RackId::Ambient.idx()].on
+}
 
 /// Live parameter handles of one layer while the rack plays.
 pub enum LiveParams {
@@ -99,33 +172,36 @@ impl Clock {
 const CLOCK_TICK_MS: u64 = 25;
 
 /// Push one effective state (layers + macros) into the live graph params.
-fn push_effective(s: &Inner, layers: &[AmbientLayer], macros: &Macros) {
+fn push_effective(s: &Inner, id: RackId, layers: &[AmbientLayer], macros: &Macros) {
     let Some(g) = s.graph.as_ref() else { return };
     let any_solo = layers.iter().any(|l| l.solo);
     for (i, l) in layers.iter().enumerate() {
-        if let Some(Some(live)) = s.ambient_live.get(i) {
+        if let Some(Some(live)) = s.racks[id.idx()].live.get(i) {
             apply_source(s, &live.params, l, macros);
         }
-        if AMBIENT_SLOT0 + i < audio_engine::MAX_LAYERS {
+        if id.slot0() + i < audio_engine::MAX_LAYERS {
             apply_layer_strip(
-                &g.params().layers[AMBIENT_SLOT0 + i],
+                &g.params().layers[id.slot0() + i],
                 l,
                 macros,
                 any_solo,
                 s,
+                id.bus(),
             );
         }
     }
-    g.params().master.space.set(macros.space as f32);
-    g.params().master.space_size.set(macros.space_size as f32);
-    g.params().master.shimmer.set(macros.shimmer as f32);
-    g.params().master.shimmer_st.set(macros.shimmer_st as f32);
+    if owns_master(s, id) {
+        g.params().master.space.set(macros.space as f32);
+        g.params().master.space_size.set(macros.space_size as f32);
+        g.params().master.shimmer.set(macros.shimmer as f32);
+        g.params().master.shimmer_st.set(macros.shimmer_st as f32);
+    }
 }
 
 /// Start the worker that advances the automation/program time and pushes the
 /// effective state every `CLOCK_TICK_MS`. Cheap when nothing is animated.
-fn start_clock(app: tauri::AppHandle, s: &mut Inner) {
-    if s.ambient_clock.is_some() {
+fn start_clock(app: tauri::AppHandle, s: &mut Inner, id: RackId) {
+    if s.racks[id.idx()].clock.is_some() {
         return;
     }
     let clock = Clock {
@@ -138,7 +214,7 @@ fn start_clock(app: tauri::AppHandle, s: &mut Inner) {
     let program_us = Arc::clone(&clock.program_us);
     let program_playing = Arc::clone(&clock.program_playing);
     let lane_us = Arc::clone(&clock.lane_us);
-    s.ambient_clock = Some(clock);
+    s.racks[id.idx()].clock = Some(clock);
     std::thread::spawn(move || {
         use tauri::Manager;
         let mut last = std::time::Instant::now();
@@ -150,10 +226,10 @@ fn start_clock(app: tauri::AppHandle, s: &mut Inner) {
             lane_us.fetch_add(dt_us, Ordering::Relaxed);
             let st = app.state::<AppState>();
             let s = st.lock();
-            if !s.ambient_on || s.graph.is_none() {
+            if !s.racks[id.idx()].on || s.graph.is_none() {
                 continue;
             }
-            let Some(a) = s.ambient.as_ref() else {
+            let Some(a) = s.racks[id.idx()].rack.as_ref() else {
                 continue;
             };
             let end = a.program.end();
@@ -174,7 +250,7 @@ fn start_clock(app: tauri::AppHandle, s: &mut Inner) {
             let lane_t = lane_us.load(Ordering::Relaxed) as f64 / 1e6;
             let program_t = if end > 0.0 { Some(pos) } else { None };
             let (layers, macros) = effective_rack(a, program_t, lane_t);
-            push_effective(&s, &layers, &macros);
+            push_effective(&s, id, &layers, &macros);
         }
     });
 }
@@ -187,13 +263,13 @@ fn project_root(s: &Inner) -> CmdResult<std::path::PathBuf> {
 }
 
 /// The rack of the open project, loaded from disk on first use.
-pub fn ambient_mut(s: &mut Inner) -> CmdResult<&mut Ambient> {
-    if s.ambient.is_none() {
+pub fn rack_mut(s: &mut Inner, id: RackId) -> CmdResult<&mut Ambient> {
+    if s.racks[id.idx()].rack.is_none() {
         let root = project_root(s)?;
-        let a = Ambient::load(&root).map_err(|e| err("io", e.to_string()))?;
-        s.ambient = Some(a);
+        let a = Ambient::load_file(&root.join(id.file())).map_err(|e| err("io", e.to_string()))?;
+        s.racks[id.idx()].rack = Some(a);
     }
-    Ok(s.ambient.as_mut().expect("just loaded"))
+    Ok(s.racks[id.idx()].rack.as_mut().expect("just loaded"))
 }
 
 /// Pitch set of a tonal layer: every degree of the project's scale inside the
@@ -268,19 +344,20 @@ fn build_key(l: &AmbientLayer, rate: u32) -> String {
 
 /// Apply macros + the layer's own level/pan/filters to its graph slot.
 /// Re-push every layer's strip (level/pan/filters) through the atmosphere bus.
-pub fn reapply_strips(s: &Inner) {
-    let (Some(a), Some(g)) = (s.ambient.as_ref(), s.graph.as_ref()) else {
+pub fn reapply_strips(s: &Inner, id: RackId) {
+    let (Some(a), Some(g)) = (s.racks[id.idx()].rack.as_ref(), s.graph.as_ref()) else {
         return;
     };
     let any_solo = a.layers.iter().any(|l| l.solo);
     for (i, l) in a.layers.iter().enumerate() {
-        if AMBIENT_SLOT0 + i < audio_engine::MAX_LAYERS {
+        if id.slot0() + i < audio_engine::MAX_LAYERS {
             apply_layer_strip(
-                &g.params().layers[AMBIENT_SLOT0 + i],
+                &g.params().layers[id.slot0() + i],
                 l,
                 &a.macros,
                 any_solo,
                 s,
+                id.bus(),
             );
         }
     }
@@ -292,6 +369,7 @@ pub(crate) fn apply_layer_strip(
     m: &Macros,
     any_solo: bool,
     s: &Inner,
+    bus: usize,
 ) {
     // Intensity: −40 dB at 0 … 0 dB at 1 (log-ish curve so the slider feels even).
     let intensity_db = if m.intensity <= 0.0 {
@@ -313,16 +391,14 @@ pub(crate) fn apply_layer_strip(
     } else {
         (l.gain_db + intensity_db + gravity_db).clamp(-120.0, 12.0)
     };
-    layer.gain_db.set(crate::bus_cmds::bus_gain(
-        s,
-        crate::bus_cmds::BUS_AMBIENT,
-        gain as f32,
-    ));
+    layer
+        .gain_db
+        .set(crate::bus_cmds::bus_gain(s, bus, gain as f32));
     // Brightness: shifts the low-pass by ±2 octaves around the layer's own setting.
     let lp = (l.lowpass_hz * 2f64.powf((m.brightness - 0.5) * 4.0)).clamp(40.0, 20_000.0);
     crate::bus_cmds::apply_bus_strip(
         s,
-        crate::bus_cmds::BUS_AMBIENT,
+        bus,
         layer,
         (l.pan * m.width) as f32,
         lp as f32,
@@ -547,9 +623,9 @@ fn loop_buffer(
 }
 
 /// Build (or rebuild) the source for layer `i` in its slot; starts silent and ramps.
-fn build_layer(s: &mut Inner, i: usize) -> CmdResult<()> {
-    let l = s
-        .ambient
+fn build_layer(s: &mut Inner, id: RackId, i: usize) -> CmdResult<()> {
+    let l = s.racks[id.idx()]
+        .rack
         .as_ref()
         .and_then(|a| a.layers.get(i))
         .cloned()
@@ -645,22 +721,22 @@ fn build_layer(s: &mut Inner, i: usize) -> CmdResult<()> {
             )
         }
     };
-    let macros = s
-        .ambient
+    let macros = s.racks[id.idx()]
+        .rack
         .as_ref()
         .map(|a| a.macros.clone())
         .unwrap_or_default();
     apply_source(s, &params, &l, &macros);
-    let slot = AMBIENT_SLOT0 + i;
+    let slot = id.slot0() + i;
     let graph = s.graph.as_mut().expect("checked above");
     graph.params().layers[slot].gain_db.set(-60.0);
     if !graph.send(GraphCmd::SetSource { slot, source }) {
         return Err(err("graph_busy", "Graph command queue is full"));
     }
-    while s.ambient_live.len() <= i {
-        s.ambient_live.push(None);
+    while s.racks[id.idx()].live.len() <= i {
+        s.racks[id.idx()].live.push(None);
     }
-    s.ambient_live[i] = Some(LiveLayer {
+    s.racks[id.idx()].live[i] = Some(LiveLayer {
         build_key: key,
         params,
     });
@@ -669,50 +745,51 @@ fn build_layer(s: &mut Inner, i: usize) -> CmdResult<()> {
 
 /// Bring the graph in line with the rack: rebuild changed slots, update the rest,
 /// clear slots of removed layers, set the master space.
-fn sync_live(s: &mut Inner) -> CmdResult<()> {
-    if !s.ambient_on || s.graph.is_none() {
+fn sync_live(s: &mut Inner, id: RackId) -> CmdResult<()> {
+    if !s.racks[id.idx()].on || s.graph.is_none() {
         return Ok(());
     }
     let rate = s.graph.as_ref().map(|g| g.sample_rate()).unwrap_or(48_000);
-    let a = ambient_mut(s)?.clone();
+    let a = rack_mut(s, id)?.clone();
     let any_solo = a.layers.iter().any(|l| l.solo);
     for (i, l) in a.layers.iter().enumerate() {
         let key = build_key(l, rate);
-        let same = s
-            .ambient_live
+        let same = s.racks[id.idx()]
+            .live
             .get(i)
             .and_then(|x| x.as_ref())
             .map(|x| x.build_key == key)
             .unwrap_or(false);
         if !same {
-            build_layer(s, i)?;
-        } else if let Some(Some(live)) = s.ambient_live.get(i) {
+            build_layer(s, id, i)?;
+        } else if let Some(Some(live)) = s.racks[id.idx()].live.get(i) {
             apply_source(s, &live.params, l, &a.macros);
         }
         let graph = s.graph.as_ref().expect("graph");
         apply_layer_strip(
-            &graph.params().layers[AMBIENT_SLOT0 + i],
+            &graph.params().layers[id.slot0() + i],
             l,
             &a.macros,
             any_solo,
             &*s,
+            id.bus(),
         );
     }
     // Layers that no longer exist: fade and clear.
-    let live_len = s.ambient_live.len();
+    let live_len = s.racks[id.idx()].live.len();
     for i in a.layers.len()..live_len {
-        if s.ambient_live[i].is_some() {
+        if s.racks[id.idx()].live[i].is_some() {
             if let Some(g) = s.graph.as_mut() {
-                g.params().layers[AMBIENT_SLOT0 + i].gain_db.set(-60.0);
+                g.params().layers[id.slot0() + i].gain_db.set(-60.0);
                 g.send(GraphCmd::Clear {
-                    slot: AMBIENT_SLOT0 + i,
+                    slot: id.slot0() + i,
                 });
             }
-            s.ambient_live[i] = None;
+            s.racks[id.idx()].live[i] = None;
         }
     }
-    s.ambient_live.truncate(a.layers.len());
-    if let Some(g) = s.graph.as_ref() {
+    s.racks[id.idx()].live.truncate(a.layers.len());
+    if let (Some(g), true) = (s.graph.as_ref(), owns_master(s, id)) {
         g.params().master.space.set(a.macros.space as f32);
         g.params().master.space_size.set(a.macros.space_size as f32);
         g.params().master.shimmer.set(a.macros.shimmer as f32);
@@ -722,22 +799,26 @@ fn sync_live(s: &mut Inner) -> CmdResult<()> {
 }
 
 /// Stop every rack layer (fade, clear) and stop the stream if nothing else uses it.
-pub fn release_all(s: &mut Inner) {
+pub fn release_all(s: &mut Inner, id: RackId) {
+    let other_on = s.racks[id.other().idx()].on;
+    let live_len = s.racks[id.idx()].live.len();
     if let Some(g) = s.graph.as_mut() {
         for i in 0..MAX_AMBIENT_LAYERS {
-            g.params().layers[AMBIENT_SLOT0 + i].gain_db.set(-60.0);
+            g.params().layers[id.slot0() + i].gain_db.set(-60.0);
         }
-        g.params().master.space.set(0.0);
+        if !other_on {
+            g.params().master.space.set(0.0);
+        }
         std::thread::sleep(std::time::Duration::from_millis(30));
-        for i in 0..s.ambient_live.len() {
+        for i in 0..live_len {
             g.send(GraphCmd::Clear {
-                slot: AMBIENT_SLOT0 + i,
+                slot: id.slot0() + i,
             });
         }
     }
-    s.ambient_live.clear();
-    s.ambient_on = false;
-    if let Some(c) = s.ambient_clock.take() {
+    s.racks[id.idx()].live.clear();
+    s.racks[id.idx()].on = false;
+    if let Some(c) = s.racks[id.idx()].clock.take() {
         c.stop();
     }
     if s.graph_idle() {
@@ -745,9 +826,9 @@ pub fn release_all(s: &mut Inner) {
     }
 }
 
-fn status(s: &mut Inner) -> CmdResult<AmbientStatus> {
-    let playing = s.ambient_on && s.graph.is_some();
-    let a = ambient_mut(s)?.clone();
+fn status(s: &mut Inner, id: RackId) -> CmdResult<AmbientStatus> {
+    let playing = s.racks[id.idx()].on && s.graph.is_some();
+    let a = rack_mut(s, id)?.clone();
     let pitches_hz: Vec<Vec<f32>> = a
         .layers
         .iter()
@@ -775,7 +856,7 @@ fn status(s: &mut Inner) -> CmdResult<AmbientStatus> {
         .collect();
     let n = a.layers.len();
     let program_end = a.program.end();
-    let (program_position, program_playing, lane_time) = match s.ambient_clock.as_ref() {
+    let (program_position, program_playing, lane_time) = match s.racks[id.idx()].clock.as_ref() {
         Some(c) => (c.program_position(), c.program_playing(), c.lane_time()),
         None => (0.0, false, 0.0),
     };
@@ -795,12 +876,12 @@ fn status(s: &mut Inner) -> CmdResult<AmbientStatus> {
         });
     };
     let st = graph.status();
-    let m = graph.params().meters(AMBIENT_SLOT0 + n);
+    let m = graph.params().meters(id.slot0() + n);
     Ok(AmbientStatus {
         playing,
         sample_rate: st.sample_rate,
         layer_peaks: (0..n)
-            .map(|i| m.layers.get(AMBIENT_SLOT0 + i).copied().unwrap_or(0.0))
+            .map(|i| m.layers.get(id.slot0() + i).copied().unwrap_or(0.0))
             .collect(),
         master_peak: m.master_peak,
         limiter_gain: m.limiter_gain,
@@ -815,24 +896,25 @@ fn status(s: &mut Inner) -> CmdResult<AmbientStatus> {
 
 /// A take was deleted: loop layers that used it are removed from the rack.
 pub fn forget_take(s: &mut Inner, take_id: &str) {
-    let Ok(a) = ambient_mut(s) else { return };
-    let before = a.layers.len();
-    a.layers.retain(|l| l.source.take_id() != Some(take_id));
-    if a.layers.len() != before {
-        if let Ok(root) = project_root(s) {
-            if let Some(a) = s.ambient.as_ref() {
-                let _ = a.save(&root);
+    for id in RackId::ALL {
+        let Ok(a) = rack_mut(s, id) else { continue };
+        let before = a.layers.len();
+        a.layers.retain(|l| l.source.take_id() != Some(take_id));
+        if a.layers.len() != before {
+            if let Ok(root) = project_root(s) {
+                if let Some(a) = s.racks[id.idx()].rack.as_ref() {
+                    let _ = a.save_file(&root.join(id.file()));
+                }
             }
+            let _ = sync_live(s, id);
         }
-        let _ = sync_live(s);
     }
 }
 
-#[tauri::command]
-pub async fn ambient_get(state: State<'_, AppState>) -> CmdResult<AmbientView> {
+fn rack_get(state: &AppState, id: RackId) -> CmdResult<AmbientView> {
     let mut s = state.lock();
-    let playing = s.ambient_on && s.graph.is_some();
-    let a = ambient_mut(&mut s)?.clone();
+    let playing = s.racks[id.idx()].on && s.graph.is_some();
+    let a = rack_mut(&mut s, id)?.clone();
     Ok(AmbientView {
         ambient: a,
         playing,
@@ -840,8 +922,7 @@ pub async fn ambient_get(state: State<'_, AppState>) -> CmdResult<AmbientView> {
 }
 
 /// Replace the rack: validate, check loop takes exist, save, apply live.
-#[tauri::command]
-pub async fn set_ambient(state: State<'_, AppState>, ambient: Ambient) -> CmdResult<AmbientView> {
+fn rack_set(state: &AppState, id: RackId, ambient: Ambient) -> CmdResult<AmbientView> {
     ambient
         .validate()
         .map_err(|e| err("invalid_argument", e.to_string()))?;
@@ -856,10 +937,11 @@ pub async fn set_ambient(state: State<'_, AppState>, ambient: Ambient) -> CmdRes
     }
     let mut a = ambient;
     a.schema_version = project::ambient::AMBIENT_SCHEMA_VERSION;
-    a.save(&root).map_err(|e| err("io", e.to_string()))?;
-    s.ambient = Some(a.clone());
-    sync_live(&mut s)?;
-    let playing = s.ambient_on && s.graph.is_some();
+    a.save_file(&root.join(id.file()))
+        .map_err(|e| err("io", e.to_string()))?;
+    s.racks[id.idx()].rack = Some(a.clone());
+    sync_live(&mut s, id)?;
+    let playing = s.racks[id.idx()].on && s.graph.is_some();
     Ok(AmbientView {
         ambient: a,
         playing,
@@ -867,36 +949,36 @@ pub async fn set_ambient(state: State<'_, AppState>, ambient: Ambient) -> CmdRes
 }
 
 /// Start the rack on the output (never called automatically: the user presses Play).
-#[tauri::command]
-pub async fn ambient_play(
+fn rack_play(
     app: tauri::AppHandle,
-    state: State<'_, AppState>,
+    state: &AppState,
+    id: RackId,
     device: Option<String>,
 ) -> CmdResult<AmbientStatus> {
     let mut s = state.lock();
-    let _ = ambient_mut(&mut s)?;
+    let _ = rack_mut(&mut s, id)?;
     ensure_graph(&mut s, device.as_deref())?;
-    s.ambient_on = true;
-    s.ambient_live.clear();
-    if let Err(e) = sync_live(&mut s) {
-        release_all(&mut s);
+    s.racks[id.idx()].on = true;
+    s.racks[id.idx()].live.clear();
+    if let Err(e) = sync_live(&mut s, id) {
+        release_all(&mut s, id);
         return Err(e);
     }
-    start_clock(app, &mut s);
-    status(&mut s)
+    start_clock(app, &mut s, id);
+    status(&mut s, id)
 }
 
 /// Program transport (F1A.5): run/pause the scene timeline and/or jump to a position.
 /// Works while the rack is stopped too (the position is applied when it plays).
-#[tauri::command]
-pub async fn ambient_program_set(
-    state: State<'_, AppState>,
+fn rack_program_set(
+    state: &AppState,
+    id: RackId,
     playing: Option<bool>,
     position: Option<f64>,
 ) -> CmdResult<AmbientStatus> {
     let mut s = state.lock();
-    let end = ambient_mut(&mut s)?.program.end();
-    if let Some(c) = s.ambient_clock.as_ref() {
+    let end = rack_mut(&mut s, id)?.program.end();
+    if let Some(c) = s.racks[id.idx()].clock.as_ref() {
         if let Some(p) = position {
             let p = p.clamp(0.0, end.max(0.0));
             c.program_us.store((p * 1e6) as u64, Ordering::Relaxed);
@@ -905,15 +987,15 @@ pub async fn ambient_program_set(
             c.program_playing.store(pl && end > 0.0, Ordering::Relaxed);
         }
         // Apply the new position at once (the thread would do it within a tick).
-        if let Some(a) = s.ambient.as_ref() {
+        if let Some(a) = s.racks[id.idx()].rack.as_ref() {
             let pos = c.program_position();
             let lane_t = c.lane_time();
             let program_t = if end > 0.0 { Some(pos) } else { None };
             let (layers, macros) = effective_rack(a, program_t, lane_t);
-            push_effective(&s, &layers, &macros);
+            push_effective(&s, id, &layers, &macros);
         }
     }
-    status(&mut s)
+    status(&mut s, id)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1041,11 +1123,12 @@ pub async fn export_ambient(
     if !(8_000..=192_000).contains(&rate) {
         return Err(err("invalid_argument", "sample rate outside 8..192 kHz"));
     }
+    let id = RackId::Ambient;
     let started = std::time::Instant::now();
     // Everything that needs the app state: the rack, the pitch sets, loop audio.
     let (a, sources, pitch_sets, master_db) = {
         let mut s = state.lock();
-        let a = ambient_mut(&mut s)?.clone();
+        let a = rack_mut(&mut s, id)?.clone();
         if a.layers.is_empty() {
             return Err(err("empty", "The atmosphere has no layers"));
         }
@@ -1088,7 +1171,7 @@ pub async fn export_ambient(
     let mut g = Graph::new(Arc::clone(&gp), rate);
     let mut live: Vec<LiveParams> = Vec::new();
     for (i, (params, source)) in sources.into_iter().enumerate() {
-        g.set_source(AMBIENT_SLOT0 + i, source);
+        g.set_source(id.slot0() + i, source);
         live.push(params);
     }
     let frames = (seconds * rate as f64).round() as usize;
@@ -1146,11 +1229,12 @@ pub async fn export_ambient(
                 }
             }
             apply_layer_strip(
-                &gp.layers[AMBIENT_SLOT0 + i],
+                &gp.layers[id.slot0() + i],
                 l,
                 &macros,
                 any_solo,
                 &offline,
+                id.bus(),
             );
         }
         gp.master.space.set(macros.space as f32);
@@ -1191,7 +1275,7 @@ pub async fn export_ambient(
             let buf = AudioBuffer::new(
                 rate,
                 ch as u16,
-                std::mem::take(&mut stem_bufs[AMBIENT_SLOT0 + i]),
+                std::mem::take(&mut stem_bufs[id.slot0() + i]),
             );
             let name =
                 project::sanitize_name(&l.name).unwrap_or_else(|_| format!("layer{}", i + 1));
@@ -1216,15 +1300,74 @@ pub async fn export_ambient(
     })
 }
 
+// ---- the atmosphere rack ----
+#[tauri::command]
+pub async fn ambient_get(state: State<'_, AppState>) -> CmdResult<AmbientView> {
+    rack_get(&state, RackId::Ambient)
+}
+#[tauri::command]
+pub async fn set_ambient(state: State<'_, AppState>, ambient: Ambient) -> CmdResult<AmbientView> {
+    rack_set(&state, RackId::Ambient, ambient)
+}
+#[tauri::command]
+pub async fn ambient_play(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    device: Option<String>,
+) -> CmdResult<AmbientStatus> {
+    rack_play(app, &state, RackId::Ambient, device)
+}
+#[tauri::command]
+pub async fn ambient_program_set(
+    state: State<'_, AppState>,
+    playing: Option<bool>,
+    position: Option<f64>,
+) -> CmdResult<AmbientStatus> {
+    rack_program_set(&state, RackId::Ambient, playing, position)
+}
 #[tauri::command]
 pub async fn ambient_stop(state: State<'_, AppState>) -> CmdResult<()> {
-    release_all(&mut state.lock());
+    release_all(&mut state.lock(), RackId::Ambient);
     Ok(())
 }
-
 #[tauri::command]
 pub async fn ambient_status(state: State<'_, AppState>) -> CmdResult<AmbientStatus> {
-    status(&mut state.lock())
+    status(&mut state.lock(), RackId::Ambient)
+}
+
+// ---- the Soundscapes rack: the same engine on its own slots, bus and file ----
+#[tauri::command]
+pub async fn scapes_get(state: State<'_, AppState>) -> CmdResult<AmbientView> {
+    rack_get(&state, RackId::Scapes)
+}
+#[tauri::command]
+pub async fn set_scapes(state: State<'_, AppState>, ambient: Ambient) -> CmdResult<AmbientView> {
+    rack_set(&state, RackId::Scapes, ambient)
+}
+#[tauri::command]
+pub async fn scapes_play(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    device: Option<String>,
+) -> CmdResult<AmbientStatus> {
+    rack_play(app, &state, RackId::Scapes, device)
+}
+#[tauri::command]
+pub async fn scapes_program_set(
+    state: State<'_, AppState>,
+    playing: Option<bool>,
+    position: Option<f64>,
+) -> CmdResult<AmbientStatus> {
+    rack_program_set(&state, RackId::Scapes, playing, position)
+}
+#[tauri::command]
+pub async fn scapes_stop(state: State<'_, AppState>) -> CmdResult<()> {
+    release_all(&mut state.lock(), RackId::Scapes);
+    Ok(())
+}
+#[tauri::command]
+pub async fn scapes_status(state: State<'_, AppState>) -> CmdResult<AmbientStatus> {
+    status(&mut state.lock(), RackId::Scapes)
 }
 
 /// Fade the whole background (rack, drone, pad) out over `seconds`, then stop it.
@@ -1256,7 +1399,9 @@ pub async fn background_fade_out(
         }
         let st = app.state::<AppState>();
         let mut s = st.lock();
-        release_all(&mut s);
+        for id in RackId::ALL {
+            release_all(&mut s, id);
+        }
         crate::graph_cmds::release_slot(&mut s, crate::graph_cmds::DRONE_SLOT);
         crate::graph_cmds::release_slot(&mut s, crate::graph_cmds::PAD_SLOT);
         // Next start comes back at the user's level, not at −60.

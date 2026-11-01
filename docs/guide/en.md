@@ -299,9 +299,10 @@ From the terminal: `academy_lessons`, `academy_instance`, `academy_score_rhythm`
 Home › Background › **Soundscapes** tab. Not just a background but a composition with a shape:
 
 - Pick a **world** (Ancient forest, Deep space, Cyberpunk rain, Rhodope night, Mountain morning, Thracian steppe), a **length** in minutes, a **seed** (🎲 Shuffle gives another journey, the same seed = the same journey) and whether it **loops**.
-- **▶ Play the journey** replaces the atmosphere rack with the world's layers and four scenes: **Intro** (only the bed, quiet), **Development** (textures come in, the first events), **Climax** (everything plays, brighter), **Outro** (everything withdraws). Transitions between scenes are smooth, and three "random walk" lanes make brightness, space and motion breathe. The bar under the worlds shows which phase runs and how much is left.
-- The result is an ordinary atmosphere rack: **Atmosphere › Layers › Program** edits the scenes and layers, and **Save as an atmosphere preset** keeps it in the Library.
-- Play and level are in the "Now playing" bar ("Atm."); ■ Stop stops the program and the layer.
+- **Soundscapes is its own module**, not a view of Atmosphere: its own rack (`scapes.json` in the project), its own **Scapes** switch in the "Now playing" bar and its own strip in the mixer 🎚, its own "soundscapes" stem in the export. The atmosphere stays as it is and both can play at the same time.
+- **▶ Play the journey** builds the world's layers and four scenes into the Soundscapes rack: **Intro** (only the bed, quiet), **Development** (textures come in, the first events), **Climax** (everything plays, brighter), **Outro** (everything withdraws). Transitions between scenes are smooth, and three "random walk" lanes make brightness, space and motion breathe. The bar under the worlds shows which phase runs and how much is left.
+- The **Journey** bar is live: it shows where you are, **click** it to jump to another moment, **❚❚ Pause / ▶ Resume** stops and runs the program without stopping the sound, **⏮ From the start** rewinds.
+- **Save as preset** keeps the journey in the Library (atmosphere presets, tag scapes). Play and level are also in the "Now playing" bar ("Scapes" switch); ■ Stop stops the program and the layer.
 - Next stages (per `docs/design/SOUNDSCAPES_GENERATIVE_PLAN.md`): random events with tension and resolution, a pulse, orbital panning, reaction to the microphone.
 
 ## Background › Atmosphere › "Modules" view (the former Soundscapes)
@@ -468,3 +469,4 @@ from "Start from a melody", because that is where key and tempo come from your t
 If a screen shows "This screen crashed" with the error text, the rest of the app (the
 background, the assistant bridge, the transport) keeps working. "Try again" renders the
 screen again; "← Home" takes you back to Home. Copy the error text and send it so we can fix it.
+- If the error is in the shared part of the app (the bottom bar, the background), the same panel fills the window instead of a blank one; "Try again" reloads.

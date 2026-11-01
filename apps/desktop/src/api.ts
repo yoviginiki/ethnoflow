@@ -1753,6 +1753,13 @@ export const api = {
   ambientStatus: () => invoke<AmbientStatus>("ambient_status"),
   backgroundFadeOut: (seconds: number) => invoke<void>("background_fade_out", { seconds }),
   ambientProgramSet: (playing: boolean | null, position: number | null) => invoke<AmbientStatus>("ambient_program_set", { playing, position }),
+  // The Soundscapes rack: same engine, own slots / bus / file (scapes.json).
+  scapesGet: () => invoke<AmbientView>("scapes_get"),
+  setScapes: (ambient: Ambient) => invoke<AmbientView>("set_scapes", { ambient }),
+  scapesPlay: (device: string | null) => invoke<AmbientStatus>("scapes_play", { device }),
+  scapesStop: () => invoke<void>("scapes_stop"),
+  scapesStatus: () => invoke<AmbientStatus>("scapes_status"),
+  scapesProgramSet: (playing: boolean | null, position: number | null) => invoke<AmbientStatus>("scapes_program_set", { playing, position }),
   exportAmbient: (path: string, format: WavFormat | null, seconds: number | null, stems: boolean, sampleRate: number | null) =>
     invoke<AmbientExportResult>("export_ambient", { path, format, seconds, stems, sampleRate }),
   startRhythm: (device: string | null, settings: RhythmSettings) => invoke<RhythmStatus>("start_rhythm", { device, settings }),
@@ -1794,7 +1801,7 @@ export const api = {
   exportArrangementMix: (path: string, format: WavFormat | null, sampleRate: number | null) =>
     invoke<ExportResult>("export_arrangement_mix", { path, format, sampleRate }),
   /** Whole song: clips + chosen background layers through one offline graph; mix + aligned stems + markers + manifest. */
-  exportSong: (path: string, include: { clips: boolean; drone: DroneSettings | null; pad: PadSettings | null; ambient: boolean; rhythm: RhythmSettings | null }, format: WavFormat | null, sampleRate: number | null, seconds: number | null, stems: boolean) =>
+  exportSong: (path: string, include: { clips: boolean; drone: DroneSettings | null; pad: PadSettings | null; ambient: boolean; scapes: boolean; rhythm: RhythmSettings | null }, format: WavFormat | null, sampleRate: number | null, seconds: number | null, stems: boolean) =>
     invoke<{ path: string; stems: string[]; markers: string | null; manifest: string; seconds: number; sample_rate: number; peak: number; bytes: number }>("export_song", { path, include, format, sampleRate, seconds, stems }),
 
   // Preset library

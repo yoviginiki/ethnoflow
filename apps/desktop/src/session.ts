@@ -16,7 +16,7 @@ export interface SessionPayload {
   layers: Record<LayerName, boolean>;
 }
 
-const LAYER_NAMES: LayerName[] = ["drone", "pad", "ambient", "rhythm"];
+const LAYER_NAMES: LayerName[] = ["drone", "pad", "ambient", "rhythm", "scapes"];
 
 /** Pure: pick the session keys out of the preferences. */
 export function pickSessionPrefs(prefs: Prefs): SessionPrefs {

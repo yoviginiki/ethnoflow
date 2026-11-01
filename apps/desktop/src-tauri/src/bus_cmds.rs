@@ -8,17 +8,18 @@
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
-use crate::ambient_cmds::AMBIENT_SLOT0;
+use crate::ambient_cmds::{RackId, AMBIENT_SLOT0, SCAPES_SLOT0};
 use crate::commands::{err, CmdResult};
 use crate::graph_cmds::{DRONE_SLOT, PAD_SLOT};
 use crate::rhythm_cmds::DRUMS_SLOT;
 use crate::state::{AppState, Inner};
 
-pub const BUS_NAMES: [&str; 4] = ["drone", "pad", "ambient", "rhythm"];
+pub const BUS_NAMES: [&str; 5] = ["drone", "pad", "ambient", "rhythm", "scapes"];
 pub const BUS_DRONE: usize = 0;
 pub const BUS_PAD: usize = 1;
 pub const BUS_AMBIENT: usize = 2;
 pub const BUS_RHYTHM: usize = 3;
+pub const BUS_SCAPES: usize = 4;
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct BusStrip {
@@ -66,8 +67,9 @@ pub fn bus_slots(bus: usize) -> std::ops::Range<usize> {
         BUS_DRONE => DRONE_SLOT..DRONE_SLOT + 1,
         BUS_PAD => PAD_SLOT..PAD_SLOT + 1,
         BUS_AMBIENT => AMBIENT_SLOT0..AMBIENT_SLOT0 + project::MAX_AMBIENT_LAYERS,
+        BUS_SCAPES => SCAPES_SLOT0..SCAPES_SLOT0 + project::MAX_AMBIENT_LAYERS,
         // The rhythm bus: the four parts and the Instrument Rack's extra slots.
-        _ => DRUMS_SLOT..audio_engine::MAX_LAYERS,
+        _ => DRUMS_SLOT..SCAPES_SLOT0,
     }
 }
 
@@ -142,7 +144,8 @@ pub fn refresh(s: &mut Inner, bus: usize) {
                 apply_bus_strip(s, BUS_PAD, l, 0.0, 20_000.0, 10.0);
             }
         }
-        BUS_AMBIENT => crate::ambient_cmds::reapply_strips(s),
+        BUS_AMBIENT => crate::ambient_cmds::reapply_strips(s, RackId::Ambient),
+        BUS_SCAPES => crate::ambient_cmds::reapply_strips(s, RackId::Scapes),
         _ => crate::rhythm_cmds::reapply(s),
     }
 }
@@ -200,10 +203,10 @@ pub async fn bus_fade(
 pub async fn bus_status(state: State<'_, AppState>) -> CmdResult<Vec<f32>> {
     let s = state.lock();
     let Some(g) = s.graph.as_ref() else {
-        return Ok(vec![0.0; 4]);
+        return Ok(vec![0.0; BUS_NAMES.len()]);
     };
     let m = g.params().meters(2);
-    Ok((0..4)
+    Ok((0..BUS_NAMES.len())
         .map(|b| {
             bus_slots(b)
                 .filter_map(|slot| m.layers.get(slot).copied())
@@ -222,7 +225,10 @@ mod tests {
         assert_eq!(bus_index("ambient").unwrap(), BUS_AMBIENT);
         assert!(bus_index("x").is_err());
         assert_eq!(bus_slots(BUS_AMBIENT).len(), project::MAX_AMBIENT_LAYERS);
-        assert_eq!(bus_slots(BUS_RHYTHM), DRUMS_SLOT..audio_engine::MAX_LAYERS);
+        assert_eq!(bus_slots(BUS_RHYTHM), DRUMS_SLOT..SCAPES_SLOT0);
+        assert_eq!(bus_slots(BUS_SCAPES).len(), project::MAX_AMBIENT_LAYERS);
+        assert!(bus_slots(BUS_SCAPES).end <= audio_engine::MAX_LAYERS);
+        assert_eq!(bus_index("scapes").unwrap(), BUS_SCAPES);
         assert!(bus_slots(BUS_RHYTHM).contains(&ARP_SLOT));
         let mut s = Inner::default();
         s.bus[BUS_PAD].strip.gain_db = -6.0;

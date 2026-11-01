@@ -249,7 +249,9 @@ pub fn close_inner(s: &mut Inner) {
     s.midi_input = None;
     s.loaded = None;
     s.arrangement = None;
-    s.ambient = None;
+    for r in s.racks.iter_mut() {
+        r.rack = None;
+    }
     s.clip_cache.clear();
     s.health.clear();
     s.project = None;

@@ -921,6 +921,7 @@ export function Arrange() {
         drone: st.layers.drone && dRoot !== null ? droneSettings(dp, dRoot) : null,
         pad: st.layers.pad && padNotes ? padSettings(pp, padNotes) : null,
         ambient: st.layers.ambient,
+        scapes: st.layers.scapes,
         rhythm: st.layers.rhythm ? { ...st.prefs.rhythm, chord: st.padChord, root_midi: dRoot, intonation: dp.intonation } : null,
       };
       const r = await api.exportSong(path, include, prefs.exportFormat, null, null, true);

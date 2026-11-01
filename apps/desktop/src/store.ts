@@ -40,7 +40,7 @@ import type { Lang } from "./i18n";
 
 export type Mode = "idle" | "recording" | "playing";
 export type Screen = "home" | "play" | "compose" | "studio" | "ambient" | "rhythm" | "library" | "soundscapes" | "start" | "help" | "instrument" | "songmap" | "samples" | "references" | "academy" | "create" | "tuner" | "live" | "scapes";
-export type LayerName = "drone" | "pad" | "ambient" | "rhythm";
+export type LayerName = "drone" | "pad" | "ambient" | "rhythm" | "scapes";
 
 /** Background mixer strip per layer: the bus (trim, pan, cuts) plus fade times in seconds. */
 export interface MixerStrip extends BusStrip {
@@ -49,7 +49,7 @@ export interface MixerStrip extends BusStrip {
 }
 export type MixerPrefs = Record<LayerName, MixerStrip>;
 const DEFAULT_STRIP: MixerStrip = { gain_db: 0, pan: 0, lowpass_hz: 20_000, highpass_hz: 10, fadeIn: 2, fadeOut: 3 };
-export const DEFAULT_MIXER: MixerPrefs = { drone: { ...DEFAULT_STRIP }, pad: { ...DEFAULT_STRIP }, ambient: { ...DEFAULT_STRIP }, rhythm: { ...DEFAULT_STRIP, fadeIn: 0.5, fadeOut: 1 } };
+export const DEFAULT_MIXER: MixerPrefs = { drone: { ...DEFAULT_STRIP }, pad: { ...DEFAULT_STRIP }, ambient: { ...DEFAULT_STRIP }, rhythm: { ...DEFAULT_STRIP, fadeIn: 0.5, fadeOut: 1 }, scapes: { ...DEFAULT_STRIP, fadeIn: 4, fadeOut: 6 } };
 export type LayerSwitches = Record<LayerName, boolean>;
 
 export interface Prefs {
@@ -249,11 +249,20 @@ export const DEFAULT_PREFS: Prefs = {
   sampleFolders: [],
 };
 
+/**
+ * Saved preferences over the defaults. Nested records gain fields over time (the mixer got
+ * a fifth strip, "scapes", on 2026-11-01): fill what an older save lacks so no reader
+ * meets undefined (that blanked the whole window once).
+ */
+export function fillPrefs(saved: Partial<Prefs>): Prefs {
+  return { ...DEFAULT_PREFS, ...saved, mixer: { ...DEFAULT_MIXER, ...(saved.mixer ?? {}) } };
+}
+
 function loadPrefs(): Prefs {
   try {
     const raw = localStorage.getItem(PREFS_KEY);
     if (!raw) return DEFAULT_PREFS;
-    return { ...DEFAULT_PREFS, ...(JSON.parse(raw) as Partial<Prefs>) };
+    return fillPrefs(JSON.parse(raw) as Partial<Prefs>);
   } catch {
     return DEFAULT_PREFS;
   }
@@ -368,6 +377,11 @@ interface Store {
   setAmbient: (a: Ambient | null) => void;
   ambientStatus: AmbientStatus | null;
   setAmbientStatus: (s: AmbientStatus | null) => void;
+  /** The Soundscapes rack (journeys): the same engine as the atmosphere on its own slots, bus and file. */
+  scapes: Ambient | null;
+  setScapes: (a: Ambient | null) => void;
+  scapesStatus: AmbientStatus | null;
+  setScapesStatus: (s: AmbientStatus | null) => void;
   rhythmStatus: RhythmStatus | null;
   setRhythmStatus: (s: RhythmStatus | null) => void;
   /** Song transport status (P3 Phase 1), polled while a project is open. */
@@ -452,14 +466,18 @@ export const useStore = create<Store>((set, get) => ({
   designerId: null,
   setDesignerId: (designerId) => set({ designerId }),
 
-  layers: { drone: false, pad: false, ambient: false, rhythm: false },
+  layers: { drone: false, pad: false, ambient: false, rhythm: false, scapes: false },
   setLayer: (name, on) => set({ layers: { ...get().layers, [name]: on } }),
-  lastLayers: { drone: true, pad: false, ambient: false, rhythm: false },
+  lastLayers: { drone: true, pad: false, ambient: false, rhythm: false, scapes: false },
   setLastLayers: (lastLayers) => set({ lastLayers }),
   ambient: null,
   setAmbient: (ambient) => set({ ambient }),
   ambientStatus: null,
   setAmbientStatus: (ambientStatus) => set({ ambientStatus }),
+  scapes: null,
+  setScapes: (scapes) => set({ scapes }),
+  scapesStatus: null,
+  setScapesStatus: (scapesStatus) => set({ scapesStatus }),
   rhythmStatus: null,
   setRhythmStatus: (rhythmStatus) => set({ rhythmStatus }),
   transport: null,

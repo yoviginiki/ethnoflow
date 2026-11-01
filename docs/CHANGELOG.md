@@ -3,6 +3,25 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Soundscapes is its own module: a second rack in the engine + a live, clickable journey
+  (2026-11-01; owner: "Soundscapes е пак заедно с Atmospheric, а идеята беше да са различни
+  модули" and "лентата долу не е realtime… не е интерактивно").** `ambient_cmds.rs` now works
+  on a `RackId` (Ambient / Scapes): the same engine on its own eight graph slots (24..32,
+  `MAX_LAYERS` 24 → 32), its own mixer bus `scapes` (five buses), its own file
+  `scapes.json`, its own stem "soundscapes" in the song export, own clock / program /
+  status; the master reverb follows the atmosphere while it plays, else the journey.
+  Commands `scapes_get / set_scapes / scapes_play / scapes_stop / scapes_status /
+  scapes_program_set`. Frontend: fifth background layer "Scapes" (switch in the bar's
+  background chip, strip in the mixer with 4 s / 6 s fades, Stop all, session), the
+  Soundscapes tab builds into and plays its own rack, the Journey bar polls the position
+  every 250 ms, click to seek, ❚❚ Pause / ▶ Resume, ⏮ From the start. Bridge: `scapes`
+  (on / playing / layers), `scapes_build` on the Soundscapes rack, `set_scapes`,
+  `scapes_seek`, `layers.scapes`, `export_song.scapes`; smoke checks the atmosphere rack
+  is untouched. Guide BG/EN, bridge doc, bus test.
+  Fix found by the smoke run: a saved mixer pref without the new strip blanked the whole
+  window (App-level hook, outside the screen boundary) → `fillPrefs` fills nested records
+  an older save lacks (vitest), readers guard, and a root `ScreenBoundary` in main.tsx
+  shows the error instead of a blank window.
 - **Soundscapes 2, stage S1: worlds → journeys (2026-11-01; owner: "обедини ги и после продължи
   със създаването на soundscapes").** New Background tab "Soundscapes" (screen `scapes`):
   six worlds (Ancient forest, Deep space, Cyberpunk rain, Rhodope night, Mountain morning,

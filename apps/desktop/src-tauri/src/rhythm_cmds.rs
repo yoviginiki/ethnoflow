@@ -42,7 +42,9 @@ pub const ARP_SLOT: usize = 15;
 /// First slot of the Instrument Rack's extra parts (tapan, chord pad, lead …); one slot
 /// per part, up to `MAX_EXTRAS` (P1 R3).
 pub const EXTRA_SLOT0: usize = 16;
-pub const MAX_EXTRAS: usize = audio_engine::MAX_LAYERS - EXTRA_SLOT0;
+/// The rhythm's slots end where the Soundscapes rack begins.
+pub const EXTRA_END: usize = crate::ambient_cmds::SCAPES_SLOT0;
+pub const MAX_EXTRAS: usize = EXTRA_END - EXTRA_SLOT0;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DrumsSettings {
@@ -1251,11 +1253,11 @@ pub fn release_all(s: &mut Inner) {
     if let Some(live) = s.rhythm.take() {
         live.clock.stop();
         if let Some(g) = s.graph.as_mut() {
-            for slot in DRUMS_SLOT..audio_engine::MAX_LAYERS {
+            for slot in DRUMS_SLOT..EXTRA_END {
                 g.params().layers[slot].gain_db.set(-60.0);
             }
             std::thread::sleep(std::time::Duration::from_millis(30));
-            for slot in DRUMS_SLOT..audio_engine::MAX_LAYERS {
+            for slot in DRUMS_SLOT..EXTRA_END {
                 g.send(GraphCmd::Clear { slot });
             }
         }

@@ -56,11 +56,13 @@ rhythm_status, ambient_status }`
 | `area` | `area?`: play/background/song/learn/library | without `area`: lists the five Home areas, their tabs (`tabs`: area id → screen ids) and the current one; with it: opens the area's main screen (play → play, background → compose, song → studio, learn → academy, library → library), returns `{area, screen}` |
 | `sample_folders` | `add?`, `remove?`: arrays of absolute folder paths | Library › My samples: the scanned folders (`prefs.sampleFolders`); without fields just lists them; returns `folders` |
 | `scapes` | — | Soundscapes 2: the world ids, the journey in the rack now (`current`, `phase` {index, role, name, progress, remaining_s, end_s}, `playing`, `position_s`) |
-| `scapes_build` | `world`, `minutes?` (8), `seed?`, `loop?`, `play?` | builds the world's journey into the atmosphere rack (replaces it; returns `previous` for a restore) with 4 scenes and 3 breathing lanes; `play: true` **starts sound** (atmosphere on, program from 0) |
-| `scapes_stop` | — | stops the program and the atmosphere layer |
+| `scapes_build` | `world`, `minutes?` (8), `seed?`, `loop?`, `play?` | builds the world's journey into the Soundscapes rack (its own rack, slots, bus and stem; the atmosphere is untouched; returns `previous` for a restore) with 4 scenes and 3 breathing lanes; `play: true` **starts sound** (atmosphere on, program from 0) |
+| `scapes_stop` | — | stops the program and the Soundscapes layer |
+| `set_scapes` | `ambient`: a whole rack | replaces the Soundscapes rack (same shape as `set_ambient`; `scapes_build` returns `previous` for this) |
+| `scapes_seek` | `position_s?`, `playing?` | jumps the journey and/or runs / pauses its program (only while the Soundscapes layer is on: the program clock lives with the running rack); returns `position_s`, `playing`, `end_s` |
 | `continue` | — | Home's "▶ Continue": opens Play & record with the latest take loaded (no takes: empty, ready to record), no sound; returns `screen`, `loaded_id`, `latest_id` |
 | `set_prefs` | `prefs`: any of the pref keys, partial objects merge | drone/pad/rhythm/harmony/intent/master |
-| `layers` | `drone`/`pad`/`ambient`/`rhythm`/`metronome`: bool | **starts or stops sound** — tell the user first |
+| `layers` | `drone`/`pad`/`ambient`/`rhythm`/`scapes`/`metronome`: bool | **starts or stops sound** — tell the user first |
 | `set_ambient` | `ambient`: a whole rack | replaces the rack (loop layers of missing takes are dropped) |
 | `set_macros` | `macros`: partial `Macros` | intensity, brightness, motion, space, space_size, tonal_gravity, width |
 | `add_layer` | `kind`, `name?`, `source?` (partial), `patch?` (gain_db, pan, lowpass_hz, highpass_hz…), `take_id` for loop | adds a module (max 8) |

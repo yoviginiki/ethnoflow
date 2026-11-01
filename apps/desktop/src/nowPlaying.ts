@@ -15,7 +15,7 @@ export interface NowPlaying {
   recording: boolean;
   take: { id: string | null; position_s: number; duration_s: number } | null;
   notes: { position_s: number; duration_s: number } | null;
-  background: { drone: boolean; pad: boolean; ambient: boolean; rhythm: boolean; any: boolean };
+  background: { drone: boolean; pad: boolean; ambient: boolean; rhythm: boolean; scapes: boolean; any: boolean };
   song: { bar: number; beat: number; seconds: number; source: string } | null;
   metronome: boolean;
   live: boolean;
@@ -27,7 +27,7 @@ export interface NowPlaying {
 export function readNowPlaying(): NowPlaying {
   const s = useStore.getState();
   const bg = s.layers;
-  const background = { drone: bg.drone, pad: bg.pad, ambient: bg.ambient, rhythm: bg.rhythm, any: bg.drone || bg.pad || bg.ambient || bg.rhythm };
+  const background = { drone: bg.drone, pad: bg.pad, ambient: bg.ambient, rhythm: bg.rhythm, scapes: bg.scapes, any: bg.drone || bg.pad || bg.ambient || bg.rhythm || bg.scapes };
   const take = s.mode === "playing" && s.player ? { id: s.loaded?.id ?? null, position_s: s.player.position_seconds, duration_s: s.player.duration_seconds } : null;
   const notes = s.notesPlayer ? { position_s: s.notesPlayer.position_seconds, duration_s: s.notesPlayer.duration_seconds } : null;
   const song = s.transport?.playing ? { bar: s.transport.bar, beat: s.transport.beat, seconds: s.transport.seconds, source: s.transport.source } : null;
@@ -51,12 +51,13 @@ export async function stopAll(): Promise<void> {
     jobs.push(api.stopNotes().catch(() => undefined));
     s.setNotesPlayer(null);
   }
-  if (s.layers.drone || s.layers.pad || s.layers.ambient || s.layers.rhythm) {
+  if (s.layers.drone || s.layers.pad || s.layers.ambient || s.layers.rhythm || s.layers.scapes) {
     s.setLastLayers({ ...s.layers });
     s.setLayer("drone", false);
     s.setLayer("pad", false);
     s.setLayer("ambient", false);
     s.setLayer("rhythm", false);
+    s.setLayer("scapes", false);
   }
   if (s.transport?.playing) jobs.push(api.transportStop().then((st) => useStore.getState().setTransport(st)).catch(() => undefined));
   if (s.metronomeOn) s.setMetronomeOn(false);

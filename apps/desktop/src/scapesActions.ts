@@ -17,29 +17,36 @@ export interface StartJourneyOptions {
 export async function startJourney(world: World, opts: StartJourneyOptions) {
   const st = useStore.getState();
   if (!st.project) throw new Error("no project");
-  if (!st.ambient) throw new Error("no rack loaded yet");
+  if (!st.scapes) throw new Error("no Soundscapes rack loaded yet");
   const t = messages[st.prefs.lang];
   const names: Record<PhaseRole, string> = { intro: t.phaseIntro, development: t.phaseDevelopment, climax: t.phaseClimax, outro: t.phaseOutro };
-  const rack = buildJourney(world, { minutes: opts.minutes, seed: opts.seed, loop: opts.loop, names, base: st.ambient, layerName: (k) => t[k] });
-  const v = await api.setAmbient(rack);
-  useStore.getState().setAmbient(v.ambient);
+  const rack = buildJourney(world, { minutes: opts.minutes, seed: opts.seed, loop: opts.loop, names, base: st.scapes, layerName: (k) => t[k] });
+  const v = await api.setScapes(rack);
+  useStore.getState().setScapes(v.ambient);
   if (opts.play) {
-    useStore.getState().setLayer("ambient", true);
+    useStore.getState().setLayer("scapes", true);
     // The program clock exists once the rack runs; wait for its first status.
     const t0 = performance.now();
-    while (useStore.getState().ambientStatus === null && performance.now() - t0 < 5000) await new Promise((r) => setTimeout(r, 50));
-    const status = await api.ambientProgramSet(true, 0);
-    useStore.getState().setAmbientStatus(status);
+    while (useStore.getState().scapesStatus === null && performance.now() - t0 < 5000) await new Promise((r) => setTimeout(r, 50));
+    const status = await api.scapesProgramSet(true, 0);
+    useStore.getState().setScapesStatus(status);
   }
   return v.ambient;
 }
 
-/** Stop the program and the atmosphere layer (the rack and its scenes stay for editing). */
+/** Run / pause the journey's program and/or jump to a position (seconds). */
+export async function seekJourney(playing: boolean | null, position_s: number | null) {
+  const status = await api.scapesProgramSet(playing, position_s);
+  useStore.getState().setScapesStatus(status);
+  return status;
+}
+
+/** Stop the program and the Soundscapes layer (the rack and its scenes stay for editing). */
 export async function stopJourney() {
   const st = useStore.getState();
-  if (st.ambientStatus) {
-    const status = await api.ambientProgramSet(false, 0).catch(() => null);
-    if (status) useStore.getState().setAmbientStatus(status);
+  if (st.scapesStatus) {
+    const status = await api.scapesProgramSet(false, 0).catch(() => null);
+    if (status) useStore.getState().setScapesStatus(status);
   }
-  if (st.layers.ambient) useStore.getState().setLayer("ambient", false);
+  if (st.layers.scapes) useStore.getState().setLayer("scapes", false);
 }

@@ -1,15 +1,16 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api, describeError } from "./api";
 import { KIND_LABEL } from "./ambientPresets";
 import { formatTime } from "./format";
 import { messages } from "./i18n";
 import { journeyWorld, phaseAt, PHASE_ROLES, PHASE_SHARE, WORLDS, worldById } from "./scapes";
-import { startJourney, stopJourney } from "./scapesActions";
+import { seekJourney, startJourney, stopJourney } from "./scapesActions";
 import { useStore } from "./store";
 
 const MIN_MINUTES = 1;
 const MAX_MINUTES = 60;
 const DEFAULT_MINUTES = 8;
+const STATUS_POLL_MS = 250;
 
 /**
  * Soundscapes (stage S1 of docs/design/SOUNDSCAPES_GENERATIVE_PLAN.md): pick a world, a
@@ -20,7 +21,7 @@ const DEFAULT_MINUTES = 8;
 export function ScapesScreen() {
   const s = useStore();
   const t = messages[s.prefs.lang];
-  const [worldId, setWorldId] = useState<string>(journeyWorld(s.ambient) ?? WORLDS[0].id);
+  const [worldId, setWorldId] = useState<string>(journeyWorld(s.scapes) ?? WORLDS[0].id);
   const [minutes, setMinutes] = useState(DEFAULT_MINUTES);
   const [seed, setSeed] = useState(() => 1 + Math.floor(Math.random() * 1_000_000));
   const [loop, setLoop] = useState(false);
@@ -28,11 +29,41 @@ export function ScapesScreen() {
   const fail = (e: unknown) => useStore.getState().setError(describeError(e));
 
   const world = worldById(worldId) ?? WORLDS[0];
-  const current = journeyWorld(s.ambient);
-  const status = s.ambientStatus;
-  const running = !!status?.program_playing && s.layers.ambient;
-  const phase = current ? phaseAt(s.ambient, status?.program_position ?? 0) : null;
+  const current = journeyWorld(s.scapes);
+  const status = s.scapesStatus;
+  const on = s.layers.scapes;
+  const running = !!status?.program_playing && on;
+  const phase = current ? phaseAt(s.scapes, status?.program_position ?? 0) : null;
   const endS = phase?.end_s ?? 0;
+  const barRef = useRef<HTMLDivElement>(null);
+
+  // Live position while the rack runs (the engine's clock moves it; the UI only reads).
+  useEffect(() => {
+    if (!on) return;
+    let cancelled = false;
+    const tick = async () => {
+      if (cancelled) return;
+      try {
+        const st = await api.scapesStatus();
+        if (!cancelled) useStore.getState().setScapesStatus(st);
+      } catch {
+        return;
+      }
+      setTimeout(tick, STATUS_POLL_MS);
+    };
+    void tick();
+    return () => {
+      cancelled = true;
+    };
+  }, [on]);
+
+  const seekTo = (e: React.MouseEvent<HTMLDivElement>) => {
+    const el = barRef.current;
+    if (!el || endS <= 0 || !on) return;
+    const r = el.getBoundingClientRect();
+    const frac = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+    void seekJourney(null, frac * endS).catch(fail);
+  };
 
   const play = async () => {
     setBusy(true);
@@ -46,9 +77,9 @@ export function ScapesScreen() {
   };
   const stop = () => void stopJourney().catch(fail);
   const savePreset = async () => {
-    if (!s.ambient || !current) return;
+    if (!s.scapes || !current) return;
     try {
-      await api.ambientPresetSave(`${t[worldById(current)!.title]} · ${minutes} min`, ["scapes", current], s.ambient);
+      await api.ambientPresetSave(`${t[worldById(current)!.title]} · ${minutes} min`, ["scapes", current], s.scapes);
       s.setMessage(t.scapesSaved);
     } catch (e) {
       fail(e);
@@ -60,6 +91,7 @@ export function ScapesScreen() {
       <section className="panel">
         <h2>{t.scapesTitle}</h2>
         <div className="muted small">{t.scapesIntro}</div>
+        <div className="muted small">{t.scapesOwnRack}</div>
       </section>
 
       <section className="panel">
@@ -78,7 +110,8 @@ export function ScapesScreen() {
         </div>
       </section>
 
-      <section className="panel analysis-row" data-coach="scapes-transport">
+      <section className="panel scapes-transport" data-coach="scapes-transport">
+        <div className="analysis-row">
         <label className="inline">
           {t.scapesMinutes}
           <input type="number" min={MIN_MINUTES} max={MAX_MINUTES} value={minutes} onChange={(e) => setMinutes(Math.max(MIN_MINUTES, Math.min(MAX_MINUTES, Number(e.target.value) || DEFAULT_MINUTES)))} style={{ width: 64 }} />
@@ -94,7 +127,7 @@ export function ScapesScreen() {
             🎲 {t.scapesShuffle}
           </button>
         </label>
-        {running ? (
+        {on ? (
           <button className="primary" onClick={stop}>
             ■ {t.scapesStop}
           </button>
@@ -106,13 +139,23 @@ export function ScapesScreen() {
         <button className="ghost" onClick={() => void savePreset()} disabled={!current}>
           💾 {t.scapesSave}
         </button>
+        </div>
       </section>
 
       <section className="panel">
         <h3>{t.scapesTimeline}</h3>
         {current && phase ? (
           <>
-            <div className="journey-bar" role="progressbar" aria-valuemin={0} aria-valuemax={Math.round(endS)} aria-valuenow={Math.round(status?.program_position ?? 0)}>
+            <div className="analysis-row">
+              <button className="ghost" disabled={!on} onClick={() => void seekJourney(!running, null).catch(fail)}>
+                {running ? `❚❚ ${t.scapesPause}` : `▶ ${t.scapesResume}`}
+              </button>
+              <button className="ghost" disabled={!on} onClick={() => void seekJourney(null, 0).catch(fail)}>
+                ⏮ {t.scapesToStart}
+              </button>
+              <span className="muted small">{t.scapesSeekHint}</span>
+            </div>
+            <div ref={barRef} className={`journey-bar ${on ? "seekable" : ""}`} role="progressbar" aria-valuemin={0} aria-valuemax={Math.round(endS)} aria-valuenow={Math.round(status?.program_position ?? 0)} onClick={seekTo} title={t.scapesSeekHint}>
               {PHASE_ROLES.map((role, i) => (
                 <span key={role} className={`journey-seg ${phase.index === i ? "on" : ""}`} style={{ flexGrow: PHASE_SHARE[role] }}>
                   {s.ambient?.program.scenes[i]?.name ?? role}
@@ -122,7 +165,7 @@ export function ScapesScreen() {
             </div>
             <div className="muted small">
               {t[worldById(current)!.title]} · {phase.name} · {formatTime(status?.program_position ?? 0)} / {formatTime(endS)} · {t.scapesRemaining} {formatTime(phase.remaining_s)}
-              {!running && ` · ${t.scapesPaused}`}
+              {on && !running && ` · ${t.scapesPaused}`}
             </div>
           </>
         ) : (

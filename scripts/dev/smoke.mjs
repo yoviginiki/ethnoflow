@@ -332,17 +332,20 @@ async function main() {
     if (after.includes(probe) || after.length !== before.length) throw new Error(JSON.stringify(after));
     return `${before.length} folder(s) kept, probe added and removed`;
   });
-  await step("soundscapes: a world builds a whole journey (4 scenes, breathing lanes) into the rack, silently, and the rack is restored", () => {
+  await step("soundscapes: a world builds a whole journey (4 scenes, breathing lanes) into its own rack, silently; the atmosphere is untouched; the rack is restored", () => {
     const list = expectOk(send({ op: "scapes" }));
     if (!Array.isArray(list.worlds) || list.worlds.length < 6) throw new Error(JSON.stringify(list));
+    const atmoBefore = JSON.stringify(readState().ambient ?? null);
     const r = expectOk(send({ op: "scapes_build", world: "rhodope-night", minutes: 2, seed: 7 }));
     try {
       if (r.scenes.length !== 4 || Math.abs(r.end_s - 120) > 2 || r.lanes !== 3 || r.playing !== false) throw new Error(JSON.stringify({ scenes: r.scenes.length, end_s: r.end_s, lanes: r.lanes, playing: r.playing }));
       const now = expectOk(send({ op: "scapes" }));
-      if (now.current !== "rhodope-night" || !now.phase) throw new Error(JSON.stringify(now));
-      return `${r.layers} layers, scenes ${r.scenes.map((sc) => `${sc.name} ${sc.duration_s}s`).join(" → ")}, phase now: ${now.phase.name}`;
+      if (now.current !== "rhodope-night" || !now.phase || now.on !== false) throw new Error(JSON.stringify(now));
+      const atmoAfter = JSON.stringify(readState().ambient ?? null);
+      if (atmoAfter !== atmoBefore) throw new Error("the atmosphere rack changed");
+      return `${r.layers} layers in the Soundscapes rack, scenes ${r.scenes.map((sc) => `${sc.name} ${sc.duration_s}s`).join(" → ")}, atmosphere untouched`;
     } finally {
-      if (r.previous) expectOk(send({ op: "set_ambient", ambient: r.previous }));
+      if (r.previous) expectOk(send({ op: "set_scapes", ambient: r.previous }));
     }
   });
   await step("soundscapes: the old screen id opens Atmosphere in the modules view (alias)", () => {
