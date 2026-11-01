@@ -5,10 +5,11 @@
 //! and their damping, `decay_s` is the fundamental's ring-out. Sparse seeded strikes as
 //! in the bells; silence is kept. No allocation in `render`.
 
-use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::atomic::{AtomicU32, AtomicU8, Ordering};
 use std::sync::Arc;
 
-use super::gen::{PitchSet, Trigger};
+use super::gen::{beat_grid, PitchSet, Trigger};
+use super::rhythm::BeatClock;
 use crate::graph::params::{ramp_samples, undenormal, Ramp, SmoothedParam};
 use crate::graph::Source;
 
@@ -30,6 +31,9 @@ pub struct ResonatorParams {
     /// 0..1 soft mallet … hard stick (exciter burst length).
     pub strike: SmoothedParam,
     pub seed: AtomicU32,
+    /// Beat grid for the strikes: 0 free, else grid lines per beat (1, 2, 4). Needs a
+    /// clock that plays (the rhythm / song transport); item 7 "the atmosphere knows the bar".
+    pub sync: AtomicU8,
 }
 
 impl Default for ResonatorParams {
@@ -42,6 +46,7 @@ impl Default for ResonatorParams {
             brightness: SmoothedParam::new(0.5, 0.0, 1.0),
             strike: SmoothedParam::new(0.5, 0.0, 1.0),
             seed: AtomicU32::new(1),
+            sync: AtomicU8::new(0),
         }
     }
 }
@@ -72,6 +77,8 @@ struct Voice {
 pub struct ResonatorSource {
     params: Arc<ResonatorParams>,
     trigger: Trigger,
+    clock: Option<Arc<BeatClock>>,
+    frame: u64,
     seed_used: u32,
     density: Ramp,
     voices: [Voice; RESONATOR_VOICES],
@@ -79,10 +86,18 @@ pub struct ResonatorSource {
 }
 
 impl ResonatorSource {
+    /// Strikes can wait for a beat grid (`sync` lines per beat) while `clock` plays.
+    pub fn with_clock(mut self, clock: Option<Arc<BeatClock>>) -> Self {
+        self.clock = clock;
+        self
+    }
+
     pub fn new(params: Arc<ResonatorParams>) -> Self {
         let seed = params.seed.load(Ordering::Relaxed);
         Self {
             trigger: Trigger::new(seed),
+            clock: None,
+            frame: 0,
             seed_used: seed,
             density: Ramp::new(params.density.target()),
             voices: [Voice::default(); RESONATOR_VOICES],
@@ -173,6 +188,11 @@ impl ResonatorSource {
 }
 
 impl Source for ResonatorSource {
+    fn render_at(&mut self, out: &mut [f32], sample_rate: u32, frame: u64) {
+        self.frame = frame;
+        self.render(out, sample_rate);
+    }
+
     fn render(&mut self, out: &mut [f32], sample_rate: u32) {
         let sr = sample_rate.max(1) as f32;
         let p = Arc::clone(&self.params);
@@ -189,7 +209,17 @@ impl Source for ResonatorSource {
         } else {
             self.density.current
         };
-        let strike_at = self.trigger.tick(n, density, sr);
+        let strike_at = self.trigger.tick_on_grid(
+            n,
+            density,
+            sr,
+            beat_grid(
+                self.clock.as_deref(),
+                self.frame,
+                sample_rate,
+                p.sync.load(Ordering::Relaxed),
+            ),
+        );
         let at = strike_at.unwrap_or(n).min(n);
         let target = p.density.target();
         let (head, tail) = out.split_at_mut(at);

@@ -515,7 +515,7 @@ export type LayerSource =
   | { kind: "noise"; color: number }
   | { kind: "wind"; gust: number; speed: number; center_hz: number; resonance: number }
   | { kind: "texture"; brightness: number; motion: number; resonance: number; tonal: boolean; register: [number, number] }
-  | { kind: "bells"; density: number; decay_s: number; brightness: number; velocity_spread: number; tonal: boolean; register: [number, number] }
+  | { kind: "bells"; density: number; decay_s: number; brightness: number; velocity_spread: number; tension: number; tonal: boolean; register: [number, number] }
   | { kind: "pluck"; density: number; damping: number; brightness: number; velocity_spread: number; tonal: boolean; register: [number, number] }
   | { kind: "loop"; take_id: string; start: number; end: number; crossfade: number; rate: number; reverse: boolean }
   | { kind: "resonator"; density: number; decay_s: number; structure: number; brightness: number; strike: number; tonal: boolean; register: [number, number] }
@@ -614,6 +614,8 @@ export interface Ambient {
   program: Program;
   /** Tonal layers follow the chord of the pad / progression instead of the whole mode. */
   follow_chord?: boolean;
+  /** Beat grid for the event layers: 0 free, 1 beat, 2 half, 4 quarter (needs a playing clock). */
+  sync?: number;
 }
 
 export interface AmbientExportResult {

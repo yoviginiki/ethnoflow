@@ -121,6 +121,9 @@ pub struct Inner {
     pub edit: Option<crate::edit_cmds::EditSession>,
     /// Where keyboard / MIDI notes go (keyboard everywhere, K1/K2).
     pub keyboard_target: KeyboardTarget,
+    /// The one beat clock of the app: the rhythm section and the song transport drive it,
+    /// the atmosphere's event layers read it (item 7 "the atmosphere knows the bar").
+    pub master_clock: Arc<audio_engine::BeatClock>,
 }
 
 /// The sound a pressed key makes: the project's live synth voice, or the instrument

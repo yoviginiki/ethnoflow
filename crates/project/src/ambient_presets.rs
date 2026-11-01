@@ -76,6 +76,7 @@ fn rack(id: &str, name: &str, tags: &[&str], macros: Macros, layers: Vec<L>) -> 
             preset: Some(id.to_string()),
             tags: tags.iter().map(|t| t.to_string()).collect(),
             follow_chord: false,
+            sync: 0,
             automation: Vec::new(),
             program: crate::program::Program::default(),
         },
@@ -132,6 +133,7 @@ fn bells(density: f64, decay_s: f64, brightness: f64, tonal: bool, lo: u8, hi: u
         decay_s,
         brightness,
         velocity_spread: 0.6,
+        tension: 0.0,
         tonal,
         register: (lo, hi),
     }

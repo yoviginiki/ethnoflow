@@ -2,10 +2,11 @@
 //! triggered sparsely by the seeded process. Delay lines are allocated once for
 //! the lowest playable note; the fractional read keeps the pitch true.
 
-use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::atomic::{AtomicU32, AtomicU8, Ordering};
 use std::sync::Arc;
 
-use super::gen::{PitchSet, Trigger};
+use super::gen::{beat_grid, PitchSet, Trigger};
+use super::rhythm::BeatClock;
 use crate::graph::params::{ramp_samples, undenormal, Ramp, SmoothedParam};
 use crate::graph::Source;
 
@@ -22,6 +23,9 @@ pub struct PluckParams {
     pub brightness: SmoothedParam,
     pub velocity_spread: SmoothedParam,
     pub seed: AtomicU32,
+    /// Beat grid for the strikes: 0 free, else grid lines per beat (1, 2, 4). Needs a
+    /// clock that plays (the rhythm / song transport); item 7 "the atmosphere knows the bar".
+    pub sync: AtomicU8,
 }
 
 impl Default for PluckParams {
@@ -33,6 +37,7 @@ impl Default for PluckParams {
             brightness: SmoothedParam::new(0.5, 0.0, 1.0),
             velocity_spread: SmoothedParam::new(0.5, 0.0, 1.0),
             seed: AtomicU32::new(1),
+            sync: AtomicU8::new(0),
         }
     }
 }
@@ -50,6 +55,8 @@ struct Str {
 pub struct PluckSource {
     params: Arc<PluckParams>,
     trigger: Trigger,
+    clock: Option<Arc<BeatClock>>,
+    frame: u64,
     seed_used: u32,
     density: Ramp,
     damping: Ramp,
@@ -60,11 +67,19 @@ pub struct PluckSource {
 }
 
 impl PluckSource {
+    /// Strikes can wait for a beat grid (`sync` lines per beat) while `clock` plays.
+    pub fn with_clock(mut self, clock: Option<Arc<BeatClock>>) -> Self {
+        self.clock = clock;
+        self
+    }
+
     pub fn new(params: Arc<PluckParams>, sample_rate: u32) -> Self {
         let seed = params.seed.load(Ordering::Relaxed);
         let len = (sample_rate.max(8000) as f32 / MIN_HZ) as usize + 4;
         Self {
             trigger: Trigger::new(seed),
+            clock: None,
+            frame: 0,
             seed_used: seed,
             density: Ramp::new(params.density.target()),
             damping: Ramp::new(params.damping.target()),
@@ -161,6 +176,11 @@ impl PluckSource {
 }
 
 impl Source for PluckSource {
+    fn render_at(&mut self, out: &mut [f32], sample_rate: u32, frame: u64) {
+        self.frame = frame;
+        self.render(out, sample_rate);
+    }
+
     fn render(&mut self, out: &mut [f32], sample_rate: u32) {
         let sr = sample_rate.max(1) as f32;
         // One refcount bump per block: lets the strike/reseed paths borrow `self` mutably.
@@ -181,7 +201,17 @@ impl Source for PluckSource {
         } else {
             self.density.current
         };
-        let pluck_at = self.trigger.tick(n, density, sr);
+        let pluck_at = self.trigger.tick_on_grid(
+            n,
+            density,
+            sr,
+            beat_grid(
+                self.clock.as_deref(),
+                self.frame,
+                sample_rate,
+                p.sync.load(Ordering::Relaxed),
+            ),
+        );
         // Loop loss per sample: damping 0 → ~0.9995, 1 → ~0.98.
         let loss = 0.9996 - self.damping.current * 0.02;
         let at = pluck_at.unwrap_or(n).min(n);

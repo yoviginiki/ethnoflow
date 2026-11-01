@@ -6,7 +6,7 @@ function layer(id: string, patch: Partial<AmbientLayer> = {}): AmbientLayer {
   return {
     id,
     name: id,
-    source: { kind: "bells", density: 8, decay_s: 5, brightness: 0.4, velocity_spread: 0.5, tonal: true, register: [60, 84] },
+    source: { kind: "bells", density: 8, decay_s: 5, brightness: 0.4, velocity_spread: 0.5, tension: 0, tonal: true, register: [60, 84] },
     gain_db: -18,
     pan: 0.2,
     lowpass_hz: 20000,

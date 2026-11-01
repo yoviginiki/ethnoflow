@@ -3,6 +3,20 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **The atmosphere knows the bar; Soundscapes events on the grid (home-studio item 7 = S2,
+  2026-11-01).** One master beat clock in the app state (`Inner.master_clock`): the rhythm
+  section drives it (tempo + start/stop, the song transport through it) and the event
+  sources of both racks read it. Engine `Trigger::tick_on_grid` + `beat_grid`: a drawn
+  strike waits for the next grid line (`sync` lines per beat: 1 / 2 / 4; 0 = free), at most
+  one per line; bells, pluck, resonator, bloom and sampler take a clock (`with_clock`) and
+  the per-rack `Ambient.sync`; test: 600/min at 120 BPM → one strike per beat, all within a
+  frame of the beat. Export: an export clock at the project tempo from frame 0 feeds the
+  racks, so "on the bar" renders too. S2 events as a bells extension: `Bells.tension`
+  (0–0.5; a strike a semitone / tritone off the mode, resolved by the next strike; test:
+  30 % asked → 27–33 % tense), slider "Tension", 10 % in the worlds' event layers. UI:
+  "On the bar" select next to "Follow the chord". Smoke: a dense 0.2 s bells layer with
+  sync 1 exports with ≥ 80 % of onsets on the 120 BPM grid, and off it when free. Guide
+  BG/EN.
 - **Keyboard everywhere, K1 + K2 + K4 (home-studio item 6, 2026-11-01).** Engine
   `graph/sources/live_notes.rs`: an allocation-free SPSC note queue (`LiveNotes`) inside the
   parameter block of the six instrument sources; bass and lead hold a mono note until its

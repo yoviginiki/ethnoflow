@@ -1353,12 +1353,15 @@ pub async fn start_rhythm(
     chord_pcs(&s, &settings)?;
     ensure_graph(&mut s, device.as_deref())?;
     if s.rhythm.is_none() {
-        let clock = Arc::new(BeatClock::new(bpm as f32));
+        // The app's master clock (shared with the atmosphere's beat grid), at this tempo.
+        let clock = Arc::clone(&s.master_clock);
         let frame = s
             .graph
             .as_ref()
             .map(|g| g.params().frame.load(Ordering::Relaxed))
             .unwrap_or(0);
+        let sr = s.graph.as_ref().map(|g| g.sample_rate()).unwrap_or(48_000);
+        clock.set_bpm(bpm as f32, frame, sr);
         // Join the song where it is when the timeline plays (song transport), else bar 1.
         clock.start(frame, crate::transport_cmds::song_beat_for_rhythm_start(&s));
         s.rhythm = Some(RhythmLive {

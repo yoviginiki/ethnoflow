@@ -426,6 +426,15 @@ export function Ambient({ kind = "ambient" }: { kind?: RackKind } = {}) {
             <input type="checkbox" checked={rack?.follow_chord ?? false} onChange={(e) => rack && commit({ ...rack, follow_chord: e.target.checked })} />
             {t.followChord}
           </label>
+          <label className="inline small" title={t.syncHint} data-coach="sync">
+            {t.syncLabel}
+            <select value={String(rack?.sync ?? 0)} onChange={(e) => rack && commit({ ...rack, sync: Number(e.target.value) })}>
+              <option value="0">{t.syncFree}</option>
+              <option value="1">{t.syncBeat}</option>
+              <option value="2">{t.syncHalf}</option>
+              <option value="4">{t.syncQuarter}</option>
+            </select>
+          </label>
           <div className="meter" style={{ width: 120 }} role="meter" aria-valuemin={-60} aria-valuemax={0} aria-valuenow={Math.round(masterPeakDb)} aria-label={t.mixTitle}>
             <div className={`meter-fill ${masterPeakDb > -3 ? "hot" : masterPeakDb > -12 ? "warm" : ""}`} style={{ width: `${meterFraction(masterPeakDb) * 100}%` }} />
           </div>

@@ -39,6 +39,10 @@ pub enum LayerSource {
         decay_s: f64,
         brightness: f64,
         velocity_spread: f64,
+        /// S2 tension: share of strikes a semitone / tritone off the mode, resolved by the
+        /// next strike (0..0.5).
+        #[serde(default)]
+        tension: f64,
         tonal: bool,
         register: (u8, u8),
     },
@@ -238,6 +242,7 @@ impl LayerSource {
                 decay_s: 5.0,
                 brightness: 0.4,
                 velocity_spread: 0.5,
+                tension: 0.0,
                 tonal: true,
                 register: (60, 84),
             },
@@ -606,6 +611,11 @@ pub struct Ambient {
     /// (when one is set) instead of the whole mode. Default off.
     #[serde(default)]
     pub follow_chord: bool,
+    /// Beat grid for the event layers (bells, pluck, resonator, bloom, sampler): 0 free,
+    /// 1 every beat, 2 half beats, 4 quarter beats. Needs a playing clock (rhythm / song);
+    /// home-studio item 7 "the atmosphere knows the bar".
+    #[serde(default)]
+    pub sync: u8,
     /// Automation lanes (F1A.4): functions of time on layer or macro parameters.
     #[serde(default)]
     pub automation: Vec<crate::program::AutomationLane>,
@@ -623,6 +633,7 @@ impl Default for Ambient {
             preset: None,
             tags: Vec::new(),
             follow_chord: false,
+            sync: 0,
             automation: Vec::new(),
             program: crate::program::Program::default(),
         }
@@ -665,6 +676,18 @@ impl Ambient {
     }
 
     pub fn validate(&self) -> Result<()> {
+        if !matches!(self.sync, 0 | 1 | 2 | 4) {
+            return Err(ProjectError::InvalidState(
+                "sync must be 0, 1, 2 or 4".into(),
+            ));
+        }
+        for l in &self.layers {
+            if let LayerSource::Bells { tension, .. } = &l.source {
+                if !(0.0..=0.5).contains(tension) {
+                    return Err(ProjectError::InvalidState("bells tension 0..0.5".into()));
+                }
+            }
+        }
         if self.layers.len() > MAX_AMBIENT_LAYERS {
             return Err(ProjectError::InvalidState(format!(
                 "at most {MAX_AMBIENT_LAYERS} layers"
@@ -780,6 +803,7 @@ mod tests {
             decay_s: 1.0,
             brightness: 0.5,
             velocity_spread: 0.5,
+            tension: 0.0,
             tonal: true,
             register: (60, 72),
         };

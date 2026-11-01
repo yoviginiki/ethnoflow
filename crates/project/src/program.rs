@@ -110,7 +110,13 @@ pub fn source_params(src: &LayerSource) -> &'static [&'static str] {
         LayerSource::Noise { .. } => &["color"],
         LayerSource::Wind { .. } => &["gust", "speed", "center_hz", "resonance"],
         LayerSource::Texture { .. } => &["brightness", "motion", "resonance"],
-        LayerSource::Bells { .. } => &["density", "decay_s", "brightness", "velocity_spread"],
+        LayerSource::Bells { .. } => &[
+            "density",
+            "decay_s",
+            "brightness",
+            "velocity_spread",
+            "tension",
+        ],
         LayerSource::Pluck { .. } => &["density", "damping", "brightness", "velocity_spread"],
         LayerSource::Loop { .. } => &["rate", "crossfade"],
         LayerSource::Resonator { .. } => {
@@ -176,6 +182,7 @@ fn source_param(s: &LayerSource, param: &str) -> Option<f64> {
         (LayerSource::Texture { motion, .. }, "motion") => *motion,
         (LayerSource::Texture { resonance, .. }, "resonance") => *resonance,
         (LayerSource::Bells { density, .. }, "density") => *density,
+        (LayerSource::Bells { tension, .. }, "tension") => *tension,
         (LayerSource::Bells { decay_s, .. }, "decay_s") => *decay_s,
         (LayerSource::Bells { brightness, .. }, "brightness") => *brightness,
         (
@@ -264,6 +271,7 @@ fn set_source_param(s: &mut LayerSource, param: &str, v: f64) -> bool {
         (LayerSource::Texture { motion, .. }, "motion") => *motion = v,
         (LayerSource::Texture { resonance, .. }, "resonance") => *resonance = v,
         (LayerSource::Bells { density, .. }, "density") => *density = v,
+        (LayerSource::Bells { tension, .. }, "tension") => *tension = v,
         (LayerSource::Bells { decay_s, .. }, "decay_s") => *decay_s = v,
         (LayerSource::Bells { brightness, .. }, "brightness") => *brightness = v,
         (

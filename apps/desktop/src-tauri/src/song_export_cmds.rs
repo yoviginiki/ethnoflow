@@ -9,7 +9,7 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
 use audio_engine::{
-    db_to_gain, gain_to_target_db, integrated_lufs, write_wav, AudioBuffer, ClipSource,
+    db_to_gain, gain_to_target_db, integrated_lufs, write_wav, AudioBuffer, BeatClock, ClipSource,
     ClipsParams, DroneParams, DroneSource, Graph, GraphParams, Limiter, PadParams, PadSource,
     WavFormat,
 };
@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 
 use crate::ambient_cmds::{
-    apply_layer_strip, apply_source, offline_sources, pitch_set, LiveParams, RackId,
+    apply_layer_strip, apply_source, apply_sync, offline_sources, pitch_set, LiveParams, RackId,
 };
 use crate::arrangement_cmds::{apply_tracks, build_clips, ARRANGE_SLOT};
 use crate::bus_cmds::{apply_bus_strip, bus_gain_offline, BUS_DRONE, BUS_PAD, BUS_RHYTHM};
@@ -101,7 +101,7 @@ pub async fn export_song(
     let mut groups: Vec<(String, Vec<usize>)> = Vec::new();
 
     // ---- everything that needs the app state, under one lock ----
-    let (duration, rack_packs, rhythm_live, markers_rows, manifest_json) = {
+    let (duration, rack_packs, rhythm_live, markers_rows, manifest_json, export_clock) = {
         let mut s = state.lock();
         let p = s
             .project
@@ -110,6 +110,11 @@ pub async fn export_song(
         let manifest = p.manifest().clone();
         let song_map = crate::project_cmds::derived_song_map(&manifest);
         let mut duration = seconds.filter(|x| *x > 0.0).unwrap_or(0.0);
+        // The export's beat clock (project tempo, from frame 0): the atmosphere's beat
+        // grid reads it; the rhythm's own offline clock runs at the same tempo from 0.
+        let export_clock = Arc::new(BeatClock::new(
+            manifest.tempo_map.first().map(|t| t.bpm).unwrap_or(120.0) as f32,
+        ));
 
         // Clips.
         if include.clips {
@@ -171,7 +176,7 @@ pub async fn export_song(
             else {
                 continue;
             };
-            let sources = offline_sources(&mut s, &a, rate)?;
+            let sources = offline_sources(&mut s, &a, rate, Some(Arc::clone(&export_clock)))?;
             let pitch_sets: Vec<Vec<f32>> = a
                 .layers
                 .iter()
@@ -289,6 +294,7 @@ pub async fn export_song(
             rhythm_live,
             markers_rows,
             manifest_json,
+            export_clock,
         )
     };
     if groups.is_empty() {
@@ -324,6 +330,7 @@ pub async fn export_song(
             for (i, l) in layers.iter().enumerate() {
                 if let Some(p) = live.get(i) {
                     apply_source(&offline, p, l, &macros, None);
+                    apply_sync(p, a.sync);
                     match p {
                         LiveParams::Texture(x) => x.pitches.set(&pitch_sets[i]),
                         LiveParams::Bells(x) => x.pitches.set(&pitch_sets[i]),
@@ -380,6 +387,7 @@ pub async fn export_song(
     if let Some(live) = rhythm_live.as_ref() {
         live.clock.start(0, 0.0);
     }
+    export_clock.start(0, 0.0);
     let block = 512usize;
     let mut done = 0usize;
     while done < frames {

@@ -84,6 +84,12 @@ pub struct BeatClock {
     pub generation: AtomicU32,
 }
 
+impl Default for BeatClock {
+    fn default() -> Self {
+        Self::new(120.0)
+    }
+}
+
 impl BeatClock {
     pub fn new(bpm: f32) -> Self {
         Self {

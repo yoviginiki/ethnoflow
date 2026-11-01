@@ -9,11 +9,11 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 
 use audio_engine::{
-    write_wav, AudioBuffer, BellParams, BellSource, BloomParams, BloomSource, ChoirParams,
-    ChoirSource, GrainParams, GrainSource, Graph, GraphCmd, GraphParams, LoopParams, LoopSource,
-    NoiseParams, NoiseSource, PluckParams, PluckSource, ResonatorParams, ResonatorSource,
-    SamplerParams, SamplerSource, SamplerZone, TextureParams, TextureSource, WavFormat, WindParams,
-    WindSource, MAX_PITCHES,
+    write_wav, AudioBuffer, BeatClock, BellParams, BellSource, BloomParams, BloomSource,
+    ChoirParams, ChoirSource, GrainParams, GrainSource, Graph, GraphCmd, GraphParams, LoopParams,
+    LoopSource, NoiseParams, NoiseSource, PluckParams, PluckSource, ResonatorParams,
+    ResonatorSource, SamplerParams, SamplerSource, SamplerZone, TextureParams, TextureSource,
+    WavFormat, WindParams, WindSource, MAX_PITCHES,
 };
 use project::{
     effective_rack, is_animated, Ambient, AmbientLayer, LayerSource, Macros, MAX_AMBIENT_LAYERS,
@@ -176,11 +176,13 @@ const CLOCK_TICK_MS: u64 = 25;
 /// Push one effective state (layers + macros) into the live graph params.
 fn push_effective(s: &Inner, id: RackId, layers: &[AmbientLayer], macros: &Macros) {
     let Some(g) = s.graph.as_ref() else { return };
+    let sync = s.racks[id.idx()].rack.as_ref().map(|a| a.sync).unwrap_or(0);
     let chord = chord_for(s, id);
     let any_solo = layers.iter().any(|l| l.solo);
     for (i, l) in layers.iter().enumerate() {
         if let Some(Some(live)) = s.racks[id.idx()].live.get(i) {
             apply_source(s, &live.params, l, macros, chord.as_deref());
+            apply_sync(&live.params, sync);
         }
         if id.slot0() + i < audio_engine::MAX_LAYERS {
             apply_layer_strip(
@@ -481,6 +483,18 @@ pub(crate) fn apply_layer_strip(
 }
 
 /// Push the layer's source parameters (motion macro included) into the live handles.
+/// The rack's beat grid into its event sources (item 7): 0 free, else lines per beat.
+pub(crate) fn apply_sync(live: &LiveParams, sync: u8) {
+    match live {
+        LiveParams::Bells(p) => p.sync.store(sync, Ordering::Relaxed),
+        LiveParams::Pluck(p) => p.sync.store(sync, Ordering::Relaxed),
+        LiveParams::Resonator(p) => p.sync.store(sync, Ordering::Relaxed),
+        LiveParams::Bloom(p) => p.sync.store(sync, Ordering::Relaxed),
+        LiveParams::Sampler(p) => p.sync.store(sync, Ordering::Relaxed),
+        _ => {}
+    }
+}
+
 pub(crate) fn apply_source(
     s: &Inner,
     live: &LiveParams,
@@ -532,11 +546,13 @@ pub(crate) fn apply_source(
                 decay_s,
                 brightness,
                 velocity_spread,
+                tension,
                 tonal,
                 register,
             },
             LiveParams::Bells(p),
         ) => {
+            p.tension.set(*tension as f32);
             p.pitches
                 .set(&layer_pitches(s, chord, *tonal, *register, l.seed));
             p.density.set((*density * motion) as f32);
@@ -753,6 +769,7 @@ fn build_layer(s: &mut Inner, id: RackId, i: usize) -> CmdResult<()> {
         .as_ref()
         .map(|g| g.sample_rate())
         .ok_or_else(|| err("no_graph", "The audio graph is not running"))?;
+    let clock = Some(Arc::clone(&s.master_clock));
     let key = build_key(&l, rate);
     let (params, source): (LiveParams, Box<dyn audio_engine::Source>) = match &l.source {
         LayerSource::Noise { .. } => {
@@ -784,7 +801,7 @@ fn build_layer(s: &mut Inner, id: RackId, i: usize) -> CmdResult<()> {
             p.seed.store(l.seed, Ordering::Relaxed);
             (
                 LiveParams::Bells(Arc::clone(&p)),
-                Box::new(BellSource::new(p)),
+                Box::new(BellSource::new(p).with_clock(clock.clone())),
             )
         }
         LayerSource::Resonator { .. } => {
@@ -792,7 +809,7 @@ fn build_layer(s: &mut Inner, id: RackId, i: usize) -> CmdResult<()> {
             p.seed.store(l.seed, Ordering::Relaxed);
             (
                 LiveParams::Resonator(Arc::clone(&p)),
-                Box::new(ResonatorSource::new(p)),
+                Box::new(ResonatorSource::new(p).with_clock(clock.clone())),
             )
         }
         LayerSource::Choir { .. } => {
@@ -808,7 +825,7 @@ fn build_layer(s: &mut Inner, id: RackId, i: usize) -> CmdResult<()> {
             p.seed.store(l.seed, Ordering::Relaxed);
             (
                 LiveParams::Bloom(Arc::clone(&p)),
-                Box::new(BloomSource::new(p)),
+                Box::new(BloomSource::new(p).with_clock(clock.clone())),
             )
         }
         LayerSource::Pluck { .. } => {
@@ -816,7 +833,7 @@ fn build_layer(s: &mut Inner, id: RackId, i: usize) -> CmdResult<()> {
             p.seed.store(l.seed, Ordering::Relaxed);
             (
                 LiveParams::Pluck(Arc::clone(&p)),
-                Box::new(PluckSource::new(p, rate)),
+                Box::new(PluckSource::new(p, rate).with_clock(clock.clone())),
             )
         }
         LayerSource::Sampler { take_id, zones, .. } => {
@@ -824,7 +841,7 @@ fn build_layer(s: &mut Inner, id: RackId, i: usize) -> CmdResult<()> {
             p.seed.store(l.seed, Ordering::Relaxed);
             let src: Box<dyn audio_engine::Source> = if zones.is_empty() {
                 let buf = loop_buffer(s, take_id, false, rate)?;
-                Box::new(SamplerSource::new(Arc::clone(&p), buf))
+                Box::new(SamplerSource::new(Arc::clone(&p), buf).with_clock(clock.clone()))
             } else {
                 let mut zs = Vec::with_capacity(zones.len());
                 for z in zones {
@@ -837,7 +854,7 @@ fn build_layer(s: &mut Inner, id: RackId, i: usize) -> CmdResult<()> {
                     );
                     zs.push(SamplerZone { root_hz, buf });
                 }
-                Box::new(SamplerSource::new_multi(Arc::clone(&p), zs))
+                Box::new(SamplerSource::new_multi(Arc::clone(&p), zs).with_clock(clock.clone()))
             };
             (LiveParams::Sampler(p), src)
         }
@@ -868,6 +885,10 @@ fn build_layer(s: &mut Inner, id: RackId, i: usize) -> CmdResult<()> {
         .unwrap_or_default();
     let chord = chord_for(s, id);
     apply_source(s, &params, &l, &macros, chord.as_deref());
+    apply_sync(
+        &params,
+        s.racks[id.idx()].rack.as_ref().map(|a| a.sync).unwrap_or(0),
+    );
     let slot = id.slot0() + i;
     let graph = s.graph.as_mut().expect("checked above");
     graph.params().layers[slot].gain_db.set(-60.0);
@@ -906,6 +927,7 @@ fn sync_live(s: &mut Inner, id: RackId) -> CmdResult<()> {
         } else if let Some(Some(live)) = s.racks[id.idx()].live.get(i) {
             let chord = chord_for(s, id);
             apply_source(s, &live.params, l, &a.macros, chord.as_deref());
+            apply_sync(&live.params, a.sync);
         }
         let graph = s.graph.as_ref().expect("graph");
         apply_layer_strip(
@@ -1168,6 +1190,7 @@ pub(crate) fn offline_sources(
     s: &mut Inner,
     a: &Ambient,
     rate: u32,
+    clock: Option<Arc<BeatClock>>,
 ) -> CmdResult<Vec<(LiveParams, Box<dyn audio_engine::Source>)>> {
     let mut out = Vec::new();
     for l in &a.layers {
@@ -1201,7 +1224,7 @@ pub(crate) fn offline_sources(
                 p.seed.store(l.seed, Ordering::Relaxed);
                 (
                     LiveParams::Bells(Arc::clone(&p)),
-                    Box::new(BellSource::new(p)),
+                    Box::new(BellSource::new(p).with_clock(clock.clone())),
                 )
             }
             LayerSource::Resonator { .. } => {
@@ -1209,7 +1232,7 @@ pub(crate) fn offline_sources(
                 p.seed.store(l.seed, Ordering::Relaxed);
                 (
                     LiveParams::Resonator(Arc::clone(&p)),
-                    Box::new(ResonatorSource::new(p)),
+                    Box::new(ResonatorSource::new(p).with_clock(clock.clone())),
                 )
             }
             LayerSource::Choir { .. } => {
@@ -1225,7 +1248,7 @@ pub(crate) fn offline_sources(
                 p.seed.store(l.seed, Ordering::Relaxed);
                 (
                     LiveParams::Bloom(Arc::clone(&p)),
-                    Box::new(BloomSource::new(p)),
+                    Box::new(BloomSource::new(p).with_clock(clock.clone())),
                 )
             }
             LayerSource::Pluck { .. } => {
@@ -1233,7 +1256,7 @@ pub(crate) fn offline_sources(
                 p.seed.store(l.seed, Ordering::Relaxed);
                 (
                     LiveParams::Pluck(Arc::clone(&p)),
-                    Box::new(PluckSource::new(p, rate)),
+                    Box::new(PluckSource::new(p, rate).with_clock(clock.clone())),
                 )
             }
             LayerSource::Sampler { take_id, zones, .. } => {
@@ -1241,7 +1264,7 @@ pub(crate) fn offline_sources(
                 p.seed.store(l.seed, Ordering::Relaxed);
                 let src: Box<dyn audio_engine::Source> = if zones.is_empty() {
                     let buf = loop_buffer(s, take_id, false, rate)?;
-                    Box::new(SamplerSource::new(Arc::clone(&p), buf))
+                    Box::new(SamplerSource::new(Arc::clone(&p), buf).with_clock(clock.clone()))
                 } else {
                     let mut zs = Vec::with_capacity(zones.len());
                     for z in zones {
@@ -1254,7 +1277,7 @@ pub(crate) fn offline_sources(
                         );
                         zs.push(SamplerZone { root_hz, buf });
                     }
-                    Box::new(SamplerSource::new_multi(Arc::clone(&p), zs))
+                    Box::new(SamplerSource::new_multi(Arc::clone(&p), zs).with_clock(clock.clone()))
                 };
                 (LiveParams::Sampler(p), src)
             }
@@ -1308,7 +1331,7 @@ pub async fn export_ambient(
         if a.layers.is_empty() {
             return Err(err("empty", "The atmosphere has no layers"));
         }
-        let sources = offline_sources(&mut s, &a, rate)?;
+        let sources = offline_sources(&mut s, &a, rate, None)?;
         let pitch_sets: Vec<Vec<f32>> = a
             .layers
             .iter()
@@ -1379,6 +1402,7 @@ pub async fn export_ambient(
         for (i, l) in layers.iter().enumerate() {
             if let Some(p) = live.get(i) {
                 apply_source(&offline, p, l, &macros, None);
+                apply_sync(p, a.sync);
                 // The offline Inner has no project: put the real pitch sets back.
                 match p {
                     LiveParams::Texture(x) => x.pitches.set(&pitch_sets[i]),

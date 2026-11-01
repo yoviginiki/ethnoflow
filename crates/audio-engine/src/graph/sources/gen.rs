@@ -121,6 +121,25 @@ pub struct Trigger {
     remaining: i64,
     /// Density the pending gap was drawn for (a change rescales the gap).
     drawn_density: f32,
+    /// A drawn event waits for the next grid line (beat sync).
+    armed: bool,
+}
+
+/// The beat grid for one block, for sources that strike "on the bar" (home-studio item 7):
+/// (beat at the block start, beats per frame, grid lines per beat). None = free-running
+/// (no clock, the clock stopped, or `sync` 0).
+pub fn beat_grid(
+    clock: Option<&super::rhythm::BeatClock>,
+    frame: u64,
+    sample_rate: u32,
+    sync: u8,
+) -> Option<(f64, f64, f64)> {
+    if sync == 0 {
+        return None;
+    }
+    let c = clock?;
+    let beat0 = c.beat_at(frame, sample_rate)?;
+    Some((beat0, c.beats_per_frame(sample_rate), sync as f64))
 }
 
 impl Trigger {
@@ -131,6 +150,45 @@ impl Trigger {
             rng: Rng::new(seed.wrapping_mul(2_654_435_761).wrapping_add(7)),
             remaining: -1,
             drawn_density: 0.0,
+            armed: false,
+        }
+    }
+
+    /// Like `tick`, but with a beat grid the drawn event waits for the next grid line
+    /// (at most one strike per line: the density still decides *whether*, the grid
+    /// decides *when*). Without a grid it is exactly `tick`.
+    #[inline]
+    pub fn tick_on_grid(
+        &mut self,
+        frames: usize,
+        density_per_minute: f32,
+        sample_rate: f32,
+        grid: Option<(f64, f64, f64)>,
+    ) -> Option<usize> {
+        let free = self.tick(frames, density_per_minute, sample_rate);
+        let Some((beat0, bpf, div)) = grid else {
+            self.armed = false;
+            return free;
+        };
+        if free.is_some() {
+            self.armed = true;
+        }
+        if !self.armed || density_per_minute <= 0.0 || bpf <= 0.0 {
+            return None;
+        }
+        let pos = beat0 * div;
+        let k = pos.floor();
+        let line = if pos - k < 1e-9 {
+            beat0
+        } else {
+            (k + 1.0) / div
+        };
+        let i = ((line - beat0) / bpf).ceil().max(0.0) as usize;
+        if i < frames {
+            self.armed = false;
+            Some(i)
+        } else {
+            None
         }
     }
 
@@ -390,5 +448,44 @@ mod tests {
             max = max.max(v);
         }
         assert!(max - min > 0.3, "{min}..{max}");
+    }
+
+    #[test]
+    fn strikes_wait_for_the_grid_line() {
+        use super::super::rhythm::BeatClock;
+        let sr = 48_000u32;
+        let clock = BeatClock::new(120.0);
+        clock.start(0, 0.0);
+        let mut t = Trigger::new(5);
+        let mut frame = 0u64;
+        let mut hits = Vec::new();
+        while frame < sr as u64 * 10 {
+            let grid = beat_grid(Some(&clock), frame, sr, 1);
+            if let Some(i) = t.tick_on_grid(64, 600.0, sr as f32, grid) {
+                hits.push(frame + i as u64);
+            }
+            frame += 64;
+        }
+        let bpf = clock.beats_per_frame(sr);
+        for h in &hits {
+            let b = *h as f64 * bpf;
+            assert!((b - b.round()).abs() <= bpf * 1.01, "hit at beat {b}");
+        }
+        // 600/min is far denser than the grid: one strike per beat, 20 beats in 10 s.
+        assert!((17..=20).contains(&hits.len()), "{} hits", hits.len());
+        // Free-running (no grid) strikes are not quantised.
+        let mut t = Trigger::new(5);
+        let mut off_grid = 0;
+        let mut frame = 0u64;
+        while frame < sr as u64 * 10 {
+            if let Some(i) = t.tick_on_grid(64, 600.0, sr as f32, None) {
+                let b = (frame + i as u64) as f64 * bpf;
+                if (b - b.round()).abs() > bpf * 2.0 {
+                    off_grid += 1;
+                }
+            }
+            frame += 64;
+        }
+        assert!(off_grid > 20, "free strikes land anywhere ({off_grid})");
     }
 }

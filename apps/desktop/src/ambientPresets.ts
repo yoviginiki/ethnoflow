@@ -32,7 +32,7 @@ export function defaultSource(kind: LayerKind, takeId = ""): LayerSource {
     case "texture":
       return { kind, brightness: 0.3, motion: 0.5, resonance: 0.6, tonal: true, register: [48, 72] };
     case "bells":
-      return { kind, density: 10, decay_s: 5, brightness: 0.4, velocity_spread: 0.5, tonal: true, register: [60, 84] };
+      return { kind, density: 10, decay_s: 5, brightness: 0.4, velocity_spread: 0.5, tension: 0, tonal: true, register: [60, 84] };
     case "pluck":
       return { kind, density: 15, damping: 0.3, brightness: 0.5, velocity_spread: 0.5, tonal: true, register: [48, 72] };
     case "loop":

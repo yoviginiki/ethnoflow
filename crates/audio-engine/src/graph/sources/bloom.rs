@@ -5,10 +5,11 @@
 //! held length. Silence between notes is kept; the same seed blooms the same way.
 //! No allocation in `render`.
 
-use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::atomic::{AtomicU32, AtomicU8, Ordering};
 use std::sync::Arc;
 
-use super::gen::{PitchSet, Trigger};
+use super::gen::{beat_grid, PitchSet, Trigger};
+use super::rhythm::BeatClock;
 use crate::graph::params::{ramp_samples, undenormal, Ramp, SmoothedParam};
 use crate::graph::Source;
 
@@ -26,6 +27,9 @@ pub struct BloomParams {
     /// 0 random picks … 1 stepwise phrases with breaths.
     pub phrase: SmoothedParam,
     pub seed: AtomicU32,
+    /// Beat grid for the strikes: 0 free, else grid lines per beat (1, 2, 4). Needs a
+    /// clock that plays (the rhythm / song transport); item 7 "the atmosphere knows the bar".
+    pub sync: AtomicU8,
 }
 
 impl Default for BloomParams {
@@ -38,6 +42,7 @@ impl Default for BloomParams {
             attack_s: SmoothedParam::new(0.25, 0.005, 2.0),
             phrase: SmoothedParam::new(0.7, 0.0, 1.0),
             seed: AtomicU32::new(1),
+            sync: AtomicU8::new(0),
         }
     }
 }
@@ -55,6 +60,8 @@ struct Voice {
 pub struct BloomSource {
     params: Arc<BloomParams>,
     trigger: Trigger,
+    clock: Option<Arc<BeatClock>>,
+    frame: u64,
     seed_used: u32,
     density: Ramp,
     brightness: Ramp,
@@ -66,10 +73,18 @@ pub struct BloomSource {
 }
 
 impl BloomSource {
+    /// Strikes can wait for a beat grid (`sync` lines per beat) while `clock` plays.
+    pub fn with_clock(mut self, clock: Option<Arc<BeatClock>>) -> Self {
+        self.clock = clock;
+        self
+    }
+
     pub fn new(params: Arc<BloomParams>) -> Self {
         let seed = params.seed.load(Ordering::Relaxed);
         Self {
             trigger: Trigger::new(seed),
+            clock: None,
+            frame: 0,
             seed_used: seed,
             density: Ramp::new(params.density.target()),
             brightness: Ramp::new(params.brightness.target()),
@@ -134,6 +149,11 @@ impl BloomSource {
 }
 
 impl Source for BloomSource {
+    fn render_at(&mut self, out: &mut [f32], sample_rate: u32, frame: u64) {
+        self.frame = frame;
+        self.render(out, sample_rate);
+    }
+
     fn render(&mut self, out: &mut [f32], sample_rate: u32) {
         let sr = sample_rate.max(1) as f32;
         let p = Arc::clone(&self.params);
@@ -152,7 +172,17 @@ impl Source for BloomSource {
         } else {
             self.density.current
         };
-        let at = self.trigger.tick(n, density, sr);
+        let at = self.trigger.tick_on_grid(
+            n,
+            density,
+            sr,
+            beat_grid(
+                self.clock.as_deref(),
+                self.frame,
+                sample_rate,
+                p.sync.load(Ordering::Relaxed),
+            ),
+        );
         let att = 1.0 / (p.attack_s.target().max(0.001) * sr);
         let rel = (-6.9078 / (p.note_s.target().max(0.2) * 0.9 * sr)).exp();
         let bright = self.brightness.current;

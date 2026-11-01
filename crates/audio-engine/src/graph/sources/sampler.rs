@@ -5,10 +5,11 @@
 //! it with attack → hold (`note_s`) → release, and runs it through a resonant low-pass
 //! (TPT state-variable filter). Up to `SAMPLER_VOICES` overlap. Allocation-free render.
 
-use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::atomic::{AtomicU32, AtomicU8, Ordering};
 use std::sync::Arc;
 
-use super::gen::{PitchSet, Trigger};
+use super::gen::{beat_grid, PitchSet, Trigger};
+use super::rhythm::BeatClock;
 use crate::graph::params::{ramp_samples, undenormal, Ramp, SmoothedParam};
 use crate::graph::Source;
 use crate::AudioBuffer;
@@ -32,6 +33,9 @@ pub struct SamplerParams {
     /// Where in the take a note starts, 0..1 of its length.
     pub start: SmoothedParam,
     pub seed: AtomicU32,
+    /// Beat grid for the strikes: 0 free, else grid lines per beat (1, 2, 4). Needs a
+    /// clock that plays (the rhythm / song transport); item 7 "the atmosphere knows the bar".
+    pub sync: AtomicU8,
 }
 
 impl Default for SamplerParams {
@@ -48,6 +52,7 @@ impl Default for SamplerParams {
             velocity_spread: SmoothedParam::new(0.4, 0.0, 1.0),
             start: SmoothedParam::new(0.0, 0.0, 1.0),
             seed: AtomicU32::new(1),
+            sync: AtomicU8::new(0),
         }
     }
 }
@@ -105,6 +110,8 @@ pub struct SamplerSource {
     /// nearest root is read for every note, so varispeed stays small.
     zones: Vec<SamplerZone>,
     trigger: Trigger,
+    clock: Option<Arc<BeatClock>>,
+    frame: u64,
     seed_used: u32,
     density: Ramp,
     cutoff: Ramp,
@@ -114,6 +121,12 @@ pub struct SamplerSource {
 }
 
 impl SamplerSource {
+    /// Strikes can wait for a beat grid (`sync` lines per beat) while `clock` plays.
+    pub fn with_clock(mut self, clock: Option<Arc<BeatClock>>) -> Self {
+        self.clock = clock;
+        self
+    }
+
     /// `buf` must be mono at the graph's sample rate; its root is the params' `root_hz`.
     pub fn new(params: Arc<SamplerParams>, buf: Arc<AudioBuffer>) -> Self {
         Self::new_multi(params, vec![SamplerZone { root_hz: 0.0, buf }])
@@ -124,6 +137,8 @@ impl SamplerSource {
         let seed = params.seed.load(Ordering::Relaxed);
         Self {
             trigger: Trigger::new(seed),
+            clock: None,
+            frame: 0,
             seed_used: seed,
             density: Ramp::new(params.density.target()),
             cutoff: Ramp::new(params.cutoff_hz.target()),
@@ -250,6 +265,11 @@ impl SamplerSource {
 }
 
 impl Source for SamplerSource {
+    fn render_at(&mut self, out: &mut [f32], sample_rate: u32, frame: u64) {
+        self.frame = frame;
+        self.render(out, sample_rate);
+    }
+
     fn render(&mut self, out: &mut [f32], sample_rate: u32) {
         let sr = sample_rate.max(1) as f32;
         let p = Arc::clone(&self.params);
@@ -269,7 +289,21 @@ impl Source for SamplerSource {
         } else {
             self.density.current
         };
-        let at = self.trigger.tick(n, density, sr).unwrap_or(n).min(n);
+        let at = self
+            .trigger
+            .tick_on_grid(
+                n,
+                density,
+                sr,
+                beat_grid(
+                    self.clock.as_deref(),
+                    self.frame,
+                    sample_rate,
+                    p.sync.load(Ordering::Relaxed),
+                ),
+            )
+            .unwrap_or(n)
+            .min(n);
         let (head, tail) = out.split_at_mut(at);
         self.render_span(head, sr);
         if at < n {

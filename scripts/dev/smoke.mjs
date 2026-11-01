@@ -127,6 +127,39 @@ function channelRms(p, fromS = 0, toS = Infinity) {
   }
   return sums.map((s) => Math.sqrt(s / Math.max(1, frames)));
 }
+/** Onset times (s) of a float WAV: a 5 ms frame whose RMS jumps 4× over the previous 50 ms. */
+function onsetTimes(p) {
+  const b = fs.readFileSync(p);
+  let o = 12;
+  let fmt = null;
+  let data = null;
+  while (o + 8 <= b.length) {
+    const id = b.toString("ascii", o, o + 4);
+    const sz = b.readUInt32LE(o + 4);
+    if (id === "fmt ") fmt = { ch: b.readUInt16LE(o + 10), sr: b.readUInt32LE(o + 12), bits: b.readUInt16LE(o + 22) };
+    if (id === "data") data = b.subarray(o + 8, Math.min(b.length, o + 8 + sz));
+    o += 8 + sz + (sz & 1);
+  }
+  if (!fmt || !data || fmt.bits !== 32) throw new Error("expected a float WAV");
+  const total = Math.floor(data.length / 4 / fmt.ch);
+  const hop = Math.round(fmt.sr * 0.005);
+  const rms = [];
+  for (let f = 0; f + hop <= total; f += hop) {
+    let acc = 0;
+    for (let i = f; i < f + hop; i++) for (let c = 0; c < fmt.ch; c++) acc += data.readFloatLE((i * fmt.ch + c) * 4) ** 2;
+    rms.push(Math.sqrt(acc / (hop * fmt.ch)));
+  }
+  const out = [];
+  let last = -1;
+  for (let i = 10; i < rms.length; i++) {
+    const prev = rms.slice(i - 10, i).reduce((a, v) => a + v, 0) / 10;
+    if (rms[i] > 0.003 && rms[i] > prev * 4 && (last < 0 || i - last > 8)) {
+      out.push((i * hop) / fmt.sr);
+      last = i;
+    }
+  }
+  return out;
+}
 const audible = (p, min = 0.02) => {
   const s = wavStats(p);
   if (!(s.peak > min && s.peak <= 1.0)) throw new Error(`${path.basename(p)} peak ${s.peak.toFixed(3)}`);
@@ -384,6 +417,38 @@ async function main() {
       const outside = offTonal.some((l) => l.hz.some((hz) => ![2, 5, 9].includes(pcOf(hz))));
       if (!outside) throw new Error("without a chord the layers should play the whole mode again");
       return `${tonal.length} tonal layers on D F A, back to the mode without a chord`;
+    } finally {
+      if (built.previous) expectOk(send({ op: "set_scapes", ambient: built.previous }));
+    }
+  });
+  await step("the atmosphere knows the bar: with sync = every beat, Soundscapes bells land on the beat grid of the export", () => {
+    const built = expectOk(send({ op: "scapes_build", world: "rhodope-night", minutes: 2, seed: 3 }));
+    try {
+      const rack = readState().scapes;
+      if (!rack || !rack.layers.length) throw new Error("no scapes rack in state");
+      // One short, dense bells layer on the beat grid; nothing else in the rack.
+      const base = rack.layers.find((l) => l.source.kind === "bells") ?? rack.layers[0];
+      const bells = { ...base, mute: false, solo: false, gain_db: -6, source: { kind: "bells", density: 240, decay_s: 0.2, brightness: 0.5, velocity_spread: 0, tension: 0, tonal: true, register: [76, 88] } };
+      expectOk(send({ op: "set_scapes", ambient: { ...rack, layers: [bells], program: { scenes: [], loop_region: null }, automation: [], sync: 1 } }));
+      const bpm = readState().project?.timing?.bpm ?? 120;
+      const out = path.join(OUT_DIR, "on-the-bar.wav");
+      const r = expectOk(send({ op: "export_song", path: out, seconds: 8, scapes: true, ambient: false, drone: false, pad: false, target_lufs: null }));
+      const stem = r.stems.find((p) => /soundscapes/i.test(path.basename(p)));
+      if (!stem) throw new Error("no soundscapes stem");
+      const beat = 60 / bpm;
+      const onsets = onsetTimes(stem).filter((t) => t > 0.3);
+      if (onsets.length < 6) throw new Error(`only ${onsets.length} onsets`);
+      const onGrid = onsets.filter((t) => Math.abs(t / beat - Math.round(t / beat)) * beat < 0.03);
+      if (onGrid.length < onsets.length * 0.8) throw new Error(`${onGrid.length}/${onsets.length} onsets on the ${bpm} BPM grid: ${onsets.map((t) => t.toFixed(3)).join(" ")}`);
+      // Free-running (sync 0): the same layer strikes off the grid too.
+      expectOk(send({ op: "set_scapes", ambient: { ...rack, layers: [bells], program: { scenes: [], loop_region: null }, automation: [], sync: 0 } }));
+      const free = path.join(OUT_DIR, "off-the-bar.wav");
+      const r2 = expectOk(send({ op: "export_song", path: free, seconds: 8, scapes: true, ambient: false, drone: false, pad: false, target_lufs: null }));
+      const stem2 = r2.stems.find((p) => /soundscapes/i.test(path.basename(p)));
+      const onsets2 = onsetTimes(stem2).filter((t) => t > 0.3);
+      const off2 = onsets2.filter((t) => Math.abs(t / beat - Math.round(t / beat)) * beat >= 0.03);
+      if (onsets2.length >= 6 && off2.length === 0) throw new Error("free-running bells all on the grid?");
+      return `${onGrid.length}/${onsets.length} on the grid at ${bpm} BPM; free: ${off2.length}/${onsets2.length} off`;
     } finally {
       if (built.previous) expectOk(send({ op: "set_scapes", ambient: built.previous }));
     }

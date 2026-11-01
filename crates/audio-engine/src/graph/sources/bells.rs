@@ -2,10 +2,11 @@
 //! trigger is a seeded sparse process (density in strikes per minute, silence is
 //! kept), so a seed plays the same bells again; a different seed never repeats them.
 
-use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::atomic::{AtomicU32, AtomicU8, Ordering};
 use std::sync::Arc;
 
-use super::gen::{PitchSet, Trigger};
+use super::gen::{beat_grid, PitchSet, Rng, Trigger};
+use super::rhythm::BeatClock;
 use crate::graph::params::{ramp_samples, Ramp, SmoothedParam};
 use crate::graph::Source;
 
@@ -21,7 +22,13 @@ pub struct BellParams {
     pub brightness: SmoothedParam,
     /// 0..1 random variation of strike loudness.
     pub velocity_spread: SmoothedParam,
+    /// S2 tension: share of strikes that land a semitone / tritone off the mode and are
+    /// resolved by the next strike (0 = none, 0.5 = half).
+    pub tension: SmoothedParam,
     pub seed: AtomicU32,
+    /// Beat grid for the strikes: 0 free, else grid lines per beat (1, 2, 4). Needs a
+    /// clock that plays (the rhythm / song transport); item 7 "the atmosphere knows the bar".
+    pub sync: AtomicU8,
 }
 
 impl Default for BellParams {
@@ -32,7 +39,9 @@ impl Default for BellParams {
             decay_s: SmoothedParam::new(4.0, 0.2, 30.0),
             brightness: SmoothedParam::new(0.4, 0.0, 1.0),
             velocity_spread: SmoothedParam::new(0.5, 0.0, 1.0),
+            tension: SmoothedParam::new(0.0, 0.0, 0.5),
             seed: AtomicU32::new(1),
+            sync: AtomicU8::new(0),
         }
     }
 }
@@ -53,6 +62,10 @@ struct Voice {
 pub struct BellSource {
     params: Arc<BellParams>,
     trigger: Trigger,
+    clock: Option<Arc<BeatClock>>,
+    frame: u64,
+    /// The mode note a tense strike must resolve to (0 = none pending).
+    resolve_to: f32,
     seed_used: u32,
     density: Ramp,
     decay: Ramp,
@@ -63,10 +76,19 @@ pub struct BellSource {
 }
 
 impl BellSource {
+    /// Strikes can wait for a beat grid (`sync` lines per beat) while `clock` plays.
+    pub fn with_clock(mut self, clock: Option<Arc<BeatClock>>) -> Self {
+        self.clock = clock;
+        self
+    }
+
     pub fn new(params: Arc<BellParams>) -> Self {
         let seed = params.seed.load(Ordering::Relaxed);
         Self {
             trigger: Trigger::new(seed),
+            clock: None,
+            frame: 0,
+            resolve_to: 0.0,
             seed_used: seed,
             density: Ramp::new(params.density.target()),
             decay: Ramp::new(params.decay_s.target()),
@@ -151,7 +173,27 @@ impl BellSource {
     }
 }
 
+/// S2 "tension": with probability `tension` the strike lands a semitone or a tritone
+/// above `base`; the caller resolves to `base` on the next strike.
+pub fn tense_pitch(rng: &mut Rng, base: f32, tension: f32) -> (f32, bool) {
+    if base > 0.0 && tension > 0.0 && rng.unit() < tension {
+        let ratio = if rng.unit() < 0.5 {
+            2f32.powf(1.0 / 12.0)
+        } else {
+            2f32.sqrt()
+        };
+        (base * ratio, true)
+    } else {
+        (base, false)
+    }
+}
+
 impl Source for BellSource {
+    fn render_at(&mut self, out: &mut [f32], sample_rate: u32, frame: u64) {
+        self.frame = frame;
+        self.render(out, sample_rate);
+    }
+
     fn render(&mut self, out: &mut [f32], sample_rate: u32) {
         let sr = sample_rate.max(1) as f32;
         // One refcount bump per block: lets the strike/reseed paths borrow `self` mutably.
@@ -172,7 +214,17 @@ impl Source for BellSource {
         } else {
             self.density.current
         };
-        let strike_at = self.trigger.tick(n, density, sr);
+        let strike_at = self.trigger.tick_on_grid(
+            n,
+            density,
+            sr,
+            beat_grid(
+                self.clock.as_deref(),
+                self.frame,
+                sample_rate,
+                p.sync.load(Ordering::Relaxed),
+            ),
+        );
         // Decay coefficients per block: env reaches 1e-3 after decay_s.
         let decay = self.decay.current.max(0.05);
         let k1 = (-6.9078 / (decay * sr)).exp();
@@ -185,7 +237,17 @@ impl Source for BellSource {
         let (head, tail) = out.split_at_mut(at);
         self.render_span(head, &p, sr, k1, k2, bright, mod_ratio);
         if strike_at.is_some() {
-            let hz = p.pitches.pick(self.trigger.rng()).unwrap_or(0.0);
+            let tension = p.tension.target();
+            let hz = if self.resolve_to > 0.0 {
+                std::mem::replace(&mut self.resolve_to, 0.0)
+            } else {
+                let base = p.pitches.pick(self.trigger.rng()).unwrap_or(0.0);
+                let (hz, tense) = tense_pitch(self.trigger.rng(), base, tension);
+                if tense {
+                    self.resolve_to = base;
+                }
+                hz
+            };
             if hz > 0.0 {
                 let (b, s) = (self.brightness.current, self.spread.current);
                 self.strike(hz, b, s);
@@ -315,5 +377,30 @@ mod tests {
         );
         assert_eq!(a.samples, b.samples);
         assert_ne!(a.samples, c.samples);
+    }
+
+    #[test]
+    fn tension_lands_off_the_mode_about_as_often_as_asked() {
+        let mut rng = Rng::new(42);
+        let semi = 2f32.powf(1.0 / 12.0);
+        let tri = 2f32.sqrt();
+        let mut tense = 0;
+        for _ in 0..10_000 {
+            let (hz, t) = tense_pitch(&mut rng, 440.0, 0.3);
+            if t {
+                tense += 1;
+                let r = hz / 440.0;
+                assert!(
+                    (r - semi).abs() < 1e-4 || (r - tri).abs() < 1e-4,
+                    "ratio {r}"
+                );
+            } else {
+                assert_eq!(hz, 440.0);
+            }
+        }
+        assert!((2_700..=3_300).contains(&tense), "{tense} tense of 10000");
+        for _ in 0..1000 {
+            assert!(!tense_pitch(&mut rng, 440.0, 0.0).1, "no tension at 0");
+        }
     }
 }

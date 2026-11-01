@@ -33,6 +33,7 @@ export const SOURCE_SLIDERS: Record<LayerKind, SliderSpec[]> = {
     { key: "decay_s", label: "decayLabel", min: 0.2, max: 30, step: 0.1, fmt: (v) => `${v.toFixed(1)} s` },
     { key: "brightness", label: "brightnessLabel", min: 0, max: 1, step: 0.01, fmt: pct },
     { key: "velocity_spread", label: "spreadLabel", min: 0, max: 1, step: 0.01, fmt: pct },
+    { key: "tension", label: "tensionLabel", min: 0, max: 0.5, step: 0.01, fmt: pct },
   ],
   pluck: [
     { key: "density", label: "densityLabel", min: 0, max: 120, step: 0.5, fmt: (v) => v.toFixed(1) },

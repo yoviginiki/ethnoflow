@@ -37,7 +37,7 @@ pub use clips::{
     ClipData, ClipSource, ClipsParams, TrackParams, Transport, MAX_TRACKS as MAX_CLIP_TRACKS,
 };
 pub use drone::{root_hz, DroneParams, DroneSource};
-pub use gen::{PitchSet, Rng, Trigger, MAX_PITCHES};
+pub use gen::{beat_grid, PitchSet, Rng, Trigger, MAX_PITCHES};
 pub use grain::{GrainParams, GrainSource, MAX_GRAINS};
 pub use lead::{LeadParams, LeadSource};
 pub use live_notes::{drum_kind_for_midi, midi_hz, LiveNote, LiveNotes};
