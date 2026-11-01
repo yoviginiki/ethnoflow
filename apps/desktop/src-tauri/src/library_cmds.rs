@@ -12,7 +12,7 @@ use tauri::State;
 use crate::commands::{err, CmdResult};
 use crate::state::{AppState, Inner};
 
-pub const KINDS: [&str; 9] = [
+pub const KINDS: [&str; 10] = [
     "session",
     "module",
     "drone",
@@ -22,6 +22,7 @@ pub const KINDS: [&str; 9] = [
     "intent",
     "ambient",
     "background",
+    "macro",
 ];
 const MAX_PAYLOAD_BYTES: usize = 1 << 20;
 

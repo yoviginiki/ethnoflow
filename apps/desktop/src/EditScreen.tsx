@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState, type WheelEvent as RWheelEvent } from "react";
 import { api, describeError, type Contrast, type EditOp, type EditStatus, type EqBand, type PlayerStatus, type Spectrogram, type SpectrumBand, type WaveformPeaks } from "./api";
 import { SpectrogramView } from "./SpectrogramView";
+import { PresetLibrary } from "./PresetLibrary";
+import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { IMPORT_EXTENSIONS } from "./api";
 import { formatDb, formatTime, isTypingTarget, takeName } from "./format";
 import { messages, type StringMessageKey } from "./i18n";
 import { useStore } from "./store";
@@ -87,6 +90,11 @@ export function EditScreen() {
   const [silenceMin, setSilenceMin] = useState(0.3);
   const [bg, setBg] = useState<[number, number] | null>(null);
   const [contrast, setContrast] = useState<Contrast | null>(null);
+  // A12 macros: record the ops applied here, keep them in the library, replay them.
+  const [macroRec, setMacroRec] = useState(false);
+  const [macroOps, setMacroOps] = useState<EditOp[]>([]);
+  const macroRecRef = useRef(macroRec);
+  macroRecRef.current = macroRec;
   const statusRef = useRef(status);
   statusRef.current = status;
   const viewRef = useRef(view);
@@ -221,6 +229,7 @@ export function EditScreen() {
       setBusy(true);
       try {
         absorb(await api.editApply(op));
+        if (macroRecRef.current) setMacroOps((m) => [...m, op]);
       } catch (e) {
         fail(e);
       } finally {
@@ -229,6 +238,61 @@ export function EditScreen() {
     },
     [absorb, fail],
   );
+
+  /** A12: an op re-targeted at the region [a, b) (macros store ops relative to "the whole"). */
+  const retarget = (op: EditOp, a: number, b: number): EditOp => {
+    const o = { ...op } as EditOp & { a?: number; b?: number; at?: number };
+    if ("a" in o && "b" in o) {
+      o.a = a;
+      o.b = b;
+    }
+    if ("at" in o) o.at = a;
+    return o as EditOp;
+  };
+  const applyMacroHere = async (ops: EditOp[]) => {
+    if (!statusRef.current || ops.length === 0) return;
+    setBusy(true);
+    try {
+      let st = statusRef.current;
+      const r0 = region();
+      for (const op of ops) {
+        const b = selection ? Math.min(r0[1], st.seconds) : st.seconds;
+        st = await api.editApply(retarget(op, selection ? r0[0] : 0, b));
+      }
+      absorb(st);
+      useStore.getState().setMessage(`${t.macroApplied}: ${ops.length}`);
+    } catch (e) {
+      fail(e);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const applyMacroToFiles = async (ops: EditOp[]) => {
+    if (ops.length === 0) return;
+    const files = await openDialog({ title: t.macroApplyFiles, multiple: true, filters: [{ name: "Audio", extensions: [...IMPORT_EXTENSIONS] }] });
+    if (!files || !Array.isArray(files) || files.length === 0) return;
+    setBusy(true);
+    let done = 0;
+    try {
+      for (const f of files) {
+        const pv = await api.importAudio(String(f));
+        const id = pv.loaded_take;
+        useStore.getState().setProject(pv);
+        if (!id) continue;
+        let st = await api.editOpen(id);
+        for (const op of ops) st = await api.editApply(retarget(op, 0, st.seconds));
+        const r = await api.editSave(`${t.macroLabel} · ${String(f).split(/[\\/]/).pop()}`);
+        useStore.getState().setProject(r.project);
+        done++;
+      }
+      useStore.getState().setMessage(`${t.macroApplied}: ${done} / ${files.length}`);
+      absorb(await api.editStatus());
+    } catch (e) {
+      fail(e);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const whole = (): [number, number] => [0, statusRef.current?.seconds ?? 0];
   const region = (): [number, number] => selection ?? whole();
@@ -494,6 +558,32 @@ export function EditScreen() {
         </div>
         {showSpec && <SpectrogramView grid={spec} label={t.specToggle} />}
       </section>
+
+      {status && (
+        <section className="panel" aria-label={t.macroTitle}>
+          <div className="analysis-row">
+            <h3>{t.macroTitle}</h3>
+            {macroRec ? (
+              <button className="danger small" onClick={() => setMacroRec(false)}>
+                ■ {t.macroStop} ({macroOps.length})
+              </button>
+            ) : (
+              <button className="small" onClick={() => { setMacroOps([]); setMacroRec(true); }}>
+                ● {t.macroRecord}
+              </button>
+            )}
+            <span className="muted small">{macroOps.length ? macroOps.map((o) => t[OP_LABEL[o.op] ?? "opOpen"]).join(" → ") : t.macroEmpty}</span>
+            <button className="small" onClick={() => void applyMacroHere(macroOps)} disabled={busy || macroOps.length === 0 || macroRec}>
+              {t.macroApplyHere}
+            </button>
+            <button className="small" onClick={() => void applyMacroToFiles(macroOps)} disabled={busy || macroOps.length === 0 || macroRec}>
+              {t.macroApplyFiles}
+            </button>
+            <PresetLibrary kind="macro" compact getPayload={() => ({ v: 1, ops: macroOps })} apply={(p) => { const ops = (p as { ops?: EditOp[] }).ops ?? []; setMacroOps(ops); }} />
+          </div>
+          <div className="muted small">{t.editMacroHint}</div>
+        </section>
+      )}
 
       {status && (
         <section className="panel" aria-label={t.editAnalysis}>

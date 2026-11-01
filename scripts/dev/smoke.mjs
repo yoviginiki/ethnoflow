@@ -743,6 +743,11 @@ async function main() {
       if (!(spec.peak_db > -60)) throw new Error(`spectrum peak ${spec.peak_db}`);
       const ctr = expectOk(send({ op: "edit_contrast", fg_a: 1, fg_b: len + 0.5, bg_a: 0, bg_b: 0.4 }));
       if (!(ctr.difference_db > 20)) throw new Error(`contrast ${ctr.difference_db} dB`);
+      // A12: a macro of two ops adds two history steps and keeps the length.
+      const before = expectOk(send({ op: "edit_status" }));
+      const mac = expectOk(send({ op: "edit_macro", ops: [{ op: "gain", a: 0, b: 1, db: -3 }, { op: "fade_out", a: 0, b: 1 }] }));
+      if (mac.versions.length !== before.versions.length + 2) throw new Error(`macro steps ${before.versions.length} → ${mac.versions.length}`);
+      near(mac.seconds, before.seconds, "macro keeps the length");
       near(expectOk(send({ op: "edit_jump", step: 1 })).seconds, len - 1, "jump to step 1");
       const saved = expectOk(send({ op: "edit_save", label: "smoke edit" }));
       const tk = saved.project.takes.find((x) => x.id === saved.take_id);

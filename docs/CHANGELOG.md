@@ -3,6 +3,10 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Macros — A12 first slice (2026-11-01 evening).** The editor records the chain of
+  operations applied while "Record a macro" is on, keeps it as a library preset of the new
+  kind "macro", applies it to the selection / whole take or to a batch of files (import →
+  chain → save as a new take). Bridge `edit_macro`; smoke. Guide BG/EN, plan A12.
 - **Loopback, timer and sound-activated recording — A1 (2026-11-01 evening).** The input
   list offers every output device as "loopback: <name>" on Windows (cpal / WASAPI capture of
   a render endpoint; `find_device` resolves the prefix, so recording and the monitor work

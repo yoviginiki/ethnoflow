@@ -455,6 +455,21 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
     case "edit_preview":
       // Sound! The effect on its region, first `seconds` (default 4), not in the history.
       return await api.editPreview(cmd.edit as EditOp, typeof cmd.seconds === "number" ? cmd.seconds : null, s.prefs.selectedOutput);
+    case "edit_macro": {
+      // A12: a chain of editor ops on the open take, each re-targeted at [a, b) (default: whole).
+      const ops = Array.isArray(cmd.ops) ? (cmd.ops as EditOp[]) : [];
+      let st = await api.editStatus();
+      if (!st) throw new Error("no take open in the editor");
+      for (const op of ops) {
+        const o = { ...op } as EditOp & { a?: number; b?: number; at?: number };
+        const a = typeof cmd.a === "number" ? cmd.a : 0;
+        const b = typeof cmd.b === "number" ? cmd.b : st.seconds;
+        if ("a" in o && "b" in o) { o.a = a; o.b = Math.min(b, st.seconds); }
+        if ("at" in o) o.at = a;
+        st = await api.editApply(o as EditOp);
+      }
+      return st;
+    }
     case "edit_spectrum": {
       const r = await api.editSpectrum(Number(cmd.a ?? 0), Number(cmd.b ?? 1e9), typeof cmd.bands === "number" ? cmd.bands : 32);
       const peak = r.reduce((m, x) => (x.db > m.db ? x : m), r[0]);

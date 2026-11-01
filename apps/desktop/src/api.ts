@@ -1735,7 +1735,7 @@ export interface BusStrip {
 }
 
 // ---------- Preset library (shell library_cmds.rs) ----------
-export const LIBRARY_KINDS = ["session", "module", "instrument", "drone", "pad", "rhythm", "harmony", "intent", "ambient", "background"] as const;
+export const LIBRARY_KINDS = ["session", "module", "instrument", "drone", "pad", "rhythm", "harmony", "intent", "ambient", "background", "macro"] as const;
 export type LibraryKind = (typeof LIBRARY_KINDS)[number];
 export type LibrarySortBy = "date_desc" | "date_asc" | "name" | "kind";
 export interface LibrarySummary {

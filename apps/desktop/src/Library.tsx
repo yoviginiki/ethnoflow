@@ -17,6 +17,7 @@ export const LIB_KIND_LABEL: Record<LibraryKind, StringMessageKey> = {
   session: "libSession",
   module: "libModule",
   instrument: "libInstrument",
+  macro: "libMacro",
 };
 
 /**
