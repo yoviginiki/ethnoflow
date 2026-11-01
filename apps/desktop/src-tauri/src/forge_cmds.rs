@@ -242,6 +242,47 @@ pub enum AuditionParams {
 pub struct AuditionLive {
     pub params: AuditionParams,
     pub category: &'static str,
+    /// Keyboard notes currently held (K2), so "all off" releases exactly those.
+    pub held: [bool; 128],
+}
+
+impl AuditionLive {
+    pub fn new(params: AuditionParams, category: &'static str) -> Self {
+        Self {
+            params,
+            category,
+            held: [false; 128],
+        }
+    }
+
+    /// A keyboard note into the auditioned instrument; false when the queue is full.
+    pub fn note(&mut self, midi: u8, on: bool, velocity: f32) -> bool {
+        self.held[(midi & 0x7f) as usize] = on;
+        self.params.live().note(midi & 0x7f, on, velocity)
+    }
+
+    pub fn all_off(&mut self) {
+        for m in 0..128u8 {
+            if self.held[m as usize] {
+                self.held[m as usize] = false;
+                self.params.live().note(m, false, 0.0);
+            }
+        }
+    }
+}
+
+impl AuditionParams {
+    /// The live-note queue of whichever instrument this is.
+    pub fn live(&self) -> &audio_engine::LiveNotes {
+        match self {
+            AuditionParams::Drums(p) => &p.live,
+            AuditionParams::Bass(p) => &p.live,
+            AuditionParams::Synth(p) => &p.live,
+            AuditionParams::Tapan(p) => &p.live,
+            AuditionParams::ChordPad(p) => &p.live,
+            AuditionParams::Lead(p) => &p.live,
+        }
+    }
 }
 
 fn midi_hz(midi: f64) -> f32 {
@@ -651,12 +692,52 @@ pub fn apply_voice(voice: &InstrumentVoice, params: &AuditionParams) {
 }
 
 /// Build the audition source for a voice on a clock; returns the params handle too.
+/// An empty pattern of the voice's kind: the instrument is silent until the keyboard
+/// plays it (K2, "the instrument under your fingers").
+fn empty_pattern(voice: &InstrumentVoice) -> AuditionPattern {
+    match voice {
+        InstrumentVoice::Drums { .. } => {
+            AuditionPattern::Drums(Arc::new(DrumPatternData::new(vec![], 8.0)))
+        }
+        InstrumentVoice::Tapan { .. } => {
+            AuditionPattern::Tapan(Arc::new(DrumPatternData::new(vec![], 8.0)))
+        }
+        InstrumentVoice::Bass { .. } => {
+            AuditionPattern::Bass(Arc::new(BassPatternData::new(vec![], 8.0)))
+        }
+        InstrumentVoice::Synth { .. } => {
+            AuditionPattern::Synth(Arc::new(NotePatternData::new(vec![], 8.0)))
+        }
+        InstrumentVoice::ChordPad { .. } => {
+            AuditionPattern::Chord(Arc::new(ChordPatternData::new(vec![], 8.0)))
+        }
+        InstrumentVoice::Lead { .. } => {
+            AuditionPattern::Lead(Arc::new(NotePatternData::new(vec![], 8.0)))
+        }
+    }
+}
+
 fn audition_source(
     voice: &InstrumentVoice,
     clock: &Arc<BeatClock>,
     midi: f64,
 ) -> (AuditionParams, Box<dyn audio_engine::Source>) {
-    match audition_pattern(voice, midi) {
+    audition_source_with(voice, clock, midi, false)
+}
+
+/// `silent`: no pattern, only keyboard notes (K2).
+fn audition_source_with(
+    voice: &InstrumentVoice,
+    clock: &Arc<BeatClock>,
+    midi: f64,
+    silent: bool,
+) -> (AuditionParams, Box<dyn audio_engine::Source>) {
+    let pattern = if silent {
+        empty_pattern(voice)
+    } else {
+        audition_pattern(voice, midi)
+    };
+    match pattern {
         AuditionPattern::Drums(pat) => {
             let p = Arc::new(DrumParams::default());
             let src = DrumSource::new(Arc::clone(&p), Arc::clone(clock), pat);
@@ -717,6 +798,7 @@ pub async fn instrument_audition_start(
     device: Option<String>,
     midi: Option<f64>,
     level_db: Option<f32>,
+    silent: Option<bool>,
 ) -> CmdResult<()> {
     voice
         .validate()
@@ -732,7 +814,7 @@ pub async fn instrument_audition_start(
         InstrumentVoice::ChordPad { .. } => 55.0,
         InstrumentVoice::Lead { .. } => 74.0,
     });
-    let (params, src) = audition_source(&voice, &clock, midi);
+    let (params, src) = audition_source_with(&voice, &clock, midi, silent.unwrap_or(false));
     let g = s.graph.as_mut().expect("graph just started");
     let frame = g.params().frame.load(Ordering::Relaxed);
     clock.start(frame, 0.0);
@@ -747,10 +829,7 @@ pub async fn instrument_audition_start(
     g.params().layers[AUDITION_SLOT]
         .gain_db
         .set(level_db.unwrap_or(-6.0).clamp(-60.0, 6.0));
-    s.audition = Some(AuditionLive {
-        params,
-        category: voice.category(),
-    });
+    s.audition = Some(AuditionLive::new(params, voice.category()));
     Ok(())
 }
 
@@ -779,6 +858,37 @@ pub async fn instrument_audition_stop(state: State<'_, AppState>) -> CmdResult<(
     let mut s = state.lock();
     if s.audition.take().is_some() {
         crate::graph_cmds::release_slot(&mut s, AUDITION_SLOT);
+    }
+    Ok(())
+}
+
+/// A keyboard note into the auditioned instrument (K2). Returns false when no instrument
+/// is being auditioned (the UI then says so instead of staying silent).
+#[tauri::command]
+pub async fn instrument_note(
+    state: State<'_, AppState>,
+    midi: u8,
+    on: bool,
+    velocity: Option<f32>,
+) -> CmdResult<bool> {
+    if midi > 127 {
+        return Err(err("invalid_argument", "midi outside 0..127"));
+    }
+    let mut s = state.lock();
+    let Some(a) = s.audition.as_mut() else {
+        return Ok(false);
+    };
+    if !a.note(midi, on, velocity.unwrap_or(0.8).clamp(0.0, 1.0)) {
+        return Err(err("synth_busy", "Note queue is full"));
+    }
+    Ok(true)
+}
+
+/// Release every keyboard note of the auditioned instrument.
+#[tauri::command]
+pub async fn instrument_notes_off(state: State<'_, AppState>) -> CmdResult<()> {
+    if let Some(a) = state.lock().audition.as_mut() {
+        a.all_off();
     }
     Ok(())
 }
@@ -853,6 +963,41 @@ mod tests {
 
     fn rms(b: &AudioBuffer) -> f32 {
         b.rms()
+    }
+
+    /// K2: a silent audition makes no sound until a keyboard note arrives, and the note
+    /// sounds at the key's pitch (checked by the bass's dominant period).
+    #[test]
+    fn a_silent_bass_sounds_only_when_a_key_is_held() {
+        let bass = factory_instruments()
+            .into_iter()
+            .find(|p| p.category == "bass")
+            .expect("a factory bass");
+        let render = |note: Option<u8>| {
+            let gp = Arc::new(GraphParams::default());
+            gp.master.gain_db.set(0.0);
+            gp.layers[AUDITION_SLOT].gain_db.set(-6.0);
+            let clock = Arc::new(BeatClock::new(120.0));
+            let (params, src) = audition_source_with(&bass.voice, &clock, 38.0, true);
+            if let Some(n) = note {
+                params.live().note(n, true, 0.8);
+            }
+            let mut g = Graph::new(gp, 48_000);
+            g.set_source(AUDITION_SLOT, src);
+            clock.start(0, 0.0);
+            g.render_offline(1.0, 1)
+        };
+        assert!(rms(&render(None)) < 1e-4, "silent without a note");
+        let played = render(Some(45));
+        assert!(rms(&played) > 0.01, "a held A2 sounds");
+        // Zero crossings over the last half second ≈ 2 × 110 Hz × 0.5 s (the sub voice is
+        // near-sinusoidal; richer voices add crossings, so allow a wide band).
+        let half = &played.samples[24_000..];
+        let zc = half
+            .windows(2)
+            .filter(|w| (w[0] >= 0.0) != (w[1] >= 0.0))
+            .count();
+        assert!((60..=600).contains(&zc), "zero crossings {zc}");
     }
 
     #[test]

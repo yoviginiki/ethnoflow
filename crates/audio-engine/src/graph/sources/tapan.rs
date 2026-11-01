@@ -5,6 +5,7 @@
 //! The pattern reuses `DrumPatternData` (Kick = boom, Snare = rim, Ghost = ghost) so the
 //! shell's pattern hand-off and the offline renderer need no new channel type.
 
+use super::live_notes::{drum_kind_for_midi, LiveNotes};
 use std::sync::Arc;
 
 use super::gen::{soft, Rng, Svf};
@@ -26,6 +27,8 @@ pub struct TapanParams {
     pub rim_tone: SmoothedParam,
     /// Level per stroke (boom, rim, ghost), dB (−60..+6).
     pub level_db: [SmoothedParam; TAPAN_STROKES],
+    /// Keyboard strokes (K2).
+    pub live: LiveNotes,
 }
 
 impl Default for TapanParams {
@@ -38,6 +41,7 @@ impl Default for TapanParams {
             level_db: std::array::from_fn(|k| {
                 SmoothedParam::new(if k == 2 { -10.0 } else { 0.0 }, -60.0, 6.0)
             }),
+            live: LiveNotes::new(),
         }
     }
 }
@@ -158,6 +162,13 @@ impl Source for TapanSource {
                 self.cursor
                     .seek(&self.pattern.beats, self.pattern.length_beats, b);
                 self.cursor.mark(generation);
+            }
+        }
+        while let Some(n) = p.live.pop() {
+            if n.on {
+                if let Some(k) = Self::stroke_index(drum_kind_for_midi(n.midi)) {
+                    self.trigger(k, n.velocity);
+                }
             }
         }
         for (i, s) in out.iter_mut().enumerate() {

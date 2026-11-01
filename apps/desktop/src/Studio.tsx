@@ -10,7 +10,6 @@ import { DronePanel } from "./DronePanel";
 import { FallingNotes } from "./FallingNotes";
 import { GateView } from "./GateView";
 import { InstrumentPanel } from "./InstrumentPanel";
-import { KeyboardPiano } from "./KeyboardPiano";
 import { MidiPanel } from "./MidiPanel";
 import { formatBytes, formatDb, formatTime, isTypingTarget, linearToDb, meterFraction, noteParts, snapToBars, takeName } from "./format";
 import { messages } from "./i18n";
@@ -219,48 +218,7 @@ export function Studio() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [s.prefs.clickPlay]);
 
-  // ---------- MIDI keyboard input: open the chosen port, poll its events ----------
-
-  useEffect(() => {
-    void api.listMidiPorts().then((p) => useStore.getState().setMidiPorts(p.map((x) => x.name))).catch(() => undefined);
-  }, []);
-
-  useEffect(() => {
-    const name = s.prefs.midiInput;
-    if (!name) {
-      void api.closeMidiInput().catch(() => undefined);
-      useStore.getState().setMidiState([], []);
-      return;
-    }
-    let cancelled = false;
-    const held = new Set<number>();
-    api.openMidiInput(name).catch((e) => {
-      fail(e);
-      useStore.getState().setPref("midiInput", null);
-    });
-    const tick = async () => {
-      if (cancelled) return;
-      try {
-        const r = await api.pollMidiEvents();
-        if (r) {
-          for (const ev of r.events) {
-            if (ev.kind === "note_on") held.add(ev.note);
-            else if (ev.kind === "note_off") held.delete(ev.note);
-          }
-          if (r.events.length) useStore.getState().setMidiState([...held], r.events);
-        }
-      } catch (e) {
-        fail(e);
-        return;
-      }
-      setTimeout(tick, STATUS_POLL_MS);
-    };
-    void tick();
-    return () => {
-      cancelled = true;
-      void api.closeMidiInput().catch(() => undefined);
-    };
-  }, [s.prefs.midiInput, fail]);
+  // MIDI input and the keyboard live app-wide now (keyboard.ts, KeyboardDock.tsx).
 
   // ---------- tuner: input monitor while idle ----------
 
@@ -1048,9 +1006,6 @@ export function Studio() {
 
           </Fold>
           <InstrumentPanel />
-          <Fold id="keyboard" label={t.foldKeyboard}>
-            <KeyboardPiano scale={project.scale} />
-          </Fold>
           <Fold id="drone" label={t.foldDrone} chip={s.layers.drone ? `${t.chipOn}${s.prefs.drone.rootMidi !== null ? ` · ${t.noteNames[noteParts(s.prefs.drone.rootMidi).pc]}${noteParts(s.prefs.drone.rootMidi).octave}` : ""}` : t.chipOff}>
             <DronePanel scale={project.scale} profile={project.instrument} />
           </Fold>

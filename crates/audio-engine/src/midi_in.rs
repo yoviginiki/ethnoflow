@@ -28,7 +28,20 @@ pub enum MidiEvent {
         note: u8,
         t_us: u64,
     },
-    /// Any other channel message (CC, pitch bend, …) — counted, not interpreted yet.
+    /// Control change (K4: 64 = sustain pedal, 1 = mod wheel).
+    Control {
+        channel: u8,
+        controller: u8,
+        value: u8,
+        t_us: u64,
+    },
+    /// Pitch bend, −8192..=8191 (0 = centre).
+    PitchBend {
+        channel: u8,
+        value: i16,
+        t_us: u64,
+    },
+    /// Any other channel message — counted, not interpreted.
     Other {
         status: u8,
         t_us: u64,
@@ -65,7 +78,18 @@ pub fn parse_message(bytes: &[u8], t_us: u64) -> Option<MidiEvent> {
             t_us,
         }),
         0x80 | 0x90 => None, // truncated note message
-        0xf0 => None,        // system messages (clock, active sensing) are ignored
+        0xb0 if bytes.len() >= 3 => Some(MidiEvent::Control {
+            channel,
+            controller: bytes[1] & 0x7f,
+            value: bytes[2] & 0x7f,
+            t_us,
+        }),
+        0xe0 if bytes.len() >= 3 => Some(MidiEvent::PitchBend {
+            channel,
+            value: (((bytes[2] & 0x7f) as i16) << 7 | (bytes[1] & 0x7f) as i16) - 8192,
+            t_us,
+        }),
+        0xf0 => None, // system messages (clock, active sensing) are ignored
         _ => Some(MidiEvent::Other { status, t_us }),
     }
 }
@@ -179,8 +203,25 @@ mod tests {
         );
         assert_eq!(
             parse_message(&[0xB0, 7, 100], 0),
+            Some(MidiEvent::Control {
+                channel: 0,
+                controller: 7,
+                value: 100,
+                t_us: 0
+            })
+        );
+        assert_eq!(
+            parse_message(&[0xE1, 0x00, 0x60], 0),
+            Some(MidiEvent::PitchBend {
+                channel: 1,
+                value: 4096,
+                t_us: 0
+            })
+        );
+        assert_eq!(
+            parse_message(&[0xD0, 10], 0),
             Some(MidiEvent::Other {
-                status: 0xB0,
+                status: 0xD0,
                 t_us: 0
             })
         );

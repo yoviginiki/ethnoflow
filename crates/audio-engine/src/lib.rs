@@ -47,11 +47,12 @@ pub use graph::sources::{
     ChoirParams, ChoirSource, ChordEvent, ChordPadParams, ChordPadSource, ChordPatternData,
     ClipData, ClipSource, ClipsParams, DroneParams, DroneSource, DrumEvent, DrumKind, DrumParams,
     DrumPatternData, DrumSource, Emotion, GrainParams, GrainSource, LeadParams, LeadSource,
-    LoopParams, LoopSource, NoiseParams, NoiseSource, NotePatternData, PadMacro, PadParams,
-    PadSource, PatternNote, PatternParams, PatternSwap, PatternSynthSource, PitchSet, PluckParams,
-    PluckSource, ResonatorParams, ResonatorSource, SamplerParams, SamplerSource, SamplerZone,
-    TapanParams, TapanSource, TextureParams, TextureSource, TrackParams, Transport, WindParams,
-    WindSource, DRUM_KINDS, MAX_CLIP_TRACKS, MAX_PITCHES, PAD_VOICES,
+    LiveNote, LiveNotes, LoopParams, LoopSource, NoiseParams, NoiseSource, NotePatternData,
+    PadMacro, PadParams, PadSource, PatternNote, PatternParams, PatternSwap, PatternSynthSource,
+    PitchSet, PluckParams, PluckSource, ResonatorParams, ResonatorSource, SamplerParams,
+    SamplerSource, SamplerZone, TapanParams, TapanSource, TextureParams, TextureSource,
+    TrackParams, Transport, WindParams, WindSource, DRUM_KINDS, MAX_CLIP_TRACKS, MAX_PITCHES,
+    PAD_VOICES,
 };
 pub use graph::{
     Graph, GraphMeters, GraphParams, LayerParams, MasterParams, SineSource, Source, MAX_LAYERS,

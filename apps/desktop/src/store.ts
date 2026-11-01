@@ -34,7 +34,7 @@ import type {
   WaveformPeaks,
   WavFormat,
 } from "./api";
-import type { AcademyCheck, Arrangement, BusStrip, FingeringOverride, LiveView, Strategy } from "./api";
+import type { AcademyCheck, Arrangement, BusStrip, FingeringOverride, InstrumentVoice, LiveView, Strategy } from "./api";
 import type { MakeSongResult } from "./makeSong";
 import type { StarterId } from "./starters";
 import type { Lang } from "./i18n";
@@ -86,6 +86,16 @@ export interface Prefs {
   snapBar: boolean;
   /** MIDI input port name, or null for none. */
   midiInput: string | null;
+  /** Keyboard dock (keyboard everywhere K1): shown above the Now-playing bar. */
+  keyboardOn: boolean;
+  /** "voice" = the project's live-synth voice; "instrument" = the designer's instrument (K2). */
+  keyboardSource: "voice" | "instrument";
+  /** MIDI note of the lowest key (C of the lower computer row). */
+  keyboardOctave: number;
+  /** Snap computer keys to the project's scale. */
+  keyboardLock: boolean;
+  /** Velocity of mouse / computer keys, 0.05..1 (MIDI keys carry their own). */
+  keyboardVelocity: number;
   /** Live accompanist harmony strategy (F8.1). */
   liveStrategy: Strategy;
   /** The assistant rail on every screen (F6.3 Coach). */
@@ -238,6 +248,11 @@ export const DEFAULT_PREFS: Prefs = {
   voice: "flute",
   snapBar: true,
   midiInput: null,
+  keyboardOn: false,
+  keyboardSource: "voice",
+  keyboardOctave: 60,
+  keyboardLock: true,
+  keyboardVelocity: 0.7,
   latencyMs: null,
   liveStrategy: "modal_pads",
   coach: true,
@@ -300,6 +315,12 @@ interface Store {
   /** Instrument Forge: the preset the designer shows. */
   designerId: string | null;
   setDesignerId: (id: string | null) => void;
+  /** The voice open in the instrument designer (the keyboard dock plays it, K2). */
+  designerVoice: InstrumentVoice | null;
+  setDesignerVoice: (v: InstrumentVoice | null) => void;
+  /** The live synth stream is running (keyboard → project voice). */
+  liveSynthOn: boolean;
+  setLiveSynthOn: (on: boolean) => void;
   setScreen: (s: Screen) => void;
   /** The take the audio editor should open (set by My studio / Play & record, read by the Edit tab). */
   editTakeId: string | null;
@@ -477,6 +498,10 @@ export const useStore = create<Store>((set, get) => ({
   },
   designerId: null,
   setDesignerId: (designerId) => set({ designerId }),
+  designerVoice: null,
+  setDesignerVoice: (designerVoice) => set({ designerVoice }),
+  liveSynthOn: false,
+  setLiveSynthOn: (liveSynthOn) => set({ liveSynthOn }),
 
   layers: { drone: false, pad: false, ambient: false, rhythm: false, scapes: false },
   setLayer: (name, on) => set({ layers: { ...get().layers, [name]: on } }),

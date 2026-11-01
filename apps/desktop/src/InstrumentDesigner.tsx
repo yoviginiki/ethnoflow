@@ -229,6 +229,7 @@ export function InstrumentDesigner() {
       setBase(p);
       setHistory([]);
       s.setDesignerId(id);
+      s.setDesignerVoice(p.voice);
     } catch (e) {
       fail(e);
     }
@@ -238,20 +239,22 @@ export function InstrumentDesigner() {
     setHistory((h) => [preset.voice, ...h].slice(0, 50));
     const voice = { ...preset.voice, ...patch } as InstrumentVoice;
     setPreset({ ...preset, voice });
-    if (audition) {
-      if (pushTimer.current !== null) window.clearTimeout(pushTimer.current);
-      pushTimer.current = window.setTimeout(() => {
-        pushTimer.current = null;
-        void api.instrumentAuditionSet(voice).catch(fail);
-      }, 25);
-    }
+    s.setDesignerVoice(voice);
+    // Pushed whether this screen or the keyboard dock started the audition (it is a no-op
+    // when nothing is auditioned).
+    if (pushTimer.current !== null) window.clearTimeout(pushTimer.current);
+    pushTimer.current = window.setTimeout(() => {
+      pushTimer.current = null;
+      void api.instrumentAuditionSet(voice).catch(fail);
+    }, 25);
   };
   const undo = () => {
     if (!preset || history.length === 0) return;
     const [v, ...rest] = history;
     setHistory(rest);
     setPreset({ ...preset, voice: v });
-    if (audition) void api.instrumentAuditionSet(v).catch(fail);
+    s.setDesignerVoice(v);
+    void api.instrumentAuditionSet(v).catch(fail);
   };
   const startAudition = async () => {
     if (!preset) return;

@@ -3,6 +3,22 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Keyboard everywhere, K1 + K2 + K4 (home-studio item 6, 2026-11-01).** Engine
+  `graph/sources/live_notes.rs`: an allocation-free SPSC note queue (`LiveNotes`) inside the
+  parameter block of the six instrument sources; bass and lead hold a mono note until its
+  off, pattern synth and chord pad are polyphonic, drums and tapan hit per key (General MIDI
+  numbers, other keys cycle); `drum_kind_for_midi`, `midi_hz`; tests. Shell:
+  `instrument_audition_start(silent)` (empty pattern, only the keyboard sounds),
+  `instrument_note` / `instrument_notes_off`, `set_keyboard_target`; the MIDI forwarding
+  thread routes to the auditioned instrument or the live synth and honours the sustain
+  pedal (CC 64); the parser now yields `Control` and `PitchBend` events; test: a silent
+  factory bass is quiet until A2 is held. UI: `KeyboardDock.tsx` above the Now-playing bar on
+  every screen (⌨ toggle): mouse keys, computer keys, MIDI port, octave, scale lock,
+  velocity, source "project's voice" / "instrument being edited" (auto in Instruments);
+  `keyboard.ts` holds the app-wide MIDI input (moved out of Play & record) and the routing;
+  the designer publishes its voice; "Stop all" releases the keys. Bridge `keyboard`, `note`,
+  `notes_off`; smoke; guide BG/EN. NOT IMPLEMENTED: K3 (pad / drone / module per key),
+  pitch bend and mod wheel (stages in the plan).
 - **Audio editor with history (home-studio item 5 = AUDIO_EDITOR_PLAN E1, 2026-11-01).**
   `edit_cmds.rs`: a take (trim + recipe applied) as a working copy; `EditOp` cut / copy /
   delete / paste / silence / trim / insert_silence / gain / normalize / fade_in / fade_out /

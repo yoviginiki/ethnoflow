@@ -1147,7 +1147,18 @@ export interface MidiTakeView {
 export type MidiEvent =
   | { kind: "note_on"; channel: number; note: number; velocity: number; t_us: number }
   | { kind: "note_off"; channel: number; note: number; t_us: number }
+  | { kind: "control"; channel: number; controller: number; value: number; t_us: number }
+  | { kind: "pitch_bend"; channel: number; value: number; t_us: number }
   | { kind: "other"; status: number; t_us: number };
+
+/** Where keyboard / MIDI notes go (keyboard everywhere K1/K2). */
+export interface LiveSynthStatus {
+  sample_rate: number;
+  voices_active: number;
+  stream_errors: number;
+}
+
+export type KeyboardTarget = "synth" | "instrument";
 
 export type Level = "beginner" | "intermediate" | "advanced";
 export const LEVELS: Level[] = ["beginner", "intermediate", "advanced"];
@@ -1762,6 +1773,12 @@ export const api = {
   stopLiveSynth: () => invoke<void>("stop_live_synth"),
   synthNote: (midi: number, on: boolean, velocity: number | null) => invoke<void>("synth_note", { midi, on, velocity }),
   synthAllOff: () => invoke<void>("synth_all_off"),
+  liveSynthStatus: () => invoke<LiveSynthStatus | null>("live_synth_status"),
+  /** Keyboard everywhere: where keyboard and MIDI notes go. */
+  setKeyboardTarget: (target: KeyboardTarget) => invoke<KeyboardTarget>("set_keyboard_target", { target }),
+  /** A keyboard note into the auditioned instrument (K2); false = nothing is auditioned. */
+  instrumentNote: (midi: number, on: boolean, velocity: number | null) => invoke<boolean>("instrument_note", { midi, on, velocity }),
+  instrumentNotesOff: () => invoke<void>("instrument_notes_off"),
   startDrone: (device: string | null, settings: DroneSettings) => invoke<DroneStatus>("start_drone", { device, settings }),
   setDrone: (settings: DroneSettings) => invoke<DroneStatus>("set_drone", { settings }),
   stopDrone: () => invoke<void>("stop_drone"),
@@ -1940,8 +1957,9 @@ export const api = {
   instrumentSave: (preset: InstrumentPreset) => invoke<InstrumentPreset>("instrument_save", { preset }),
   instrumentUpdate: (preset: InstrumentPreset) => invoke<InstrumentPreset>("instrument_update", { preset }),
   instrumentDelete: (id: string) => invoke<void>("instrument_delete", { id }),
-  instrumentAuditionStart: (voice: InstrumentVoice, device: string | null, midi: number | null, levelDb: number | null) =>
-    invoke<void>("instrument_audition_start", { voice, device, midi, levelDb }),
+  /** `silent`: no pattern, the instrument sounds only from the keyboard (K2). */
+  instrumentAuditionStart: (voice: InstrumentVoice, device: string | null, midi: number | null, levelDb: number | null, silent = false) =>
+    invoke<void>("instrument_audition_start", { voice, device, midi, levelDb, silent }),
   instrumentAuditionSet: (voice: InstrumentVoice) => invoke<boolean>("instrument_audition_set", { voice }),
   instrumentAuditionStop: () => invoke<void>("instrument_audition_stop"),
   instrumentRender: (path: string, voice: InstrumentVoice, seconds: number | null, midi: number | null) =>

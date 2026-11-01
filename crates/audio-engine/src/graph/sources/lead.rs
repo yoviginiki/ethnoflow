@@ -4,6 +4,7 @@
 //! the ostinato and arpeggio use), one note at a time: overlapping notes become legato
 //! (no retrigger, glide), separated notes retrigger the envelopes.
 
+use super::live_notes::{midi_hz, LiveNotes};
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::Arc;
 
@@ -31,6 +32,8 @@ pub struct LeadParams {
     pub release_s: SmoothedParam,
     /// 0..1 drive before the filter.
     pub drive: SmoothedParam,
+    /// Keyboard notes (K2).
+    pub live: LiveNotes,
 }
 
 impl Default for LeadParams {
@@ -46,6 +49,7 @@ impl Default for LeadParams {
             attack_s: SmoothedParam::new(0.01, 0.001, 2.0),
             release_s: SmoothedParam::new(0.2, 0.01, 4.0),
             drive: SmoothedParam::new(0.2, 0.0, 1.0),
+            live: LiveNotes::new(),
         }
     }
 }
@@ -70,6 +74,8 @@ pub struct LeadSource {
     lp: Svf,
     cutoff: Ramp,
     frame: u64,
+    /// The keyboard note being held (0 = none).
+    live_midi: u8,
 }
 
 impl LeadSource {
@@ -102,6 +108,7 @@ impl LeadSource {
             vib_phase: 0.0,
             lp: Svf::default(),
             frame: 0,
+            live_midi: 0,
         }
     }
 
@@ -176,6 +183,16 @@ impl Source for LeadSource {
             }
         } else {
             self.gate = false;
+        }
+        // Keyboard notes (K2): held until their off.
+        while let Some(n) = p.live.pop() {
+            if n.on {
+                self.note_on(midi_hz(n.midi), n.velocity, f64::INFINITY);
+                self.live_midi = n.midi;
+            } else if self.live_midi == n.midi {
+                self.gate = false;
+                self.live_midi = 0;
+            }
         }
         for (i, s) in out.iter_mut().enumerate() {
             let beat = beat0.map(|b0| b0 + i as f64 * bpf);

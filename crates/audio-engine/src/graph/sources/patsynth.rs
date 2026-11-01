@@ -3,6 +3,7 @@
 //! carry their own Hz (so scale cents are honoured) and a length in beats, so
 //! nothing hangs when the pattern or the chord changes.
 
+use super::live_notes::{midi_hz, LiveNotes};
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::Arc;
 
@@ -49,6 +50,8 @@ pub struct PatternParams {
     pub tone_hz: SmoothedParam,
     /// 0..1 how much velocity shapes loudness.
     pub dynamics: SmoothedParam,
+    /// Keyboard notes (K2).
+    pub live: LiveNotes,
 }
 
 impl Default for PatternParams {
@@ -59,6 +62,7 @@ impl Default for PatternParams {
             release_s: SmoothedParam::new(0.15, 0.01, 4.0),
             tone_hz: SmoothedParam::new(6000.0, 200.0, 20_000.0),
             dynamics: SmoothedParam::new(0.6, 0.0, 1.0),
+            live: LiveNotes::new(),
         }
     }
 }
@@ -196,6 +200,28 @@ impl Source for PatternSynthSource {
         } else {
             for v in self.voices.iter_mut() {
                 v.gate = false;
+            }
+        }
+        // Keyboard notes (K2): polyphonic, held until their off.
+        while let Some(n) = p.live.pop() {
+            let hz = midi_hz(n.midi);
+            if n.on {
+                self.note_on(
+                    PatternNote {
+                        beat: 0.0,
+                        length_beats: 0.0,
+                        hz,
+                        velocity: n.velocity,
+                    },
+                    f64::INFINITY,
+                    dynamics,
+                );
+            } else {
+                for v in self.voices.iter_mut() {
+                    if v.active && v.gate && v.gate_until.is_infinite() && (v.hz - hz).abs() < 0.5 {
+                        v.gate = false;
+                    }
+                }
             }
         }
         for (i, s) in out.iter_mut().enumerate() {

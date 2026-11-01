@@ -119,6 +119,18 @@ pub struct Inner {
     pub chord_midi: Option<Vec<u8>>,
     /// The audio editor session (home-studio item 5): a take in memory with its history.
     pub edit: Option<crate::edit_cmds::EditSession>,
+    /// Where keyboard / MIDI notes go (keyboard everywhere, K1/K2).
+    pub keyboard_target: KeyboardTarget,
+}
+
+/// The sound a pressed key makes: the project's live synth voice, or the instrument
+/// being auditioned in the designer (K2).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum KeyboardTarget {
+    #[default]
+    Synth,
+    Instrument,
 }
 
 impl Inner {

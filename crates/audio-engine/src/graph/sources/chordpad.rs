@@ -5,6 +5,7 @@
 //! says which pitches sound from which beat for how long, so it can breathe with the
 //! bars and change with the harmony.
 
+use super::live_notes::{midi_hz, LiveNotes};
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::Arc;
 
@@ -58,6 +59,8 @@ pub struct ChordPadParams {
     pub movement: SmoothedParam,
     /// 0..1 how much velocity shapes loudness.
     pub dynamics: SmoothedParam,
+    /// Keyboard notes (K2).
+    pub live: LiveNotes,
 }
 
 impl Default for ChordPadParams {
@@ -70,6 +73,7 @@ impl Default for ChordPadParams {
             cutoff_hz: SmoothedParam::new(1800.0, 200.0, 12_000.0),
             movement: SmoothedParam::new(0.3, 0.0, 1.0),
             dynamics: SmoothedParam::new(0.4, 0.0, 1.0),
+            live: LiveNotes::new(),
         }
     }
 }
@@ -200,6 +204,36 @@ impl ChordPadSource {
     }
 }
 
+impl ChordPadSource {
+    /// One keyboard note (K2): a voice of its own, held until its off; the others stay.
+    fn note_on_live(&mut self, hz: f32, vel: f32, dynamics: f32) {
+        let slot = self
+            .voices
+            .iter()
+            .position(|v| !v.active)
+            .unwrap_or_else(|| {
+                self.voices
+                    .iter()
+                    .enumerate()
+                    .min_by_key(|(_, v)| v.age)
+                    .map(|(i, _)| i)
+                    .unwrap_or(0)
+            });
+        self.counter += 1;
+        self.voices[slot] = Voice {
+            hz,
+            phase_a: 0.0,
+            phase_b: 0.37,
+            env: 0.0,
+            gain: 0.22 * (1.0 - dynamics + dynamics * vel.clamp(0.05, 1.0)),
+            gate_until: f64::INFINITY,
+            gate: true,
+            active: true,
+            age: self.counter,
+        };
+    }
+}
+
 impl Source for ChordPadSource {
     fn render(&mut self, out: &mut [f32], sample_rate: u32) {
         let f = self.frame;
@@ -235,6 +269,18 @@ impl Source for ChordPadSource {
         } else {
             for v in self.voices.iter_mut() {
                 v.gate = false;
+            }
+        }
+        while let Some(n) = p.live.pop() {
+            let hz = midi_hz(n.midi);
+            if n.on {
+                self.note_on_live(hz, n.velocity, dynamics);
+            } else {
+                for v in self.voices.iter_mut() {
+                    if v.active && v.gate && v.gate_until.is_infinite() && (v.hz - hz).abs() < 0.5 {
+                        v.gate = false;
+                    }
+                }
             }
         }
         let lfo_inc = 0.08 / sr;

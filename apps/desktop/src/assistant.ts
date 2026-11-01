@@ -9,6 +9,7 @@ import { AREA_IDS, AREAS, areaMainScreen, areaOf, areaTabs } from "./areas";
 import { messages } from "./i18n";
 import { DEFAULT_RHYTHM, useStore, type LayerName, type Screen } from "./store";
 import { latestTake, loadTake, playLoaded, stopPlaying, continueLast } from "./takeActions";
+import { heldNotes, keyboardAllOff, keyboardNote } from "./keyboard";
 import { journeyWorld, phaseAt, WORLD_IDS, worldById } from "./scapes";
 import { startJourney, stopJourney } from "./scapesActions";
 import { RACKS, type RackKind } from "./rackAdapter";
@@ -396,6 +397,33 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
       await stopPlaying();
       const st = useStore.getState();
       return { mode: st.mode, cursor_s: st.cursor };
+    }
+    // ---- keyboard everywhere (K1/K2) ----
+    case "keyboard": {
+      // Reads or sets the dock: on, source ("voice" | "instrument"), octave (24..96 base
+      // MIDI), lock, velocity, midi_input (port name or null). Returns the dock's state.
+      const st = useStore.getState();
+      if (typeof cmd.on === "boolean") st.setPref("keyboardOn", cmd.on);
+      if (cmd.source === "voice" || cmd.source === "instrument") st.setPref("keyboardSource", cmd.source);
+      if (typeof cmd.octave === "number") st.setPref("keyboardOctave", Math.max(24, Math.min(96, Math.round(cmd.octave))));
+      if (typeof cmd.lock === "boolean") st.setPref("keyboardLock", cmd.lock);
+      if (typeof cmd.velocity === "number") st.setPref("keyboardVelocity", Math.max(0.05, Math.min(1, cmd.velocity)));
+      if (cmd.midi_input === null || typeof cmd.midi_input === "string") st.setPref("midiInput", cmd.midi_input);
+      await new Promise((r) => setTimeout(r, 250));
+      const p = useStore.getState();
+      const synth = await api.liveSynthStatus().catch(() => null);
+      return { on: p.prefs.keyboardOn, source: p.prefs.keyboardSource, octave: p.prefs.keyboardOctave, lock: p.prefs.keyboardLock, velocity: p.prefs.keyboardVelocity, midi_input: p.prefs.midiInput, midi_ports: p.midiPorts, synth_running: synth !== null, designer_voice: p.designerVoice !== null, held: heldNotes() };
+    }
+    case "note": {
+      // Sound! One keyboard note where the dock points: { midi, on, velocity? }; "notes_off" releases all.
+      const midi = Number(cmd.midi);
+      if (!(midi >= 0 && midi <= 127)) throw new Error("midi outside 0..127");
+      await keyboardNote(midi, cmd.on !== false, typeof cmd.velocity === "number" ? cmd.velocity : undefined);
+      return { midi, on: cmd.on !== false, held: heldNotes() };
+    }
+    case "notes_off": {
+      await keyboardAllOff();
+      return { held: [] };
     }
     // ---- audio editor (home-studio item 5 = E1) ----
     case "edit_open": {

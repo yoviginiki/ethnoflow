@@ -2,6 +2,7 @@
 //! the beat clock with sub / pluck / Reese voices, glide, a wobble filter synced to
 //! the beat, soft saturation and sidechain ducking from the drums' kick envelope.
 
+use super::live_notes::{midi_hz, LiveNotes};
 use std::sync::atomic::{AtomicU32, AtomicU8, Ordering};
 use std::sync::Arc;
 
@@ -88,6 +89,8 @@ pub struct BassParams {
     /// 0..1 level of the triangle layer (Sub) / low-pass warmth.
     pub warmth: SmoothedParam,
     pub release_s: SmoothedParam,
+    /// Keyboard notes (K2): on = a held note at the key's pitch, off = release.
+    pub live: LiveNotes,
 }
 
 impl Default for BassParams {
@@ -111,6 +114,7 @@ impl Default for BassParams {
             wobble_depth: SmoothedParam::new(0.5, 0.0, 1.0),
             warmth: SmoothedParam::new(0.5, 0.0, 1.0),
             release_s: SmoothedParam::new(0.08, 0.01, 2.0),
+            live: LiveNotes::new(),
         }
     }
 }
@@ -148,6 +152,8 @@ pub struct BassSource {
     duck: f32,
     frame: u64,
     inbox: Option<PatternInbox<BassPatternData>>,
+    /// The keyboard note being held (0 = none).
+    live_midi: u8,
 }
 
 impl BassSource {
@@ -194,6 +200,7 @@ impl BassSource {
             duck: 1.0,
             frame: 0,
             inbox: None,
+            live_midi: 0,
         }
     }
 
@@ -253,6 +260,31 @@ impl Source for BassSource {
             }
         } else {
             self.gate = false;
+        }
+        // Keyboard notes: a held note until its off (the pattern keeps running underneath).
+        while let Some(n) = p.live.pop() {
+            if n.on {
+                self.target_hz = midi_hz(n.midi);
+                self.glide_coeff = if glide_s > 0.0 && self.gate {
+                    1.0 - (-1.0 / (glide_s * sr)).exp()
+                } else {
+                    1.0
+                };
+                self.gate_until_beat = f64::INFINITY;
+                self.gate = true;
+                self.stage = 0;
+                self.vel = n.velocity.clamp(0.05, 1.0);
+                self.filt_env = 1.0;
+                self.pitch_env = 1.0;
+                self.live_midi = n.midi;
+                if self.env < 0.001 {
+                    self.phase = 0.0;
+                    self.phase2 = 0.0;
+                }
+            } else if self.live_midi == n.midi {
+                self.gate = false;
+                self.live_midi = 0;
+            }
         }
         let wobble_div = p.wobble_div.load(Ordering::Relaxed);
         let kick_env = self.drums.as_ref().map(|d| d.kick_env()).unwrap_or(0.0);

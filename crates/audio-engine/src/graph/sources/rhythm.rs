@@ -4,6 +4,7 @@
 //! sync and a rebuilt source lands back on the grid. Drums are synthesized (no
 //! samples): kick, snare, ghost, closed/open hat, shaker.
 
+use super::live_notes::{drum_kind_for_midi, LiveNotes};
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 
@@ -265,6 +266,8 @@ pub struct DrumParams {
     pub brightness: SmoothedParam,
     /// Kick envelope (0..1 bits) for sidechain readers.
     kick_env_bits: AtomicU32,
+    /// Keyboard hits (K2): a key = a drum (General MIDI numbers, else cycling).
+    pub live: LiveNotes,
 }
 
 impl Default for DrumParams {
@@ -277,6 +280,7 @@ impl Default for DrumParams {
             decay: SmoothedParam::new(0.5, 0.0, 1.0),
             brightness: SmoothedParam::new(0.5, 0.0, 1.0),
             kick_env_bits: AtomicU32::new(0),
+            live: LiveNotes::new(),
         }
     }
 }
@@ -398,6 +402,11 @@ impl Source for DrumSource {
                 self.cursor
                     .seek(&self.pattern.beats, self.pattern.length_beats, b);
                 self.cursor.mark(generation);
+            }
+        }
+        while let Some(n) = p.live.pop() {
+            if n.on {
+                self.trigger(drum_kind_for_midi(n.midi), n.velocity);
             }
         }
         let mut kick_env_peak = 0.0f32;

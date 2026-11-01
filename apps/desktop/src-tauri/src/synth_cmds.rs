@@ -5,7 +5,7 @@ use tauri::State;
 
 use crate::analysis_cmds::DEFAULT_A4_HZ;
 use crate::commands::{err, CmdResult};
-use crate::state::AppState;
+use crate::state::{AppState, KeyboardTarget};
 
 #[tauri::command]
 pub async fn start_live_synth(
@@ -71,6 +71,26 @@ pub async fn synth_all_off(state: State<'_, AppState>) -> CmdResult<()> {
         synth.send(SynthCmd::AllOff);
     }
     Ok(())
+}
+
+/// Where keyboard and MIDI notes go: the project's voice or the auditioned instrument.
+#[tauri::command]
+pub async fn set_keyboard_target(
+    state: State<'_, AppState>,
+    target: KeyboardTarget,
+) -> CmdResult<KeyboardTarget> {
+    let mut s = state.lock();
+    if s.keyboard_target != target {
+        // Switching: release what the old target holds so nothing hangs.
+        if let Some(a) = s.audition.as_mut() {
+            a.all_off();
+        }
+        if let Some(synth) = s.live_synth.as_mut() {
+            synth.send(SynthCmd::AllOff);
+        }
+    }
+    s.keyboard_target = target;
+    Ok(target)
 }
 
 #[tauri::command]

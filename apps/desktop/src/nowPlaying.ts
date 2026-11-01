@@ -60,6 +60,9 @@ export async function stopAll(): Promise<void> {
     s.setLayer("scapes", false);
   }
   if (s.transport?.playing) jobs.push(api.transportStop().then((st) => useStore.getState().setTransport(st)).catch(() => undefined));
+  // Keyboard everywhere: whatever the keys hold goes quiet too.
+  jobs.push(api.synthAllOff().catch(() => undefined));
+  jobs.push(api.instrumentNotesOff().catch(() => undefined));
   if (s.metronomeOn) s.setMetronomeOn(false);
   if (s.liveRunning) {
     jobs.push(api.liveStop().catch(() => undefined));

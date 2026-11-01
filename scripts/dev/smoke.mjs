@@ -420,6 +420,26 @@ async function main() {
     }
     return `${n} tabs in 5 areas, each under its own area`;
   });
+  await step("keyboard: the dock switches on with the project's voice (live synth runs), points at the instrument, off", async () => {
+    const before = expectOk(send({ op: "keyboard" }));
+    try {
+      const on = expectOk(send({ op: "keyboard", on: true, source: "voice", octave: 60 }));
+      if (!on.on || on.source !== "voice" || !on.synth_running) throw new Error(`on ${JSON.stringify(on)}`);
+      if (SOUND) {
+        expectOk(send({ op: "note", midi: 62, on: true, velocity: 0.6 }));
+        await new Promise((r) => setTimeout(r, 500));
+        const h = expectOk(send({ op: "note", midi: 62, on: false }));
+        if (h.held.length !== 0) throw new Error("note still held");
+      }
+      const inst = expectOk(send({ op: "keyboard", source: "instrument" }));
+      if (inst.source !== "instrument" || inst.synth_running) throw new Error(`instrument ${JSON.stringify(inst)}`);
+      const off = expectOk(send({ op: "keyboard", on: false, source: "voice" }));
+      if (off.on || off.synth_running) throw new Error(`off ${JSON.stringify(off)}`);
+      return `ports ${before.midi_ports.length}, synth on → instrument → off`;
+    } finally {
+      send({ op: "keyboard", on: before.on, source: before.source, octave: before.octave });
+    }
+  });
   await step("now playing: the bar's snapshot has every source, stop_all leaves silence", async () => {
     const np = expectOk(send({ op: "now_playing" }));
     for (const k of ["recording", "take", "notes", "background", "song", "metronome", "live", "any"]) if (!(k in np)) throw new Error(`missing ${k}`);

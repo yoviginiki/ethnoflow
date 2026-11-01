@@ -99,6 +99,10 @@ export function NowPlayingBar() {
 
       {s.liveRunning && <span className="np-chip on">{t.npLive}</span>}
 
+      <button className={`np-chip ${s.prefs.keyboardOn ? "on" : ""}`} onClick={() => s.setPref("keyboardOn", !s.prefs.keyboardOn)} title={t.kbToggleHint} aria-pressed={s.prefs.keyboardOn} data-coach="keyboard-toggle">
+        ⌨ {t.kbDock}
+      </button>
+
       <span className="spacer" />
       <button className={anySound ? "danger" : "ghost"} disabled={!anySound} onClick={() => void stopAll().catch(fail)} title={t.npStopAllHint}>
         ■ {t.npStopAll}

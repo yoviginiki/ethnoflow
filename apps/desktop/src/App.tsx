@@ -4,6 +4,8 @@ import { AreaScreen } from "./AreaScreen";
 import { Help } from "./Help";
 import { Home } from "./Home";
 import { NowPlayingBar } from "./NowPlayingBar";
+import { KeyboardDock } from "./KeyboardDock";
+import { useKeyboardRouting, useMidiInput } from "./keyboard";
 import { PresetLibrary } from "./PresetLibrary";
 import { ScreenBoundary } from "./ScreenBoundary";
 import { useAssistantBridge } from "./assistant";
@@ -38,6 +40,9 @@ export default function App() {
   useAcademyGuided();
   useLiveFollow();
   useCoachHighlight();
+  useMidiInput();
+  useKeyboardRouting();
+  const keyboardOn = useStore((s) => s.prefs.keyboardOn);
   useEffect(() => {
     void api
       .fingeringOverridesGet("kaval-d")
@@ -108,7 +113,7 @@ export default function App() {
         </div>
       )}
 
-      <div className={`app-body ${coachOn ? "with-coach" : ""}`}>
+      <div className={`app-body ${coachOn ? "with-coach" : ""} ${keyboardOn ? "with-kb" : ""}`}>
       <div className="app-main">
       <ScreenBoundary screen={screen}>
       {screen === "home" && <Home />}
@@ -118,6 +123,7 @@ export default function App() {
       </div>
       {coachOn && <CoachPanel />}
       </div>
+      <KeyboardDock />
       <NowPlayingBar />
     </div>
   );

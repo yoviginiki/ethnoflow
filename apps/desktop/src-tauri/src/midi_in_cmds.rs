@@ -11,7 +11,7 @@ use serde::Serialize;
 use tauri::{AppHandle, Manager, State};
 
 use crate::commands::{err, CmdResult};
-use crate::state::AppState;
+use crate::state::{AppState, Inner, KeyboardTarget};
 
 const UI_QUEUE_MAX: usize = 4096;
 
@@ -57,27 +57,48 @@ pub async fn open_midi_input(
         .name("ethnoflow-midi-forward".into())
         .spawn(move || {
             let mut buf = Vec::with_capacity(64);
+            // K4: the sustain pedal (CC 64) holds note-offs until it is released.
+            let mut sustain = false;
+            let mut pending = [false; 128];
             while !t_stop.load(Ordering::Acquire) {
                 buf.clear();
                 port.drain(&mut buf);
                 if !buf.is_empty() {
-                    // Live synth first (lowest latency), then the UI queue.
+                    // Sound first (lowest latency), then the UI queue.
                     let st = app.state::<AppState>();
                     let mut s = st.lock();
-                    if let Some(synth) = s.live_synth.as_mut() {
-                        for ev in &buf {
-                            match *ev {
-                                MidiEvent::NoteOn { note, velocity, .. } => {
-                                    synth.send(SynthCmd::On {
-                                        midi: note,
-                                        velocity: velocity as f32 / 127.0,
-                                    });
-                                }
-                                MidiEvent::NoteOff { note, .. } => {
-                                    synth.send(SynthCmd::Off { midi: note });
-                                }
-                                MidiEvent::Other { .. } => {}
+                    for ev in &buf {
+                        match *ev {
+                            MidiEvent::NoteOn { note, velocity, .. } => {
+                                pending[note as usize] = false;
+                                send_note(&mut s, note, true, velocity as f32 / 127.0);
                             }
+                            MidiEvent::NoteOff { note, .. } => {
+                                if sustain {
+                                    pending[note as usize] = true;
+                                } else {
+                                    send_note(&mut s, note, false, 0.0);
+                                }
+                            }
+                            MidiEvent::Control {
+                                controller: 64,
+                                value,
+                                ..
+                            } => {
+                                let down = value >= 64;
+                                if sustain && !down {
+                                    for (n, p) in pending.iter_mut().enumerate() {
+                                        if *p {
+                                            *p = false;
+                                            send_note(&mut s, n as u8, false, 0.0);
+                                        }
+                                    }
+                                }
+                                sustain = down;
+                            }
+                            MidiEvent::Control { .. }
+                            | MidiEvent::PitchBend { .. }
+                            | MidiEvent::Other { .. } => {}
                         }
                     }
                     drop(s);
@@ -100,6 +121,24 @@ pub async fn open_midi_input(
         queue,
     });
     Ok(())
+}
+
+/// One note to wherever the keyboard points (K1/K2): the auditioned instrument when
+/// chosen and running, else the live synth when it runs.
+fn send_note(s: &mut Inner, midi: u8, on: bool, velocity: f32) {
+    if s.keyboard_target == KeyboardTarget::Instrument {
+        if let Some(a) = s.audition.as_mut() {
+            a.note(midi, on, velocity);
+            return;
+        }
+    }
+    if let Some(synth) = s.live_synth.as_mut() {
+        synth.send(if on {
+            SynthCmd::On { midi, velocity }
+        } else {
+            SynthCmd::Off { midi }
+        });
+    }
 }
 
 #[tauri::command]
