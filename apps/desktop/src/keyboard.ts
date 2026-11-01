@@ -95,7 +95,9 @@ export async function keyboardNote(midi: number, on: boolean, velocity?: number)
     if (on) {
       if (!before) before = { padChord: st.padChord, droneRoot: st.droneRootOverride, padOn: st.layers.pad, droneOn: st.layers.drone };
       if (src === "pad") {
-        st.setFollow(voicingNotes(st.prefs.pad.voicing, midi, st.project?.scale ?? null), st.droneRootOverride);
+        // A scale voicing needs 7 degrees; on a shorter scale the key still gets a chord (a fifth).
+        const chord = voicingNotes(st.prefs.pad.voicing, midi, st.project?.scale ?? null) ?? voicingNotes("fifth", midi, null);
+        st.setFollow(chord, st.droneRootOverride);
         if (!st.layers.pad) st.setLayer("pad", true);
       } else {
         st.setFollow(st.padChord, midi);
