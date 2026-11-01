@@ -736,6 +736,13 @@ async function main() {
       near(stretched.seconds, len + 0.5, "stretch ×1.5 of 1 s");
       const pitched = expectOk(send({ op: "edit", edit: { op: "pitch", a: 0, b: len + 0.5, semitones: 2 } }));
       near(pitched.seconds, len + 0.5, "pitch keeps the length");
+      // A11: the silenced head is found as a silence; the spectrum has a peak; contrast head vs. body.
+      const sil = expectOk(send({ op: "edit_silences", threshold_db: -60, min_s: 0.2 })).silences;
+      if (!sil.length || sil[0][0] > 0.05 || sil[0][1] < 0.4) throw new Error(`silences ${JSON.stringify(sil)}`);
+      const spec = expectOk(send({ op: "edit_spectrum", a: 1, b: len + 0.5, bands: 32 }));
+      if (!(spec.peak_db > -60)) throw new Error(`spectrum peak ${spec.peak_db}`);
+      const ctr = expectOk(send({ op: "edit_contrast", fg_a: 1, fg_b: len + 0.5, bg_a: 0, bg_b: 0.4 }));
+      if (!(ctr.difference_db > 20)) throw new Error(`contrast ${ctr.difference_db} dB`);
       near(expectOk(send({ op: "edit_jump", step: 1 })).seconds, len - 1, "jump to step 1");
       const saved = expectOk(send({ op: "edit_save", label: "smoke edit" }));
       const tk = saved.project.takes.find((x) => x.id === saved.take_id);

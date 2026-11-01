@@ -455,6 +455,15 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
     case "edit_preview":
       // Sound! The effect on its region, first `seconds` (default 4), not in the history.
       return await api.editPreview(cmd.edit as EditOp, typeof cmd.seconds === "number" ? cmd.seconds : null, s.prefs.selectedOutput);
+    case "edit_spectrum": {
+      const r = await api.editSpectrum(Number(cmd.a ?? 0), Number(cmd.b ?? 1e9), typeof cmd.bands === "number" ? cmd.bands : 32);
+      const peak = r.reduce((m, x) => (x.db > m.db ? x : m), r[0]);
+      return { bands: r, peak_hz: peak?.hz ?? null, peak_db: peak?.db ?? null };
+    }
+    case "edit_silences":
+      return { silences: await api.editSilences(typeof cmd.threshold_db === "number" ? cmd.threshold_db : null, typeof cmd.min_s === "number" ? cmd.min_s : null) };
+    case "edit_contrast":
+      return await api.editContrast(Number(cmd.fg_a), Number(cmd.fg_b), Number(cmd.bg_a), Number(cmd.bg_b));
     case "edit_undo":
       return await api.editUndo();
     case "edit_redo":

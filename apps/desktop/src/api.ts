@@ -1615,6 +1615,24 @@ export interface EqBand {
   q: number;
 }
 
+export interface SpectrumBand {
+  hz: number;
+  db: number;
+}
+export interface Spectrogram {
+  cols: number;
+  rows: number;
+  min_hz: number;
+  max_hz: number;
+  /** Row-major rows × cols, dBFS; row 0 = lowest frequency. */
+  db: number[];
+}
+export interface Contrast {
+  foreground_db: number;
+  background_db: number;
+  difference_db: number;
+}
+
 export interface EditVersionInfo {
   step: number;
   op: string;
@@ -1959,6 +1977,11 @@ export const api = {
   editPlay: (fromS: number, toS: number | null, device: string | null) => invoke<PlayerStatus>("edit_play", { fromS, toS, device }),
   /** A7: hear an effect on its region before applying it (first `seconds`; not in the history). */
   editPreview: (op: EditOp, seconds: number | null, device: string | null) => invoke<PlayerStatus>("edit_preview", { op, seconds, device }),
+  /** A11: analysis of the working copy. */
+  editSpectrum: (a: number, b: number, bands: number | null) => invoke<SpectrumBand[]>("edit_spectrum", { a, b, bands }),
+  editSpectrogram: (fromS: number | null, toS: number | null, cols: number | null, rows: number | null) => invoke<Spectrogram>("edit_spectrogram", { fromS, toS, cols, rows }),
+  editSilences: (thresholdDb: number | null, minS: number | null) => invoke<[number, number][]>("edit_silences", { thresholdDb, minS }),
+  editContrast: (fgA: number, fgB: number, bgA: number, bgB: number) => invoke<Contrast>("edit_contrast", { fgA, fgB, bgA, bgB }),
   editSave: (label: string | null) => invoke<{ project: ProjectView; take_id: string }>("edit_save", { label }),
 
   // Preset library

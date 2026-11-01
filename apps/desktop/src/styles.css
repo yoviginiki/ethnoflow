@@ -772,3 +772,8 @@ button.ghost.on { border-color: var(--accent); color: var(--accent); }
 .world-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border: 1px solid var(--axis); border-radius: 14px; background: var(--panel); color: var(--text); font: inherit; cursor: pointer; }
 .world-chip.on { border-color: var(--accent); outline: 2px solid var(--accent); }
 .world-chip.mine { border-style: dashed; padding: 0 4px; }
+
+/* Editor analysis (A11) */
+.spectrogram { width: 100%; height: 160px; display: block; border: 1px solid var(--axis); border-radius: 8px; margin-top: 6px; background: #0b1020; }
+.spectrum-bars { display: flex; align-items: flex-end; gap: 1px; height: 120px; border-bottom: 1px solid var(--axis); }
+.spectrum-bar { flex: 1; background: var(--accent); min-height: 2px; }

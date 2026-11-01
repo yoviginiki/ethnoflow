@@ -121,7 +121,10 @@ rhythm_status, ambient_status }`
 | `notes_off` | | releases everything the keyboard holds |
 | `edit_open` | `id?` (default: the latest take) | opens a take in the audio editor (working copy + history); returns the editor status (`seconds`, `versions`, `index`, `clipboard_seconds`, `dirty`) |
 | `edit` | `edit`: `{op, a, b, at, seconds, db, target_dbfs, bands, threshold_db, ratio, attack_ms, release_ms, makeup_db, ceiling_db}` with `op` = cut, copy, delete, paste, silence, trim, insert_silence, gain, normalize, fade_in, fade_out, reverse, **eq** (bands: `{kind: low_shelf\|peak\|high_shelf, hz, gain_db, q}`), **compress**, **limit**, **noise_profile** (a, b = noise only), **denoise** (reduction_db 0..40, sensitivity 0.5..4; needs a profile), **declip** (threshold 0.5..1), **deess** (threshold_db, amount_db), **declick** (sensitivity 2..40), **stretch** (factor 0.25..4, changes the length), **pitch** (semitones ±24, keeps the length) |
-| `edit_preview` | `edit` (an effect op), `seconds?` | **sound**: the effect on its region before applying it | one operation on the working copy (seconds absolute); returns the status |
+| `edit_preview` | `edit` (an effect op), `seconds?` | **sound**: the effect on its region before applying it |
+| `edit_spectrum` | `a`, `b`, `bands?` | averaged spectrum of the region: `{bands: [{hz, db}], peak_hz, peak_db}` |
+| `edit_silences` | `threshold_db?` (−50), `min_s?` (0.3) | `{silences: [[start, end], …]}` |
+| `edit_contrast` | `fg_a`, `fg_b`, `bg_a`, `bg_b` | RMS of the foreground vs. the background in dB and their difference | one operation on the working copy (seconds absolute); returns the status |
 | `edit_undo` / `edit_redo` / `edit_jump` | `step` for jump | walk the history |
 | `edit_snap` | `seconds` | the nearest zero crossing (±10 ms) |
 | `edit_peaks` | `bins?`, `from_s?`, `to_s?` | reduced peaks of the working copy (or of a range): `{bins, duration_seconds, peak}` |

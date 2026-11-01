@@ -786,6 +786,104 @@ pub async fn edit_play(
     Ok(st)
 }
 
+/// A11: averaged spectrum (log bands, dBFS) of [a, b).
+#[tauri::command]
+pub async fn edit_spectrum(
+    state: State<'_, AppState>,
+    a: f64,
+    b: f64,
+    bands: Option<usize>,
+) -> CmdResult<Vec<analysis::SpectrumBand>> {
+    let mut s = state.lock();
+    let e = session(&mut s)?;
+    let cur = Arc::clone(e.current());
+    let (fa, fb) = region(&cur, a, b)?;
+    let piece = cur.slice_frames(fa, fb);
+    Ok(analysis::spectrum(
+        &piece.samples,
+        cur.channels as usize,
+        cur.sample_rate,
+        bands.unwrap_or(64),
+    ))
+}
+
+/// A11: a cols × rows dB grid of [from_s, to_s) (whole take when absent).
+#[tauri::command]
+pub async fn edit_spectrogram(
+    state: State<'_, AppState>,
+    from_s: Option<f64>,
+    to_s: Option<f64>,
+    cols: Option<usize>,
+    rows: Option<usize>,
+) -> CmdResult<analysis::Spectrogram> {
+    let mut s = state.lock();
+    let e = session(&mut s)?;
+    let cur = Arc::clone(e.current());
+    let piece = match (from_s, to_s) {
+        (Some(a), Some(b)) => {
+            let (fa, fb) = region(&cur, a, b)?;
+            cur.slice_frames(fa, fb)
+        }
+        _ => (*cur).clone(),
+    };
+    Ok(analysis::spectrogram(
+        &piece.samples,
+        cur.channels as usize,
+        cur.sample_rate,
+        cols.unwrap_or(400),
+        rows.unwrap_or(96),
+    ))
+}
+
+/// A11: silent stretches (below `threshold_db`, at least `min_s` long), as [start, end) seconds.
+#[tauri::command]
+pub async fn edit_silences(
+    state: State<'_, AppState>,
+    threshold_db: Option<f64>,
+    min_s: Option<f64>,
+) -> CmdResult<Vec<(f64, f64)>> {
+    let mut s = state.lock();
+    let e = session(&mut s)?;
+    let cur = Arc::clone(e.current());
+    Ok(audio_engine::detect_silence(
+        &cur,
+        threshold_db.unwrap_or(-50.0).clamp(-100.0, 0.0),
+        min_s.unwrap_or(0.3).clamp(0.02, 60.0),
+        0.02,
+    ))
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct Contrast {
+    pub foreground_db: f32,
+    pub background_db: f32,
+    pub difference_db: f32,
+}
+
+/// A11: RMS of a foreground selection against a background one (dB), as Audacity's
+/// Contrast tool (WCAG wants ≥ 20 dB between speech and its background).
+#[tauri::command]
+pub async fn edit_contrast(
+    state: State<'_, AppState>,
+    fg_a: f64,
+    fg_b: f64,
+    bg_a: f64,
+    bg_b: f64,
+) -> CmdResult<Contrast> {
+    let mut s = state.lock();
+    let e = session(&mut s)?;
+    let cur = Arc::clone(e.current());
+    let (fa, fb) = region(&cur, fg_a, fg_b)?;
+    let (ga, gb) = region(&cur, bg_a, bg_b)?;
+    let fg = linear_to_dbfs(cur.slice_frames(fa, fb).rms());
+    let bg = linear_to_dbfs(cur.slice_frames(ga, gb).rms());
+    Ok(Contrast {
+        foreground_db: fg,
+        background_db: bg,
+        difference_db: fg - bg,
+    })
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct EditSaved {
     pub project: ProjectView,

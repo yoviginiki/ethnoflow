@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type WheelEvent as RWheelEvent } from "react";
-import { api, describeError, type EditOp, type EditStatus, type EqBand, type PlayerStatus, type WaveformPeaks } from "./api";
+import { api, describeError, type Contrast, type EditOp, type EditStatus, type EqBand, type PlayerStatus, type Spectrogram, type SpectrumBand, type WaveformPeaks } from "./api";
+import { SpectrogramView } from "./SpectrogramView";
 import { formatDb, formatTime, isTypingTarget, takeName } from "./format";
 import { messages, type StringMessageKey } from "./i18n";
 import { useStore } from "./store";
@@ -77,6 +78,15 @@ export function EditScreen() {
   const [dn, setDn] = useState(DEFAULT_DENOISE);
   const [rep, setRep] = useState(DEFAULT_REPAIR);
   const [tm, setTm] = useState(DEFAULT_TIME);
+  // A11 analysis views.
+  const [showSpec, setShowSpec] = useState(false);
+  const [spec, setSpec] = useState<Spectrogram | null>(null);
+  const [spectrum, setSpectrum] = useState<SpectrumBand[] | null>(null);
+  const [silences, setSilences] = useState<[number, number][] | null>(null);
+  const [silenceDb, setSilenceDb] = useState(-50);
+  const [silenceMin, setSilenceMin] = useState(0.3);
+  const [bg, setBg] = useState<[number, number] | null>(null);
+  const [contrast, setContrast] = useState<Contrast | null>(null);
   const statusRef = useRef(status);
   statusRef.current = status;
   const viewRef = useRef(view);
@@ -168,6 +178,42 @@ export function EditScreen() {
     }, 100);
     return () => window.clearInterval(id);
   }, [playing !== null]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The spectrogram follows the view and every change of the working copy.
+  useEffect(() => {
+    if (!showSpec || !status) {
+      setSpec(null);
+      return;
+    }
+    api
+      .editSpectrogram(view ? view[0] : null, view ? view[1] : null, 400, 96)
+      .then(setSpec)
+      .catch(fail);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showSpec, status?.index, status?.versions.length, view?.[0], view?.[1]]);
+  const analyseSpectrum = async () => {
+    const r = region();
+    try {
+      setSpectrum(await api.editSpectrum(r[0], r[1], 64));
+    } catch (e) {
+      fail(e);
+    }
+  };
+  const findSilences = async () => {
+    try {
+      setSilences(await api.editSilences(silenceDb, silenceMin));
+    } catch (e) {
+      fail(e);
+    }
+  };
+  const measureContrast = async () => {
+    if (!selection || !bg) return;
+    try {
+      setContrast(await api.editContrast(selection[0], selection[1], bg[0], bg[1]));
+    } catch (e) {
+      fail(e);
+    }
+  };
 
   const run = useCallback(
     async (op: EditOp) => {
@@ -442,8 +488,68 @@ export function EditScreen() {
           <button className="ghost small" onClick={() => setSelection(null)} disabled={!selection}>
             {t.clearSelection}
           </button>
+          <button className={`ghost small ${showSpec ? "on" : ""}`} onClick={() => setShowSpec((v) => !v)} aria-pressed={showSpec} title={t.specHint}>
+            {t.specToggle}
+          </button>
         </div>
+        {showSpec && <SpectrogramView grid={spec} label={t.specToggle} />}
       </section>
+
+      {status && (
+        <section className="panel" aria-label={t.editAnalysis}>
+          <div className="analysis-row">
+            <h3>{t.editAnalysis}</h3>
+            <button className="small" onClick={() => void analyseSpectrum()}>
+              {t.specPlot}
+            </button>
+            <span className="muted small">{selection ? t.editOnSelection : t.editOnWhole}</span>
+          </div>
+          {spectrum && (
+            <div className="spectrum-bars" role="img" aria-label={t.specPlot}>
+              {spectrum.map((b) => (
+                <span key={b.hz} className="spectrum-bar" style={{ height: `${Math.max(2, ((b.db + 90) / 90) * 100)}%` }} title={`${b.hz >= 1000 ? (b.hz / 1000).toFixed(1) + " kHz" : Math.round(b.hz) + " Hz"}: ${b.db.toFixed(1)} dB`} />
+              ))}
+            </div>
+          )}
+          <div className="analysis-row small">
+            <button className="small" onClick={() => void findSilences()}>
+              {t.silenceFind}
+            </button>
+            <label className="inline">
+              {t.silenceBelow}
+              <input type="number" min={-100} max={0} value={silenceDb} onChange={(e) => setSilenceDb(Number(e.target.value))} style={{ width: 64 }} /> dB
+            </label>
+            <label className="inline">
+              {t.silenceMin}
+              <input type="number" min={0.02} max={60} step={0.1} value={silenceMin} onChange={(e) => setSilenceMin(Number(e.target.value))} style={{ width: 64 }} /> s
+            </label>
+            {silences && (
+              <span className="muted">
+                {silences.length} {t.silenceFound}
+                {silences.slice(0, 12).map(([a, b], i) => (
+                  <button key={i} className="ghost small" onClick={() => setSelection([a, b])}>
+                    {formatTime(a)}–{formatTime(b)}
+                  </button>
+                ))}
+              </span>
+            )}
+          </div>
+          <div className="analysis-row small">
+            <button className="small" onClick={() => selection && setBg(selection)} disabled={!selection} title={t.contrastBgHint}>
+              {t.contrastBg}
+            </button>
+            <span className="muted">{bg ? `${formatTime(bg[0])}–${formatTime(bg[1])}` : "—"}</span>
+            <button className="small" onClick={() => void measureContrast()} disabled={!selection || !bg}>
+              {t.contrastMeasure}
+            </button>
+            {contrast && (
+              <span className="mono-num">
+                {t.contrastFg} {contrast.foreground_db.toFixed(1)} dB · {t.contrastBgLabel} {contrast.background_db.toFixed(1)} dB · Δ {contrast.difference_db.toFixed(1)} dB {contrast.difference_db >= 20 ? "✓" : "⚠"}
+              </span>
+            )}
+          </div>
+        </section>
+      )}
 
       <section className="panel">
         <div className="analysis-row">

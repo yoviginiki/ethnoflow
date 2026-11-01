@@ -3,6 +3,14 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Editor analysis — A11 (2026-11-01 evening).** `crates/analysis/src/spectrum.rs`:
+  `spectrum` (averaged magnitude in log bands, dBFS, a full-scale sine reads ~0 dB) and
+  `spectrogram` (cols × rows dB grid, log frequency 40 Hz…Nyquist); tests: the tone's band
+  peaks, a pitch change moves the hot row. Commands `edit_spectrum`, `edit_spectrogram`,
+  `edit_silences` (the engine's `detect_silence`), `edit_contrast` (RMS foreground vs.
+  background); the Edit tab gets a "Spectrogram" view under the waveform (heat map canvas)
+  and an "Analysis" panel (spectrum bars, silence finder with click-to-select, contrast).
+  Bridge ops, smoke (silenced head found, spectrum peak, contrast > 20 dB), guide BG/EN.
 - **Tempo and pitch — A6 (2026-11-01 evening).** `crates/analysis/src/stretch.rs`: phase
   vocoder (Hann 2048, analysis hop 512, true-frequency phase propagation, synthesis hop
   512 × factor, OLA normalised) for `time_stretch` (×0.25…×4) and `pitch_shift` (stretch by

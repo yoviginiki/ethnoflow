@@ -6,6 +6,8 @@
 //! ground truth: the user corrects everything in the map.
 
 pub mod denoise;
+pub mod spectrum;
+pub use spectrum::{spectrogram, spectrum, Spectrogram, SpectrumBand};
 pub mod stretch;
 pub use denoise::{denoise, noise_profile, NoiseProfile};
 pub use stretch::{pitch_shift, time_stretch};
