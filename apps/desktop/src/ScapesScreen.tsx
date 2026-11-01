@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Ambient } from "./Ambient";
+import { Fold } from "./Fold";
 import { api, describeError } from "./api";
 import { KIND_LABEL } from "./ambientPresets";
 import { formatTime } from "./format";
@@ -175,12 +176,12 @@ export function ScapesScreen() {
         <div className="muted small">{t.scapesEditHint}</div>
       </section>
 
-      {/* The whole rack editor (layers / modules with knobs, samples, scenes, mixer, macros) on the Soundscapes rack. */}
-      <section className="panel scapes-editor" data-coach="scapes-editor">
-        <h3>{t.scapesEditorTitle}</h3>
+      {/* The whole rack editor on the Soundscapes rack, folded by default (owner 1.11: the two
+          tabs looked the same once scrolled; the journey is what makes this one different). */}
+      <Fold id="scapes-editor" label={t.scapesEditorTitle} chip={t.scapesEditorChip}>
         <div className="muted small">{t.scapesEditorHint}</div>
-      </section>
-      <Ambient kind="scapes" />
+        <Ambient kind="scapes" />
+      </Fold>
     </main>
   );
 }
