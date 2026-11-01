@@ -554,8 +554,8 @@ async function main() {
       if (!(tail > dryTail * 4 && tail > 1e-4)) throw new Error(`send tail ${tail.toExponential(2)} vs dry ${dryTail.toExponential(2)}`);
       if (r3.gain_db !== 0) throw new Error(`target_lufs null but gain ${r3.gain_db}`);
       // Home-studio item 4: the track compressor (threshold −36, ratio 20) squeezes the
-      // clips stem; a −24 dB high shelf takes the top out of it.
-      expectOk(send({ op: "set_arrangement", arrangement: { ...arr, tracks: [track(0, 0, { comp_threshold_db: -36, comp_ratio: 20 })], loop_region: null } }));
+      // clips stem (0.1 ms attack so the drum transients are caught too).
+      expectOk(send({ op: "set_arrangement", arrangement: { ...arr, tracks: [track(0, 0, { comp_threshold_db: -36, comp_ratio: 20, comp_attack_ms: 0.1, comp_release_ms: 300 })], loop_region: null } }));
       const squeezed = path.join(OUT_DIR, "strip-comp.wav");
       const r4 = expectOk(send({ op: "export_song", path: squeezed, seconds: 3, rhythm: false, drone: false, pad: false, ambient: false, target_lufs: null }));
       const dryPeak = wavStats(r3.stems.find((p) => /clips/i.test(path.basename(p)))).peak;
