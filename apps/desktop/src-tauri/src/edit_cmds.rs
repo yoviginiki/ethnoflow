@@ -10,9 +10,9 @@
 use std::sync::Arc;
 
 use audio_engine::{
-    apply_recipe, compress, compute_peaks, decode_file, eq, fade, gain, limit, linear_to_dbfs,
-    nearest_zero_crossing, normalize, read_wav, reverse, write_wav, AudioBuffer, EqBand,
-    PlayOptions, Player, PlayerStatus, WavFormat, WaveformPeaks,
+    apply_recipe, compress, compute_peaks, declick, declip, decode_file, deess, eq, fade, gain,
+    limit, linear_to_dbfs, nearest_zero_crossing, normalize, read_wav, reverse, write_wav,
+    AudioBuffer, EqBand, PlayOptions, Player, PlayerStatus, WavFormat, WaveformPeaks,
 };
 use project::{TakeHealth, TakeState};
 use serde::{Deserialize, Serialize};
@@ -122,6 +122,17 @@ pub enum EditOp {
         reduction_db: f32,
         sensitivity: f32,
     },
+    /// A5: rebuild clipped runs (threshold 0.5..1 of full scale).
+    Declip { a: f64, b: f64, threshold: f32 },
+    /// A5: duck the band above 4 kHz while it is loud (threshold dBFS, amount dB).
+    Deess {
+        a: f64,
+        b: f64,
+        threshold_db: f32,
+        amount_db: f32,
+    },
+    /// A5: remove clicks (sensitivity 2..40 × local RMS of the derivative).
+    Declick { a: f64, b: f64, sensitivity: f32 },
 }
 
 impl EditOp {
@@ -144,6 +155,9 @@ impl EditOp {
             EditOp::Limit { .. } => "limit",
             EditOp::NoiseProfile { .. } => "noise_profile",
             EditOp::Denoise { .. } => "denoise",
+            EditOp::Declip { .. } => "declip",
+            EditOp::Deess { .. } => "deess",
+            EditOp::Declick { .. } => "declick",
         }
     }
 }
@@ -534,6 +548,58 @@ fn compute(e: &mut EditSession, op: &EditOp) -> CmdResult<Option<AudioBuffer>> {
                 AudioBuffer::new(sr, ch, y)
             }))
         }
+        EditOp::Declip { a, b, threshold } => {
+            let (fa, fb) = region(&cur, *a, *b)?;
+            let mut err_out = None;
+            let out = replace_region(&cur, fa, fb, |m| match declip(m, *threshold) {
+                Ok(x) => x,
+                Err(e) => {
+                    err_out = Some(e);
+                    m.clone()
+                }
+            });
+            if let Some(e) = err_out {
+                return Err(err("invalid_argument", e.to_string()));
+            }
+            Some(out)
+        }
+        EditOp::Deess {
+            a,
+            b,
+            threshold_db,
+            amount_db,
+        } => {
+            let (fa, fb) = region(&cur, *a, *b)?;
+            let mut err_out = None;
+            let out = replace_region(&cur, fa, fb, |m| {
+                match deess(m, *threshold_db, *amount_db) {
+                    Ok(x) => x,
+                    Err(e) => {
+                        err_out = Some(e);
+                        m.clone()
+                    }
+                }
+            });
+            if let Some(e) = err_out {
+                return Err(err("invalid_argument", e.to_string()));
+            }
+            Some(out)
+        }
+        EditOp::Declick { a, b, sensitivity } => {
+            let (fa, fb) = region(&cur, *a, *b)?;
+            let mut err_out = None;
+            let out = replace_region(&cur, fa, fb, |m| match declick(m, *sensitivity) {
+                Ok(x) => x,
+                Err(e) => {
+                    err_out = Some(e);
+                    m.clone()
+                }
+            });
+            if let Some(e) = err_out {
+                return Err(err("invalid_argument", e.to_string()));
+            }
+            Some(out)
+        }
         EditOp::Limit { a, b, ceiling_db } => {
             let (fa, fb) = region(&cur, *a, *b)?;
             let mut err_out = None;
@@ -581,7 +647,8 @@ pub async fn edit_preview(
             (*a, *b)
         }
         EditOp::Gain { a, b, .. } | EditOp::Normalize { a, b, .. } => (*a, *b),
-        EditOp::Denoise { a, b, .. } => (*a, *b),
+        EditOp::Denoise { a, b, .. } | EditOp::Declip { a, b, .. } => (*a, *b),
+        EditOp::Deess { a, b, .. } | EditOp::Declick { a, b, .. } => (*a, *b),
         EditOp::FadeIn { a, b } | EditOp::FadeOut { a, b } | EditOp::Reverse { a, b } => (*a, *b),
         _ => {
             return Err(err(

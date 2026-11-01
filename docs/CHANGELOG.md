@@ -3,6 +3,13 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Repairs — A5 second slice (2026-11-01 evening): de-clipper, de-esser, click removal.**
+  `fx.rs`: `declip` (runs at / above a threshold rebuilt by Catmull-Rom interpolation, then
+  scaled under 0 dBFS), `deess` (one-pole split at 4 kHz, envelope with 1 ms / 40 ms,
+  the top band ducked above a threshold by up to the amount), `declick` (derivative
+  outliers vs. the local RMS, up to 1 ms rebuilt); tests: a squashed sine is rebuilt, 7 kHz
+  ducked while 440 Hz stays, an impulse goes while the music before it is bit-identical.
+  Editor ops with preview, forms in the effects panel, bridge doc, smoke round trip.
 - **Noise reduction — A5 first slice (2026-11-01 evening).** `crates/analysis/src/denoise.rs`:
   noise profile (mean STFT magnitude per bin of a noise-only selection) and spectral
   subtraction with a soft knee, 3-bin frequency smoothing and fast-open / slow-close time

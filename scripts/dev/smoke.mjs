@@ -723,6 +723,14 @@ async function main() {
       const dn = expectOk(send({ op: "edit", edit: { op: "denoise", a: 0, b: len, reduction_db: 12, sensitivity: 1.5 } }));
       near(dn.seconds, len, "denoise keeps the length");
       if (dn.peak_dbfs > eqd.peak_dbfs + 0.5) throw new Error(`denoise raised the peak ${eqd.peak_dbfs} → ${dn.peak_dbfs}`);
+      // A5 repairs round-trip: declip / de-ess / declick keep the length and never raise the peak.
+      let last = dn;
+      for (const edit of [{ op: "declip", a: 0, b: len, threshold: 0.95 }, { op: "deess", a: 0, b: len, threshold_db: -24, amount_db: 8 }, { op: "declick", a: 0, b: len, sensitivity: 8 }]) {
+        const r = expectOk(send({ op: "edit", edit }));
+        near(r.seconds, len, `${edit.op} keeps the length`);
+        if (r.peak_dbfs > last.peak_dbfs + 0.5) throw new Error(`${edit.op} raised the peak ${last.peak_dbfs} → ${r.peak_dbfs}`);
+        last = r;
+      }
       near(expectOk(send({ op: "edit_jump", step: 1 })).seconds, len - 1, "jump to step 1");
       const saved = expectOk(send({ op: "edit_save", label: "smoke edit" }));
       const tk = saved.project.takes.find((x) => x.id === saved.take_id);

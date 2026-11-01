@@ -1600,7 +1600,10 @@ export type EditOp =
   | { op: "compress"; a: number; b: number; threshold_db: number; ratio: number; attack_ms: number; release_ms: number; makeup_db: number }
   | { op: "limit"; a: number; b: number; ceiling_db: number }
   | { op: "noise_profile"; a: number; b: number }
-  | { op: "denoise"; a: number; b: number; reduction_db: number; sensitivity: number };
+  | { op: "denoise"; a: number; b: number; reduction_db: number; sensitivity: number }
+  | { op: "declip"; a: number; b: number; threshold: number }
+  | { op: "deess"; a: number; b: number; threshold_db: number; amount_db: number }
+  | { op: "declick"; a: number; b: number; sensitivity: number };
 
 /** One band of the editor's EQ (A7 = E3). */
 export interface EqBand {

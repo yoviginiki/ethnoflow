@@ -29,9 +29,13 @@ const OP_LABEL: Record<string, StringMessageKey> = {
   limit: "opLimit",
   noise_profile: "opNoiseProfile",
   denoise: "opDenoise",
+  declip: "opDeclip",
+  deess: "opDeess",
+  declick: "opDeclick",
 };
 
-type FxKind = "eq" | "compress" | "limit" | "denoise";
+type FxKind = "eq" | "compress" | "limit" | "denoise" | "declip" | "deess" | "declick";
+const DEFAULT_REPAIR = { threshold: 0.95, threshold_db: -24, amount_db: 8, sensitivity: 8 };
 const DEFAULT_DENOISE = { reduction_db: 12, sensitivity: 1.5 };
 const DEFAULT_BANDS: EqBand[] = [
   { kind: "low_shelf", hz: 200, gain_db: 0, q: 1 },
@@ -68,6 +72,7 @@ export function EditScreen() {
   const [comp, setComp] = useState(DEFAULT_COMP);
   const [lim, setLim] = useState(DEFAULT_LIMIT);
   const [dn, setDn] = useState(DEFAULT_DENOISE);
+  const [rep, setRep] = useState(DEFAULT_REPAIR);
   const statusRef = useRef(status);
   statusRef.current = status;
   const viewRef = useRef(view);
@@ -242,6 +247,9 @@ export function EditScreen() {
     if (fx === "compress") return { op: "compress", a: r[0], b: r[1], ...comp };
     if (fx === "limit") return { op: "limit", a: r[0], b: r[1], ...lim };
     if (fx === "denoise") return { op: "denoise", a: r[0], b: r[1], ...dn };
+    if (fx === "declip") return { op: "declip", a: r[0], b: r[1], threshold: rep.threshold };
+    if (fx === "deess") return { op: "deess", a: r[0], b: r[1], threshold_db: rep.threshold_db, amount_db: rep.amount_db };
+    if (fx === "declick") return { op: "declick", a: r[0], b: r[1], sensitivity: rep.sensitivity };
     return null;
   };
   const previewFx = async () => {
@@ -511,9 +519,9 @@ export function EditScreen() {
         <section className="panel" aria-label={t.editFx}>
           <div className="analysis-row">
             <h3>{t.editFx}</h3>
-            {(["eq", "compress", "limit", "denoise"] as FxKind[]).map((k) => (
+            {(["eq", "compress", "limit", "denoise", "declip", "deess", "declick"] as FxKind[]).map((k) => (
               <button key={k} className={`small ${fx === k ? "primary" : ""}`} onClick={() => setFx(fx === k ? null : k)}>
-                {k === "eq" ? t.fxEq : k === "compress" ? t.fxCompress : k === "limit" ? t.fxLimit : t.fxDenoise}
+                {k === "eq" ? t.fxEq : k === "compress" ? t.fxCompress : k === "limit" ? t.fxLimit : k === "denoise" ? t.fxDenoise : k === "declip" ? t.fxDeclip : k === "deess" ? t.fxDeess : t.fxDeclick}
               </button>
             ))}
             <span className="muted small">{t.editFxHint}</span>
@@ -590,6 +598,41 @@ export function EditScreen() {
                 <input type="range" min={0.5} max={4} step={0.1} value={dn.sensitivity} onChange={(e) => setDn({ ...dn, sensitivity: Number(e.target.value) })} />
                 <span className="mono-num">{dn.sensitivity.toFixed(1)}</span>
               </label>
+            </div>
+          )}
+          {fx === "declip" && (
+            <div className="fx-form analysis-row">
+              <label className="inline small">
+                {t.fxClipThreshold}
+                <input type="range" min={0.5} max={1} step={0.01} value={rep.threshold} onChange={(e) => setRep({ ...rep, threshold: Number(e.target.value) })} />
+                <span className="mono-num">{Math.round(rep.threshold * 100)}%</span>
+              </label>
+              <span className="muted small">{t.fxDeclipHint}</span>
+            </div>
+          )}
+          {fx === "deess" && (
+            <div className="fx-form analysis-row">
+              <label className="inline small">
+                {t.compThreshold}
+                <input type="range" min={-60} max={0} step={1} value={rep.threshold_db} onChange={(e) => setRep({ ...rep, threshold_db: Number(e.target.value) })} />
+                <span className="mono-num">{rep.threshold_db} dB</span>
+              </label>
+              <label className="inline small">
+                {t.fxAmount}
+                <input type="range" min={0} max={24} step={1} value={rep.amount_db} onChange={(e) => setRep({ ...rep, amount_db: Number(e.target.value) })} />
+                <span className="mono-num">{rep.amount_db} dB</span>
+              </label>
+              <span className="muted small">{t.fxDeessHint}</span>
+            </div>
+          )}
+          {fx === "declick" && (
+            <div className="fx-form analysis-row">
+              <label className="inline small">
+                {t.fxSensitivity}
+                <input type="range" min={2} max={40} step={1} value={rep.sensitivity} onChange={(e) => setRep({ ...rep, sensitivity: Number(e.target.value) })} />
+                <span className="mono-num">{rep.sensitivity}×</span>
+              </label>
+              <span className="muted small">{t.fxDeclickHint}</span>
             </div>
           )}
           {fx && (
