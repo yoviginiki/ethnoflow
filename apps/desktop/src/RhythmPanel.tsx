@@ -52,7 +52,12 @@ function Sliders<T extends object>({ specs, value, onChange, disabled }: { specs
  * following the project's tempo/meter and the current chord. Runs through
  * `useBackgroundLayers` like the drone and the pad; this panel edits the prefs.
  */
-export function RhythmPanel() {
+export interface RhythmPanelProps {
+  /** Rhythm studio: open the part's instrument in the editor next to the parts instead of leaving the screen. */
+  onEdit?: (presetId: string, assign: (id: string) => void) => void;
+}
+
+export function RhythmPanel({ onEdit }: RhythmPanelProps = {}) {
   const s = useStore();
   const t = messages[s.prefs.lang];
   const project = s.project!;
@@ -182,7 +187,9 @@ export function RhythmPanel() {
           className="ghost small"
           title={t.igOpenDesigner}
           onClick={() => {
-            s.setDesignerId(r.instruments?.[part] ?? defaultInstrument(part));
+            const id = r.instruments?.[part] ?? defaultInstrument(part);
+            if (onEdit) return onEdit(id, (nid) => setInstrument(part, nid));
+            s.setDesignerId(id);
             s.setScreen("instrument");
           }}
         >
@@ -587,7 +594,9 @@ export function RhythmPanel() {
               className="ghost small"
               title={t.igOpenDesigner}
               onClick={() => {
-                s.setDesignerId(x.instrument ?? EXTRA_DEFAULT_PRESET[x.kind]);
+                const id = x.instrument ?? EXTRA_DEFAULT_PRESET[x.kind];
+                if (onEdit) return onEdit(id, (nid) => patchExtra(x.id, { instrument: nid }));
+                s.setDesignerId(id);
                 s.setScreen("instrument");
               }}
             >

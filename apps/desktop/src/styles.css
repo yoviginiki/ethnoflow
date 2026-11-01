@@ -759,3 +759,11 @@ button.ghost.on { border-color: var(--accent); color: var(--accent); }
 .scene-matrix th, .scene-matrix td { border-bottom: 1px solid var(--axis); padding: 4px 6px; text-align: left; vertical-align: top; }
 .scene-matrix td.off { opacity: 0.55; }
 .scene-matrix input[type="range"] { width: 110px; vertical-align: middle; }
+
+/* Rhythm studio (1.11 evening) */
+.rhythm-studio { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 12px; align-items: start; }
+@media (max-width: 1100px) { .rhythm-studio { grid-template-columns: 1fr; } }
+.instrument-picker { display: flex; flex-direction: column; gap: 6px; max-height: 80vh; }
+.rhythm-parts { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.forge-layout.compact { grid-template-columns: 1fr; }
+.forge.compact .forge-main { padding: 0; border: 0; background: transparent; }

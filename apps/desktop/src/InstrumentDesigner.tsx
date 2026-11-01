@@ -8,10 +8,10 @@ import { messages, type StringMessageKey } from "./i18n";
 import { DEFAULT_RHYTHM, useStore } from "./store";
 import { newExtraPart } from "./extraParts";
 
-type Cat = "drums" | "bass" | "synth" | "tapan" | "chordpad" | "lead";
+export type Cat = "drums" | "bass" | "synth" | "tapan" | "chordpad" | "lead";
 const PART_NAME: Record<"drums" | "bass" | "ostinato" | "arp", StringMessageKey> = { drums: "igPartDrums", bass: "igPartBass", ostinato: "igPartOstinato", arp: "igPartArp" };
-const CATS: Cat[] = ["drums", "bass", "synth", "tapan", "chordpad", "lead"];
-const CAT_LABEL: Record<Cat, StringMessageKey> = { drums: "igCatDrums", bass: "igCatBass", synth: "igCatSynth", tapan: "igCatTapan", chordpad: "igCatChordPad", lead: "igCatLead" };
+export const CATS: Cat[] = ["drums", "bass", "synth", "tapan", "chordpad", "lead"];
+export const CAT_LABEL: Record<Cat, StringMessageKey> = { drums: "igCatDrums", bass: "igCatBass", synth: "igCatSynth", tapan: "igCatTapan", chordpad: "igCatChordPad", lead: "igCatLead" };
 /** Rack kind for the categories that live in the Instrument Rack (P1 R3). */
 const RACK_KIND: Partial<Record<string, ExtraKind>> = { tapan: "tapan", chordpad: "chord_pad", lead: "lead" };
 /** Factory ids → localized names. */
@@ -176,7 +176,15 @@ const fromPos = (k: KnobSpec, p: number) => {
  * delete, lineage, and "use in the rhythm section". The browser on the left lists
  * factory and user presets by category.
  */
-export function InstrumentDesigner() {
+export interface DesignerProps {
+  /** Compact: no browser, edit exactly `presetId` (the Rhythm studio's part editor). */
+  compact?: boolean;
+  presetId?: string | null;
+  /** Called with the id of a saved copy / update, so the caller can point its part at it. */
+  onSaved?: (id: string) => void;
+}
+
+export function InstrumentDesigner({ compact = false, presetId = null, onSaved }: DesignerProps = {}) {
   const s = useStore();
   const t = messages[s.prefs.lang];
   const [list, setList] = useState<InstrumentSummary[]>([]);
@@ -198,7 +206,7 @@ export function InstrumentDesigner() {
     try {
       const l = await api.instrumentList(cat, query.trim() || null);
       setList(l);
-      const id = selectId ?? s.designerId ?? l[0]?.id ?? null;
+      const id = selectId ?? (compact ? presetId : null) ?? s.designerId ?? l[0]?.id ?? null;
       if (id && (!preset || preset.id !== id || selectId)) {
         const p = await api.instrumentGet(id);
         setPreset(p);
@@ -211,9 +219,9 @@ export function InstrumentDesigner() {
     }
   };
   useEffect(() => {
-    void refresh();
+    void refresh(compact ? presetId : undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cat, query]);
+  }, [cat, query, compact ? presetId : null]);
   useEffect(
     () => () => {
       void api.instrumentAuditionStop().catch(() => undefined);
@@ -276,6 +284,7 @@ export function InstrumentDesigner() {
       setSaving(null);
       setNewName("");
       s.setMessage(`${t.presetSaved}: ${saved.name}`);
+      onSaved?.(saved.id);
       await refresh(saved.id);
     } catch (e) {
       fail(e);
@@ -288,6 +297,7 @@ export function InstrumentDesigner() {
       setPreset(saved);
       setBase(saved);
       s.setMessage(`${t.presetUpdated}: ${saved.name}`);
+      onSaved?.(saved.id);
       await refresh(saved.id);
     } catch (e) {
       fail(e);
@@ -345,9 +355,10 @@ export function InstrumentDesigner() {
   const partsFor = (c: string): ("drums" | "bass" | "ostinato" | "arp")[] => (c === "drums" ? ["drums"] : c === "bass" ? ["bass"] : c === "synth" ? ["ostinato", "arp"] : []);
 
   return (
-    <section className="forge">
-      <div className="muted small">{t.igIntro}</div>
-      <div className="forge-layout">
+    <section className={`forge ${compact ? "compact" : ""}`}>
+      {!compact && <div className="muted small">{t.igIntro}</div>}
+      <div className={`forge-layout ${compact ? "compact" : ""}`}>
+        {!compact && (
         <aside className="panel forge-browser">
           <div className="style-row">
             <button className={`ghost small ${cat === null ? "on" : ""}`} onClick={() => setCat(null)}>
@@ -380,6 +391,7 @@ export function InstrumentDesigner() {
             ))}
           </ul>
         </aside>
+        )}
 
         <div className="panel forge-main">
           {!preset || !voice ? (

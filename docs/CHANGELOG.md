@@ -3,6 +3,12 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Rhythm studio (2026-11-01 evening; owner: "същото и за ритъм секцията").** The Rhythm tab
+  gets an instrument list on the left (`InstrumentPicker.tsx`: categories, search, ▶
+  audition through the designer's audition path, + onto drums / bass / ostinato / arp or
+  as a tapan / chord-pad / lead part) and a part editor on the same screen: ✎ on a part
+  opens `InstrumentDesigner` in compact mode (`presetId`, no browser) and a saved copy is
+  wired back to the part (`onSaved`). Guide BG/EN.
 - **Soundscape studio + a rack bug fix (2026-11-01 evening; owner: "искам Soundscapes да е студио").**
   Bug: `commitRack` (the Modules view's debounced save) always wrote the atmosphere rack, so
   editing modules on the Soundscapes tab changed the atmosphere ("they became the same
