@@ -133,7 +133,7 @@ const audible = (p, min = 0.02) => {
   return `${path.basename(p)} ${s.seconds.toFixed(1)} s peak ${s.peak.toFixed(2)}`;
 };
 
-const SCREENS = ["home", "play", "tuner", "compose", "studio", "ambient", "rhythm", "live", "library", "instrument", "songmap", "samples", "references", "academy", "create", "start", "help"];
+const SCREENS = ["home", "play", "tuner", "compose", "studio", "ambient", "scapes", "rhythm", "live", "library", "instrument", "songmap", "samples", "references", "academy", "create", "start", "help"];
 
 async function main() {
   await step("bridge: ping", () => expectOk(send({ op: "ping" })).pong === true || Promise.reject(new Error("no pong")));
@@ -332,6 +332,19 @@ async function main() {
     if (after.includes(probe) || after.length !== before.length) throw new Error(JSON.stringify(after));
     return `${before.length} folder(s) kept, probe added and removed`;
   });
+  await step("soundscapes: a world builds a whole journey (4 scenes, breathing lanes) into the rack, silently, and the rack is restored", () => {
+    const list = expectOk(send({ op: "scapes" }));
+    if (!Array.isArray(list.worlds) || list.worlds.length < 6) throw new Error(JSON.stringify(list));
+    const r = expectOk(send({ op: "scapes_build", world: "rhodope-night", minutes: 2, seed: 7 }));
+    try {
+      if (r.scenes.length !== 4 || Math.abs(r.end_s - 120) > 2 || r.lanes !== 3 || r.playing !== false) throw new Error(JSON.stringify({ scenes: r.scenes.length, end_s: r.end_s, lanes: r.lanes, playing: r.playing }));
+      const now = expectOk(send({ op: "scapes" }));
+      if (now.current !== "rhodope-night" || !now.phase) throw new Error(JSON.stringify(now));
+      return `${r.layers} layers, scenes ${r.scenes.map((sc) => `${sc.name} ${sc.duration_s}s`).join(" → ")}, phase now: ${now.phase.name}`;
+    } finally {
+      if (r.previous) expectOk(send({ op: "set_ambient", ambient: r.previous }));
+    }
+  });
   await step("soundscapes: the old screen id opens Atmosphere in the modules view (alias)", () => {
     const r = expectOk(send({ op: "screen", screen: "soundscapes" }));
     if (r.screen !== "ambient") throw new Error(`screen is ${r.screen}`);
@@ -341,7 +354,7 @@ async function main() {
   });
   await step("areas: every tab of Play / Background / Song / Learn / Library is a screen of its area", () => {
     const list = expectOk(send({ op: "area" }));
-    const want = { play: ["play", "tuner"], background: ["compose", "ambient", "rhythm", "instrument", "live"], song: ["studio", "songmap", "create", "start"], learn: ["academy", "references"], library: ["library", "samples"] };
+    const want = { play: ["play", "tuner"], background: ["compose", "ambient", "scapes", "rhythm", "instrument", "live"], song: ["studio", "songmap", "create", "start"], learn: ["academy", "references"], library: ["library", "samples"] };
     for (const id of Object.keys(want)) if (JSON.stringify(list.tabs?.[id]) !== JSON.stringify(want[id])) throw new Error(`${id}: ${JSON.stringify(list.tabs?.[id])}`);
     let n = 0;
     for (const [id, tabs] of Object.entries(want)) {

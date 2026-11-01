@@ -8,6 +8,8 @@ import { applyLibraryPayload, applySession, collectSession, mergeSessionPrefs, p
 import { AREA_IDS, AREAS, areaMainScreen, areaOf, areaTabs } from "./areas";
 import { useStore, type LayerName, type Screen } from "./store";
 import { latestTake, loadTake, playLoaded, stopPlaying, continueLast } from "./takeActions";
+import { journeyWorld, phaseAt, WORLD_IDS, worldById } from "./scapes";
+import { startJourney, stopJourney } from "./scapesActions";
 import { readNowPlaying, stopAll } from "./nowPlaying";
 import { hzToMidi as tunerHzToMidi } from "./format";
 import { clampA4, readTuner, targetsFor, TUNER_INSTRUMENTS, type TunerInstrument } from "./tunerTargets";
@@ -114,6 +116,27 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
       const next = [...cur.filter((f) => !remove.has(f)), ...add.filter((f) => !cur.includes(f))];
       if (add.length || remove.size) s.setPref("sampleFolders", next);
       return { folders: useStore.getState().prefs.sampleFolders ?? [] };
+    }
+    case "scapes": {
+      // Soundscapes 2 (stage S1): the worlds and the journey in the rack now.
+      const st = useStore.getState();
+      const world = journeyWorld(st.ambient);
+      const ph = world ? phaseAt(st.ambient, st.ambientStatus?.program_position ?? 0) : null;
+      return { worlds: WORLD_IDS, current: world, phase: ph, playing: !!st.ambientStatus?.program_playing && st.layers.ambient, position_s: st.ambientStatus?.program_position ?? 0 };
+    }
+    case "scapes_build": {
+      // Build a world's journey into the rack (replaces it; `previous` comes back for a
+      // restore). `play: true` starts the atmosphere and the program — sound!
+      const w = worldById(String(cmd.world));
+      if (!w) throw new Error(`unknown world ${String(cmd.world)}; one of ${WORLD_IDS.join(", ")}`);
+      const previous = rack();
+      const built = await startJourney(w, { minutes: typeof cmd.minutes === "number" ? cmd.minutes : 8, seed: typeof cmd.seed === "number" ? cmd.seed : 1 + Math.floor(Math.random() * 1_000_000), loop: cmd.loop === true, play: cmd.play === true });
+      const end = built.program.scenes.reduce((m, sc) => Math.max(m, sc.start_s + sc.duration_s), 0);
+      return { world: w.id, layers: built.layers.length, scenes: built.program.scenes.map((sc) => ({ name: sc.name, start_s: sc.start_s, duration_s: sc.duration_s, transition_s: sc.transition_s })), lanes: built.automation.length, end_s: end, loop: built.program.loop_region !== null, playing: cmd.play === true, previous };
+    }
+    case "scapes_stop": {
+      await stopJourney();
+      return { playing: false };
     }
     case "continue": {
       // Home's "Continue": Play & record with the latest take loaded (none: ready to record).

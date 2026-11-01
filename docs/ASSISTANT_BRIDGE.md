@@ -55,6 +55,9 @@ rhythm_status, ambient_status }`
 | `screen` | `screen`: home/play/tuner/compose/studio/ambient/soundscapes/rhythm/live/library/instrument/songmap/samples/references/academy/create/start/help (every area is a screen with tabs: play = play/tuner, background = compose/ambient/rhythm/instrument/live; `soundscapes` is an alias that opens Atmosphere in its modules view, song = studio/songmap/create/start, learn = academy/references, library = library/samples) | navigates |
 | `area` | `area?`: play/background/song/learn/library | without `area`: lists the five Home areas, their tabs (`tabs`: area id → screen ids) and the current one; with it: opens the area's main screen (play → play, background → compose, song → studio, learn → academy, library → library), returns `{area, screen}` |
 | `sample_folders` | `add?`, `remove?`: arrays of absolute folder paths | Library › My samples: the scanned folders (`prefs.sampleFolders`); without fields just lists them; returns `folders` |
+| `scapes` | — | Soundscapes 2: the world ids, the journey in the rack now (`current`, `phase` {index, role, name, progress, remaining_s, end_s}, `playing`, `position_s`) |
+| `scapes_build` | `world`, `minutes?` (8), `seed?`, `loop?`, `play?` | builds the world's journey into the atmosphere rack (replaces it; returns `previous` for a restore) with 4 scenes and 3 breathing lanes; `play: true` **starts sound** (atmosphere on, program from 0) |
+| `scapes_stop` | — | stops the program and the atmosphere layer |
 | `continue` | — | Home's "▶ Continue": opens Play & record with the latest take loaded (no takes: empty, ready to record), no sound; returns `screen`, `loaded_id`, `latest_id` |
 | `set_prefs` | `prefs`: any of the pref keys, partial objects merge | drone/pad/rhythm/harmony/intent/master |
 | `layers` | `drone`/`pad`/`ambient`/`rhythm`/`metronome`: bool | **starts or stops sound** — tell the user first |

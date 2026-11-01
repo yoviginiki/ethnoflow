@@ -3,6 +3,19 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Soundscapes 2, stage S1: worlds → journeys (2026-11-01; owner: "обедини ги и после продължи
+  със създаването на soundscapes").** New Background tab "Soundscapes" (screen `scapes`):
+  six worlds (Ancient forest, Deep space, Cyberpunk rain, Rhodope night, Mountain morning,
+  Thracian steppe), length, seed, loop; "Play the journey" builds a whole composition on the
+  atmosphere engine that already exists — `scapes.ts` turns a world recipe into a rack of 5–6
+  layers, four scenes Intro → Development → Climax → Outro with transitions (events and pulses
+  silent in the intro and outro, macros rise and fall) and three "walk" automation lanes that
+  make brightness / space / motion breathe — then switches the atmosphere on and runs the
+  program; a timeline shows the phase and the time left; "Save as an atmosphere preset". The
+  rack stays editable in Atmosphere › Layers › Program. Bridge ops `scapes`, `scapes_build`
+  (returns `previous` for a restore; `play` is opt-in), `scapes_stop`; smoke builds a 2-minute
+  Rhodope night silently and restores the rack; vitest (4) checks the arc, determinism and
+  phaseAt. Guide BG/EN, bridge doc, plan status.
 - **Sample libraries + bridge op `sample_folders` (2026-11-01; owner: "малко са тези, дето имаме").** ELPHNT FIELD
   (153 WAV, CC0) downloaded to `DocumentsEthnoFlowSamplesELPHNT FIELD`; the bridge can list /
   add / remove the folders of Library › My samples (`prefs.sampleFolders`), smoke step added.

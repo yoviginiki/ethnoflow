@@ -294,6 +294,16 @@ new variant (seed) of the same exercise.
 From the terminal: `academy_lessons`, `academy_instance`, `academy_score_rhythm`,
 `academy_record`, `academy_reset` (see the bridge).
 
+## Background › Soundscapes (a journey: a whole composition)
+
+Home › Background › **Soundscapes** tab. Not just a background but a composition with a shape:
+
+- Pick a **world** (Ancient forest, Deep space, Cyberpunk rain, Rhodope night, Mountain morning, Thracian steppe), a **length** in minutes, a **seed** (🎲 Shuffle gives another journey, the same seed = the same journey) and whether it **loops**.
+- **▶ Play the journey** replaces the atmosphere rack with the world's layers and four scenes: **Intro** (only the bed, quiet), **Development** (textures come in, the first events), **Climax** (everything plays, brighter), **Outro** (everything withdraws). Transitions between scenes are smooth, and three "random walk" lanes make brightness, space and motion breathe. The bar under the worlds shows which phase runs and how much is left.
+- The result is an ordinary atmosphere rack: **Atmosphere › Layers › Program** edits the scenes and layers, and **Save as an atmosphere preset** keeps it in the Library.
+- Play and level are in the "Now playing" bar ("Atm."); ■ Stop stops the program and the layer.
+- Next stages (per `docs/design/SOUNDSCAPES_GENERATIVE_PLAN.md`): random events with tension and resolution, a pulse, orbital panning, reaction to the microphone.
+
 ## Background › Atmosphere › "Modules" view (the former Soundscapes)
 
 Atmosphere's top row has a **Layers / Modules** switch. "Modules" shows the same rack one module at a time with big knobs. Until 1.11 this was a separate "Soundscapes" screen; now it is one screen and one "Atm." switch in the "Now playing" bar, because the sound is the same. Old presets and links that led to Soundscapes open Atmosphere in this view.
