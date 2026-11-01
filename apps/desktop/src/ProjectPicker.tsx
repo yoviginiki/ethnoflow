@@ -3,6 +3,8 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { api, describeError, type RecentProject } from "./api";
 import { messages } from "./i18n";
 import { useStore } from "./store";
+import { applyTemplate, STARTER_TITLE } from "./templates";
+import { STARTER_IDS, type StarterId } from "./starters";
 
 export function ProjectPicker() {
   const t = messages[useStore((s) => s.prefs.lang)];
@@ -33,6 +35,7 @@ export function ProjectPicker() {
     }
   };
 
+  const [style, setStyle] = useState<StarterId | "">("");
   const onCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
@@ -40,6 +43,11 @@ export function ProjectPicker() {
     try {
       setError(null);
       setProject(await api.createProject(name.trim(), null), null);
+      if (style) {
+        // The template: the style's background, progression and world, no sound yet.
+        await applyTemplate(style, false);
+        useStore.getState().setMessage(`${t.templateApplied}: ${t[STARTER_TITLE[style]]}`);
+      }
     } catch (err) {
       setError(describeError(err));
     } finally {
@@ -64,6 +72,17 @@ export function ProjectPicker() {
         <label>
           {t.projectName}
           <input value={name} onChange={(e) => setName(e.target.value)} maxLength={120} autoFocus />
+        </label>
+        <label title={t.templateHint}>
+          {t.templateLabel}
+          <select value={style} onChange={(e) => setStyle(e.target.value as StarterId | "")}>
+            <option value="">{t.templateNone}</option>
+            {STARTER_IDS.map((id) => (
+              <option key={id} value={id}>
+                {t[STARTER_TITLE[id]]}
+              </option>
+            ))}
+          </select>
         </label>
         {dir && (
           <div className="muted small">

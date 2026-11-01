@@ -689,6 +689,24 @@ async function main() {
       send({ op: "edit_close" });
     }
   });
+  await step("export: FLAC 24-bit mix and stems (magic bytes, smaller than WAV)", () => {
+    const out = path.join(OUT_DIR, "song-flac.flac");
+    const r = expectOk(send({ op: "export_song", path: out, seconds: 4, format: "flac24", rhythm: false, drone: false, pad: false, ambient: true, target_lufs: null }));
+    if (!/\.flac$/i.test(r.path) || !fs.existsSync(r.path)) throw new Error(`no flac at ${r.path}`);
+    const head = fs.readFileSync(r.path).subarray(0, 4).toString("ascii");
+    if (head !== "fLaC") throw new Error(`magic ${JSON.stringify(head)}`);
+    const stem = r.stems.find((p) => /\.flac$/i.test(p));
+    if (!stem || fs.readFileSync(stem).subarray(0, 4).toString("ascii") !== "fLaC") throw new Error("stems are not FLAC");
+    const wav = path.join(OUT_DIR, "song-pcm24.wav");
+    const w = expectOk(send({ op: "export_song", path: wav, seconds: 4, format: "pcm24", rhythm: false, drone: false, pad: false, ambient: true, target_lufs: null, stems: false }));
+    if (!(r.bytes < w.bytes * 0.9)) throw new Error(`flac ${r.bytes} B vs wav ${w.bytes} B`);
+    return `${(r.bytes / 1024).toFixed(0)} kB FLAC vs ${(w.bytes / 1024).toFixed(0)} kB WAV 24, ${r.stems.length} stems`;
+  });
+  await step("what next: the header hint follows the path (takes → background → export)", () => {
+    const n = expectOk(send({ op: "what_next" }));
+    if (!n.key || !n.screen || !n.text) throw new Error(JSON.stringify(n));
+    return `${n.key} → ${n.screen}`;
+  });
   await step("export: whole song offline with stems", () => {
     const out = path.join(OUT_DIR, "song.wav");
     const r = expectOk(send({ op: "export_song", path: out, seconds: 6 }));
@@ -736,6 +754,20 @@ async function main() {
     });
     await step("sound: instrument audition 1 s", () => expectOk(send({ op: "instrument_audition", id: "factory:bass.pluck", seconds: 1 })).played);
   }
+  await step("template: a new project from the liquid DnB style has the progression, the world and the layers set", () => {
+    const r = expectOk(send({ op: "create_project", name: "smoke-template", style: "liquid_dnb" }));
+    try {
+      if (r.style !== "liquid_dnb") throw new Error(JSON.stringify(r));
+      const st = expectOk(send({ op: "state" }));
+      const genre = st.prefs?.progression?.genre;
+      const world = st.scapes_status?.world ?? st.scapes?.tags?.find?.((x) => x === "cyber-rain");
+      if (genre !== "liquid") throw new Error(`progression genre ${genre}`);
+      if (!st.prefs?.rhythm?.on && !st.prefs?.drone) throw new Error("no background prefs");
+      return `genre ${genre}, world ${world ?? "(journey built)"}`;
+    } finally {
+      expectOk(send({ op: "open_project", path: PROJECT }));
+    }
+  });
   await step("cleanup: your prefs, project and screen restored", () => {
     if (original.prefs.rhythm || original.prefs.mixer) expectOk(send({ op: "set_prefs", prefs: original.prefs }));
     if (original.project && original.project !== PROJECT) expectOk(send({ op: "open_project", path: original.project }));

@@ -836,11 +836,12 @@ pub async fn export_wav(
             .map(|l| Arc::clone(&l.buffer))
             .ok_or_else(|| err("no_take", "Nothing to export"))?
     };
-    let mut p = PathBuf::from(&path);
-    if p.extension().is_none_or(|e| !e.eq_ignore_ascii_case("wav")) {
-        p.set_extension("wav");
-    }
     let format = format.unwrap_or_default();
+    let mut p = PathBuf::from(&path);
+    let ext = format.extension();
+    if p.extension().is_none_or(|e| !e.eq_ignore_ascii_case(ext)) {
+        p.set_extension(ext);
+    }
     write_wav(&p, &buf, format)?;
     let bytes = std::fs::metadata(&p).map(|m| m.len()).unwrap_or(0);
     Ok(ExportResult {

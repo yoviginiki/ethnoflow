@@ -105,7 +105,7 @@ rhythm_status, ambient_status }`
 | `trainer_log` | `entry` | appends a trainer result (what the Studio trainer does after each report) |
 | `fingering_overrides` | `instrument?`, `overrides?` | without `overrides`: the user's chart corrections; with: validates and saves them (holes = 8 of c/o/x/h) |
 | `error_clear` | | clears the app's error banner |
-| `create_project` | `name` | closes the current project and creates a new one |
+| `create_project` | `name`, `style?` (one of the nine starter ids = a template) | closes the current project and creates a new one |
 | `instrument_list` | | instrument presets (id, name, category, factory) |
 | `instrument_render` | `id`, `out`, `seconds?`, `midi?` | renders a preset's audition pattern to a WAV (silent proof per instrument) |
 | `instrument_audition` | `id`, `seconds?` | **plays** a preset through the designer's audition path for a few seconds |
@@ -115,6 +115,7 @@ rhythm_status, ambient_status }`
 | `arrangement` | | the studio arrangement (tracks, clips, loop) |
 | `set_arrangement` | `arrangement` | replaces it (validated); track strips: gain_db, pan, lowpass_hz, highpass_hz, send |
 | `set_song_map` | `song_map` (whole SongMap) | replaces the project's song map (validated) |
+| `what_next` | | the "What next" hint of the header: `{key, screen, text}` |
 | `keyboard` | `on?`, `source?` (voice \| instrument), `octave?` (24..96), `lock?`, `velocity?`, `midi_input?` | the keyboard dock above the Now-playing bar: reads / sets it; returns `on, source, octave, lock, velocity, midi_input, midi_ports, synth_running, designer_voice, held` |
 | `note` | `midi`, `on?` (default true), `velocity?` | **sound**: one key where the dock points (the project's voice or the instrument being edited) |
 | `notes_off` | | releases everything the keyboard holds |
@@ -126,7 +127,7 @@ rhythm_status, ambient_status }`
 | `edit_play` | `from_s?`, `to_s?` | **sound**: plays the working copy; `stop_take` stops |
 | `edit_save` | `label?` | writes the current version as a new take derived from the original; returns `{project, take_id}` |
 | `edit_status` / `edit_close` | | the editor's status / close the session |
-| `export_song` | `path`, `seconds?`, `drone?`, `pad?`, `ambient?`, `rhythm?`, `stems?`, `target_lufs?` (number = normalise to it, `null` = as rendered, absent = the studio's setting, default −14) | the studio's whole-song export (mix + stems + markers + manifest); the result carries `lufs`, `lufs_after`, `gain_db` |
+| `export_song` | `path`, `seconds?`, `drone?`, `pad?`, `ambient?`, `rhythm?`, `stems?`, `target_lufs?` (number = normalise to it, `null` = as rendered, absent = the studio's setting, default −14), `format?` (float32 \| pcm24 \| pcm16 \| flac24 \| flac16; FLAC writes `.flac` for the mix and the stems) | the studio's whole-song export (mix + stems + markers + manifest); the result carries `lufs`, `lufs_after`, `gain_db` |
 | `reference_add` | `path` (WAV/MP3/FLAC/OGG) | copies the song into the references library (never into a project); reply: id, name, duration |
 | `reference_list` | | the references library (id, name, duration, analyzed) |
 | `reference_report` | `id` | the saved analysis report (tempo candidates, key hypotheses, segments) without the curves |

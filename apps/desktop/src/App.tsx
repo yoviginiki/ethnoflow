@@ -6,6 +6,7 @@ import { Home } from "./Home";
 import { NowPlayingBar } from "./NowPlayingBar";
 import { KeyboardDock } from "./KeyboardDock";
 import { useKeyboardRouting, useMidiInput } from "./keyboard";
+import { whatNext } from "./whatNext";
 import { PresetLibrary } from "./PresetLibrary";
 import { ScreenBoundary } from "./ScreenBoundary";
 import { useAssistantBridge } from "./assistant";
@@ -43,6 +44,20 @@ export default function App() {
   useMidiInput();
   useKeyboardRouting();
   const keyboardOn = useStore((s) => s.prefs.keyboardOn);
+  const layers = useStore((s) => s.layers);
+  const loaded = useStore((s) => s.loaded);
+  const clips = useStore((s) => s.arrangeClips);
+  const exportedMs = useStore((s) => s.lastSongExportMs);
+  const next = whatNext({
+    hasProject: !!project,
+    takes: project?.takes.length ?? 0,
+    hasScale: !!project?.scale,
+    loaded: !!loaded,
+    layersOn: layers,
+    clips,
+    exportedMs,
+    screen,
+  });
   useEffect(() => {
     void api
       .fingeringOverridesGet("kaval-d")
@@ -81,6 +96,9 @@ export default function App() {
           </div>
         </div>
         <div className="topbar-right">
+          <button className="ghost small what-next" onClick={() => setScreen(next.screen)} title={t.whatNextHint} data-coach="what-next">
+            → {t.whatNext}: {t[next.key]}
+          </button>
           {project && (
             <div className="session-bar" title={t.libSessionHint}>
               <span className="muted small">{t.libSession}</span>

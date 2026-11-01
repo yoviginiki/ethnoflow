@@ -409,11 +409,12 @@ pub async fn export_song(
     }
 
     // ---- files ----
-    let mut p = std::path::PathBuf::from(&path);
-    if p.extension().is_none_or(|e| !e.eq_ignore_ascii_case("wav")) {
-        p.set_extension("wav");
-    }
     let format = format.unwrap_or_default();
+    let mut p = std::path::PathBuf::from(&path);
+    let ext = format.extension();
+    if p.extension().is_none_or(|e| !e.eq_ignore_ascii_case(ext)) {
+        p.set_extension(ext);
+    }
     let mut mix = AudioBuffer::new(rate, ch as u16, out);
     // Loudness normalisation (home-studio item 4): measure the mix, lift or lower the
     // mix AND the stems by the same gain so they still sum, then a true-peak-ish
@@ -450,7 +451,7 @@ pub async fn export_song(
                     sum[k] += v;
                 }
             }
-            let sp = dir.join(format!("{name}.wav"));
+            let sp = dir.join(format!("{name}.{ext}"));
             write_wav(&sp, &AudioBuffer::new(rate, ch as u16, sum), format)?;
             stem_paths.push(sp.display().to_string());
         }

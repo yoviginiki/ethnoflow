@@ -255,3 +255,20 @@ API, more code for a tree-shaped format), `xml-rs` (older, slower), parsing in t
 (see above).
 Supply chain: crates.io, pinned at the 0.20 line; maintained (RazrFalcon, also author of
 `resvg`), ~30 M downloads, no dependencies.
+
+## ADR-0023 flacenc 0.5 for FLAC export (Apache-2.0)
+
+Context: home-studio item 8 (2026-11-01) wants a smaller lossless file than WAV for sharing
+the song and its stems; MP3 was asked for too.
+Decision: `flacenc` 0.5 (Apache-2.0), pure Rust, no C toolchain, no unsafe in our use,
+`default-features = false` (no threads, no logging, no serde), in `crates/audio-engine`
+(`flac.rs`: `encode_flac` / `write_flac`, 16 or 24 bit; `WavFormat::Flac24 / Flac16`
+route `write_wav` to it, so the take export and the song export (mix + stems) write
+`.flac` with the same code paths). Reading FLAC was already there (`decode.rs`).
+MP3 is NOT IMPLEMENTED: an encoder means LAME (LGPL, C) or a pure-Rust port with a
+patent-expired codec; it stays a separate owner decision (AUDIO_EDITOR_PLAN §5.3).
+Alternatives: `flac` 0.5 (older, decoder-focused), `rusty_flac` / `flac-io`
+(younger, fewer users), shelling out to `flac.exe` (a tool on the user's machine — rule:
+no toolchain on end-user machines).
+Supply chain: crates.io, pinned at the 0.5 line, author yotarok (also `flacenc-bin`),
+dependencies `heapless`, `md-5`, `seq-macro` (all pure Rust).

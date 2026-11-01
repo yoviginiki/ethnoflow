@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { open, save } from "@tauri-apps/plugin-dialog";
-import { api, describeError, IMPORT_EXTENSIONS, type Note, type NoteClass, type WavFormat } from "./api";
+import { api, describeError, formatExtension, IMPORT_EXTENSIONS, type Note, type NoteClass, type WavFormat } from "./api";
 import { HarmonyPanel, useHarmonyFollow, useHarmonyProposals } from "./HarmonyPanel";
 import { IntentPanel, usePerformanceAnalysis } from "./IntentPanel";
 import { AnalysisPanel } from "./AnalysisPanel";
@@ -534,10 +534,11 @@ export function Studio() {
   const onExport = async () => {
     if (!loadedTake) return;
     const base = takeName(loadedTake, t.take).replace(/[<>:"/\\|?*]/g, "_");
+    const ext = formatExtension(s.prefs.exportFormat);
     const path = await save({
       title: t.exportWav,
-      defaultPath: `${project.name} - ${base}.wav`,
-      filters: [{ name: "WAV", extensions: ["wav"] }],
+      defaultPath: `${project.name} - ${base}.${ext}`,
+      filters: [{ name: ext.toUpperCase(), extensions: [ext] }],
     });
     if (!path) return;
     const r = await withPending(t.exporting, () => api.exportWav(path, s.prefs.exportFormat));
@@ -898,9 +899,11 @@ export function Studio() {
             <label className="inline">
               {t.format}
               <select value={s.prefs.exportFormat} onChange={(e) => s.setPref("exportFormat", e.target.value as WavFormat)}>
-                <option value="float32">32-bit float</option>
-                <option value="pcm24">24-bit PCM</option>
-                <option value="pcm16">16-bit PCM</option>
+                <option value="float32">WAV 32-bit float</option>
+                <option value="pcm24">WAV 24-bit PCM</option>
+                <option value="pcm16">WAV 16-bit PCM</option>
+                <option value="flac24">FLAC 24-bit</option>
+                <option value="flac16">FLAC 16-bit</option>
               </select>
             </label>
             <button onClick={onExport} disabled={busy || !s.loaded}>

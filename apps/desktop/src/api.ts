@@ -1482,7 +1482,10 @@ export interface PlayerStatus {
   looping: boolean;
 }
 
-export type WavFormat = "float32" | "pcm24" | "pcm16";
+/** Export formats: WAV (float / 24 / 16) or FLAC (24 / 16, lossless, smaller). */
+export type WavFormat = "float32" | "pcm24" | "pcm16" | "flac24" | "flac16";
+export const EXPORT_FORMATS: WavFormat[] = ["float32", "pcm24", "pcm16", "flac24", "flac16"];
+export const formatExtension = (f: WavFormat) => (f === "flac24" || f === "flac16" ? "flac" : "wav");
 
 export interface ExportResult {
   path: string;

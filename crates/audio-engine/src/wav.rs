@@ -20,13 +20,30 @@ pub enum WavFormat {
     Pcm24,
     /// Integer PCM, 16 bit.
     Pcm16,
+    /// FLAC, 24 bit (lossless; `write_wav` writes a .flac file for these two).
+    Flac24,
+    /// FLAC, 16 bit.
+    Flac16,
+}
+
+impl WavFormat {
+    /// File extension for the format.
+    pub fn extension(self) -> &'static str {
+        match self {
+            WavFormat::Flac24 | WavFormat::Flac16 => "flac",
+            _ => "wav",
+        }
+    }
+    pub fn is_flac(self) -> bool {
+        matches!(self, WavFormat::Flac24 | WavFormat::Flac16)
+    }
 }
 
 fn spec_for(buffer: &AudioBuffer, format: WavFormat) -> WavSpec {
     let (bits, sample_format) = match format {
         WavFormat::Float32 => (32, SampleFormat::Float),
-        WavFormat::Pcm24 => (24, SampleFormat::Int),
-        WavFormat::Pcm16 => (16, SampleFormat::Int),
+        WavFormat::Pcm24 | WavFormat::Flac24 => (24, SampleFormat::Int),
+        WavFormat::Pcm16 | WavFormat::Flac16 => (16, SampleFormat::Int),
     };
     WavSpec {
         channels: buffer.channels,
@@ -43,9 +60,16 @@ pub fn write_wav<P: AsRef<Path>>(path: P, buffer: &AudioBuffer, format: WavForma
             "sample_rate must be > 0".into(),
         ));
     }
+    // FLAC goes through its own encoder (item 8); the WAV path below is unchanged.
+    match format {
+        WavFormat::Flac24 => return crate::flac::write_flac(path, buffer, 24),
+        WavFormat::Flac16 => return crate::flac::write_flac(path, buffer, 16),
+        _ => {}
+    }
     let spec = spec_for(buffer, format);
     let mut writer = WavWriter::create(path, spec)?;
     match format {
+        WavFormat::Flac24 | WavFormat::Flac16 => unreachable!("handled above"),
         WavFormat::Float32 => {
             for &s in &buffer.samples {
                 writer.write_sample(s)?;

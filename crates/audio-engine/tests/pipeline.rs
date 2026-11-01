@@ -29,6 +29,7 @@ fn synthetic_take_roundtrips_through_export_and_import() {
             WavFormat::Float32 => 0.0,
             WavFormat::Pcm24 => 2e-7,
             WavFormat::Pcm16 => 4e-5,
+            WavFormat::Flac24 | WavFormat::Flac16 => 2e-7,
         };
         let worst = take
             .samples

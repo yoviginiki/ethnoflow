@@ -464,6 +464,9 @@ interface Store {
   setCoachArrangement: (a: Arrangement | null) => void;
   /** When the whole song was last exported (the Create-a-song guide checks it). */
   lastSongExportMs: number | null;
+  /** Number of clips in the arrangement as My studio last saw it (null = not loaded). */
+  arrangeClips: number | null;
+  setArrangeClips: (n: number | null) => void;
   setLastSongExportMs: (ms: number | null) => void;
   liveView: LiveView | null;
   setLiveView: (v: LiveView | null) => void;
@@ -628,6 +631,8 @@ export const useStore = create<Store>((set, get) => ({
   coachArrangement: null,
   setCoachArrangement: (coachArrangement) => set({ coachArrangement }),
   lastSongExportMs: null,
+  arrangeClips: null,
+  setArrangeClips: (arrangeClips) => set({ arrangeClips }),
   setLastSongExportMs: (lastSongExportMs) => set({ lastSongExportMs }),
   setLiveRunning: (liveRunning) => set({ liveRunning }),
   liveView: null,

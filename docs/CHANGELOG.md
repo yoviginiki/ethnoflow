@@ -3,6 +3,17 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Templates, FLAC export, "What next" (home-studio item 8, 2026-11-01).** New project
+  form: "Template (style)" picks one of the nine starters and applies it through
+  `applyStyle` once the rack is loaded (`templates.ts`; bridge `create_project.style`).
+  FLAC: `crates/audio-engine/src/flac.rs` (`flacenc` 0.5, pure Rust, ADR-0023),
+  `WavFormat::Flac24 / Flac16` routed inside `write_wav`, `.flac` extension for the take
+  export and for the song mix + stems; format select next to Export mix; bridge
+  `export_song.format`. "What next" in the header (`whatNext.ts`: project → take → mode →
+  background → track → export → play along; vitest; bridge `what_next`); My studio
+  publishes its clip count. Smoke: FLAC magic + size vs WAV 24, what_next, a template
+  project (liquid DnB → progression genre liquid). MP3: NOT IMPLEMENTED (LAME is an
+  owner decision).
 - **The atmosphere knows the bar; Soundscapes events on the grid (home-studio item 7 = S2,
   2026-11-01).** One master beat clock in the app state (`Inner.master_clock`): the rhythm
   section drives it (tempo + start/stop, the song transport through it) and the event

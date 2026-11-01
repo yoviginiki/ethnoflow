@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { api, describeError, type Ambient as AmbientRack, type AmbientLayer, type EditOp, type LayerKind, type LayerSource, type LibraryKind, type Scale, type Timing, type Level, type TrainerLogEntry, type FingeringOverride, type Locks } from "./api";
+import { api, describeError, type Ambient as AmbientRack, type AmbientLayer, type EditOp, type LayerKind, type LayerSource, type LibraryKind, type Scale, type Timing, type Level, type TrainerLogEntry, type FingeringOverride, type Locks, type WavFormat } from "./api";
 import { startLive, stopLive } from "./LiveFollowPanel";
 import { makeSong } from "./makeSong";
 import type { StarterId } from "./starters";
@@ -10,6 +10,8 @@ import { messages } from "./i18n";
 import { DEFAULT_RHYTHM, useStore, type LayerName, type Screen } from "./store";
 import { latestTake, loadTake, playLoaded, stopPlaying, continueLast } from "./takeActions";
 import { heldNotes, keyboardAllOff, keyboardNote } from "./keyboard";
+import { applyTemplate, isStarterId } from "./templates";
+import { whatNext } from "./whatNext";
 import { journeyWorld, phaseAt, WORLD_IDS, worldById } from "./scapes";
 import { startJourney, stopJourney } from "./scapesActions";
 import { RACKS, type RackKind } from "./rackAdapter";
@@ -323,7 +325,9 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
       }
       const pv = await api.createProject(String(cmd.name ?? "smoke"), null);
       useStore.getState().setProject(pv, null);
-      return { name: pv.name, root: pv.root };
+      // `style`: one of the nine starters as a template (item 8).
+      const style = isStarterId(cmd.style) ? await applyTemplate(cmd.style, false) : null;
+      return { name: pv.name, root: pv.root, style };
     }
     case "instrument_list":
       return await api.instrumentList(null, null);
@@ -399,6 +403,11 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
       return { mode: st.mode, cursor_s: st.cursor };
     }
     // ---- keyboard everywhere (K1/K2) ----
+    case "what_next": {
+      const st = useStore.getState();
+      const n = whatNext({ hasProject: !!st.project, takes: st.project?.takes.length ?? 0, hasScale: !!st.project?.scale, loaded: !!st.loaded, layersOn: st.layers, clips: st.arrangeClips, exportedMs: st.lastSongExportMs, screen: st.screen });
+      return { key: n.key, screen: n.screen, text: t[n.key] };
+    }
     case "keyboard": {
       // Reads or sets the dock: on, source ("voice" | "instrument"), octave (24..96 base
       // MIDI), lock, velocity, midi_input (port name or null). Returns the dock's state.
@@ -512,7 +521,9 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
       // `target_lufs`: a number normalises to it, null leaves the mix as rendered,
       // absent = the studio's own setting (default −14).
       const targetLufs = cmd.target_lufs === undefined ? (s.prefs.exportLoudness ?? null) : typeof cmd.target_lufs === "number" ? cmd.target_lufs : null;
-      return await api.exportSong(String(cmd.path), include as never, s.prefs.exportFormat ?? null, null, typeof cmd.seconds === "number" ? cmd.seconds : null, cmd.stems !== false, targetLufs);
+      // `format`: float32 | pcm24 | pcm16 | flac24 | flac16 (default: the studio's setting).
+      const format = (typeof cmd.format === "string" ? cmd.format : s.prefs.exportFormat) as WavFormat;
+      return await api.exportSong(String(cmd.path), include as never, format ?? null, null, typeof cmd.seconds === "number" ? cmd.seconds : null, cmd.stems !== false, targetLufs);
     }
     case "instrument_audition": {
       // Plays a preset through the designer's audition path for a few seconds (sound!).

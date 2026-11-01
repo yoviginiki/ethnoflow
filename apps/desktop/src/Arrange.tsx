@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as RPointerEvent, type WheelEvent as RWheelEvent } from "react";
 import { open, save } from "@tauri-apps/plugin-dialog";
-import { api, describeError, IMPORT_EXTENSIONS, trackFx, type Arrangement, type ArrangeStatus, type Clip, type RecordingStatus, type TakeView, type Track, type WaveformPeaks, SECTION_NAMES } from "./api";
+import { api, describeError, formatExtension, IMPORT_EXTENSIONS, trackFx, type Arrangement, type ArrangeStatus, type Clip, type RecordingStatus, type TakeView, type Track, type WaveformPeaks, type WavFormat, SECTION_NAMES } from "./api";
 import { BackgroundTransport } from "./BackgroundTransport";
 import { droneRoot, droneSettings, padRoot, padSettings, voicingNotes } from "./layers";
 import { ConfirmDialog } from "./ConfirmDialog";
@@ -940,7 +940,8 @@ export function Arrange() {
     const st = useStore.getState();
     try {
       st.setError(null);
-      const path = await save({ title: t.exportMix, defaultPath: `${project.name}-song.wav`, filters: [{ name: "WAV", extensions: ["wav"] }] });
+      const ext = formatExtension(prefs.exportFormat);
+      const path = await save({ title: t.exportMix, defaultPath: `${project.name}-song.${ext}`, filters: [{ name: ext.toUpperCase(), extensions: [ext] }] });
       if (!path) return;
       st.setPending(t.exporting);
       // The background goes in exactly as it plays: the switched-on layers with their settings.
@@ -971,6 +972,10 @@ export function Arrange() {
   };
 
   const duration = useMemo(() => (arr ? arr.tracks.reduce((m, tr) => tr.clips.reduce((mm, c) => Math.max(mm, c.start + c.length), m), 0) : 0), [arr]);
+  // "What next" reads the clip count from the store (item 8).
+  useEffect(() => {
+    useStore.getState().setArrangeClips(arr ? arr.tracks.reduce((n, tr) => n + tr.clips.length, 0) : null);
+  }, [arr]);
   const loopOn = !!arr?.loop_region;
   const toggleLoop = () => {
     if (!arr) return;
@@ -1356,6 +1361,16 @@ export function Arrange() {
           <button onClick={() => void onExportMix()} disabled={busy || duration <= 0 || recording}>
             {t.exportMix}
           </button>
+          <label className="inline small">
+            {t.format}
+            <select value={prefs.exportFormat} onChange={(e) => useStore.getState().setPref("exportFormat", e.target.value as WavFormat)}>
+              <option value="float32">WAV 32f</option>
+              <option value="pcm24">WAV 24</option>
+              <option value="pcm16">WAV 16</option>
+              <option value="flac24">FLAC 24</option>
+              <option value="flac16">FLAC 16</option>
+            </select>
+          </label>
           <label className="inline small" title={t.exportLoudnessHint}>
             {t.exportLoudness}
             <select value={prefs.exportLoudness === null ? "" : String(prefs.exportLoudness)} onChange={(e) => useStore.getState().setPref("exportLoudness", e.target.value === "" ? null : Number(e.target.value))}>
