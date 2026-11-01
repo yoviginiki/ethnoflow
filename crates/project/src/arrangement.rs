@@ -29,6 +29,16 @@ pub struct Clip {
     pub fade_out: f64,
     #[serde(default)]
     pub mute: bool,
+    /// Gain envelope (A3): points (seconds from the clip start, dB) sorted by time;
+    /// empty = flat. −60 dB = silent.
+    #[serde(default)]
+    pub envelope: Vec<EnvPoint>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct EnvPoint {
+    pub at: f64,
+    pub db: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -178,6 +188,18 @@ impl Arrangement {
                 return Err(ProjectError::InvalidState("track compressor".into()));
             }
             for c in &t.clips {
+                let mut last = -1.0;
+                for p in &c.envelope {
+                    if !(p.at >= 0.0 && p.at <= c.length + 1e-6 && p.at >= last)
+                        || !(-60.0..=12.0).contains(&p.db)
+                    {
+                        return Err(ProjectError::InvalidState(format!(
+                            "clip {} has an invalid envelope",
+                            c.id
+                        )));
+                    }
+                    last = p.at;
+                }
                 if !(c.start >= 0.0 && c.offset >= 0.0 && c.length > 0.0)
                     || !c.start.is_finite()
                     || !c.length.is_finite()
@@ -247,6 +269,7 @@ mod tests {
                 fade_in: 0.01,
                 fade_out: 0.1,
                 mute: false,
+                envelope: Vec::new(),
             }],
         });
         a.validate().unwrap();

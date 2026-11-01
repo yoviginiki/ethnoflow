@@ -187,6 +187,11 @@ pub(crate) fn build_clips(s: &mut Inner, a: &Arrangement, rate: u32) -> CmdResul
                 fade_in: frames(c.fade_in, rate).min(length),
                 fade_out: frames(c.fade_out, rate).min(length),
                 mute: c.mute,
+                envelope: c
+                    .envelope
+                    .iter()
+                    .map(|p| (frames(p.at, rate).min(length), db_to_gain(p.db as f32)))
+                    .collect(),
             });
         }
     }

@@ -3,6 +3,13 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Clip gain envelope — A3 first slice (2026-11-01 evening).** `ClipData.envelope` (frame,
+  gain) with `envelope_gain` linear interpolation inside `clip_sample` (test: a clip fading
+  to silence over its second half); project `Clip.envelope: Vec<EnvPoint {at, db}>`
+  validated (sorted, inside the clip, −60..+12 dB); My studio: "⌇ Envelope" tool (click
+  adds a point, drag moves time and dB, double-click removes, "Clear the envelope"), the
+  line drawn on every clip; smoke: an envelope silences the second half of the clips stem.
+  Guide BG/EN.
 - **Editor effects with preview — A7 first slice = E2 + E3 (2026-11-01 evening; owner: "давай
   E2 E3").** `crates/audio-engine/src/fx.rs`: parametric EQ (shelves / peak bands in
   series), channel-linked compressor and brick-wall limiter on a buffer, built on the

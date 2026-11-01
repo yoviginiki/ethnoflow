@@ -34,7 +34,8 @@ pub use chordpad::{
     ChordEvent, ChordPadParams, ChordPadSource, ChordPatternData, CHORDPAD_VOICES, CHORD_NOTES,
 };
 pub use clips::{
-    ClipData, ClipSource, ClipsParams, TrackParams, Transport, MAX_TRACKS as MAX_CLIP_TRACKS,
+    envelope_gain, ClipData, ClipSource, ClipsParams, TrackParams, Transport,
+    MAX_TRACKS as MAX_CLIP_TRACKS,
 };
 pub use drone::{root_hz, DroneParams, DroneSource};
 pub use gen::{beat_grid, PitchSet, Rng, Trigger, MAX_PITCHES};

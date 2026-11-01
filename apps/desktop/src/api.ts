@@ -1531,6 +1531,12 @@ export interface Clip {
   fade_in: number;
   fade_out: number;
   mute: boolean;
+  /** Gain envelope (A3): points (seconds from the clip start, dB), sorted; absent = flat. */
+  envelope?: EnvPoint[];
+}
+export interface EnvPoint {
+  at: number;
+  db: number;
 }
 
 export interface Track {

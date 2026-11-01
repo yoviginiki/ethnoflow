@@ -155,6 +155,9 @@ pub struct ClipData {
     pub fade_in: u64,
     pub fade_out: u64,
     pub mute: bool,
+    /// Gain envelope (A3): (frame in clip, linear gain) sorted by frame; empty = flat.
+    /// Linear interpolation between points, the first / last value outside them.
+    pub envelope: Vec<(u64, f32)>,
 }
 
 pub struct ClipSource {
@@ -219,7 +222,34 @@ impl ClipSource {
         if left < c.fade_out {
             g *= left as f32 / c.fade_out.max(1) as f32;
         }
+        g *= envelope_gain(&c.envelope, frame_in_clip);
         s * g
+    }
+}
+
+/// Linear interpolation of a sorted (frame, gain) envelope; 1.0 when empty.
+#[inline]
+pub fn envelope_gain(env: &[(u64, f32)], frame: u64) -> f32 {
+    match env {
+        [] => 1.0,
+        [(f0, g0), ..] if frame <= *f0 => *g0,
+        _ => {
+            let (fl, gl) = env[env.len() - 1];
+            if frame >= fl {
+                return gl;
+            }
+            // Find the segment (envelopes are short: a linear scan is fine per sample).
+            let mut prev = env[0];
+            for &(f, g) in &env[1..] {
+                if frame < f {
+                    let span = (f - prev.0).max(1) as f32;
+                    let t = (frame - prev.0) as f32 / span;
+                    return prev.1 + (g - prev.1) * t;
+                }
+                prev = (f, g);
+            }
+            gl
+        }
     }
 }
 
@@ -437,6 +467,7 @@ mod tests {
             fade_in: 0,
             fade_out: 0,
             mute: false,
+            envelope: Vec::new(),
         };
         // Pan: track 0 hard left → the right channel is (almost) empty.
         let p = Arc::new(ClipsParams::default());
@@ -536,6 +567,7 @@ mod tests {
                 fade_in: 480,
                 fade_out: 480,
                 mute: false,
+                envelope: Vec::new(),
             },
             ClipData {
                 track: 1,
@@ -547,6 +579,7 @@ mod tests {
                 fade_in: 0,
                 fade_out: 0,
                 mute: false,
+                envelope: Vec::new(),
             },
         ];
         p.tracks[1].mute.store(true, Ordering::Relaxed);
@@ -581,6 +614,7 @@ mod tests {
             fade_in: 0,
             fade_out: 0,
             mute: false,
+            envelope: Vec::new(),
         }];
         // Stopped: silence and no movement.
         let b = render(&p, clips, 0.5);
@@ -605,6 +639,7 @@ mod tests {
             fade_in: 0,
             fade_out: 0,
             mute: false,
+            envelope: Vec::new(),
         }];
         let b = render(&p, clips, 2.0);
         assert!(b.rms() > 0.3);
@@ -626,6 +661,7 @@ mod tests {
             fade_in: 0,
             fade_out: 0,
             mute: false,
+            envelope: Vec::new(),
         };
         let rms = |b: &AudioBuffer| {
             let n = b.samples.len() as f32;
@@ -657,5 +693,39 @@ mod tests {
             peak_db < -20.0 && peak_db > -32.0,
             "compressed peak {peak_db} dBFS"
         );
+    }
+
+    #[test]
+    fn the_envelope_shapes_the_clip() {
+        let env = [(0u64, 1.0f32), (1000, 0.0), (2000, 0.5)];
+        assert_eq!(envelope_gain(&[], 123), 1.0);
+        assert_eq!(envelope_gain(&env, 0), 1.0);
+        assert!((envelope_gain(&env, 500) - 0.5).abs() < 1e-6);
+        assert_eq!(envelope_gain(&env, 1000), 0.0);
+        assert!((envelope_gain(&env, 1500) - 0.25).abs() < 1e-6);
+        assert_eq!(envelope_gain(&env, 5000), 0.5);
+        // Through the source: a clip fading to silence over its second half.
+        let sr = 48_000u32;
+        let p = Arc::new(ClipsParams::default());
+        p.transport.playing.store(true, Ordering::Relaxed);
+        let clip = ClipData {
+            track: 0,
+            buffer: tone(440.0, 2.0, sr),
+            start: 0,
+            offset: 0,
+            length: 2 * sr as u64,
+            gain: 1.0,
+            fade_in: 0,
+            fade_out: 0,
+            mute: false,
+            envelope: vec![(0, 1.0), (sr as u64, 1.0), (sr as u64 + 2400, 0.0)],
+        };
+        let out = render(&p, vec![clip], 2.0);
+        let rms = |a: usize, b: usize| {
+            (out.samples[a..b].iter().map(|v| v * v).sum::<f32>() / (b - a) as f32).sqrt()
+        };
+        let head = rms(10_000, 40_000);
+        let tail = rms(60_000, 90_000);
+        assert!(head > 0.1 && tail < head * 0.05, "head {head} tail {tail}");
     }
 }

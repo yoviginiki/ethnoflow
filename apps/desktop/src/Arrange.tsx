@@ -39,7 +39,8 @@ type Drag =
   | { kind: "none" }
   | { kind: "ruler"; anchor: number; moved: boolean }
   | { kind: "move"; track: number; clip: string; grab: number; origin: Arrangement; moved: boolean; startX: number }
-  | { kind: "trimL" | "trimR"; track: number; clip: string; origin: Arrangement; moved: boolean };
+  | { kind: "trimL" | "trimR"; track: number; clip: string; origin: Arrangement; moved: boolean }
+  | { kind: "env"; track: number; clip: string; point: number; origin: Arrangement; moved: boolean };
 
 /**
  * "My studio" (F5.1): tracks of clips over the project's takes on one timeline.
@@ -85,6 +86,10 @@ export function Arrange() {
   const [selected, setSelected] = useState<{ track: string; clip: string } | null>(null);
   const [selectedTrack, setSelectedTrack] = useState<string | null>(null);
   const [fxOpen, setFxOpen] = useState(false);
+  /** A3: the envelope tool — clicks on a clip add / move / remove gain points. */
+  const [envMode, setEnvMode] = useState(false);
+  const envModeRef = useRef(envMode);
+  envModeRef.current = envMode;
   const [renaming, setRenaming] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [removeTrack, setRemoveTrack] = useState<Track | null>(null);
@@ -100,6 +105,7 @@ export function Arrange() {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [tick, bump] = useState(0);
   const redraw = useCallback(() => bump((n) => n + 1), []);
+  useEffect(() => redraw(), [envMode, redraw]); // env tool redraw
 
   const playing = status?.playing ?? false;
   const recording = mode === "recording";
@@ -504,6 +510,10 @@ export function Arrange() {
     [snap, beatSeconds, barSeconds],
   );
 
+  /** Envelope: dB ↔ y inside a lane (−60 dB at the bottom, +12 dB at the top). */
+  const dbToY = (y0: number, db: number) => y0 + 3 + (1 - (db + 60) / 72) * (LANE_H - 6);
+  const yToDb = (y0: number, y: number) => Math.round(Math.max(-60, Math.min(12, (1 - (y - y0 - 3) / (LANE_H - 6)) * 72 - 60)) * 2) / 2;
+
   const hit = useCallback(
     (x: number, y: number) => {
       const cur = preview.current ?? arrRef.current;
@@ -540,6 +550,35 @@ export function Arrange() {
     const h = hit(x, y);
     if (y < RULER_H) {
       drag.current = { kind: "ruler", anchor: h.sec, moved: false };
+      return;
+    }
+    if (h.clip && envMode && !h.clip.edge) {
+      // Envelope tool: grab a point within 7 px, else add one here (double-click removes).
+      const tr = arr.tracks[h.clip.track];
+      setSelected({ track: tr.id, clip: h.clip.clip.id });
+      setSelectedTrack(tr.id);
+      const origin = clone(arr);
+      const c = origin.tracks[h.clip.track].clips.find((x) => x.id === h.clip!.clip.id)!;
+      const y0 = RULER_H + h.clip.track * LANE_H;
+      const x0 = toX(c.start);
+      const env = [...(c.envelope ?? [])];
+      let point = env.findIndex((p) => Math.abs(x0 + p.at * viewRef.current.pps - x) <= 7 && Math.abs(dbToY(y0, p.db) - y) <= 7);
+      if (e.detail === 2 && point >= 0) {
+        env.splice(point, 1);
+        c.envelope = env;
+        commit(origin);
+        return;
+      }
+      if (point < 0) {
+        const at = Math.max(0, Math.min(c.length, h.sec - c.start));
+        env.push({ at, db: yToDb(y0, y) });
+        env.sort((p, q) => p.at - q.at);
+        point = env.findIndex((p) => p.at === at);
+        c.envelope = env;
+      }
+      drag.current = { kind: "env", track: h.clip.track, clip: c.id, point, origin, moved: point >= 0 };
+      preview.current = origin;
+      redraw();
       return;
     }
     if (h.clip) {
@@ -586,6 +625,20 @@ export function Arrange() {
     const idx = srcTrack.clips.findIndex((c) => c.id === d.clip);
     if (idx < 0) return;
     const c = srcTrack.clips[idx];
+    if (d.kind === "env") {
+      d.moved = true;
+      const env = [...(c.envelope ?? [])];
+      const p = env[d.point];
+      if (!p) return;
+      const y0 = RULER_H + d.track * LANE_H;
+      const lo = d.point > 0 ? env[d.point - 1].at : 0;
+      const hi = d.point < env.length - 1 ? env[d.point + 1].at : c.length;
+      env[d.point] = { at: Math.max(lo, Math.min(hi, toSec(x) - c.start)), db: yToDb(y0, y) };
+      c.envelope = env;
+      preview.current = next;
+      redraw();
+      return;
+    }
     if (d.kind === "move") {
       if (!d.moved && Math.abs(x - d.startX) < 3) return;
       d.moved = true;
@@ -875,6 +928,26 @@ export function Arrange() {
             ctx.stroke();
           }
           ctx.globalAlpha = 1;
+          // Gain envelope (A3): a line through the points, dots when the tool is on.
+          const env = c.envelope ?? [];
+          if (env.length > 0 || envModeRef.current) {
+            const pts = env.length > 0 ? env : [{ at: 0, db: 0 }];
+            ctx.strokeStyle = colHead;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(x0, dbToY(y0, pts[0].db));
+            for (const p of pts) ctx.lineTo(x0 + p.at * pps, dbToY(y0, p.db));
+            ctx.lineTo(x1, dbToY(y0, pts[pts.length - 1].db));
+            ctx.stroke();
+            if (envModeRef.current) {
+              ctx.fillStyle = colHead;
+              for (const p of env) {
+                ctx.beginPath();
+                ctx.arc(x0 + p.at * pps, dbToY(y0, p.db), 4, 0, Math.PI * 2);
+                ctx.fill();
+              }
+            }
+          }
           ctx.strokeStyle = isSel ? colAccent : trackColor(ti);
           ctx.lineWidth = isSel ? 2 : 1;
           ctx.strokeRect(x0 + 0.5, y0 + 3.5, cw - 1, LANE_H - 7);
@@ -1075,6 +1148,9 @@ export function Arrange() {
         </label>
         <button className="ghost small" onClick={doUndo} disabled={undo.length === 0} title={t.undo} aria-label={t.undo}>
           ↶
+        </button>
+        <button className={`ghost small ${envMode ? "on" : ""}`} onClick={() => setEnvMode((v) => !v)} title={t.envToolHint} aria-pressed={envMode} data-coach="env-tool">
+          ⌇ {t.envTool}
         </button>
         <button className="ghost small" onClick={doRedo} disabled={redo.length === 0} title={t.redo} aria-label={t.redo}>
           ↷
@@ -1297,6 +1373,11 @@ export function Arrange() {
                 <button className="small" onClick={splitClip}>
                   {t.split}
                 </button>
+                {(selectedClip.clip.envelope?.length ?? 0) > 0 && (
+                  <button className="small" onClick={() => patchClip((c) => void (c.envelope = []))} title={t.envClearHint}>
+                    {t.envClear}
+                  </button>
+                )}
                 <button
                   className="small"
                   title={t.editHint}
