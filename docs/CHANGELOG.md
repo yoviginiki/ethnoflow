@@ -3,6 +3,13 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Tempo and pitch — A6 (2026-11-01 evening).** `crates/analysis/src/stretch.rs`: phase
+  vocoder (Hann 2048, analysis hop 512, true-frequency phase propagation, synthesis hop
+  512 × factor, OLA normalised) for `time_stretch` (×0.25…×4) and `pitch_shift` (stretch by
+  the ratio, resample back; ±24 semitones); tests: 440 Hz stays at ×1.5, an octave up/down
+  doubles/halves the zero crossings at the same length. Editor ops `stretch` / `pitch` with
+  preview, forms in the effects panel, bridge doc, smoke (×1.5 of 1 s adds 0.5 s; pitch
+  keeps the length), guide BG/EN.
 - **Repairs — A5 second slice (2026-11-01 evening): de-clipper, de-esser, click removal.**
   `fx.rs`: `declip` (runs at / above a threshold rebuilt by Catmull-Rom interpolation, then
   scaled under 0 dBFS), `deess` (one-pole split at 4 kHz, envelope with 1 ms / 40 ms,

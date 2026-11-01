@@ -32,9 +32,12 @@ const OP_LABEL: Record<string, StringMessageKey> = {
   declip: "opDeclip",
   deess: "opDeess",
   declick: "opDeclick",
+  stretch: "opStretch",
+  pitch: "opPitch",
 };
 
-type FxKind = "eq" | "compress" | "limit" | "denoise" | "declip" | "deess" | "declick";
+type FxKind = "eq" | "compress" | "limit" | "denoise" | "declip" | "deess" | "declick" | "stretch" | "pitch";
+const DEFAULT_TIME = { factor: 1.25, semitones: 0 };
 const DEFAULT_REPAIR = { threshold: 0.95, threshold_db: -24, amount_db: 8, sensitivity: 8 };
 const DEFAULT_DENOISE = { reduction_db: 12, sensitivity: 1.5 };
 const DEFAULT_BANDS: EqBand[] = [
@@ -73,6 +76,7 @@ export function EditScreen() {
   const [lim, setLim] = useState(DEFAULT_LIMIT);
   const [dn, setDn] = useState(DEFAULT_DENOISE);
   const [rep, setRep] = useState(DEFAULT_REPAIR);
+  const [tm, setTm] = useState(DEFAULT_TIME);
   const statusRef = useRef(status);
   statusRef.current = status;
   const viewRef = useRef(view);
@@ -250,6 +254,8 @@ export function EditScreen() {
     if (fx === "declip") return { op: "declip", a: r[0], b: r[1], threshold: rep.threshold };
     if (fx === "deess") return { op: "deess", a: r[0], b: r[1], threshold_db: rep.threshold_db, amount_db: rep.amount_db };
     if (fx === "declick") return { op: "declick", a: r[0], b: r[1], sensitivity: rep.sensitivity };
+    if (fx === "stretch") return { op: "stretch", a: r[0], b: r[1], factor: tm.factor };
+    if (fx === "pitch") return { op: "pitch", a: r[0], b: r[1], semitones: tm.semitones };
     return null;
   };
   const previewFx = async () => {
@@ -519,9 +525,9 @@ export function EditScreen() {
         <section className="panel" aria-label={t.editFx}>
           <div className="analysis-row">
             <h3>{t.editFx}</h3>
-            {(["eq", "compress", "limit", "denoise", "declip", "deess", "declick"] as FxKind[]).map((k) => (
+            {(["eq", "compress", "limit", "denoise", "declip", "deess", "declick", "stretch", "pitch"] as FxKind[]).map((k) => (
               <button key={k} className={`small ${fx === k ? "primary" : ""}`} onClick={() => setFx(fx === k ? null : k)}>
-                {k === "eq" ? t.fxEq : k === "compress" ? t.fxCompress : k === "limit" ? t.fxLimit : k === "denoise" ? t.fxDenoise : k === "declip" ? t.fxDeclip : k === "deess" ? t.fxDeess : t.fxDeclick}
+                {k === "eq" ? t.fxEq : k === "compress" ? t.fxCompress : k === "limit" ? t.fxLimit : k === "denoise" ? t.fxDenoise : k === "declip" ? t.fxDeclip : k === "deess" ? t.fxDeess : k === "declick" ? t.fxDeclick : k === "stretch" ? t.fxStretch : t.fxPitch}
               </button>
             ))}
             <span className="muted small">{t.editFxHint}</span>
@@ -633,6 +639,26 @@ export function EditScreen() {
                 <span className="mono-num">{rep.sensitivity}×</span>
               </label>
               <span className="muted small">{t.fxDeclickHint}</span>
+            </div>
+          )}
+          {fx === "stretch" && (
+            <div className="fx-form analysis-row">
+              <label className="inline small">
+                {t.fxFactor}
+                <input type="range" min={0.25} max={4} step={0.05} value={tm.factor} onChange={(e) => setTm({ ...tm, factor: Number(e.target.value) })} />
+                <span className="mono-num">×{tm.factor.toFixed(2)}</span>
+              </label>
+              <span className="muted small">{t.fxStretchHint}</span>
+            </div>
+          )}
+          {fx === "pitch" && (
+            <div className="fx-form analysis-row">
+              <label className="inline small">
+                {t.fxSemitones}
+                <input type="range" min={-24} max={24} step={0.5} value={tm.semitones} onChange={(e) => setTm({ ...tm, semitones: Number(e.target.value) })} />
+                <span className="mono-num">{tm.semitones >= 0 ? "+" : ""}{tm.semitones.toFixed(1)}</span>
+              </label>
+              <span className="muted small">{t.fxPitchHint}</span>
             </div>
           )}
           {fx && (

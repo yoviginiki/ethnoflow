@@ -731,6 +731,11 @@ async function main() {
         if (r.peak_dbfs > last.peak_dbfs + 0.5) throw new Error(`${edit.op} raised the peak ${last.peak_dbfs} → ${r.peak_dbfs}`);
         last = r;
       }
+      // A6: stretching the first second by 1.5 adds 0.5 s; a pitch shift keeps the length.
+      const stretched = expectOk(send({ op: "edit", edit: { op: "stretch", a: 0, b: 1, factor: 1.5 } }));
+      near(stretched.seconds, len + 0.5, "stretch ×1.5 of 1 s");
+      const pitched = expectOk(send({ op: "edit", edit: { op: "pitch", a: 0, b: len + 0.5, semitones: 2 } }));
+      near(pitched.seconds, len + 0.5, "pitch keeps the length");
       near(expectOk(send({ op: "edit_jump", step: 1 })).seconds, len - 1, "jump to step 1");
       const saved = expectOk(send({ op: "edit_save", label: "smoke edit" }));
       const tk = saved.project.takes.find((x) => x.id === saved.take_id);

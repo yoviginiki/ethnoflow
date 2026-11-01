@@ -133,6 +133,10 @@ pub enum EditOp {
     },
     /// A5: remove clicks (sensitivity 2..40 × local RMS of the derivative).
     Declick { a: f64, b: f64, sensitivity: f32 },
+    /// A6: change the length of [a, b) by `factor` (0.25..4) without changing the pitch.
+    Stretch { a: f64, b: f64, factor: f32 },
+    /// A6: shift the pitch of [a, b) by `semitones` (±24) without changing the length.
+    Pitch { a: f64, b: f64, semitones: f32 },
 }
 
 impl EditOp {
@@ -158,6 +162,8 @@ impl EditOp {
             EditOp::Declip { .. } => "declip",
             EditOp::Deess { .. } => "deess",
             EditOp::Declick { .. } => "declick",
+            EditOp::Stretch { .. } => "stretch",
+            EditOp::Pitch { .. } => "pitch",
         }
     }
 }
@@ -600,6 +606,32 @@ fn compute(e: &mut EditSession, op: &EditOp) -> CmdResult<Option<AudioBuffer>> {
             }
             Some(out)
         }
+        EditOp::Stretch { a, b, factor } => {
+            if !(0.25..=4.0).contains(factor) {
+                return Err(err("invalid_argument", "stretch factor 0.25..4"));
+            }
+            let (fa, fb) = region(&cur, *a, *b)?;
+            Some(replace_region(&cur, fa, fb, |m| {
+                AudioBuffer::new(
+                    sr,
+                    ch,
+                    analysis::time_stretch(&m.samples, ch as usize, *factor),
+                )
+            }))
+        }
+        EditOp::Pitch { a, b, semitones } => {
+            if !(-24.0..=24.0).contains(semitones) {
+                return Err(err("invalid_argument", "pitch ±24 semitones"));
+            }
+            let (fa, fb) = region(&cur, *a, *b)?;
+            Some(replace_region(&cur, fa, fb, |m| {
+                AudioBuffer::new(
+                    sr,
+                    ch,
+                    analysis::pitch_shift(&m.samples, ch as usize, *semitones),
+                )
+            }))
+        }
         EditOp::Limit { a, b, ceiling_db } => {
             let (fa, fb) = region(&cur, *a, *b)?;
             let mut err_out = None;
@@ -649,6 +681,7 @@ pub async fn edit_preview(
         EditOp::Gain { a, b, .. } | EditOp::Normalize { a, b, .. } => (*a, *b),
         EditOp::Denoise { a, b, .. } | EditOp::Declip { a, b, .. } => (*a, *b),
         EditOp::Deess { a, b, .. } | EditOp::Declick { a, b, .. } => (*a, *b),
+        EditOp::Stretch { a, b, .. } | EditOp::Pitch { a, b, .. } => (*a, *b),
         EditOp::FadeIn { a, b } | EditOp::FadeOut { a, b } | EditOp::Reverse { a, b } => (*a, *b),
         _ => {
             return Err(err(

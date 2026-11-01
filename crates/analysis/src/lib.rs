@@ -6,7 +6,9 @@
 //! ground truth: the user corrects everything in the map.
 
 pub mod denoise;
+pub mod stretch;
 pub use denoise::{denoise, noise_profile, NoiseProfile};
+pub use stretch::{pitch_shift, time_stretch};
 
 use rustfft::num_complex::Complex;
 use rustfft::FftPlanner;
