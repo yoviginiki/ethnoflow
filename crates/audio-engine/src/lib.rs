@@ -74,8 +74,8 @@ pub use pitch::{
 };
 pub use player::{adapt_for_device, PlayOptions, Player, PlayerStatus};
 pub use process::{
-    apply_recipe, detect_silence, loop_crossfade, nearest_zero_crossing, normalize, sound_bounds,
-    Recipe,
+    apply_recipe, detect_silence, fade, gain, loop_crossfade, nearest_zero_crossing, normalize,
+    reverse, sound_bounds, Recipe,
 };
 pub use recorder::{RecordedTake, Recorder, RecorderStatus};
 pub use resample::resample_linear;

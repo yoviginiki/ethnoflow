@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { api, describeError, type Ambient as AmbientRack, type AmbientLayer, type LayerKind, type LayerSource, type LibraryKind, type Scale, type Timing, type Level, type TrainerLogEntry, type FingeringOverride, type Locks } from "./api";
+import { api, describeError, type Ambient as AmbientRack, type AmbientLayer, type EditOp, type LayerKind, type LayerSource, type LibraryKind, type Scale, type Timing, type Level, type TrainerLogEntry, type FingeringOverride, type Locks } from "./api";
 import { startLive, stopLive } from "./LiveFollowPanel";
 import { makeSong } from "./makeSong";
 import type { StarterId } from "./starters";
@@ -396,6 +396,49 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
       await stopPlaying();
       const st = useStore.getState();
       return { mode: st.mode, cursor_s: st.cursor };
+    }
+    // ---- audio editor (home-studio item 5 = E1) ----
+    case "edit_open": {
+      // Opens a take (default: the latest) as the editor's working copy; the Edit tab follows.
+      const pv = project();
+      const id = typeof cmd.id === "string" ? cmd.id : latestTake(pv.takes)?.id;
+      if (!id) throw new Error("no takes in the project");
+      const st = await api.editOpen(id);
+      useStore.getState().setEditTake(id);
+      return st;
+    }
+    case "edit_status":
+      return await api.editStatus();
+    case "edit":
+      // One operation: `edit` = { op: cut|copy|delete|paste|silence|trim|insert_silence|gain|normalize|fade_in|fade_out|reverse, a, b, at, seconds, db, target_dbfs }.
+      return await api.editApply(cmd.edit as EditOp);
+    case "edit_undo":
+      return await api.editUndo();
+    case "edit_redo":
+      return await api.editRedo();
+    case "edit_jump":
+      return await api.editJump(Number(cmd.step));
+    case "edit_snap":
+      return { seconds: await api.editSnap(Number(cmd.seconds)) };
+    case "edit_peaks": {
+      const pk = await api.editPeaks(typeof cmd.bins === "number" ? cmd.bins : 200, typeof cmd.from_s === "number" ? cmd.from_s : null, typeof cmd.to_s === "number" ? cmd.to_s : null);
+      const peak = pk.max.reduce((m, v, i) => Math.max(m, Math.abs(v), Math.abs(pk.min[i])), 0);
+      return { bins: pk.max.length, duration_seconds: pk.duration_seconds, peak };
+    }
+    case "edit_play": {
+      // Sound! Plays the working copy from from_s (to to_s when given); stop_take stops it.
+      const st = await api.editPlay(typeof cmd.from_s === "number" ? cmd.from_s : 0, typeof cmd.to_s === "number" ? cmd.to_s : null, s.prefs.selectedOutput);
+      return st;
+    }
+    case "edit_save": {
+      const r = await api.editSave(typeof cmd.label === "string" ? cmd.label : null);
+      useStore.getState().setProject(r.project);
+      return r;
+    }
+    case "edit_close": {
+      await api.editClose();
+      useStore.getState().setEditTake(null);
+      return { closed: true };
     }
     case "import_audio": {
       project();

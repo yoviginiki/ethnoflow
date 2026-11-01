@@ -406,7 +406,7 @@ async function main() {
   });
   await step("areas: every tab of Play / Background / Song / Learn / Library is a screen of its area", () => {
     const list = expectOk(send({ op: "area" }));
-    const want = { play: ["play", "tuner"], background: ["compose", "ambient", "scapes", "rhythm", "progression", "instrument", "live"], song: ["studio", "songmap", "create", "start"], learn: ["academy", "references"], library: ["library", "samples"] };
+    const want = { play: ["play", "edit", "tuner"], background: ["compose", "ambient", "scapes", "rhythm", "progression", "instrument", "live"], song: ["studio", "songmap", "create", "start"], learn: ["academy", "references"], library: ["library", "samples"] };
     for (const id of Object.keys(want)) if (JSON.stringify(list.tabs?.[id]) !== JSON.stringify(want[id])) throw new Error(`${id}: ${JSON.stringify(list.tabs?.[id])}`);
     let n = 0;
     for (const [id, tabs] of Object.entries(want)) {
@@ -568,6 +568,40 @@ async function main() {
       return `L/R ${(l / Math.max(rr, 1e-9)).toFixed(0)}×, reverb tail ${(20 * Math.log10(tail)).toFixed(0)} dBFS, comp peak ${compPeak.toFixed(2)} vs ${dryPeak.toFixed(2)}, ${r5.lufs.toFixed(1)} → ${r5.lufs_after.toFixed(1)} LUFS`;
     } finally {
       send({ op: "set_arrangement", arrangement: { ...arr, tracks: [], loop_region: null } });
+    }
+  });
+  await step("editor: cut / undo / redo / paste / silence / jump, then save as a new take", () => {
+    const src = path.join(OUT_DIR, "rhythm-four.wav");
+    const imp = expectOk(send({ op: "import_audio", path: src }));
+    try {
+      const st0 = expectOk(send({ op: "edit_open", id: imp.take_id }));
+      const len = st0.seconds;
+      if (!(len > 2)) throw new Error(`take too short (${len} s)`);
+      const near = (x, y, what) => {
+        if (Math.abs(x - y) > 0.01) throw new Error(`${what}: ${x.toFixed(3)} vs ${y.toFixed(3)}`);
+      };
+      const st1 = expectOk(send({ op: "edit", edit: { op: "cut", a: len / 2 - 0.5, b: len / 2 + 0.5 } }));
+      near(st1.seconds, len - 1, "cut 1 s");
+      if (Math.abs(st1.clipboard_seconds - 1) > 0.01) throw new Error("clipboard");
+      near(expectOk(send({ op: "edit_undo" })).seconds, len, "undo");
+      near(expectOk(send({ op: "edit_redo" })).seconds, len - 1, "redo");
+      near(expectOk(send({ op: "edit", edit: { op: "paste", at: 0 } })).seconds, len, "paste");
+      const st5 = expectOk(send({ op: "edit", edit: { op: "silence", a: 0, b: 0.5 } }));
+      const quiet = expectOk(send({ op: "edit_peaks", bins: 50, from_s: 0, to_s: 0.5 }));
+      if (quiet.peak > 1e-6) throw new Error(`silence peak ${quiet.peak}`);
+      const loud = expectOk(send({ op: "edit_peaks", bins: 50, from_s: 0.5, to_s: 1.5 }));
+      if (!(loud.peak > 0.01)) throw new Error("the pasted audio is gone");
+      if (st5.versions.length !== 4 || st5.index !== 3 || !st5.dirty) throw new Error(`history ${JSON.stringify(st5.versions)}`);
+      near(expectOk(send({ op: "edit_jump", step: 1 })).seconds, len - 1, "jump to step 1");
+      const saved = expectOk(send({ op: "edit_save", label: "smoke edit" }));
+      const tk = saved.project.takes.find((x) => x.id === saved.take_id);
+      if (!tk || tk.derived_from !== imp.take_id) throw new Error("the saved take is not derived from the original");
+      near(tk.duration_seconds, len - 1, "saved length");
+      const orig = saved.project.takes.find((x) => x.id === imp.take_id);
+      near(orig.duration_seconds, len, "the original is untouched");
+      return `${len.toFixed(2)} s → cut → ${(len - 1).toFixed(2)} s; 4 steps; saved ${tk.label}`;
+    } finally {
+      send({ op: "edit_close" });
     }
   });
   await step("export: whole song offline with stems", () => {

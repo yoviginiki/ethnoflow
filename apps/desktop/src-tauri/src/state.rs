@@ -117,6 +117,8 @@ pub struct Inner {
     /// The chord the pad / progression follows right now (MIDI notes); racks with
     /// `follow_chord` take their tonal pitches from it.
     pub chord_midi: Option<Vec<u8>>,
+    /// The audio editor session (home-studio item 5): a take in memory with its history.
+    pub edit: Option<crate::edit_cmds::EditSession>,
 }
 
 impl Inner {

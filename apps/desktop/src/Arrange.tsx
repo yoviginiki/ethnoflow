@@ -1292,6 +1292,17 @@ export function Arrange() {
                 <button className="small" onClick={splitClip}>
                   {t.split}
                 </button>
+                <button
+                  className="small"
+                  title={t.editHint}
+                  onClick={() => {
+                    const st = useStore.getState();
+                    st.setEditTake(selectedClip.clip.take_id);
+                    st.setScreen("edit");
+                  }}
+                >
+                  {t.editFromStudio}
+                </button>
                 <button className="small" onClick={duplicateClip}>
                   {t.duplicate}
                 </button>

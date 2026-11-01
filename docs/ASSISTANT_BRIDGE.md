@@ -115,6 +115,14 @@ rhythm_status, ambient_status }`
 | `arrangement` | | the studio arrangement (tracks, clips, loop) |
 | `set_arrangement` | `arrangement` | replaces it (validated); track strips: gain_db, pan, lowpass_hz, highpass_hz, send |
 | `set_song_map` | `song_map` (whole SongMap) | replaces the project's song map (validated) |
+| `edit_open` | `id?` (default: the latest take) | opens a take in the audio editor (working copy + history); returns the editor status (`seconds`, `versions`, `index`, `clipboard_seconds`, `dirty`) |
+| `edit` | `edit`: `{op, a, b, at, seconds, db, target_dbfs}` with `op` = cut, copy, delete, paste, silence, trim, insert_silence, gain, normalize, fade_in, fade_out, reverse | one operation on the working copy (seconds absolute); returns the status |
+| `edit_undo` / `edit_redo` / `edit_jump` | `step` for jump | walk the history |
+| `edit_snap` | `seconds` | the nearest zero crossing (±10 ms) |
+| `edit_peaks` | `bins?`, `from_s?`, `to_s?` | reduced peaks of the working copy (or of a range): `{bins, duration_seconds, peak}` |
+| `edit_play` | `from_s?`, `to_s?` | **sound**: plays the working copy; `stop_take` stops |
+| `edit_save` | `label?` | writes the current version as a new take derived from the original; returns `{project, take_id}` |
+| `edit_status` / `edit_close` | | the editor's status / close the session |
 | `export_song` | `path`, `seconds?`, `drone?`, `pad?`, `ambient?`, `rhythm?`, `stems?`, `target_lufs?` (number = normalise to it, `null` = as rendered, absent = the studio's setting, default −14) | the studio's whole-song export (mix + stems + markers + manifest); the result carries `lufs`, `lufs_after`, `gain_db` |
 | `reference_add` | `path` (WAV/MP3/FLAC/OGG) | copies the song into the references library (never into a project); reply: id, name, duration |
 | `reference_list` | | the references library (id, name, duration, analyzed) |

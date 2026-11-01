@@ -732,3 +732,11 @@ button.ghost.on { border-color: var(--accent); color: var(--accent); }
 /* Gate game (F2.12): walls with openings, the ball is the live pitch */
 .gate-wrap { background: var(--panel); border: 1px solid var(--axis); border-radius: 8px; overflow: hidden; height: 340px; }
 .gate { width: 100%; height: 100%; display: block; }
+
+/* Audio editor (home-studio item 5) */
+.editor { display: flex; flex-direction: column; gap: 10px; }
+.editor-wave { min-height: 220px; }
+.editor-wave .waveform-wrap, .editor-wave canvas { min-height: 160px; }
+.edit-history { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 4px; }
+.edit-history li.on button { background: var(--accent); color: #111; border-color: var(--accent); }
+.edit-history li.undone button { opacity: 0.55; }

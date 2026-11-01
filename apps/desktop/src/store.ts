@@ -40,7 +40,7 @@ import type { StarterId } from "./starters";
 import type { Lang } from "./i18n";
 
 export type Mode = "idle" | "recording" | "playing";
-export type Screen = "home" | "play" | "compose" | "studio" | "ambient" | "rhythm" | "library" | "soundscapes" | "start" | "help" | "instrument" | "songmap" | "samples" | "references" | "academy" | "create" | "tuner" | "live" | "scapes" | "progression";
+export type Screen = "home" | "play" | "compose" | "studio" | "ambient" | "rhythm" | "library" | "soundscapes" | "start" | "help" | "instrument" | "songmap" | "samples" | "references" | "academy" | "create" | "tuner" | "live" | "scapes" | "progression" | "edit";
 export type LayerName = "drone" | "pad" | "ambient" | "rhythm" | "scapes";
 
 /** Background mixer strip per layer: the bus (trim, pan, cuts) plus fade times in seconds. */
@@ -301,6 +301,9 @@ interface Store {
   designerId: string | null;
   setDesignerId: (id: string | null) => void;
   setScreen: (s: Screen) => void;
+  /** The take the audio editor should open (set by My studio / Play & record, read by the Edit tab). */
+  editTakeId: string | null;
+  setEditTake: (id: string | null) => void;
 
   inputDevices: DeviceInfo[];
   outputDevices: DeviceInfo[];
@@ -462,6 +465,8 @@ export const useStore = create<Store>((set, get) => ({
   },
 
   screen: "home",
+  editTakeId: null,
+  setEditTake: (editTakeId) => set({ editTakeId }),
   setScreen: (screen) => {
     // "soundscapes" stays a valid id for presets, the bridge and old links: it is
     // Atmosphere in the "modules" view (merged 2026-11-01, owner: "обедини ги").

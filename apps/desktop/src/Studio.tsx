@@ -913,6 +913,17 @@ export function Studio() {
             <button onClick={saveSelection} disabled={busy || !s.selection}>
               {t.saveSelectionAsTake}
             </button>
+            <button
+              disabled={busy || !loadedTake || loadedTake.source === "midi_file"}
+              title={t.editHint}
+              onClick={() => {
+                if (!loadedTake) return;
+                s.setEditTake(loadedTake.id);
+                s.setScreen("edit");
+              }}
+            >
+              {t.editFromStudio}
+            </button>
             {hasTrim && (
               <button className="ghost small" onClick={clearTrim} disabled={busy}>
                 {t.clearTrim}

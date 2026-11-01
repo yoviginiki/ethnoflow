@@ -3,6 +3,21 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Audio editor with history (home-studio item 5 = AUDIO_EDITOR_PLAN E1, 2026-11-01).**
+  `edit_cmds.rs`: a take (trim + recipe applied) as a working copy; `EditOp` cut / copy /
+  delete / paste / silence / trim / insert_silence / gain / normalize / fade_in / fade_out /
+  reverse on a region (seconds absolute); every change is a new version in a history with
+  undo / redo / jump (200 steps, ~1 GB budget, oldest dropped, step numbers stable);
+  clipboard fitted mono ⇄ stereo; `edit_snap` (nearest zero crossing); `edit_play` through
+  the main player; `edit_save` → `create_derived_take` (the original file never changes).
+  Unit tests: cut moves the tail / paste / undo flags; the budget keeps step numbers;
+  clipboard channel fit. UI: "Edit" tab in Play (`EditScreen.tsx`): waveform with
+  selection, Ctrl+wheel zoom (range peaks), operation buttons, keyboard (Space, Ctrl+X/C/V,
+  Del, Z, Ctrl+Z/Y, Home/End), history list with jump, "Save as a new take" with a label
+  from the operations. Entry points: My studio (selected clip) and Play & record (loaded
+  take). Bridge `edit_open`, `edit`, `edit_undo/redo/jump`, `edit_snap`, `edit_peaks`,
+  `edit_play`, `edit_save`, `edit_status`, `edit_close`. Smoke: cut 1 s → undo → redo →
+  paste → silence (peaks 0) → jump → save (derived, −1 s; the original keeps its length).
 - **Track EQ + compressor and a loudness target on export (home-studio item 4, 2026-11-01).**
   Engine `graph/trackfx.rs`: RBJ shelves (200 Hz / 4 kHz) + peak, feed-forward compressor
   (threshold / ratio / attack / release / make-up), coefficients once per block, nothing

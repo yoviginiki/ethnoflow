@@ -6,6 +6,7 @@ mod assistant_cmds;
 mod bus_cmds;
 mod clap_cmds;
 mod commands;
+mod edit_cmds;
 mod forge_cmds;
 mod graph_cmds;
 mod harmony_cmds;
@@ -168,6 +169,17 @@ pub fn run() {
             arrangement_cmds::arrangement_release,
             arrangement_cmds::arrangement_status,
             arrangement_cmds::take_peaks,
+            edit_cmds::edit_open,
+            edit_cmds::edit_status,
+            edit_cmds::edit_close,
+            edit_cmds::edit_peaks,
+            edit_cmds::edit_apply,
+            edit_cmds::edit_undo,
+            edit_cmds::edit_redo,
+            edit_cmds::edit_jump,
+            edit_cmds::edit_snap,
+            edit_cmds::edit_play,
+            edit_cmds::edit_save,
             arrangement_cmds::export_arrangement_mix,
             ambient_cmds::ambient_get,
             ambient_cmds::scapes_get,

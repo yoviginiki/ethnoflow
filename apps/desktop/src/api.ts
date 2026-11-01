@@ -1558,6 +1558,43 @@ export function trackFx(tr: Track) {
   };
 }
 
+// ---------- audio editor (home-studio item 5 = E1) ----------
+
+/** One operation on the editor's working copy; seconds are absolute in the current version. */
+export type EditOp =
+  | { op: "cut"; a: number; b: number }
+  | { op: "copy"; a: number; b: number }
+  | { op: "delete"; a: number; b: number }
+  | { op: "paste"; at: number }
+  | { op: "silence"; a: number; b: number }
+  | { op: "trim"; a: number; b: number }
+  | { op: "insert_silence"; at: number; seconds: number }
+  | { op: "gain"; a: number; b: number; db: number }
+  | { op: "normalize"; a: number; b: number; target_dbfs: number }
+  | { op: "fade_in"; a: number; b: number }
+  | { op: "fade_out"; a: number; b: number }
+  | { op: "reverse"; a: number; b: number };
+
+export interface EditVersionInfo {
+  step: number;
+  op: string;
+  seconds: number;
+}
+
+export interface EditStatus {
+  take_id: string;
+  sample_rate: number;
+  channels: number;
+  seconds: number;
+  peak_dbfs: number;
+  index: number;
+  versions: EditVersionInfo[];
+  clipboard_seconds: number | null;
+  can_undo: boolean;
+  can_redo: boolean;
+  dirty: boolean;
+}
+
 export interface SongExportResult {
   path: string;
   stems: string[];
@@ -1856,6 +1893,19 @@ export const api = {
   /** Whole song: clips + chosen background layers through one offline graph; mix + aligned stems + markers + manifest. */
   exportSong: (path: string, include: { clips: boolean; drone: DroneSettings | null; pad: PadSettings | null; ambient: boolean; scapes: boolean; rhythm: RhythmSettings | null }, format: WavFormat | null, sampleRate: number | null, seconds: number | null, stems: boolean, targetLufs: number | null = null) =>
     invoke<SongExportResult>("export_song", { path, include, format, sampleRate, seconds, stems, targetLufs }),
+
+  // Audio editor (home-studio item 5 = E1): a take as a working copy with history.
+  editOpen: (takeId: string) => invoke<EditStatus>("edit_open", { takeId }),
+  editStatus: () => invoke<EditStatus | null>("edit_status"),
+  editClose: () => invoke<void>("edit_close"),
+  editPeaks: (bins: number, fromS: number | null, toS: number | null) => invoke<WaveformPeaks>("edit_peaks", { bins, fromS, toS }),
+  editApply: (op: EditOp) => invoke<EditStatus>("edit_apply", { op }),
+  editUndo: () => invoke<EditStatus>("edit_undo"),
+  editRedo: () => invoke<EditStatus>("edit_redo"),
+  editJump: (step: number) => invoke<EditStatus>("edit_jump", { step }),
+  editSnap: (seconds: number) => invoke<number>("edit_snap", { seconds }),
+  editPlay: (fromS: number, toS: number | null, device: string | null) => invoke<PlayerStatus>("edit_play", { fromS, toS, device }),
+  editSave: (label: string | null) => invoke<{ project: ProjectView; take_id: string }>("edit_save", { label }),
 
   // Preset library
   libraryList: (kind: LibraryKind | null, project: string | null, query: string | null, sortBy: LibrarySortBy) =>

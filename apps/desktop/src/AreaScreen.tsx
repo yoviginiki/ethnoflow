@@ -4,6 +4,7 @@ import { ALIAS_SCREENS, areaOf, areaTabs, SCREEN_TITLE, type AreaScreenId } from
 import { Arrange } from "./Arrange";
 import { Compose } from "./Compose";
 import { CreateSongScreen } from "./CreateSongScreen";
+import { EditScreen } from "./EditScreen";
 import { messages } from "./i18n";
 import { InstrumentDesigner } from "./InstrumentDesigner";
 import { Library } from "./Library";
@@ -46,6 +47,7 @@ export function AreaScreen({ screen }: { screen: AreaScreenId }) {
       </nav>
       {screen === "play" && <Studio />}
       {screen === "tuner" && <TunerScreen />}
+      {screen === "edit" && <EditScreen />}
       {screen === "compose" && <Compose />}
       {screen === "ambient" && <Ambient />}
       {screen === "scapes" && <ScapesScreen />}
