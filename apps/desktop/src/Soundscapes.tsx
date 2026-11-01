@@ -75,12 +75,12 @@ export function Soundscapes({ kind = "ambient" }: { kind?: RackKind } = {}) {
     }, POLL_MS);
     return () => {
       window.clearInterval(id);
-      flushRack();
+      flushRack(kind);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const commit = (next: NonNullable<typeof rack>) => commitRack(next, fail);
+  const commit = (next: NonNullable<typeof rack>) => commitRack(next, fail, kind);
   const patchLayer = (id: string, patch: Partial<AmbientLayer>) => {
     if (!rack) return;
     commit({ ...rack, layers: rack.layers.map((l) => (l.id === id ? { ...l, ...patch } : l)) });

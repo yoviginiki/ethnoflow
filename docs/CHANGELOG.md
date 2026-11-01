@@ -3,6 +3,15 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Soundscape studio + a rack bug fix (2026-11-01 evening; owner: "искам Soundscapes да е студио").**
+  Bug: `commitRack` (the Modules view's debounced save) always wrote the atmosphere rack, so
+  editing modules on the Soundscapes tab changed the atmosphere ("they became the same
+  again"); it now takes the rack kind. The Soundscapes tab is a studio: samples on the left
+  (`SamplePicker.tsx`: the My-samples folders, search, ▶ preview, + as loop / cloud /
+  sampler), the journey's modules with knobs on the right (`Soundscapes kind="scapes"`),
+  a scenes table below (`SceneMatrix.tsx`: level per layer per scene, scene length and
+  transition; edits go to the rack's program), "My worlds" (atmosphere presets tagged
+  scapes: save ★ / load / delete) next to the built-in worlds, the full rack editor folded.
 - **Keyboard K3: pad, drone and module under the keys (2026-11-01).** Sources "Pad" (the
   voicing on the pressed note through the follower, restored on release; the layer is
   switched on for the press when it was off), "Drone" (root on the pressed note) and

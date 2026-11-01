@@ -1,40 +1,44 @@
-import { api, type Ambient as AmbientRack } from "./api";
-import { useStore } from "./store";
+import { type Ambient as AmbientRack } from "./api";
+import { RACKS, type RackKind } from "./rackAdapter";
 
 const COMMIT_MS = 80;
-let pending: AmbientRack | null = null;
-let timer: number | null = null;
+const pending: Record<RackKind, AmbientRack | null> = { ambient: null, scapes: null };
+const timers: Record<RackKind, number | null> = { ambient: null, scapes: null };
 
 /**
- * Local state now, save + apply shortly after (knobs fire continuously). One
- * debouncer for every screen that edits the rack (Soundscapes, Library loads), so
- * two quick edits never race each other on the way to the shell.
+ * Local state now, save + apply shortly after (knobs fire continuously). One debouncer
+ * per rack for every screen that edits it (the Modules view, Library loads), so two
+ * quick edits never race each other on the way to the shell. `kind` picks the rack —
+ * before 2026-11-01 (evening) this always wrote the atmosphere, so editing modules on
+ * the Soundscapes tab changed the atmosphere instead (owner: "they became the same again").
  */
-export function commitRack(next: AmbientRack, fail: (e: unknown) => void): void {
-  useStore.getState().setAmbient(next);
-  pending = next;
-  if (timer !== null) return;
-  timer = window.setTimeout(() => {
-    timer = null;
-    const p = pending;
-    pending = null;
+export function commitRack(next: AmbientRack, fail: (e: unknown) => void, kind: RackKind = "ambient"): void {
+  const R = RACKS[kind];
+  R.store(next);
+  pending[kind] = next;
+  if (timers[kind] !== null) return;
+  timers[kind] = window.setTimeout(() => {
+    timers[kind] = null;
+    const p = pending[kind];
+    pending[kind] = null;
     if (!p) return;
-    api
-      .setAmbient(p)
+    R.set(p)
       .then((v) => {
         // Keep newer local edits if any arrived while saving.
-        if (pending === null) useStore.getState().setAmbient(v.ambient);
+        if (pending[kind] === null) R.store(v.ambient);
       })
       .catch(fail);
   }, COMMIT_MS);
 }
 
 /** Save what is still pending (on unmount / before switching screens). */
-export function flushRack(): void {
-  if (timer === null) return;
-  window.clearTimeout(timer);
-  timer = null;
-  const p = pending;
-  pending = null;
-  if (p) void api.setAmbient(p).catch(() => undefined);
+export function flushRack(kind?: RackKind): void {
+  for (const k of (kind ? [kind] : ["ambient", "scapes"]) as RackKind[]) {
+    if (timers[k] === null) continue;
+    window.clearTimeout(timers[k]!);
+    timers[k] = null;
+    const p = pending[k];
+    pending[k] = null;
+    if (p) void RACKS[k].set(p).catch(() => undefined);
+  }
 }

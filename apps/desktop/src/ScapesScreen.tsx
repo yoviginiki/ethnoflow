@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Ambient } from "./Ambient";
 import { Fold } from "./Fold";
-import { api, describeError } from "./api";
+import { SamplePicker } from "./SamplePicker";
+import { SceneMatrix } from "./SceneMatrix";
+import { Soundscapes } from "./Soundscapes";
+import { recordChange } from "./rackHistory";
+import { api, describeError, type PresetSummary } from "./api";
 import { KIND_LABEL } from "./ambientPresets";
 import { formatTime } from "./format";
 import { messages } from "./i18n";
@@ -38,6 +42,52 @@ export function ScapesScreen() {
   const phase = current ? phaseAt(s.scapes, status?.program_position ?? 0) : null;
   const endS = phase?.end_s ?? 0;
   const barRef = useRef<HTMLDivElement>(null);
+  // My worlds: atmosphere presets tagged "scapes" (saved journeys with their scenes).
+  const [mine, setMine] = useState<PresetSummary[]>([]);
+  const [worldName, setWorldName] = useState("");
+  const refreshMine = () =>
+    api
+      .ambientPresets()
+      .then((list) => setMine(list.filter((p) => p.tags.includes("scapes") && !p.factory)))
+      .catch(() => undefined);
+  useEffect(() => {
+    void refreshMine();
+  }, []);
+  const loadMine = async (p: PresetSummary) => {
+    if (!s.scapes) return;
+    setBusy(true);
+    try {
+      const rack = await api.ambientPresetLoad(p.id);
+      const v = await api.setScapes({ ...rack, schema_version: s.scapes.schema_version });
+      recordChange("scapes", s.scapes, v.ambient, t.hJourney(p.name), t.hStart);
+      useStore.getState().setScapes(v.ambient);
+      s.setMessage(`${t.scapesLoaded}: ${p.name}`);
+    } catch (e) {
+      fail(e);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const saveMine = async () => {
+    if (!s.scapes) return;
+    const name = worldName.trim() || `${current ? t[worldById(current)!.title] : t.scapesTitle} · ${new Date().toLocaleDateString()}`;
+    try {
+      await api.ambientPresetSave(name, ["scapes", ...(current ? [current] : [])], s.scapes);
+      setWorldName("");
+      await refreshMine();
+      s.setMessage(`${t.scapesSaved}: ${name}`);
+    } catch (e) {
+      fail(e);
+    }
+  };
+  const deleteMine = async (p: PresetSummary) => {
+    try {
+      await api.ambientPresetDelete(p.id);
+      await refreshMine();
+    } catch (e) {
+      fail(e);
+    }
+  };
 
   // Live position while the rack runs (the engine's clock moves it; the UI only reads).
   useEffect(() => {
@@ -78,15 +128,6 @@ export function ScapesScreen() {
     }
   };
   const stop = () => void stopJourney().catch(fail);
-  const savePreset = async () => {
-    if (!s.scapes || !current) return;
-    try {
-      await api.ambientPresetSave(`${t[worldById(current)!.title]} · ${minutes} min`, ["scapes", current], s.scapes);
-      s.setMessage(t.scapesSaved);
-    } catch (e) {
-      fail(e);
-    }
-  };
 
   return (
     <main className="compose scapes">
@@ -109,6 +150,30 @@ export function ScapesScreen() {
               {w.id === current && <span className="badge ok">{t.scapesCurrent}</span>}
             </button>
           ))}
+          {mine.map((p) => (
+            <div key={p.id} className="world-card mine" data-world={p.id}>
+              <span className="world-title">★ {p.name}</span>
+              <span className="muted small">
+                {p.layer_count} {t.layersWord}
+                {p.tags.filter((x) => x !== "scapes").length > 0 && ` · ${p.tags.filter((x) => x !== "scapes").join(", ")}`}
+              </span>
+              <div className="analysis-row">
+                <button className="small" onClick={() => void loadMine(p)} disabled={busy || !s.scapes}>
+                  {t.scapesLoadWorld}
+                </button>
+                <button className="ghost small" onClick={() => void deleteMine(p)} title={t.delete} aria-label={t.delete}>
+                  🗑
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="analysis-row">
+          <input value={worldName} onChange={(e) => setWorldName(e.target.value)} placeholder={t.scapesWorldName} maxLength={60} aria-label={t.scapesWorldName} />
+          <button onClick={() => void saveMine()} disabled={!s.scapes || s.scapes.layers.length === 0} title={t.scapesSaveWorldHint}>
+            ★ {t.scapesSaveWorld}
+          </button>
+          <span className="muted small">{t.scapesMyWorldsHint}</span>
         </div>
       </section>
 
@@ -138,9 +203,6 @@ export function ScapesScreen() {
             ▶ {t.scapesPlay}
           </button>
         )}
-        <button className="ghost" onClick={() => void savePreset()} disabled={!current}>
-          💾 {t.scapesSave}
-        </button>
         </div>
       </section>
 
@@ -176,8 +238,22 @@ export function ScapesScreen() {
         <div className="muted small">{t.scapesEditHint}</div>
       </section>
 
-      {/* The whole rack editor on the Soundscapes rack, folded by default (owner 1.11: the two
-          tabs looked the same once scrolled; the journey is what makes this one different). */}
+      {/* The studio (owner 1.11 evening): samples on the left to hear and add, the journey's
+          modules with knobs on the right, the scenes table below; the full rack editor folded. */}
+      <section className="panel" data-coach="scapes-studio">
+        <h3>{t.scapesStudio}</h3>
+        <div className="muted small">{t.scapesStudioHint}</div>
+      </section>
+      <div className="scapes-studio">
+        <SamplePicker kind="scapes" />
+        <div className="scapes-modules">
+          <Soundscapes kind="scapes" />
+        </div>
+      </div>
+      <section className="panel" data-coach="scapes-scenes">
+        <h3>{t.scapesScenes}</h3>
+        <SceneMatrix kind="scapes" />
+      </section>
       <Fold id="scapes-editor" label={t.scapesEditorTitle} chip={t.scapesEditorChip}>
         <div className="muted small">{t.scapesEditorHint}</div>
         <Ambient kind="scapes" />
