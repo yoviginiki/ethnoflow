@@ -7,10 +7,13 @@ import { noteParts, takeName } from "./format";
 import { messages, type StringMessageKey } from "./i18n";
 import { applySession, collectSession } from "./session";
 import { melodyRegister, proposeStarters, type Starter, type StarterFact, type StarterId } from "./starters";
+import { applyStyle } from "./styleActions";
+import { stepLabel } from "./progression";
+import { worldById } from "./scapes";
 import { useStore } from "./store";
 
-const TITLE: Record<StarterId, StringMessageKey> = { quiet_ambient: "varQuietAmbient", dark_drone: "varDarkDrone", liquid_dnb: "varLiquidDnb", ambient_dnb: "varAmbientDnb", ethno_pulse: "varEthnoPulse" };
-const DESC: Record<StarterId, StringMessageKey> = { quiet_ambient: "varQuietAmbientDesc", dark_drone: "varDarkDroneDesc", liquid_dnb: "varLiquidDnbDesc", ambient_dnb: "varAmbientDnbDesc", ethno_pulse: "varEthnoPulseDesc" };
+const TITLE: Record<StarterId, StringMessageKey> = { quiet_ambient: "varQuietAmbient", dark_drone: "varDarkDrone", liquid_dnb: "varLiquidDnb", ambient_dnb: "varAmbientDnb", ethno_pulse: "varEthnoPulse", rnb_soul: "varRnbSoul", rock_band: "varRockBand", pop_air: "varPopAir", jazz_night: "varJazzNight" };
+const DESC: Record<StarterId, StringMessageKey> = { quiet_ambient: "varQuietAmbientDesc", dark_drone: "varDarkDroneDesc", liquid_dnb: "varLiquidDnbDesc", ambient_dnb: "varAmbientDnbDesc", ethno_pulse: "varEthnoPulseDesc", rnb_soul: "varRnbSoulDesc", rock_band: "varRockBandDesc", pop_air: "varPopAirDesc", jazz_night: "varJazzNightDesc" };
 
 interface Before {
   scale: Scale | null;
@@ -100,12 +103,14 @@ export function Start() {
     return h ? scaleFromKind({ tonic_pc: h.tonic_pc, degrees_cents: [], kind: h.kind }) : null;
   }, [analysis, chosenKey, project.scale]);
   const register = useMemo(() => (analysis ? melodyRegister(analysis.notes) : null), [analysis]);
-  const names = useMemo(() => ({ noise: t.kindNoise, wind: t.kindWind, texture: t.kindTexture, bells: t.kindBells, pluck: t.kindPluck, loop: t.kindLoop, cloud: t.kindCloud, resonator: t.kindResonator, choir: t.kindChoir, bloom: t.kindBloom }), [t]);
+  const names = useMemo(() => ({ noise: t.kindNoise, wind: t.kindWind, texture: t.kindTexture, bells: t.kindBells, pluck: t.kindPluck, loop: t.kindLoop, cloud: t.kindCloud, resonator: t.kindResonator, choir: t.kindChoir, bloom: t.kindBloom, sampler: t.kindSampler }), [t]);
+  // Styles need a scale: from the analysis, or the project's (then no melody is needed to start a background).
+  const [styleSeed, setStyleSeed] = useState(1);
   const starters: Starter[] = useMemo(() => {
-    if (!analysis || !s.ambient) return [];
-    return proposeStarters({ scale: chosenScale, timing: project.timing, detectedBpm: chosenTempo, register, baseRack: s.ambient, names });
+    if (!s.ambient || (!analysis && !project.scale)) return [];
+    return proposeStarters({ seed: styleSeed, scale: chosenScale, timing: project.timing, detectedBpm: chosenTempo, register, baseRack: s.ambient, names });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [analysis, chosenScale, chosenTempo, register, s.ambient?.schema_version, project.timing, names]);
+  }, [analysis, chosenScale, chosenTempo, register, s.ambient?.schema_version, project.timing, names, styleSeed, project.scale]);
 
   const factText = (f: StarterFact): string => {
     switch (f.kind) {
@@ -142,7 +147,7 @@ export function Start() {
       if (JSON.stringify(chosenScale) !== JSON.stringify(project.scale)) pv = await api.setScale(chosenScale);
       if (st.timing && JSON.stringify(st.timing) !== JSON.stringify(pv.timing)) pv = await api.setTiming(st.timing);
       s.setProject(pv);
-      await applySession(st.session, true);
+      await applyStyle(st, { play: true, seed: styleSeed });
       setTried(st.id);
       s.setMessage(`${t.startTrying}: ${t[TITLE[st.id]]}`);
     } catch (e) {
@@ -152,7 +157,7 @@ export function Start() {
     }
   };
   const stopAll = () => {
-    for (const n of ["drone", "pad", "ambient", "rhythm"] as const) if (s.layers[n]) s.setLayer(n, false);
+    for (const n of ["drone", "pad", "ambient", "rhythm", "scapes"] as const) if (s.layers[n]) s.setLayer(n, false);
   };
   const undo = async () => {
     if (!before) return;
@@ -182,7 +187,7 @@ export function Start() {
     }
   };
 
-  const anyPlaying = s.layers.drone || s.layers.pad || s.layers.ambient || s.layers.rhythm;
+  const anyPlaying = s.layers.drone || s.layers.pad || s.layers.ambient || s.layers.rhythm || s.layers.scapes;
   const take = project.takes.find((x) => x.id === takeId) ?? null;
 
   return (
@@ -275,7 +280,20 @@ export function Start() {
             </button>
           )}
         </div>
-        {!analysis && <div className="muted small">{t.startNoAnalysis}</div>}
+        {!analysis && !project.scale && <div className="muted small">{t.startNoAnalysis}</div>}
+        {!analysis && project.scale && <div className="muted small">{t.startFromProjectScale}</div>}
+        {starters.length > 0 && (
+          <div className="analysis-row">
+            <span className="muted small">{t.startStyleHint}</span>
+            <label className="inline small">
+              {t.scapesSeed}
+              <span className="mono-num">{styleSeed}</span>
+              <button className="ghost small" onClick={() => setStyleSeed(1 + Math.floor(Math.random() * 1_000_000))}>
+                🎲 {t.scapesShuffle}
+              </button>
+            </label>
+          </div>
+        )}
         {analysis && starters.length === 0 && <div className="muted small">{t.loading}</div>}
         <div className="start-grid">
           {starters.map((st) => (
@@ -287,8 +305,11 @@ export function Start() {
                   <li key={i}>{factText(f)}</li>
                 ))}
                 <li>
-                  {t.startLayersWord}: {(["drone", "pad", "rhythm", "ambient"] as const).filter((n) => st.session.layers[n]).map((n) => t.layerWords[n]).join(", ") || "—"} ·{" "}
+                  {t.startLayersWord}: {(["drone", "pad", "rhythm", "ambient", "scapes"] as const).filter((n) => st.session.layers[n]).map((n) => t.layerWords[n] ?? n).join(", ") || "—"} ·{" "}
                   {st.session.ambient?.layers.map((l) => t[KIND_LABEL[l.source.kind]]).join(", ")}
+                </li>
+                <li>
+                  {t.progTitle}: {st.session.prefs.progression?.steps.map((x) => stepLabel(chosenScale, x)).join(" · ")} · {t.scapesTitle}: {t[worldById(st.world)!.title]}
                 </li>
               </ul>
               <div className="style-row">

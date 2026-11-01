@@ -299,6 +299,10 @@ async function main() {
     if (!Array.isArray(r.facts) || r.facts.length < 5) throw new Error("too few decisions: " + JSON.stringify(r.facts));
     const st = expectOk(send({ op: "state" }));
     if (!st.project.timing.bpm) throw new Error("no tempo after make_song");
+    const prog = expectOk(send({ op: "progression" }));
+    if (!prog.progression.follow || prog.progression.genre !== "liquid") throw new Error(`style did not set the progression: ${JSON.stringify(prog.progression.genre)}`);
+    const sc = expectOk(send({ op: "scapes" }));
+    if (sc.current !== "cyber-rain") throw new Error(`style did not build the journey: ${sc.current}`);
     const arr = expectOk(send({ op: "arrangement" })).arrangement;
     if (!arr.tracks.some((tr) => tr.clips.length > 0 && tr.highpass_hz >= 100)) throw new Error("melody track not set up");
     // Silent run: switch the background it started back off.
@@ -482,6 +486,8 @@ async function main() {
   await step("atmosphere: choir + bloom layers render audibly through the export", () => {
     const a = expectOk(send({ op: "add_layer", kind: "choir", name: "smoke choir" }));
     const b = expectOk(send({ op: "add_layer", kind: "bloom", name: "smoke bloom", source: { density: 60, note_s: 0.5, attack_s: 0.02 } }));
+    const takeId = readState().project?.takes?.[0]?.id;
+    if (takeId) expectOk(send({ op: "add_layer", kind: "sampler", name: "smoke sampler", take_id: takeId, source: { density: 120, note_s: 0.4, release_s: 0.2, cutoff_hz: 12000 } }));
     const out = path.join(OUT_DIR, "atmo.wav");
     try {
       const r = expectOk(send({ op: "export_song", path: out, seconds: 6, ambient: true, rhythm: false, drone: false, pad: false }));
@@ -492,6 +498,7 @@ async function main() {
       send({ op: "remove_layer", id: a.id ?? a.layer?.id ?? "smoke choir" });
       send({ op: "remove_layer", name: "smoke bloom" });
       send({ op: "remove_layer", name: "smoke choir" });
+      send({ op: "remove_layer", name: "smoke sampler" });
     }
   });
   await step("studio: track strip — pan and send are real in the export", () => {

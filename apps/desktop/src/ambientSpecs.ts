@@ -79,6 +79,17 @@ export const SOURCE_SLIDERS: Record<LayerKind, SliderSpec[]> = {
     { key: "reverse_p", label: "reverseProbLabel", min: 0, max: 1, step: 0.01, fmt: pct },
     { key: "octave_p", label: "octaveProbLabel", min: 0, max: 1, step: 0.01, fmt: pct },
   ],
+  sampler: [
+  { key: "root_midi", label: "rootNoteLabel", min: 24, max: 108, step: 1, fmt: (v) => `MIDI ${Math.round(v)}` },
+  { key: "density", label: "densityLabel", min: 0, max: 120, step: 0.5, fmt: (v) => `${v.toFixed(1)}/min` },
+  { key: "note_s", label: "noteLenLabel", min: 0.05, max: 30, step: 0.05, fmt: (v) => `${v.toFixed(2)} s` },
+  { key: "attack_s", label: "attackLabel", min: 0.001, max: 5, step: 0.001, fmt: (v) => `${v.toFixed(3)} s` },
+  { key: "release_s", label: "releaseLabel", min: 0.01, max: 20, step: 0.01, fmt: (v) => `${v.toFixed(2)} s` },
+  { key: "cutoff_hz", label: "cutoffLabel", min: 40, max: 20000, step: 1, fmt: (v) => (v >= 1000 ? `${(v / 1000).toFixed(1)} kHz` : `${Math.round(v)} Hz`) },
+  { key: "resonance", label: "resonanceLabel", min: 0, max: 1, step: 0.01, fmt: pct },
+  { key: "velocity_spread", label: "velocitySpreadLabel", min: 0, max: 1, step: 0.01, fmt: pct },
+  { key: "start", label: "startLabel", min: 0, max: 1, step: 0.005, fmt: pct },
+  ],
 };
 
 export const MACRO_SLIDERS: { key: keyof Macros; label: StringMessageKey }[] = [

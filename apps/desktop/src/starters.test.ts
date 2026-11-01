@@ -3,7 +3,7 @@ import type { Ambient, Note, Scale } from "./api";
 import { melodyRegister, proposeStarters, STARTER_IDS, type StarterContext } from "./starters";
 
 const baseRack = { schema_version: 1, layers: [], macros: {}, preset: null, tags: [], automation: [], program: { scenes: [], loop_region: null } } as unknown as Ambient;
-const names = { noise: "Шум", wind: "Вятър", texture: "Текстура", bells: "Камбани", pluck: "Струни", loop: "Запис", cloud: "Облак", resonator: "Резонатор", choir: "Хор", bloom: "Блум" } as const;
+const names = { noise: "Шум", wind: "Вятър", texture: "Текстура", bells: "Камбани", pluck: "Струни", loop: "Запис", cloud: "Облак", resonator: "Резонатор", choir: "Хор", bloom: "Блум", sampler: "Семплер" } as const;
 const note = (midi: number): Note => ({ start: 0, end: 0.5, midi, cents: 0, confidence: 0.9, velocity: 0.8, bend: [] });
 
 describe("starters", () => {
@@ -19,6 +19,10 @@ describe("starters", () => {
     const st = proposeStarters(ctx);
     expect(st.map((s) => s.id)).toEqual(STARTER_IDS);
     for (const s of st) {
+      // Every style carries a chord progression that follows, and a Soundscapes world.
+      expect(s.session.prefs.progression?.follow).toBe(true);
+      expect(s.session.prefs.progression?.steps.length).toBeGreaterThan(0);
+      expect(typeof s.world).toBe("string");
       expect(s.session.prefs.drone?.rootMidi).toBe(54);
       expect(s.session.prefs.pad?.rootMidi).toBe(54);
       expect(s.session.ambient?.layers.length).toBeGreaterThan(0);

@@ -1,7 +1,9 @@
 import { api, type Arrangement, type Note, type Phrase, type ProjectView, type Scale, type SongMap, type TempoCandidate } from "./api";
 import { scaleFromKind } from "./AnalysisPanel";
 import { messages, type Messages } from "./i18n";
-import { applySession } from "./session";
+import { applyStyle } from "./styleActions";
+import { stepLabel } from "./progression";
+import { worldById } from "./scapes";
 import { melodyRegister, proposeStarters, type StarterId } from "./starters";
 import { useStore } from "./store";
 import { droneRoot, droneSettings, padRoot, padSettings, voicingNotes } from "./layers";
@@ -133,7 +135,7 @@ export async function makeSong(style: StarterId, takeIdWanted: string | null): P
   if (detected) facts.push({ key: "makeFactTempoDetected", detail: `${detected} BPM` });
   else facts.push({ key: "makeFactTempoNone" });
   // 2. Starter for the wanted style, in the take's key and register.
-  const names = { noise: t.kindNoise, wind: t.kindWind, texture: t.kindTexture, bells: t.kindBells, pluck: t.kindPluck, loop: t.kindLoop, cloud: t.kindCloud, resonator: t.kindResonator, choir: t.kindChoir, bloom: t.kindBloom };
+  const names = { noise: t.kindNoise, wind: t.kindWind, texture: t.kindTexture, bells: t.kindBells, pluck: t.kindPluck, loop: t.kindLoop, cloud: t.kindCloud, resonator: t.kindResonator, choir: t.kindChoir, bloom: t.kindBloom, sampler: t.kindSampler };
   if (!st.ambient) throw new Error(t.makeNoRack);
   const register = melodyRegister(a.notes);
   const starters = proposeStarters({ scale, timing: p.timing, detectedBpm: detected, register, baseRack: st.ambient, names });
@@ -142,8 +144,11 @@ export async function makeSong(style: StarterId, takeIdWanted: string | null): P
   if (JSON.stringify(scale) !== JSON.stringify(p.scale)) p = await api.setScale(scale);
   if (starter.timing && JSON.stringify(starter.timing) !== JSON.stringify(p.timing)) p = await api.setTiming(starter.timing);
   st.setProject(p);
-  await applySession(starter.session, true);
+  await applyStyle(starter, { play: true, seed: 1 });
   const bpm = p.timing.bpm;
+  const prog = starter.session.prefs.progression;
+  if (prog) facts.push({ key: "makeFactProgression", detail: `${prog.genre} · ${prog.steps.map((x) => stepLabel(scale, x)).join(" · ")}` });
+  facts.push({ key: "makeFactWorld", detail: t[worldById(starter.world)!.title] });
   facts.push({ key: "makeFactStarter", detail: `${t[STARTER_TITLE[starter.id]]}${bpm ? ` · ${bpm} BPM ${p.timing.numerator}/${p.timing.unit}` : ""}` });
   if (detected && bpm && Math.abs(detected - bpm) > 3 && Math.abs(detected * 2 - bpm) > 3 && Math.abs(detected - bpm * 2) > 3) {
     facts.push({ key: "makeFactFreePhrase", detail: `${detected} ≠ ${bpm}` });
@@ -211,6 +216,10 @@ export const STARTER_TITLE: Record<StarterId, keyof Messages> = {
   liquid_dnb: "varLiquidDnb",
   ambient_dnb: "varAmbientDnb",
   ethno_pulse: "varEthnoPulse",
+  rnb_soul: "varRnbSoul",
+  rock_band: "varRockBand",
+  pop_air: "varPopAir",
+  jazz_night: "varJazzNight",
 };
 
 /** RMS targets per group, dBFS (mono sum): melody on top, drums just under, bass below, beds far back. */

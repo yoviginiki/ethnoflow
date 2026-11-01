@@ -12,6 +12,8 @@ export interface SessionPayload {
   prefs: SessionPrefs;
   /** The atmosphere rack at save time (null when the project had none). */
   ambient: AmbientRack | null;
+  /** The Soundscapes rack at save time (optional: older sessions have none). */
+  scapes?: AmbientRack | null;
   /** Which background layers were playing. */
   layers: Record<LayerName, boolean>;
 }
@@ -74,7 +76,7 @@ export function rackForProject(rack: AmbientRack, takeIds: Set<string>): Ambient
 
 export function collectSession(): SessionPayload {
   const s = useStore.getState();
-  return { v: 1, prefs: pickSessionPrefs(s.prefs), ambient: s.ambient, layers: { ...s.layers } };
+  return { v: 1, prefs: pickSessionPrefs(s.prefs), ambient: s.ambient, scapes: s.scapes, layers: { ...s.layers } };
 }
 
 /** Apply a saved session: preferences, the rack, and (optionally) which layers play. */
@@ -87,6 +89,11 @@ export async function applySession(payload: unknown, restoreLayers: boolean): Pr
     const rack = rackForProject(payload.ambient, new Set(s.project.takes.map((t) => t.id)));
     const v = await api.setAmbient(rack);
     useStore.getState().setAmbient(v.ambient);
+  }
+  if (payload.scapes && s.project) {
+    const rack = rackForProject(payload.scapes, new Set(s.project.takes.map((t) => t.id)));
+    const v = await api.setScapes(rack);
+    useStore.getState().setScapes(v.ambient);
   }
   if (restoreLayers) {
     const want = payload.layers ?? ({} as Record<LayerName, boolean>);

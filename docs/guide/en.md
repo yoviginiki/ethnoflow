@@ -19,9 +19,9 @@ This guide is also shown inside the app (the **? Help** button top right, with s
 - The strip's cuts add to the modules' own (the stricter wins). Level at the minimum = the layer is off.
 - Mixer settings are part of the session and are remembered per project.
 
-## Song › Start from a melody
+## Song › Start from a melody (styles)
 
-The quickest path from an idea to a background:
+The quickest path from an idea to a background. One **style** sets the drone, the pad, the rhythm, the atmosphere, the **chord progression** (follow on) and a **Soundscapes journey** in its world at once. Nine styles: Quiet ambient, Dark drone, Liquid DnB, Ambient DnB, Ethno pulse, RnB / soul, Rock, Pop, Jazz night. If the project already has a mode, the styles show without an analysed melody (from the project's mode and tempo); "Seed" + 🎲 gives other chords and another journey.
 
 1. **Melody**: record with the microphone (🎙 Record), import a file (📂 Import: WAV, MP3, FLAC, OGG, MIDI) or pick an existing take.
 2. **🔍 Analyse**. Nothing changes by itself; the analysis only proposes: a key with percentages (pick another or "no key"), a tempo with percentages (or the project's), and the melody's register (lowest, highest and median note).
@@ -315,6 +315,7 @@ Atmosphere's top row has a **Layers / Modules** switch. "Modules" shows the same
 - **Resonator** (modal synthesis): a struck body in the mode, from string/tube (Structure 0) to bowl/bell (1); Strike, Brightness, Decay, Density. Good for sparse bell hits over the pad or a wooden pulse under the melody.
 - **Choir** (vocal drone): vowels a–e–i–o–u through formants on the mode, Breath for slow swells, Spread for width, Voices = how many tones sing; a low register = a men's choir. Under the kaval with a big Space.
 - **Bloom** (generative melody): notes from the mode that appear by themselves — Density per minute, Length/Attack from drops to long tones, Phrasing from random to stepwise phrases with breaths. Same seed = same melody.
+- **Sampler** (a take as notes): pick a take of the project or a sample from Library › My samples ("+ Sampler") and it plays as notes of the mode: every note reads the sample faster or slower relative to **Root note** (the note the recording itself sounds at). Density per minute, Note length, Attack / Release, **Filter with Resonance** (a low-pass that "sings" around the cutoff), Start in the take, register. Brightness moves the filter, Motion scales the density; everything automates (LFO / random walk / keyframes) and goes into scenes. This is the answer to "samples with notes, pitch and filters".
 - **Cloud** (granular): pick a take (kaval, voice, rain) and it becomes an endless pad of small grains. Position = where in the take, Scan 0 = freezes the moment, Grain and Density go from whisper to choir, Pitch transposes (−12 = an octave down), Reverse and Octave up are per-grain probabilities. The strongest ambient module for your own recordings.
 - Knobs: level with a meter, pan, the module's parameters, HP/LP. Drag up/down; Shift = fine; double-click = default; the wheel works too.
 - **Shuffle** gives new values to this module only (the level stays); 🔒 protects it from "Surprise me".
@@ -394,6 +395,8 @@ have their own knobs and a button **"Add to the rhythm as a new part"**.
 - Takes are arranged as clips on tracks, with section markers and one transport. Drone, pad, atmosphere and rhythm play together with the clips.
 - **Import** adds a file as a new take and a clip at the cursor; **Export mix** writes the whole song: the clips plus the switched-on layers (drone, pad, atmosphere with its scenes, rhythm) through the same graph and limiter. Next to the WAV a folder holds one stem per group (same start and length), markers.csv with the song map's sections and manifest.json (tempo, meter, sections) for a DAW.
 - Trimming, silence at the edges ("Silence analysis"), snapping to zero crossings.
+- **Takes** (recording over the background like in a studio): ● Record records at the cursor onto the selected track while the background and the other tracks play; **● One more take** records again from the same spot. Older takes at the same spot stay on the track, muted; in the clip panel "Takes" lists every recording at that spot with ▶ to audition and "Use this take" (only that one sounds). Nothing is deleted by itself.
+- **Latency**: the "Latency" button in the record row measures how late the microphone hears the output (plays clicks; the same measurement as in the trainer). The measured time is cut from the start of every new recording so it sits exactly on the background; the message after the take says by how much.
 
 ## Library › Presets and sessions
 

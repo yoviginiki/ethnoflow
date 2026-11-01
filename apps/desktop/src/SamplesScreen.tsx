@@ -189,6 +189,9 @@ export function SamplesScreen() {
               <button className="ghost small" disabled={!project || busy !== null} onClick={() => void importAs(e, "loop")} title={t.samplesAsLoop}>
                 + {t.kindLoop}
               </button>
+              <button className="ghost small" disabled={!project || busy !== null} onClick={() => void importAs(e, "sampler")} title={t.samplesAsSampler}>
+                + {t.kindSampler}
+              </button>
               <button className="ghost small" disabled={!project || busy !== null} onClick={() => void importAs(e, "cloud")} title={t.samplesAsCloud}>
                 + {t.kindCloud}
               </button>

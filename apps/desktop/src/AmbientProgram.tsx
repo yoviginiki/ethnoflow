@@ -31,6 +31,8 @@ function sourceParams(src: LayerSource): string[] {
       return ["vowel", "breath", "spread", "brightness", "morph"];
     case "bloom":
       return ["density", "note_s", "brightness", "attack_s", "phrase"];
+    case "sampler":
+      return ["density", "note_s", "attack_s", "release_s", "cutoff_hz", "resonance", "velocity_spread", "start", "root_midi"];
   }
 }
 const PARAM_LABEL: Record<string, StringMessageKey> = {

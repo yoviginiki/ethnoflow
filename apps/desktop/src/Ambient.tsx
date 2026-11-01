@@ -158,7 +158,7 @@ export function Ambient({ kind = "ambient" }: { kind?: RackKind } = {}) {
   const sel = layers.find((l) => l.id === selected) ?? null;
   const selIndex = sel ? layers.indexOf(sel) : -1;
   const kindNames = useMemo(
-    () => ({ noise: t.kindNoise, wind: t.kindWind, texture: t.kindTexture, bells: t.kindBells, pluck: t.kindPluck, loop: t.kindLoop, cloud: t.kindCloud, resonator: t.kindResonator, choir: t.kindChoir, bloom: t.kindBloom }),
+    () => ({ noise: t.kindNoise, wind: t.kindWind, texture: t.kindTexture, bells: t.kindBells, pluck: t.kindPluck, loop: t.kindLoop, cloud: t.kindCloud, resonator: t.kindResonator, choir: t.kindChoir, bloom: t.kindBloom, sampler: t.kindSampler }),
     [t],
   );
 
@@ -572,6 +572,17 @@ export function Ambient({ kind = "ambient" }: { kind?: RackKind } = {}) {
             </select>
           </label>
           <label>
+            {t.samplerFromTake}
+            <select value="" disabled={layers.length >= MAX_AMBIENT_LAYERS || project.takes.length === 0} onChange={(e) => e.target.value && addLayer("sampler", e.target.value)} data-coach="sampler-from-take">
+              <option value="">…</option>
+              {project.takes.map((tk) => (
+                <option key={tk.id} value={tk.id}>
+                  {takeName(tk, t.take)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="inline small">
             {t.cloudFromTake}
             <select value="" disabled={layers.length >= MAX_AMBIENT_LAYERS || project.takes.length === 0} onChange={(e) => e.target.value && addLayer("cloud", e.target.value)}>
               <option value="">…</option>

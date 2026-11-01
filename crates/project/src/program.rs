@@ -84,6 +84,10 @@ pub fn param_range(param: &str) -> Option<(f64, f64)> {
         "spread" => (0.0, 30.0),
         "note_s" => (0.2, 8.0),
         "attack_s" => (0.005, 2.0),
+        "release_s" => (0.01, 20.0),
+        "cutoff_hz" => (40.0, 20_000.0),
+        "root_midi" => (24.0, 108.0),
+        "start" => (0.0, 1.0),
         "center_hz" => (80.0, 6_000.0),
         "density" => (0.0, 120.0),
         "decay_s" => (0.2, 30.0),
@@ -114,6 +118,17 @@ pub fn source_params(src: &LayerSource) -> &'static [&'static str] {
         }
         LayerSource::Choir { .. } => &["vowel", "breath", "spread", "brightness", "morph"],
         LayerSource::Bloom { .. } => &["density", "note_s", "brightness", "attack_s", "phrase"],
+        LayerSource::Sampler { .. } => &[
+            "density",
+            "note_s",
+            "attack_s",
+            "release_s",
+            "cutoff_hz",
+            "resonance",
+            "velocity_spread",
+            "start",
+            "root_midi",
+        ],
         LayerSource::Cloud { .. } => &[
             "grain_ms",
             "density",
@@ -204,6 +219,20 @@ fn source_param(s: &LayerSource, param: &str) -> Option<f64> {
         (LayerSource::Cloud { jitter, .. }, "jitter") => *jitter,
         (LayerSource::Cloud { reverse_p, .. }, "reverse_p") => *reverse_p,
         (LayerSource::Cloud { octave_p, .. }, "octave_p") => *octave_p,
+        (LayerSource::Sampler { density, .. }, "density") => *density,
+        (LayerSource::Sampler { note_s, .. }, "note_s") => *note_s,
+        (LayerSource::Sampler { attack_s, .. }, "attack_s") => *attack_s,
+        (LayerSource::Sampler { release_s, .. }, "release_s") => *release_s,
+        (LayerSource::Sampler { cutoff_hz, .. }, "cutoff_hz") => *cutoff_hz,
+        (LayerSource::Sampler { resonance, .. }, "resonance") => *resonance,
+        (
+            LayerSource::Sampler {
+                velocity_spread, ..
+            },
+            "velocity_spread",
+        ) => *velocity_spread,
+        (LayerSource::Sampler { start, .. }, "start") => *start,
+        (LayerSource::Sampler { root_midi, .. }, "root_midi") => *root_midi,
         _ => return None,
     })
 }
@@ -278,6 +307,20 @@ fn set_source_param(s: &mut LayerSource, param: &str, v: f64) -> bool {
         (LayerSource::Cloud { jitter, .. }, "jitter") => *jitter = v,
         (LayerSource::Cloud { reverse_p, .. }, "reverse_p") => *reverse_p = v,
         (LayerSource::Cloud { octave_p, .. }, "octave_p") => *octave_p = v,
+        (LayerSource::Sampler { density, .. }, "density") => *density = v,
+        (LayerSource::Sampler { note_s, .. }, "note_s") => *note_s = v,
+        (LayerSource::Sampler { attack_s, .. }, "attack_s") => *attack_s = v,
+        (LayerSource::Sampler { release_s, .. }, "release_s") => *release_s = v,
+        (LayerSource::Sampler { cutoff_hz, .. }, "cutoff_hz") => *cutoff_hz = v,
+        (LayerSource::Sampler { resonance, .. }, "resonance") => *resonance = v,
+        (
+            LayerSource::Sampler {
+                velocity_spread, ..
+            },
+            "velocity_spread",
+        ) => *velocity_spread = v,
+        (LayerSource::Sampler { start, .. }, "start") => *start = v,
+        (LayerSource::Sampler { root_midi, .. }, "root_midi") => *root_midi = v,
         _ => return false,
     }
     true

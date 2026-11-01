@@ -7,6 +7,8 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { formatBytes, formatDb, formatTime, isTypingTarget, linearToDb, meterFraction, takeName } from "./format";
 import { Knob } from "./Knob";
 import { messages } from "./i18n";
+import { chooseTake, overlappingClips, placeRecordedClip } from "./arrangeTakes";
+import { playTake } from "./takeActions";
 import { useStore } from "./store";
 
 const RULER_H = 26;
@@ -87,6 +89,8 @@ export function Arrange() {
   const [removeTrack, setRemoveTrack] = useState<Track | null>(null);
   const [rec, setRec] = useState<RecordingStatus | null>(null);
   const recStart = useRef<{ at: number; track: string | null } | null>(null);
+  const [lastRec, setLastRec] = useState<{ at: number; track: string | null } | null>(null);
+  const [measuring, setMeasuring] = useState(false);
   const peaks = useRef(new Map<string, WaveformPeaks>());
   const [peaksVersion, setPeaksVersion] = useState(0);
   const drag = useRef<Drag>({ kind: "none" });
@@ -286,15 +290,40 @@ export function Arrange() {
       setMessage(null);
       const at = statusRef.current?.playing ? statusRef.current.position_seconds : cursorRef.current;
       await api.arrangementPlay(prefs.selectedOutput, at);
-      await api.startRecording({ input: prefs.selectedInput, output: prefs.selectedOutput, sample_rate: prefs.sampleRate, click: false, count_in_bars: 0 });
+      await api.startRecording({ input: prefs.selectedInput, output: prefs.selectedOutput, sample_rate: prefs.sampleRate, click: prefs.clickRec, count_in_bars: 0 });
       recStart.current = { at, track: selectedTrack };
+      setLastRec({ at, track: selectedTrack });
       setRec(null);
       setMode("recording");
     } catch (e) {
       fail(e);
       void api.arrangementPause().then((st) => setStatus(st)).catch(() => undefined);
     }
-  }, [fail, prefs.selectedInput, prefs.selectedOutput, prefs.sampleRate, selectedTrack, setError, setMessage, setMode]);
+  }, [fail, prefs.selectedInput, prefs.selectedOutput, prefs.sampleRate, prefs.clickRec, selectedTrack, setError, setMessage, setMode]);
+
+  /** One more take at the same spot as the last recording (the older take stays, muted). */
+  const onRecordAgain = useCallback(async () => {
+    if (!lastRec) return;
+    setSelectedTrack(lastRec.track);
+    cursorRef.current = lastRec.at;
+    setCursor(lastRec.at);
+    await seek(lastRec.at);
+    await onRecord();
+  }, [lastRec, onRecord, seek, setCursor]);
+
+  const measureLatency = useCallback(async () => {
+    setMeasuring(true);
+    const p = useStore.getState().prefs;
+    try {
+      const r = await api.measureLatency(p.selectedInput, p.selectedOutput, p.sampleRate);
+      useStore.getState().setPref("latencyMs", Math.round(r.ms * 10) / 10);
+      useStore.getState().setMessage(`${t.latencyLabel}: ${r.ms.toFixed(0)} ms ±${(r.spread_ms / 2).toFixed(0)} (${r.heard}/${r.clicks})`);
+    } catch (e) {
+      fail(e);
+    } finally {
+      setMeasuring(false);
+    }
+  }, [fail, t]);
 
   const onStopRecord = useCallback(async () => {
     const st = useStore.getState();
@@ -317,13 +346,18 @@ export function Arrange() {
           next.tracks.push(track);
           setSelectedTrack(track.id);
         }
-        const clip: Clip = { id: uid(), take_id: r.take.id, start: start.at, offset: 0, length: Math.max(MIN_CLIP_S, r.take.duration_seconds ?? 0), gain_db: 0, fade_in: 0, fade_out: 0, mute: false };
-        track.clips.push(clip);
+        const latencyMs = st.prefs.latencyMs;
+        const placed = placeRecordedClip(track, r.take, start.at, latencyMs, uid());
+        track.clips = placed.track.clips;
         commit(next);
-        setSelected({ track: track.id, clip: clip.id });
+        setSelected({ track: track.id, clip: placed.clip.id });
         setCursor(start.at);
-      }
-      if (r.frames_lost > 0) st.setMessage(`${t.recordedOnto} · ${r.frames_lost} ${t.framesLost}`);
+        const notes = [t.recordedOnto];
+        if (latencyMs) notes.push(t.latencyComp(Math.round(latencyMs)));
+        if (placed.mutedIds.length) notes.push(t.takesKept(placed.mutedIds.length));
+        if (r.frames_lost > 0) notes.push(`${r.frames_lost} ${t.framesLost}`);
+        st.setMessage(notes.join(" · "));
+      } else if (r.frames_lost > 0) st.setMessage(`${t.recordedOnto} · ${r.frames_lost} ${t.framesLost}`);
       else st.setMessage(t.recordedOnto);
     } catch (e) {
       fail(e);
@@ -1009,6 +1043,14 @@ export function Arrange() {
             ● {t.record}
           </button>
         )}
+        {!recording && lastRec && (
+          <button className="ghost" onClick={() => void onRecordAgain()} disabled={busy || !arr} title={t.takeAgainHint}>
+            ● {t.takeAgain}
+          </button>
+        )}
+        <button className="ghost small" onClick={() => void measureLatency()} disabled={measuring || recording || playing || busy} title={t.latencyHintStudio} data-coach="studio-latency">
+          {t.latencyLabel}: <span className="mono-num">{prefs.latencyMs !== null ? `${prefs.latencyMs.toFixed(0)} ms` : t.latencyUnknown}</span>
+        </button>
         <label className="inline">
           <input type="checkbox" checked={loopOn} onChange={toggleLoop} disabled={!arr} />
           {t.loopRegion}
@@ -1211,6 +1253,33 @@ export function Arrange() {
                   {t.deleteClip}
                 </button>
               </div>
+              {(() => {
+                const group = overlappingClips(selectedClip.track, selectedClip.clip);
+                if (group.length < 2) return null;
+                return (
+                  <div className="takes-group" data-coach="studio-takes">
+                    <div className="analysis-row">
+                      <strong>{t.takesTitle}</strong>
+                      <span className="muted small">{t.takesHint}</span>
+                    </div>
+                    <div className="style-row">
+                      {group.map((c) => {
+                        const tk = takeById.get(c.take_id);
+                        return (
+                          <span key={c.id} className={`take-chip ${c.mute ? "" : "on"}`}>
+                            <button className="ghost small" onClick={() => void playTake(c.take_id).catch(fail)} title={t.playTake}>
+                              ▶
+                            </button>
+                            <button className={`ghost small ${c.mute ? "" : "on"}`} onClick={() => patchTrack(selectedClip.track.id, (tr) => void (tr.clips = chooseTake(tr, c.id).clips))} title={t.useThisTake}>
+                              {tk ? takeName(tk, t.take) : c.take_id} {c.mute ? "" : "✓"}
+                            </button>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
             </>
           ) : (
             <div className="muted small">{t.noClipSelected}</div>

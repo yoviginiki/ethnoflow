@@ -12,7 +12,8 @@ use audio_engine::{
     write_wav, AudioBuffer, BellParams, BellSource, BloomParams, BloomSource, ChoirParams,
     ChoirSource, GrainParams, GrainSource, Graph, GraphCmd, GraphParams, LoopParams, LoopSource,
     NoiseParams, NoiseSource, PluckParams, PluckSource, ResonatorParams, ResonatorSource,
-    TextureParams, TextureSource, WavFormat, WindParams, WindSource, MAX_PITCHES,
+    SamplerParams, SamplerSource, TextureParams, TextureSource, WavFormat, WindParams, WindSource,
+    MAX_PITCHES,
 };
 use project::{
     effective_rack, is_animated, Ambient, AmbientLayer, LayerSource, Macros, MAX_AMBIENT_LAYERS,
@@ -112,6 +113,7 @@ pub enum LiveParams {
     Resonator(Arc<ResonatorParams>),
     Choir(Arc<ChoirParams>),
     Bloom(Arc<BloomParams>),
+    Sampler(Arc<SamplerParams>),
 }
 
 pub struct LiveLayer {
@@ -338,6 +340,7 @@ fn build_key(l: &AmbientLayer, rate: u32) -> String {
             ..
         } => format!("loop:{take_id}:{start}:{end}:{reverse}:{rate}"),
         LayerSource::Cloud { take_id, .. } => format!("cloud:{take_id}:{rate}:{}", l.seed),
+        LayerSource::Sampler { take_id, .. } => format!("sampler:{take_id}:{rate}:{}", l.seed),
         other => format!("{}:{}", other.kind(), l.seed),
     }
 }
@@ -551,6 +554,44 @@ pub(crate) fn apply_source(s: &Inner, live: &LiveParams, l: &AmbientLayer, m: &M
             p.seed.store(l.seed, Ordering::Relaxed);
         }
         (
+            LayerSource::Sampler {
+                root_midi,
+                density,
+                note_s,
+                attack_s,
+                release_s,
+                cutoff_hz,
+                resonance,
+                velocity_spread,
+                start,
+                tonal,
+                register,
+                ..
+            },
+            LiveParams::Sampler(p),
+        ) => {
+            p.pitches.set(&pitch_set(s, *tonal, *register, l.seed));
+            let (root_hz, _) = crate::graph_cmds::note_hz(
+                s,
+                root_midi.round().clamp(0.0, 127.0) as u8,
+                0.0,
+                crate::graph_cmds::Intonation::Tempered,
+            );
+            p.root_hz.set(root_hz);
+            p.density.set((*density * motion) as f32);
+            p.note_s.set(*note_s as f32);
+            p.attack_s.set(*attack_s as f32);
+            p.release_s.set(*release_s as f32);
+            // Brightness macro shifts the filter by ±2 octaves like the strip's low-pass.
+            p.cutoff_hz.set(
+                (*cutoff_hz * 2f64.powf((m.brightness - 0.5) * 4.0)).clamp(40.0, 20_000.0) as f32,
+            );
+            p.resonance.set(*resonance as f32);
+            p.velocity_spread.set(*velocity_spread as f32);
+            p.start.set(*start as f32);
+            p.seed.store(l.seed, Ordering::Relaxed);
+        }
+        (
             LayerSource::Cloud {
                 grain_ms,
                 density,
@@ -701,6 +742,15 @@ fn build_layer(s: &mut Inner, id: RackId, i: usize) -> CmdResult<()> {
                 Box::new(PluckSource::new(p, rate)),
             )
         }
+        LayerSource::Sampler { take_id, .. } => {
+            let buf = loop_buffer(s, take_id, false, rate)?;
+            let p = Arc::new(SamplerParams::default());
+            p.seed.store(l.seed, Ordering::Relaxed);
+            (
+                LiveParams::Sampler(Arc::clone(&p)),
+                Box::new(SamplerSource::new(p, buf)),
+            )
+        }
         LayerSource::Cloud { take_id, .. } => {
             let buf = loop_buffer(s, take_id, false, rate)?;
             let p = Arc::new(GrainParams::default());
@@ -849,6 +899,9 @@ fn status(s: &mut Inner, id: RackId) -> CmdResult<AmbientStatus> {
                 tonal, register, ..
             }
             | LayerSource::Bloom {
+                tonal, register, ..
+            }
+            | LayerSource::Sampler {
                 tonal, register, ..
             } => pitch_set(s, *tonal, *register, l.seed),
             _ => Vec::new(),
@@ -1082,6 +1135,15 @@ pub(crate) fn offline_sources(
                     Box::new(PluckSource::new(p, rate)),
                 )
             }
+            LayerSource::Sampler { take_id, .. } => {
+                let buf = loop_buffer(s, take_id, false, rate)?;
+                let p = Arc::new(SamplerParams::default());
+                p.seed.store(l.seed, Ordering::Relaxed);
+                (
+                    LiveParams::Sampler(Arc::clone(&p)),
+                    Box::new(SamplerSource::new(p, buf)),
+                )
+            }
             LayerSource::Cloud { take_id, .. } => {
                 let buf = loop_buffer(s, take_id, false, rate)?;
                 let p = Arc::new(GrainParams::default());
@@ -1154,6 +1216,9 @@ pub async fn export_ambient(
                 }
                 | LayerSource::Bloom {
                     tonal, register, ..
+                }
+                | LayerSource::Sampler {
+                    tonal, register, ..
                 } => pitch_set(&s, *tonal, *register, l.seed),
                 _ => Vec::new(),
             })
@@ -1208,6 +1273,7 @@ pub async fn export_ambient(
                     LiveParams::Resonator(x) => x.pitches.set(&pitch_sets[i]),
                     LiveParams::Choir(x) => x.pitches.set(&pitch_sets[i]),
                     LiveParams::Bloom(x) => x.pitches.set(&pitch_sets[i]),
+                    LiveParams::Sampler(x) => x.pitches.set(&pitch_sets[i]),
                     LiveParams::Loop(x) => {
                         // apply_source used 48 kHz for the frame math; redo at `rate`.
                         if let LayerSource::Loop {

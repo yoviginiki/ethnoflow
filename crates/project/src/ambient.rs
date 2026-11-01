@@ -102,6 +102,27 @@ pub enum LayerSource {
         tonal: bool,
         register: (u8, u8),
     },
+    /// Sampler: a take played as notes from the pitch set (varispeed), with an
+    /// attack → hold → release envelope and a resonant low-pass per note.
+    Sampler {
+        take_id: String,
+        /// The MIDI note the take itself sounds at (its own pitch), 24..108.
+        root_midi: f64,
+        /// Notes per minute (0..120).
+        density: f64,
+        /// Held length of a note, seconds (0.05..30).
+        note_s: f64,
+        attack_s: f64,
+        release_s: f64,
+        /// Low-pass cutoff Hz (40..20000) and resonance 0..1.
+        cutoff_hz: f64,
+        resonance: f64,
+        velocity_spread: f64,
+        /// Where in the take a note starts, 0..1.
+        start: f64,
+        tonal: bool,
+        register: (u8, u8),
+    },
     /// Granular cloud of a take (F1B.2): grains around a read position, transposed.
     Cloud {
         take_id: String,
@@ -127,9 +148,9 @@ impl LayerSource {
     /// The take a layer reads, if it reads one (loop, cloud).
     pub fn take_id(&self) -> Option<&str> {
         match self {
-            LayerSource::Loop { take_id, .. } | LayerSource::Cloud { take_id, .. } => {
-                Some(take_id.as_str())
-            }
+            LayerSource::Loop { take_id, .. }
+            | LayerSource::Cloud { take_id, .. }
+            | LayerSource::Sampler { take_id, .. } => Some(take_id.as_str()),
             _ => None,
         }
     }
@@ -143,6 +164,7 @@ impl LayerSource {
             LayerSource::Pluck { .. } => "pluck",
             LayerSource::Loop { .. } => "loop",
             LayerSource::Cloud { .. } => "cloud",
+            LayerSource::Sampler { .. } => "sampler",
             LayerSource::Resonator { .. } => "resonator",
             LayerSource::Choir { .. } => "choir",
             LayerSource::Bloom { .. } => "bloom",
@@ -159,6 +181,7 @@ impl LayerSource {
                 | LayerSource::Resonator { tonal: true, .. }
                 | LayerSource::Choir { tonal: true, .. }
                 | LayerSource::Bloom { tonal: true, .. }
+                | LayerSource::Sampler { tonal: true, .. }
         )
     }
 
@@ -192,6 +215,20 @@ impl LayerSource {
                 damping: 0.3,
                 brightness: 0.5,
                 velocity_spread: 0.5,
+                tonal: true,
+                register: (48, 72),
+            },
+            "sampler" => LayerSource::Sampler {
+                take_id: String::new(),
+                root_midi: 60.0,
+                density: 12.0,
+                note_s: 1.5,
+                attack_s: 0.02,
+                release_s: 0.8,
+                cutoff_hz: 8000.0,
+                resonance: 0.2,
+                velocity_spread: 0.4,
+                start: 0.0,
                 tonal: true,
                 register: (48, 72),
             },
@@ -326,6 +363,35 @@ impl LayerSource {
                 }
                 unit(*brightness, "brightness")?;
                 unit(*phrase, "phrase")?;
+                register(*r)
+            }
+            LayerSource::Sampler {
+                take_id,
+                root_midi,
+                density,
+                note_s,
+                attack_s,
+                release_s,
+                cutoff_hz,
+                resonance,
+                velocity_spread,
+                start,
+                register: r,
+                ..
+            } => {
+                if take_id.is_empty()
+                    || !(24.0..=108.0).contains(root_midi)
+                    || !(0.0..=120.0).contains(density)
+                    || !(0.05..=30.0).contains(note_s)
+                    || !(0.001..=5.0).contains(attack_s)
+                    || !(0.01..=20.0).contains(release_s)
+                    || !(40.0..=20_000.0).contains(cutoff_hz)
+                {
+                    return Err(ProjectError::InvalidState("sampler range".into()));
+                }
+                unit(*resonance, "resonance")?;
+                unit(*velocity_spread, "velocity_spread")?;
+                unit(*start, "start")?;
                 register(*r)
             }
             LayerSource::Cloud {

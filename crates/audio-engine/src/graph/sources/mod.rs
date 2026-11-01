@@ -19,6 +19,7 @@ pub mod pluck;
 pub mod resonator;
 pub mod reverb;
 pub mod rhythm;
+pub mod sampler;
 pub mod shimmer;
 pub mod tapan;
 pub mod texture;
@@ -49,6 +50,7 @@ pub use rhythm::{
     pattern_channel, BeatClock, DrumEvent, DrumKind, DrumParams, DrumPatternData, DrumSource,
     PatternInbox, PatternSwap, DRUM_KINDS,
 };
+pub use sampler::{SamplerParams, SamplerSource, SAMPLER_VOICES};
 pub use shimmer::PitchShifter;
 pub use tapan::{TapanParams, TapanSource, TAPAN_STROKES};
 pub use texture::{TextureParams, TextureSource};

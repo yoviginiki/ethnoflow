@@ -61,6 +61,12 @@ export async function continueLast(): Promise<string | null> {
   return latest?.id ?? null;
 }
 
+/** Load (if needed) and play a take from its start: the ▶ of a take row, a take chip, the bridge. Sound! */
+export async function playTake(id: string, from = 0): Promise<void> {
+  if (useStore.getState().loaded?.id !== id) await loadTake(id);
+  await playLoaded(from, false);
+}
+
 /** Stop playback and leave the cursor where it stopped. */
 export async function stopPlaying(): Promise<void> {
   const st = useStore.getState();

@@ -68,6 +68,17 @@ function randomizeSource(rnd: () => number, s: LayerSource): LayerSource {
         brightness: nudge(rnd, s.brightness, 0.25, 0, 1),
         morph: nudge(rnd, s.morph, 0.3, 0, 1),
       };
+    case "sampler":
+      // The take and its root stay (the user chose them); the shape breathes.
+      return {
+        ...s,
+        density: clamp(s.density * Math.pow(2, (rnd() * 2 - 1) * 0.6), 1, 60),
+        note_s: clamp(s.note_s * Math.pow(2, (rnd() * 2 - 1) * 0.5), 0.1, 8),
+        release_s: clamp(s.release_s * Math.pow(2, (rnd() * 2 - 1) * 0.5), 0.05, 6),
+        cutoff_hz: clamp(s.cutoff_hz * Math.pow(2, (rnd() * 2 - 1) * 1.2), 200, 16000),
+        resonance: nudge(rnd, s.resonance, 0.25, 0, 0.9),
+        start: nudge(rnd, s.start, 0.2, 0, 0.8),
+      };
     case "bloom":
       return {
         ...s,

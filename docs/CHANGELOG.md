@@ -3,6 +3,38 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Sampler layer: a take or a library sample played as notes (home-studio item 3, first
+  slice, 2026-11-01; owner: "семплите в Soundscapes с ноти, фейдъри, pitch и филтри").**
+  Engine `sampler.rs`: eight varispeed voices on the pitch set (rate = pitch / root),
+  attack → hold → release envelope, TPT state-variable resonant low-pass per voice,
+  seeded sparse trigger; tests: a note an octave up reads the take twice as fast
+  (contour median 440 Hz on a 220 Hz take), silent without pitches, the filter tames
+  the top. Project: `LayerSource::Sampler` (take_id, root_midi, density, note_s,
+  attack_s, release_s, cutoff_hz, resonance, velocity_spread, start, tonal, register)
+  with validation, defaults, automation params and write-back. Commands: build / apply /
+  offline / export pitch sets; the root note goes through the project's A4. UI: "Sampler
+  from a take…" in Atmosphere and the Soundscapes editor, a module in the Modules view
+  with its how-to, "+ Sampler" in My samples; sliders / knobs for every parameter.
+  Smoke: a sampler layer renders audibly through the export stem. Guide BG/EN.
+  Next in item 3: multisample folders (one sample per note) and following the chord of
+  the progression instead of the whole mode.
+- **Takes on a track, latency compensation, "one more take" (home-studio item 2, 2026-11-01).**
+  `arrangeTakes.ts`: a recording placed on a track skips the measured round-trip latency
+  (prefs.latencyMs) so it sits on the background, and mutes (never deletes) the older
+  clips it overlaps; `chooseTake` makes one take of a group the sounding one. My studio:
+  "● One more take" records again at the last spot, a "Latency" button measures it there
+  (same measurement as the trainer), the click follows the record preference, the clip
+  panel lists the take group with ▶ and "Use this take". vitest 2; guide BG/EN.
+### Implemented
+- **Styles: one path from the kaval to a song (home-studio item 1, 2026-11-01; owner: "давай по
+  ред 1–8 всички").** A starter is now a style: besides drone / pad / rhythm / atmosphere it
+  carries the chord progression of its genre (follow on) and a Soundscapes world; four new
+  styles (RnB / soul, Rock, Pop, Jazz night) with tempo ranges, next to the five existing
+  ones. `styleActions.applyStyle` applies the session, builds the journey into the
+  Soundscapes rack and switches the layers, used by "Start from a melody", "Create a song"
+  (makeSong, two new facts) and the bridge. Start shows the styles without an analysis when
+  the project has a mode, with a seed. Sessions carry the Soundscapes rack. Smoke: make_song
+  checks the progression and the journey; vitest. Guide BG/EN.
 - **Chord progressions by genre with a generator, hand editing and a follower (2026-11-01;
   owner: "различните прогресии… RnB, rock, DnB, liquid, ambient… но прогресиите да имат
   генератор", then "давай напред").** `progression.ts`: eight genre specs (patterns of scale

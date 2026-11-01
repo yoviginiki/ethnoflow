@@ -2,6 +2,8 @@ import type { Ambient as AmbientRack, AmbientLayer, LayerKind, LayerSource, Note
 import { DEFAULT_MACROS, defaultSource, makeLayer } from "./ambientPresets";
 import type { SessionPayload } from "./session";
 import { DEFAULT_DRONE, DEFAULT_HARMONY, DEFAULT_PAD, DEFAULT_RHYTHM } from "./store";
+import { generateProgression, type Genre } from "./progression";
+import type { WorldId } from "./scapes";
 
 /**
  * "Start from a melody" (owner request 2026-10-17): after the analysis of a take, propose
@@ -30,8 +32,33 @@ export function melodyRegister(notes: Note[]): MelodyRegister | null {
   return { low: m[0], high: m[m.length - 1], median: m[Math.floor(m.length / 2)], count: m.length };
 }
 
-export type StarterId = "quiet_ambient" | "dark_drone" | "liquid_dnb" | "ambient_dnb" | "ethno_pulse";
-export const STARTER_IDS: StarterId[] = ["quiet_ambient", "dark_drone", "liquid_dnb", "ambient_dnb", "ethno_pulse"];
+export type StarterId = "quiet_ambient" | "dark_drone" | "liquid_dnb" | "ambient_dnb" | "ethno_pulse" | "rnb_soul" | "rock_band" | "pop_air" | "jazz_night";
+export const STARTER_IDS: StarterId[] = ["quiet_ambient", "dark_drone", "liquid_dnb", "ambient_dnb", "ethno_pulse", "rnb_soul", "rock_band", "pop_air", "jazz_night"];
+
+/**
+ * A style is a starter plus the two engines that arrived on 2026-11-01: the chord
+ * progression (genre, follow on) and the Soundscapes journey (world). One "Try" sets
+ * everything at once (owner: "един лесен път от кавала до песен").
+ */
+export interface StyleLink {
+  genre: Genre;
+  world: WorldId;
+  /** Length of the generated progression in bars. */
+  bars: number;
+  /** Whether the Soundscapes journey plays along from the start. */
+  scapesOn: boolean;
+}
+export const STYLE_LINKS: Record<StarterId, StyleLink> = {
+  quiet_ambient: { genre: "ambient", world: "mountain-morning", bars: 16, scapesOn: true },
+  dark_drone: { genre: "ambient", world: "deep-space", bars: 16, scapesOn: true },
+  liquid_dnb: { genre: "liquid", world: "cyber-rain", bars: 16, scapesOn: false },
+  ambient_dnb: { genre: "dnb", world: "rhodope-night", bars: 16, scapesOn: true },
+  ethno_pulse: { genre: "ethno", world: "thracian-steppe", bars: 8, scapesOn: false },
+  rnb_soul: { genre: "rnb", world: "ancient-forest", bars: 8, scapesOn: false },
+  rock_band: { genre: "rock", world: "cyber-rain", bars: 8, scapesOn: false },
+  pop_air: { genre: "pop", world: "mountain-morning", bars: 8, scapesOn: false },
+  jazz_night: { genre: "jazz", world: "deep-space", bars: 8, scapesOn: false },
+};
 
 export type StarterFact =
   | { kind: "key"; scale: Scale }
@@ -43,6 +70,8 @@ export type StarterFact =
   | { kind: "register_unknown" };
 
 export interface StarterContext {
+  /** Seed for the progression generator (same seed = same chords); default 1. */
+  seed?: number;
   scale: Scale | null;
   timing: Timing;
   /** Best tempo candidate of the analysis, if any. */
@@ -60,6 +89,8 @@ export interface Starter {
   /** Timing to write into the project before trying (null = keep the project's). */
   timing: Timing | null;
   facts: StarterFact[];
+  /** The Soundscapes world whose journey the style builds (the screen does it after the session). */
+  world: WorldId;
 }
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
@@ -73,6 +104,16 @@ function padRegister(ctx: StarterContext): { low: number; high: number; fact: St
   if (!ctx.register) return { low: 48, high: 72, fact: { kind: "register_unknown" } };
   const low = clamp(ctx.register.median - 19, 36, 60);
   return { low, high: low + 24, fact: { kind: "pad_below", low, high: low + 24 } };
+}
+
+/** Tempo inside a genre's range: detected or project tempo when it fits, else a suggestion. */
+function rangeTempo(ctx: StarterContext, lo: number, hi: number, suggested: number): { bpm: number; fact: StarterFact } {
+  const b = ctx.detectedBpm ?? ctx.timing.bpm;
+  if (b !== null) {
+    if (b >= lo && b <= hi) return { bpm: Math.round(b), fact: { kind: ctx.detectedBpm !== null ? "tempo_detected" : "tempo_project", bpm: Math.round(b) } };
+    if (b * 2 >= lo && b * 2 <= hi) return { bpm: Math.round(b * 2), fact: { kind: "tempo_doubled", bpm: Math.round(b * 2) } };
+  }
+  return { bpm: suggested, fact: { kind: "tempo_suggested", bpm: suggested } };
 }
 
 function dnbTempo(ctx: StarterContext): { bpm: number; fact: StarterFact } {
@@ -106,7 +147,7 @@ export function proposeStarters(ctx: StarterContext): Starter[] {
   const texReg: [number, number] = [clamp(med - 24, 36, 72), clamp(med - 5, 48, 84)];
   const bellReg: [number, number] = [clamp(med - 7, 48, 84), clamp(med + 12, 60, 100)];
   const harmony = { ...DEFAULT_HARMONY, registerLow: pr.low, registerHigh: pr.high };
-  const out: Starter[] = [];
+  const out: Omit<Starter, "world">[] = [];
 
   // 1. Quiet ambient: drone + pad + a breathing texture, bells far away.
   out.push({
@@ -271,5 +312,143 @@ export function proposeStarters(ctx: StarterContext): Starter[] {
     },
   });
 
-  return out;
+  // 6. RnB / soul: half-time drums, a round bass, a seventh-chord pad, sparse bells.
+  const rnb = rangeTempo(ctx, 68, 100, 84);
+  out.push({
+    id: "rnb_soul",
+    timing: { bpm: rnb.bpm, numerator: 4, unit: 4, grouping: [] },
+    facts: [...keyFacts(ctx), rnb.fact, pr.fact],
+    session: {
+      v: 1,
+      prefs: {
+        drone: { ...DEFAULT_DRONE, rootMidi: r, levelDb: -24, sub: 0.3, fifth: 0.2 },
+        pad: { ...DEFAULT_PAD, rootMidi: r, voicing: "scale_7th", emotion: "melancholy", x: 0.5, y: 0.45, levelDb: -15, lfoHz: 0.08 },
+        rhythm: {
+          ...DEFAULT_RHYTHM,
+          drums: { ...DEFAULT_RHYTHM.drums, on: true, style: "halftime", complexity: 0.4, humanize: 0.45, swing: 0.15, level_db: -11 },
+          bass: { ...DEFAULT_RHYTHM.bass, on: true, voice: 1, density: 0.45, syncopation: 0.5, passing: 0.5, sidechain: 0.4, level_db: -13 },
+          ostinato: { ...DEFAULT_RHYTHM.ostinato, on: false },
+          arp: { ...DEFAULT_RHYTHM.arp, on: false },
+        },
+        harmony,
+        masterDb: 0,
+      },
+      ambient: rack(
+        ctx,
+        [
+          layer(ctx, "texture", { brightness: 0.4, motion: 0.3, resonance: 0.35, tonal, register: texReg }, { gain_db: -24, pan: -0.2 }),
+          layer(ctx, "bells", { density: 2, decay_s: 8, brightness: 0.5, velocity_spread: 0.6, tonal, register: bellReg }, { gain_db: -26, pan: 0.3 }),
+        ],
+        { space: 0.45, space_size: 0.6, motion: 0.4, brightness: 0.5 },
+      ),
+      layers: { drone: false, pad: tonal, ambient: true, rhythm: true, scapes: false },
+    },
+  });
+
+  // 7. Rock band: straight drums, a driving bass, fifths in the pad, no drone.
+  const rock = rangeTempo(ctx, 100, 150, 120);
+  out.push({
+    id: "rock_band",
+    timing: { bpm: rock.bpm, numerator: 4, unit: 4, grouping: [] },
+    facts: [...keyFacts(ctx), rock.fact, pr.fact],
+    session: {
+      v: 1,
+      prefs: {
+        drone: { ...DEFAULT_DRONE, rootMidi: r, levelDb: -30 },
+        pad: { ...DEFAULT_PAD, rootMidi: r, voicing: "fifth", emotion: "light", x: 0.65, y: 0.4, levelDb: -16, lfoHz: 0.2 },
+        rhythm: {
+          ...DEFAULT_RHYTHM,
+          drums: { ...DEFAULT_RHYTHM.drums, on: true, style: "liquid", complexity: 0.6, humanize: 0.2, level_db: -8 },
+          bass: { ...DEFAULT_RHYTHM.bass, on: true, voice: 1, density: 0.7, syncopation: 0.2, passing: 0.3, sidechain: 0.2, level_db: -11 },
+          ostinato: { ...DEFAULT_RHYTHM.ostinato, on: false },
+          arp: { ...DEFAULT_RHYTHM.arp, on: false },
+        },
+        harmony,
+        masterDb: 0,
+      },
+      ambient: rack(
+        ctx,
+        [
+          layer(ctx, "noise", { color: 0.4 }, { gain_db: -34, lowpass_hz: 4000 }),
+          layer(ctx, "texture", { brightness: 0.55, motion: 0.5, resonance: 0.3, tonal, register: texReg }, { gain_db: -26, pan: 0.2 }),
+        ],
+        { space: 0.3, space_size: 0.5, motion: 0.5, brightness: 0.6, width: 0.9 },
+      ),
+      layers: { drone: false, pad: tonal, ambient: true, rhythm: true, scapes: false },
+    },
+  });
+
+  // 8. Pop air: light drums, a simple bass, an open pad, bells and wind.
+  const pop = rangeTempo(ctx, 90, 130, 108);
+  out.push({
+    id: "pop_air",
+    timing: { bpm: pop.bpm, numerator: 4, unit: 4, grouping: [] },
+    facts: [...keyFacts(ctx), pop.fact, pr.fact],
+    session: {
+      v: 1,
+      prefs: {
+        drone: { ...DEFAULT_DRONE, rootMidi: r, levelDb: -26 },
+        pad: { ...DEFAULT_PAD, rootMidi: r, voicing: "scale_triad", emotion: "light", x: 0.6, y: 0.5, levelDb: -15, lfoHz: 0.1 },
+        rhythm: {
+          ...DEFAULT_RHYTHM,
+          drums: { ...DEFAULT_RHYTHM.drums, on: true, style: "liquid", complexity: 0.5, humanize: 0.3, level_db: -10 },
+          bass: { ...DEFAULT_RHYTHM.bass, on: true, voice: 0, density: 0.5, syncopation: 0.3, sidechain: 0.5, level_db: -12 },
+          ostinato: { ...DEFAULT_RHYTHM.ostinato, on: false },
+          arp: { ...DEFAULT_RHYTHM.arp, on: true, level_db: -20 },
+        },
+        harmony,
+        masterDb: 0,
+      },
+      ambient: rack(
+        ctx,
+        [
+          layer(ctx, "bells", { density: 4, decay_s: 5, brightness: 0.55, velocity_spread: 0.5, tonal, register: bellReg }, { gain_db: -24, pan: 0.3 }),
+          layer(ctx, "wind", { gust: 0.3, speed: 0.4, center_hz: 1200, resonance: 0.2 }, { gain_db: -30, pan: -0.3 }),
+        ],
+        { space: 0.4, space_size: 0.6, motion: 0.45, brightness: 0.6 },
+      ),
+      layers: { drone: false, pad: tonal, ambient: true, rhythm: true, scapes: false },
+    },
+  });
+
+  // 9. Jazz night: brushed half-time drums, a walking-ish bass, seventh chords, dark texture.
+  const jazz = rangeTempo(ctx, 80, 170, 112);
+  out.push({
+    id: "jazz_night",
+    timing: { bpm: jazz.bpm, numerator: 4, unit: 4, grouping: [] },
+    facts: [...keyFacts(ctx), jazz.fact, pr.fact],
+    session: {
+      v: 1,
+      prefs: {
+        drone: { ...DEFAULT_DRONE, rootMidi: r, levelDb: -28 },
+        pad: { ...DEFAULT_PAD, rootMidi: r, voicing: "scale_7th", emotion: "dark", x: 0.4, y: 0.5, levelDb: -17, lfoHz: 0.05 },
+        rhythm: {
+          ...DEFAULT_RHYTHM,
+          drums: { ...DEFAULT_RHYTHM.drums, on: true, style: "halftime", complexity: 0.35, humanize: 0.5, swing: 0.3, level_db: -13 },
+          bass: { ...DEFAULT_RHYTHM.bass, on: true, voice: 1, density: 0.6, syncopation: 0.3, passing: 0.7, sidechain: 0.1, level_db: -13 },
+          ostinato: { ...DEFAULT_RHYTHM.ostinato, on: false },
+          arp: { ...DEFAULT_RHYTHM.arp, on: false },
+        },
+        harmony,
+        masterDb: 0,
+      },
+      ambient: rack(
+        ctx,
+        [
+          layer(ctx, "texture", { brightness: 0.3, motion: 0.25, resonance: 0.4, tonal, register: texReg }, { gain_db: -24, pan: -0.15 }),
+          layer(ctx, "pluck", { density: 2, damping: 0.6, brightness: 0.4, velocity_spread: 0.6, tonal, register: bellReg }, { gain_db: -28, pan: 0.35 }),
+        ],
+        { space: 0.5, space_size: 0.7, motion: 0.3, brightness: 0.4 },
+      ),
+      layers: { drone: false, pad: tonal, ambient: true, rhythm: true, scapes: false },
+    },
+  });
+
+  // Every style also carries its chord progression (follow on) and its Soundscapes world.
+  const seed = ctx.seed ?? 1;
+  return out.map((st) => {
+    const link = STYLE_LINKS[st.id];
+    const progression = { ...generateProgression(link.genre, seed, link.bars), follow: true };
+    return { ...st, world: link.world, session: { ...st.session, prefs: { ...st.session.prefs, progression }, layers: { ...st.session.layers, scapes: link.scapesOn && tonal } } };
+  });
 }
