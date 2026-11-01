@@ -46,7 +46,7 @@ export function defaultSource(kind: LayerKind, takeId = ""): LayerSource {
     case "cloud":
       return { kind, take_id: takeId, grain_ms: 120, density: 20, position: 0.3, spray: 0.1, scan: 0, pitch: 0, jitter: 10, reverse_p: 0.2, octave_p: 0.1 };
     case "sampler":
-      return { kind, take_id: takeId, root_midi: 60, density: 12, note_s: 1.5, attack_s: 0.02, release_s: 0.8, cutoff_hz: 8000, resonance: 0.2, velocity_spread: 0.4, start: 0, tonal: true, register: [48, 72] };
+      return { kind, take_id: takeId, root_midi: 60, density: 12, note_s: 1.5, attack_s: 0.02, release_s: 0.8, cutoff_hz: 8000, resonance: 0.2, velocity_spread: 0.4, start: 0, tonal: true, register: [48, 72], zones: [] };
   }
 }
 

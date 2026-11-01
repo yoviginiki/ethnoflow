@@ -114,6 +114,9 @@ pub struct Inner {
     pub racks: [crate::ambient_cmds::RackState; 2],
     /// Rhythm section (Phase 4) on slots 12..16 while it plays.
     pub rhythm: Option<crate::rhythm_cmds::RhythmLive>,
+    /// The chord the pad / progression follows right now (MIDI notes); racks with
+    /// `follow_chord` take their tonal pitches from it.
+    pub chord_midi: Option<Vec<u8>>,
 }
 
 impl Inner {

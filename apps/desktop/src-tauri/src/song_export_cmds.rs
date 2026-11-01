@@ -306,7 +306,7 @@ pub async fn export_song(
             let any_solo = layers.iter().any(|l| l.solo);
             for (i, l) in layers.iter().enumerate() {
                 if let Some(p) = live.get(i) {
-                    apply_source(&offline, p, l, &macros);
+                    apply_source(&offline, p, l, &macros, None);
                     match p {
                         LiveParams::Texture(x) => x.pitches.set(&pitch_sets[i]),
                         LiveParams::Bells(x) => x.pitches.set(&pitch_sets[i]),

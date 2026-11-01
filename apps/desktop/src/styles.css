@@ -143,6 +143,8 @@ h2 { font-size: 15px; margin: 0 0 8px; font-weight: 600; }
 .takes-group { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--axis); }
 .take-chip { display: inline-flex; gap: 2px; align-items: center; }
 .take-chip.on button.on { border-color: var(--accent); color: var(--accent); }
+.zones-list { list-style: none; padding: 0; margin: 4px 0; display: flex; flex-direction: column; gap: 2px; }
+.zones-list li { display: flex; gap: 8px; align-items: center; }
 .area {
   display: flex; flex-direction: column; gap: 6px; text-align: left; padding: 16px;
   background: var(--panel); border: 1px solid var(--axis); border-radius: 10px; min-height: 96px;

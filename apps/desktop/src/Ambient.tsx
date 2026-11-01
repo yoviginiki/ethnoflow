@@ -154,6 +154,7 @@ export function Ambient({ kind = "ambient" }: { kind?: RackKind } = {}) {
   );
 
   const layers = rack?.layers ?? [];
+  const takeById = useMemo(() => new Map(project.takes.map((tk) => [tk.id, tk])), [project.takes]);
   const macros = rack?.macros ?? DEFAULT_MACROS;
   const sel = layers.find((l) => l.id === selected) ?? null;
   const selIndex = sel ? layers.indexOf(sel) : -1;
@@ -421,6 +422,10 @@ export function Ambient({ kind = "ambient" }: { kind?: RackKind } = {}) {
               {t.ambientViewModules}
             </button>
           </span>
+          <label className="inline small" title={t.followChordHint} data-coach="follow-chord">
+            <input type="checkbox" checked={rack?.follow_chord ?? false} onChange={(e) => rack && commit({ ...rack, follow_chord: e.target.checked })} />
+            {t.followChord}
+          </label>
           <div className="meter" style={{ width: 120 }} role="meter" aria-valuemin={-60} aria-valuemax={0} aria-valuenow={Math.round(masterPeakDb)} aria-label={t.mixTitle}>
             <div className={`meter-fill ${masterPeakDb > -3 ? "hot" : masterPeakDb > -12 ? "warm" : ""}`} style={{ width: `${meterFraction(masterPeakDb) * 100}%` }} />
           </div>
@@ -721,6 +726,33 @@ export function Ambient({ kind = "ambient" }: { kind?: RackKind } = {}) {
                   </label>
                 );
               })}
+              {sel.source.kind === "sampler" && (sel.source.zones?.length ?? 0) > 0 && (
+                <div className="zones" data-coach="sampler-zones">
+                  <div className="muted small">
+                    {t.zonesTitle}: {sel.source.zones!.length} · {t.zonesHint}
+                  </div>
+                  <ul className="zones-list">
+                    {sel.source.zones!.map((z, zi) => (
+                      <li key={`${z.take_id}-${zi}`}>
+                        <span className="small">{takeById.get(z.take_id) ? takeName(takeById.get(z.take_id)!, t.take) : z.take_id}</span>
+                        <label className="inline small">
+                          {t.rootNoteLabel}
+                          <select value={Math.round(z.root_midi)} onChange={(e) => patchSource(sel.id, { zones: sel.source.kind === "sampler" ? sel.source.zones!.map((x, k) => (k === zi ? { ...x, root_midi: Number(e.target.value) } : x)) : [] })}>
+                            {REGISTER.map((m) => (
+                              <option key={m} value={m}>
+                                {noteName(m)}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <button className="ghost small" onClick={() => patchSource(sel.id, { zones: sel.source.kind === "sampler" ? sel.source.zones!.filter((_, k) => k !== zi) : [] })} title={t.delete}>
+                          ✕
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               {"take_id" in sel.source && (
                 <>
                   <label className="inline">

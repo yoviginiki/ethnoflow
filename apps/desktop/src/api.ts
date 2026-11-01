@@ -522,7 +522,12 @@ export type LayerSource =
   | { kind: "choir"; vowel: number; breath: number; spread: number; brightness: number; morph: number; voices: number; tonal: boolean; register: [number, number] }
   | { kind: "bloom"; density: number; note_s: number; brightness: number; attack_s: number; phrase: number; tonal: boolean; register: [number, number] }
   | { kind: "cloud"; take_id: string; grain_ms: number; density: number; position: number; spray: number; scan: number; pitch: number; jitter: number; reverse_p: number; octave_p: number }
-  | { kind: "sampler"; take_id: string; root_midi: number; density: number; note_s: number; attack_s: number; release_s: number; cutoff_hz: number; resonance: number; velocity_spread: number; start: number; tonal: boolean; register: [number, number] };
+  | { kind: "sampler"; take_id: string; root_midi: number; density: number; note_s: number; attack_s: number; release_s: number; cutoff_hz: number; resonance: number; velocity_spread: number; start: number; tonal: boolean; register: [number, number]; zones?: SamplerZoneSpec[] };
+/** One sample of a multisample sampler: the take and the MIDI note it sounds at. */
+export interface SamplerZoneSpec {
+  take_id: string;
+  root_midi: number;
+}
 export type LayerKind = LayerSource["kind"];
 
 export interface AmbientLayer {
@@ -607,6 +612,8 @@ export interface Ambient {
   tags: string[];
   automation: AutomationLane[];
   program: Program;
+  /** Tonal layers follow the chord of the pad / progression instead of the whole mode. */
+  follow_chord?: boolean;
 }
 
 export interface AmbientExportResult {
@@ -1761,6 +1768,8 @@ export const api = {
   scapesStop: () => invoke<void>("scapes_stop"),
   scapesStatus: () => invoke<AmbientStatus>("scapes_status"),
   scapesProgramSet: (playing: boolean | null, position: number | null) => invoke<AmbientStatus>("scapes_program_set", { playing, position }),
+  /** The chord the background follows now (MIDI), for racks with follow_chord; null = none. */
+  setChordPitches: (midi: number[] | null) => invoke<void>("set_chord_pitches", { midi }),
   exportAmbient: (path: string, format: WavFormat | null, seconds: number | null, stems: boolean, sampleRate: number | null) =>
     invoke<AmbientExportResult>("export_ambient", { path, format, seconds, stems, sampleRate }),
   startRhythm: (device: string | null, settings: RhythmSettings) => invoke<RhythmStatus>("start_rhythm", { device, settings }),

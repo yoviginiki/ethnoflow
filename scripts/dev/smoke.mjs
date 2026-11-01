@@ -366,6 +366,28 @@ async function main() {
       expectOk(send({ op: "progression_set", follow: false, steps: before.steps }));
     }
   });
+  await step("follow the chord: with follow_chord on, tonal layers re-pitch to the chord (D F A), off → back to the mode", () => {
+    const built = expectOk(send({ op: "scapes_build", world: "rhodope-night", minutes: 2, seed: 3 }));
+    try {
+      const rack = readState().scapes;
+      if (!rack) throw new Error("no scapes rack in state");
+      expectOk(send({ op: "set_scapes", ambient: { ...rack, follow_chord: true } }));
+      expectOk(send({ op: "chord_pitches", midi: [50, 53, 57] }));
+      const on = expectOk(send({ op: "rack_pitches", rack: "scapes" }));
+      const pcOf = (hz) => ((Math.round(69 + 12 * Math.log2(hz / 440)) % 12) + 12) % 12;
+      const tonal = on.layers.filter((l) => l.hz.length > 0);
+      if (tonal.length === 0) throw new Error("no tonal layers in the journey");
+      for (const l of tonal) for (const hz of l.hz) if (![2, 5, 9].includes(pcOf(hz))) throw new Error(`${l.name}: ${hz.toFixed(1)} Hz is not D / F / A`);
+      expectOk(send({ op: "chord_pitches", midi: null }));
+      const off = expectOk(send({ op: "rack_pitches", rack: "scapes" }));
+      const offTonal = off.layers.filter((l) => l.hz.length > 0);
+      const outside = offTonal.some((l) => l.hz.some((hz) => ![2, 5, 9].includes(pcOf(hz))));
+      if (!outside) throw new Error("without a chord the layers should play the whole mode again");
+      return `${tonal.length} tonal layers on D F A, back to the mode without a chord`;
+    } finally {
+      if (built.previous) expectOk(send({ op: "set_scapes", ambient: built.previous }));
+    }
+  });
   await step("history: the Soundscapes rack remembers steps; undo / redo through the bridge restore them", () => {
     const h0 = expectOk(send({ op: "rack_history", rack: "scapes" }));
     if (h0.count < 2) throw new Error(`only ${h0.count} step(s): ${JSON.stringify(h0.labels)}`);
@@ -487,7 +509,13 @@ async function main() {
     const a = expectOk(send({ op: "add_layer", kind: "choir", name: "smoke choir" }));
     const b = expectOk(send({ op: "add_layer", kind: "bloom", name: "smoke bloom", source: { density: 60, note_s: 0.5, attack_s: 0.02 } }));
     const takeId = readState().project?.takes?.[0]?.id;
-    if (takeId) expectOk(send({ op: "add_layer", kind: "sampler", name: "smoke sampler", take_id: takeId, source: { density: 120, note_s: 0.4, release_s: 0.2, cutoff_hz: 12000 } }));
+    if (takeId) expectOk(send({ op: "add_layer", kind: "sampler", name: "smoke sampler", take_id: takeId, source: { density: 120, note_s: 0.4, release_s: 0.2, cutoff_hz: 12000, zones: [{ take_id: takeId, root_midi: 48 }, { take_id: takeId, root_midi: 60 }] } }));
+    if (takeId) {
+      // state.json lags the bridge by a second or so: ask for the snapshot directly.
+      const fresh = expectOk(send({ op: "state" }));
+      const z = (fresh.ambient?.layers ?? []).find((l) => l.name === "smoke sampler")?.source?.zones;
+      if (!z || z.length !== 2) throw new Error("the sampler's two zones did not round-trip");
+    }
     const out = path.join(OUT_DIR, "atmo.wav");
     try {
       const r = expectOk(send({ op: "export_song", path: out, seconds: 6, ambient: true, rhythm: false, drone: false, pad: false }));

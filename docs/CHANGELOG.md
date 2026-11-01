@@ -3,6 +3,23 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Multisample instruments from a folder (home-studio item 3, third slice, 2026-11-01).**
+  `SamplerSource::new_multi` with zones (root Hz + buffer): the nearest root plays every
+  note with a small varispeed (engine test); `LayerSource::Sampler.zones` (take + root
+  per zone, validated, forgotten with their takes, every take checked on set); the
+  layer editor lists zones with editable roots; My samples: "🎹 Instrument from the
+  folder (N)" imports the note-named files (`multisample.ts`: C4 / A#3 / Bb2 / C-1 /
+  MIDI numbers, one per note, shorter name wins; vitest) and makes one layer, and an
+  "Into:" switch sends sample layers to the Soundscapes rack (default) or the
+  atmosphere, recorded in the history. Smoke: a two-zone sampler round-trips and renders.
+- **Racks follow the chord (home-studio item 3, second slice, 2026-11-01).** `Ambient.follow_chord`
+  (rack flag, default off) + `Inner.chord_midi` + command `set_chord_pitches`: the progression
+  follower / live accompanist's chord (the pad's notes) reaches the engine, and racks that follow
+  re-pitch every tonal layer to the chord's pitch classes inside the layer's register
+  (`layer_pitches`), live and in the status; without a chord they play the mode. Checkbox
+  "Follow the chord" in Atmosphere and the Soundscapes editor. Bridge `chord_pitches`,
+  `rack_pitches`; smoke: a journey with follow_chord on re-pitches to D F A and back. Offline
+  export still plays the mode (noted in the guide).
 - **Sampler layer: a take or a library sample played as notes (home-studio item 3, first
   slice, 2026-11-01; owner: "семплите в Soundscapes с ноти, фейдъри, pitch и филтри").**
   Engine `sampler.rs`: eight varispeed voices on the pitch set (rate = pitch / root),

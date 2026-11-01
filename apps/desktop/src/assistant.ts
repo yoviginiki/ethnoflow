@@ -53,6 +53,8 @@ export function snapshot(): Record<string, unknown> {
     layers: s.layers,
     metronome: s.metronomeOn,
     ambient: s.ambient,
+    scapes: s.scapes,
+    scapes_status: s.scapesStatus ? { playing: s.scapesStatus.playing, program_position: s.scapesStatus.program_position, program_playing: s.scapesStatus.program_playing } : null,
     rhythm_status: s.rhythmStatus,
     ambient_status: s.ambientStatus ? { playing: s.ambientStatus.playing, master_peak: s.ambientStatus.master_peak, limiter_gain: s.ambientStatus.limiter_gain } : null,
   };
@@ -181,6 +183,19 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
       s.setPref("progression", next);
       const scale = s.project?.scale ?? null;
       return { progression: next, total_bars: totalBars(next), labels: next.steps.map((st) => stepLabel(scale, st)) };
+    }
+    case "chord_pitches": {
+      // The chord the racks follow (MIDI list or null). Normally the progression / live follower sets it.
+      const midi = Array.isArray(cmd.midi) ? (cmd.midi as number[]).map((m) => Math.max(0, Math.min(127, Math.round(Number(m))))) : null;
+      await api.setChordPitches(midi);
+      return { midi };
+    }
+    case "rack_pitches": {
+      // What every layer of a rack would play now (Hz per layer; empty for non-tonal), also while stopped.
+      const kind = (cmd.rack === "scapes" ? "scapes" : "ambient") as RackKind;
+      const st = await RACKS[kind].status();
+      const rk = RACKS[kind].read(useStore.getState());
+      return { rack: kind, follow_chord: rk?.follow_chord ?? false, layers: (rk?.layers ?? []).map((l, i) => ({ name: l.name, kind: l.source.kind, hz: st.pitches_hz[i] ?? [] })) };
     }
     case "rack_history": {
       // The steps of a rack's edit history (`rack`: ambient | scapes); `undo` / `redo` (count)

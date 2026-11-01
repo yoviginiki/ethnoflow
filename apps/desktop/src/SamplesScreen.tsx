@@ -2,10 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { api, describeError, type LayerKind, type SampleEntry } from "./api";
 import { defaultSource, makeLayer, MAX_AMBIENT_LAYERS } from "./ambientPresets";
-import { commitRack } from "./rack";
 import { formatTime } from "./format";
 import { messages } from "./i18n";
 import { useStore } from "./store";
+import { planZones, zonesRegister } from "./multisample";
+import { RACKS, type RackKind } from "./rackAdapter";
+import { recordChange } from "./rackHistory";
 
 type SortKey = "name" | "date" | "duration";
 const PAGE = 300;
@@ -27,6 +29,50 @@ export function SamplesScreen() {
   const [shown, setShown] = useState(PAGE);
   const [previewing, setPreviewing] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  /** Which rack a new layer goes to: the atmosphere or the Soundscapes rack. */
+  const [target, setTarget] = useState<RackKind>("scapes");
+
+  /** Import every note-named sample of a folder as a take and make one multisample Sampler layer. */
+  const instrumentFromFolder = async (folder: string) => {
+    if (!project) return;
+    const plan = planZones(entries, folder);
+    if (plan.length === 0) {
+      useStore.getState().setMessage(t.multisampleNone);
+      return;
+    }
+    setBusy(folder);
+    try {
+      const zones: { take_id: string; root_midi: number }[] = [];
+      let pv = project;
+      for (const z of plan.slice(0, 64)) {
+        pv = await api.importAudio(z.entry.path);
+        const id = pv.loaded_take;
+        if (!id) continue;
+        const tk = pv.takes.find((x) => x.id === id);
+        if (tk && !tk.label) pv = await api.renameTake(id, z.entry.name);
+        zones.push({ take_id: id, root_midi: z.root_midi });
+      }
+      useStore.getState().setProject(pv);
+      const R = RACKS[target];
+      const rack = R.read(useStore.getState()) ?? (await R.get()).ambient;
+      if (rack.layers.length >= MAX_AMBIENT_LAYERS) {
+        useStore.getState().setMessage(t.maxLayers);
+        return;
+      }
+      const name = folder.split(/[\\/]/).filter(Boolean).pop() ?? t.kindSampler;
+      const src = defaultSource("sampler", zones[0]?.take_id ?? "");
+      const layer = makeLayer(name, { ...src, zones, root_midi: zones[0]?.root_midi ?? 60, register: zonesRegister(zones) } as typeof src, { gain_db: -16 });
+      const next = { ...rack, layers: [...rack.layers, layer] };
+      const v = await R.set(next);
+      recordChange(target, rack, v.ambient, t.hLayerAdded(name), t.hStart);
+      R.store(v.ambient);
+      useStore.getState().setMessage(t.multisampleMade(name, zones.length));
+    } catch (err) {
+      fail(err);
+    } finally {
+      setBusy(null);
+    }
+  };
   const fail = (e: unknown) => useStore.getState().setError(describeError(e));
   const project = s.project;
 
@@ -110,12 +156,15 @@ export function SamplesScreen() {
       }
       useStore.getState().setProject(pv);
       if (as !== "take" && id) {
-        const rack = useStore.getState().ambient ?? (await api.ambientGet()).ambient;
+        const R = RACKS[target];
+        const rack = R.read(useStore.getState()) ?? (await R.get()).ambient;
         if (rack.layers.length >= MAX_AMBIENT_LAYERS) {
           useStore.getState().setMessage(t.maxLayers);
         } else {
           const layer = makeLayer(e.name, defaultSource(as, id), { gain_db: -18 });
-          commitRack({ ...rack, layers: [...rack.layers, layer] }, fail);
+          const v = await R.set({ ...rack, layers: [...rack.layers, layer] });
+          recordChange(target, rack, v.ambient, t.hLayerAdded(e.name), t.hStart);
+          R.store(v.ambient);
         }
       }
       useStore.getState().setMessage(`${t.importedOk}: ${e.name}`);
@@ -142,12 +191,22 @@ export function SamplesScreen() {
             {entries.length} {t.samplesFiles}
             {truncated ? ` · ${t.samplesTruncated}` : ""}
           </span>
+          <label className="inline small" title={t.samplesTargetHint}>
+            {t.samplesTarget}
+            <select value={target} onChange={(e) => setTarget(e.target.value as RackKind)}>
+              <option value="scapes">{t.scapesTitle}</option>
+              <option value="ambient">{t.areaAmbient}</option>
+            </select>
+          </label>
         </div>
         <ul className="samples-folders">
           {folders.length === 0 && <li className="muted small">{t.samplesNoFolders}</li>}
           {folders.map((f) => (
             <li key={f}>
               <span className="small path">{f}</span>
+              <button className="ghost small" disabled={!project || busy !== null || planZones(entries, f).length === 0} onClick={() => void instrumentFromFolder(f)} title={t.multisampleHint}>
+                🎹 {t.multisampleMake} ({planZones(entries, f).length})
+              </button>
               <button className="ghost small" onClick={() => void removeFolder(f)} title={t.delete}>
                 ✕
               </button>

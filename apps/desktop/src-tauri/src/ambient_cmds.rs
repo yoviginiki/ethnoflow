@@ -12,8 +12,8 @@ use audio_engine::{
     write_wav, AudioBuffer, BellParams, BellSource, BloomParams, BloomSource, ChoirParams,
     ChoirSource, GrainParams, GrainSource, Graph, GraphCmd, GraphParams, LoopParams, LoopSource,
     NoiseParams, NoiseSource, PluckParams, PluckSource, ResonatorParams, ResonatorSource,
-    SamplerParams, SamplerSource, TextureParams, TextureSource, WavFormat, WindParams, WindSource,
-    MAX_PITCHES,
+    SamplerParams, SamplerSource, SamplerZone, TextureParams, TextureSource, WavFormat, WindParams,
+    WindSource, MAX_PITCHES,
 };
 use project::{
     effective_rack, is_animated, Ambient, AmbientLayer, LayerSource, Macros, MAX_AMBIENT_LAYERS,
@@ -176,10 +176,11 @@ const CLOCK_TICK_MS: u64 = 25;
 /// Push one effective state (layers + macros) into the live graph params.
 fn push_effective(s: &Inner, id: RackId, layers: &[AmbientLayer], macros: &Macros) {
     let Some(g) = s.graph.as_ref() else { return };
+    let chord = chord_for(s, id);
     let any_solo = layers.iter().any(|l| l.solo);
     for (i, l) in layers.iter().enumerate() {
         if let Some(Some(live)) = s.racks[id.idx()].live.get(i) {
-            apply_source(s, &live.params, l, macros);
+            apply_source(s, &live.params, l, macros, chord.as_deref());
         }
         if id.slot0() + i < audio_engine::MAX_LAYERS {
             apply_layer_strip(
@@ -278,6 +279,61 @@ pub fn rack_mut(s: &mut Inner, id: RackId) -> CmdResult<&mut Ambient> {
 /// register (profile intonation when available), thinned to `MAX_PITCHES` spread
 /// across the register. Without a scale or with `tonal = false`: an inharmonic set
 /// from the seed (no key is ever assumed).
+/// The chord a rack follows now: its pitch classes, when the rack says so and a chord is set.
+pub fn chord_for(s: &Inner, id: RackId) -> Option<Vec<u8>> {
+    let follows = s.racks[id.idx()]
+        .rack
+        .as_ref()
+        .map(|a| a.follow_chord)
+        .unwrap_or(false);
+    if !follows {
+        return None;
+    }
+    s.chord_midi.clone().filter(|c| !c.is_empty())
+}
+
+/// Every note of the chord's pitch classes inside the register (thinned to the engine's
+/// maximum, spread across the register, lowest first), through the project's A4.
+fn chord_hz_in_register(s: &Inner, chord: &[u8], register: (u8, u8)) -> Vec<f32> {
+    let (lo, hi) = (register.0.min(register.1), register.1.max(register.0));
+    let pcs: Vec<u8> = chord.iter().map(|m| m % 12).collect();
+    let notes: Vec<u8> = (lo..=hi).filter(|m| pcs.contains(&(m % 12))).collect();
+    if notes.is_empty() {
+        return Vec::new();
+    }
+    let picked: Vec<u8> = if notes.len() <= MAX_PITCHES {
+        notes
+    } else {
+        (0..MAX_PITCHES)
+            .map(|k| notes[k * (notes.len() - 1) / (MAX_PITCHES - 1)])
+            .collect()
+    };
+    picked
+        .into_iter()
+        .map(|m| note_hz(s, m, 0.0, Intonation::Profile).0)
+        .collect()
+}
+
+/// A tonal layer's pitches: the followed chord inside its register when the rack follows
+/// one, otherwise the mode (or the no-key set).
+pub fn layer_pitches(
+    s: &Inner,
+    chord: Option<&[u8]>,
+    tonal: bool,
+    register: (u8, u8),
+    seed: u32,
+) -> Vec<f32> {
+    if tonal {
+        if let Some(c) = chord {
+            let hz = chord_hz_in_register(s, c, register);
+            if !hz.is_empty() {
+                return hz;
+            }
+        }
+    }
+    pitch_set(s, tonal, register, seed)
+}
+
 pub fn pitch_set(s: &Inner, tonal: bool, register: (u8, u8), seed: u32) -> Vec<f32> {
     let (lo, hi) = (register.0.min(register.1), register.1.max(register.0));
     let scale = s.project.as_ref().and_then(|p| p.manifest().scale.clone());
@@ -340,7 +396,15 @@ fn build_key(l: &AmbientLayer, rate: u32) -> String {
             ..
         } => format!("loop:{take_id}:{start}:{end}:{reverse}:{rate}"),
         LayerSource::Cloud { take_id, .. } => format!("cloud:{take_id}:{rate}:{}", l.seed),
-        LayerSource::Sampler { take_id, .. } => format!("sampler:{take_id}:{rate}:{}", l.seed),
+        LayerSource::Sampler { take_id, zones, .. } => format!(
+            "sampler:{take_id}:{rate}:{}:{}",
+            l.seed,
+            zones
+                .iter()
+                .map(|z| format!("{}@{}", z.take_id, z.root_midi))
+                .collect::<Vec<_>>()
+                .join(",")
+        ),
         other => format!("{}:{}", other.kind(), l.seed),
     }
 }
@@ -417,7 +481,13 @@ pub(crate) fn apply_layer_strip(
 }
 
 /// Push the layer's source parameters (motion macro included) into the live handles.
-pub(crate) fn apply_source(s: &Inner, live: &LiveParams, l: &AmbientLayer, m: &Macros) {
+pub(crate) fn apply_source(
+    s: &Inner,
+    live: &LiveParams,
+    l: &AmbientLayer,
+    m: &Macros,
+    chord: Option<&[u8]>,
+) {
     let motion = 2f64.powf((m.motion - 0.5) * 2.0); // ×0.5 … ×2
     match (&l.source, live) {
         (LayerSource::Noise { color }, LiveParams::Noise(p)) => {
@@ -449,7 +519,8 @@ pub(crate) fn apply_source(s: &Inner, live: &LiveParams, l: &AmbientLayer, m: &M
             },
             LiveParams::Texture(p),
         ) => {
-            p.pitches.set(&pitch_set(s, *tonal, *register, l.seed));
+            p.pitches
+                .set(&layer_pitches(s, chord, *tonal, *register, l.seed));
             p.brightness.set(*brightness as f32);
             p.motion.set((*mo * motion).min(1.0) as f32);
             p.resonance.set(*resonance as f32);
@@ -466,7 +537,8 @@ pub(crate) fn apply_source(s: &Inner, live: &LiveParams, l: &AmbientLayer, m: &M
             },
             LiveParams::Bells(p),
         ) => {
-            p.pitches.set(&pitch_set(s, *tonal, *register, l.seed));
+            p.pitches
+                .set(&layer_pitches(s, chord, *tonal, *register, l.seed));
             p.density.set((*density * motion) as f32);
             p.decay_s.set(*decay_s as f32);
             p.brightness.set(*brightness as f32);
@@ -485,7 +557,8 @@ pub(crate) fn apply_source(s: &Inner, live: &LiveParams, l: &AmbientLayer, m: &M
             },
             LiveParams::Resonator(p),
         ) => {
-            p.pitches.set(&pitch_set(s, *tonal, *register, l.seed));
+            p.pitches
+                .set(&layer_pitches(s, chord, *tonal, *register, l.seed));
             p.density.set((*density * motion) as f32);
             p.decay_s.set(*decay_s as f32);
             p.structure.set(*structure as f32);
@@ -506,7 +579,8 @@ pub(crate) fn apply_source(s: &Inner, live: &LiveParams, l: &AmbientLayer, m: &M
             },
             LiveParams::Choir(p),
         ) => {
-            p.pitches.set(&pitch_set(s, *tonal, *register, l.seed));
+            p.pitches
+                .set(&layer_pitches(s, chord, *tonal, *register, l.seed));
             p.vowel.set(*vowel as f32);
             p.breath.set(*breath as f32);
             p.width.set(*spread as f32);
@@ -527,7 +601,8 @@ pub(crate) fn apply_source(s: &Inner, live: &LiveParams, l: &AmbientLayer, m: &M
             },
             LiveParams::Bloom(p),
         ) => {
-            p.pitches.set(&pitch_set(s, *tonal, *register, l.seed));
+            p.pitches
+                .set(&layer_pitches(s, chord, *tonal, *register, l.seed));
             p.density.set((*density * motion) as f32);
             p.note_s.set(*note_s as f32);
             p.brightness.set(*brightness as f32);
@@ -546,7 +621,8 @@ pub(crate) fn apply_source(s: &Inner, live: &LiveParams, l: &AmbientLayer, m: &M
             },
             LiveParams::Pluck(p),
         ) => {
-            p.pitches.set(&pitch_set(s, *tonal, *register, l.seed));
+            p.pitches
+                .set(&layer_pitches(s, chord, *tonal, *register, l.seed));
             p.density.set((*density * motion) as f32);
             p.damping.set(*damping as f32);
             p.brightness.set(*brightness as f32);
@@ -570,7 +646,8 @@ pub(crate) fn apply_source(s: &Inner, live: &LiveParams, l: &AmbientLayer, m: &M
             },
             LiveParams::Sampler(p),
         ) => {
-            p.pitches.set(&pitch_set(s, *tonal, *register, l.seed));
+            p.pitches
+                .set(&layer_pitches(s, chord, *tonal, *register, l.seed));
             let (root_hz, _) = crate::graph_cmds::note_hz(
                 s,
                 root_midi.round().clamp(0.0, 127.0) as u8,
@@ -742,14 +819,27 @@ fn build_layer(s: &mut Inner, id: RackId, i: usize) -> CmdResult<()> {
                 Box::new(PluckSource::new(p, rate)),
             )
         }
-        LayerSource::Sampler { take_id, .. } => {
-            let buf = loop_buffer(s, take_id, false, rate)?;
+        LayerSource::Sampler { take_id, zones, .. } => {
             let p = Arc::new(SamplerParams::default());
             p.seed.store(l.seed, Ordering::Relaxed);
-            (
-                LiveParams::Sampler(Arc::clone(&p)),
-                Box::new(SamplerSource::new(p, buf)),
-            )
+            let src: Box<dyn audio_engine::Source> = if zones.is_empty() {
+                let buf = loop_buffer(s, take_id, false, rate)?;
+                Box::new(SamplerSource::new(Arc::clone(&p), buf))
+            } else {
+                let mut zs = Vec::with_capacity(zones.len());
+                for z in zones {
+                    let buf = loop_buffer(s, &z.take_id, false, rate)?;
+                    let (root_hz, _) = crate::graph_cmds::note_hz(
+                        s,
+                        z.root_midi.round().clamp(0.0, 127.0) as u8,
+                        0.0,
+                        crate::graph_cmds::Intonation::Tempered,
+                    );
+                    zs.push(SamplerZone { root_hz, buf });
+                }
+                Box::new(SamplerSource::new_multi(Arc::clone(&p), zs))
+            };
+            (LiveParams::Sampler(p), src)
         }
         LayerSource::Cloud { take_id, .. } => {
             let buf = loop_buffer(s, take_id, false, rate)?;
@@ -776,7 +866,8 @@ fn build_layer(s: &mut Inner, id: RackId, i: usize) -> CmdResult<()> {
         .as_ref()
         .map(|a| a.macros.clone())
         .unwrap_or_default();
-    apply_source(s, &params, &l, &macros);
+    let chord = chord_for(s, id);
+    apply_source(s, &params, &l, &macros, chord.as_deref());
     let slot = id.slot0() + i;
     let graph = s.graph.as_mut().expect("checked above");
     graph.params().layers[slot].gain_db.set(-60.0);
@@ -813,7 +904,8 @@ fn sync_live(s: &mut Inner, id: RackId) -> CmdResult<()> {
         if !same {
             build_layer(s, id, i)?;
         } else if let Some(Some(live)) = s.racks[id.idx()].live.get(i) {
-            apply_source(s, &live.params, l, &a.macros);
+            let chord = chord_for(s, id);
+            apply_source(s, &live.params, l, &a.macros, chord.as_deref());
         }
         let graph = s.graph.as_ref().expect("graph");
         apply_layer_strip(
@@ -879,6 +971,7 @@ pub fn release_all(s: &mut Inner, id: RackId) {
 fn status(s: &mut Inner, id: RackId) -> CmdResult<AmbientStatus> {
     let playing = s.racks[id.idx()].on && s.graph.is_some();
     let a = rack_mut(s, id)?.clone();
+    let chord = chord_for(s, id);
     let pitches_hz: Vec<Vec<f32>> = a
         .layers
         .iter()
@@ -903,7 +996,7 @@ fn status(s: &mut Inner, id: RackId) -> CmdResult<AmbientStatus> {
             }
             | LayerSource::Sampler {
                 tonal, register, ..
-            } => pitch_set(s, *tonal, *register, l.seed),
+            } => layer_pitches(s, chord.as_deref(), *tonal, *register, l.seed),
             _ => Vec::new(),
         })
         .collect();
@@ -952,7 +1045,15 @@ pub fn forget_take(s: &mut Inner, take_id: &str) {
     for id in RackId::ALL {
         let Ok(a) = rack_mut(s, id) else { continue };
         let before = a.layers.len();
-        a.layers.retain(|l| l.source.take_id() != Some(take_id));
+        for l in a.layers.iter_mut() {
+            if let LayerSource::Sampler { zones, .. } = &mut l.source {
+                zones.retain(|z| z.take_id != take_id);
+            }
+        }
+        a.layers.retain(|l| {
+            !l.source.take_ids().contains(&take_id) && !l.source.take_ids().is_empty()
+                || l.source.take_id().is_none()
+        });
         if a.layers.len() != before {
             if let Ok(root) = project_root(s) {
                 if let Some(a) = s.racks[id.idx()].rack.as_ref() {
@@ -982,7 +1083,7 @@ fn rack_set(state: &AppState, id: RackId, ambient: Ambient) -> CmdResult<Ambient
     let mut s = state.lock();
     let root = project_root(&s)?;
     for l in &ambient.layers {
-        if let Some(take_id) = l.source.take_id() {
+        for take_id in l.source.take_ids() {
             let p = s.project.as_ref().expect("project checked");
             p.take(take_id)
                 .map_err(|_| err("missing", format!("Unknown take {take_id}")))?;
@@ -1135,14 +1236,27 @@ pub(crate) fn offline_sources(
                     Box::new(PluckSource::new(p, rate)),
                 )
             }
-            LayerSource::Sampler { take_id, .. } => {
-                let buf = loop_buffer(s, take_id, false, rate)?;
+            LayerSource::Sampler { take_id, zones, .. } => {
                 let p = Arc::new(SamplerParams::default());
                 p.seed.store(l.seed, Ordering::Relaxed);
-                (
-                    LiveParams::Sampler(Arc::clone(&p)),
-                    Box::new(SamplerSource::new(p, buf)),
-                )
+                let src: Box<dyn audio_engine::Source> = if zones.is_empty() {
+                    let buf = loop_buffer(s, take_id, false, rate)?;
+                    Box::new(SamplerSource::new(Arc::clone(&p), buf))
+                } else {
+                    let mut zs = Vec::with_capacity(zones.len());
+                    for z in zones {
+                        let buf = loop_buffer(s, &z.take_id, false, rate)?;
+                        let (root_hz, _) = crate::graph_cmds::note_hz(
+                            s,
+                            z.root_midi.round().clamp(0.0, 127.0) as u8,
+                            0.0,
+                            crate::graph_cmds::Intonation::Tempered,
+                        );
+                        zs.push(SamplerZone { root_hz, buf });
+                    }
+                    Box::new(SamplerSource::new_multi(Arc::clone(&p), zs))
+                };
+                (LiveParams::Sampler(p), src)
             }
             LayerSource::Cloud { take_id, .. } => {
                 let buf = loop_buffer(s, take_id, false, rate)?;
@@ -1264,7 +1378,7 @@ pub async fn export_ambient(
         let any_solo = layers.iter().any(|l| l.solo);
         for (i, l) in layers.iter().enumerate() {
             if let Some(p) = live.get(i) {
-                apply_source(&offline, p, l, &macros);
+                apply_source(&offline, p, l, &macros, None);
                 // The offline Inner has no project: put the real pitch sets back.
                 match p {
                     LiveParams::Texture(x) => x.pitches.set(&pitch_sets[i]),
@@ -1399,6 +1513,20 @@ pub async fn ambient_stop(state: State<'_, AppState>) -> CmdResult<()> {
 #[tauri::command]
 pub async fn ambient_status(state: State<'_, AppState>) -> CmdResult<AmbientStatus> {
     status(&mut state.lock(), RackId::Ambient)
+}
+
+/// The chord the pad / progression follows now (MIDI notes, or none): racks with
+/// `follow_chord` re-pitch their tonal layers at once. Called by the UI's follower.
+#[tauri::command]
+pub async fn set_chord_pitches(state: State<'_, AppState>, midi: Option<Vec<u8>>) -> CmdResult<()> {
+    let mut s = state.lock();
+    s.chord_midi = midi.filter(|m| !m.is_empty());
+    for id in RackId::ALL {
+        if s.racks[id.idx()].on {
+            let _ = sync_live(&mut s, id);
+        }
+    }
+    Ok(())
 }
 
 // ---- the Soundscapes rack: the same engine on its own slots, bus and file ----

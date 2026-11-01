@@ -75,6 +75,7 @@ fn rack(id: &str, name: &str, tags: &[&str], macros: Macros, layers: Vec<L>) -> 
             macros,
             preset: Some(id.to_string()),
             tags: tags.iter().map(|t| t.to_string()).collect(),
+            follow_chord: false,
             automation: Vec::new(),
             program: crate::program::Program::default(),
         },

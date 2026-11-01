@@ -122,6 +122,10 @@ pub enum LayerSource {
         start: f64,
         tonal: bool,
         register: (u8, u8),
+        /// Multisample: one take per note (its own root); when present, `take_id` /
+        /// `root_midi` above are the fallback only and the nearest zone plays each note.
+        #[serde(default)]
+        zones: Vec<SamplerZoneSpec>,
     },
     /// Granular cloud of a take (F1B.2): grains around a read position, transposed.
     Cloud {
@@ -184,6 +188,33 @@ impl LayerSource {
                 | LayerSource::Sampler { tonal: true, .. }
         )
     }
+}
+
+/// One sample of a multisample sampler: the take and the MIDI note it sounds at.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SamplerZoneSpec {
+    pub take_id: String,
+    pub root_midi: f64,
+}
+
+impl LayerSource {
+    /// Every take a source uses (loop / cloud: one; sampler: the main one plus its zones).
+    pub fn take_ids(&self) -> Vec<&str> {
+        let mut out: Vec<&str> = Vec::new();
+        if let Some(t) = self.take_id() {
+            if !t.is_empty() {
+                out.push(t);
+            }
+        }
+        if let LayerSource::Sampler { zones, .. } = self {
+            for z in zones {
+                if !z.take_id.is_empty() && !out.contains(&z.take_id.as_str()) {
+                    out.push(&z.take_id);
+                }
+            }
+        }
+        out
+    }
 
     /// Sensible defaults per kind (what "add layer" creates).
     pub fn default_for(kind: &str) -> Option<LayerSource> {
@@ -231,6 +262,7 @@ impl LayerSource {
                 start: 0.0,
                 tonal: true,
                 register: (48, 72),
+                zones: Vec::new(),
             },
             _ => return None,
         })
@@ -377,9 +409,15 @@ impl LayerSource {
                 velocity_spread,
                 start,
                 register: r,
+                zones,
                 ..
             } => {
-                if take_id.is_empty()
+                for z in zones {
+                    if z.take_id.is_empty() || !(0.0..=127.0).contains(&z.root_midi) {
+                        return Err(ProjectError::InvalidState("sampler zone".into()));
+                    }
+                }
+                if (take_id.is_empty() && zones.is_empty())
                     || !(24.0..=108.0).contains(root_midi)
                     || !(0.0..=120.0).contains(density)
                     || !(0.05..=30.0).contains(note_s)
@@ -564,6 +602,10 @@ pub struct Ambient {
     /// Tags when saved as a preset (ids from `ambient_presets::TAGS`).
     #[serde(default)]
     pub tags: Vec<String>,
+    /// Tonal layers take their pitches from the chord the pad / progression follows
+    /// (when one is set) instead of the whole mode. Default off.
+    #[serde(default)]
+    pub follow_chord: bool,
     /// Automation lanes (F1A.4): functions of time on layer or macro parameters.
     #[serde(default)]
     pub automation: Vec<crate::program::AutomationLane>,
@@ -580,6 +622,7 @@ impl Default for Ambient {
             macros: Macros::default(),
             preset: None,
             tags: Vec::new(),
+            follow_chord: false,
             automation: Vec::new(),
             program: crate::program::Program::default(),
         }

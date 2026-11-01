@@ -183,6 +183,11 @@ export function useProgressionFollow() {
   const liveRunning = useStore((s) => s.liveRunning);
   const follow = !!prog?.follow && !liveRunning;
   const wasFollowing = useRef(false);
+  // Whatever sets the chord (this follower or the live accompanist), the racks hear it.
+  const padChord = useStore((s) => s.padChord);
+  useEffect(() => {
+    void api.setChordPitches(padChord ? padChord.map((n) => n.midi) : null).catch(() => undefined);
+  }, [padChord]);
   useEffect(() => {
     if (!follow || !scale || !prog || bar === null) return;
     const at = stepAtBar(prog, Math.max(0, bar - 1));

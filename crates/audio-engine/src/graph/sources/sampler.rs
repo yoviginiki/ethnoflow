@@ -61,6 +61,7 @@ enum Stage {
 
 struct Voice {
     active: bool,
+    zone: usize,
     pos: f64,
     rate: f64,
     /// Seconds since the note started.
@@ -78,6 +79,7 @@ struct Voice {
 impl Voice {
     const IDLE: Voice = Voice {
         active: false,
+        zone: 0,
         pos: 0.0,
         rate: 1.0,
         age: 0.0,
@@ -91,9 +93,17 @@ impl Voice {
     };
 }
 
+/// One sample of a multisample instrument: the pitch it sounds at (Hz) and its audio.
+pub struct SamplerZone {
+    pub root_hz: f32,
+    pub buf: Arc<AudioBuffer>,
+}
+
 pub struct SamplerSource {
     params: Arc<SamplerParams>,
-    buf: Arc<AudioBuffer>,
+    /// One zone = the plain sampler (root from the params); several = a multisample: the
+    /// nearest root is read for every note, so varispeed stays small.
+    zones: Vec<SamplerZone>,
     trigger: Trigger,
     seed_used: u32,
     density: Ramp,
@@ -104,8 +114,13 @@ pub struct SamplerSource {
 }
 
 impl SamplerSource {
-    /// `buf` must be mono at the graph's sample rate.
+    /// `buf` must be mono at the graph's sample rate; its root is the params' `root_hz`.
     pub fn new(params: Arc<SamplerParams>, buf: Arc<AudioBuffer>) -> Self {
+        Self::new_multi(params, vec![SamplerZone { root_hz: 0.0, buf }])
+    }
+
+    /// Several samples with their own roots (Hz); a zone with root 0 uses the params' root.
+    pub fn new_multi(params: Arc<SamplerParams>, zones: Vec<SamplerZone>) -> Self {
         let seed = params.seed.load(Ordering::Relaxed);
         Self {
             trigger: Trigger::new(seed),
@@ -116,8 +131,22 @@ impl SamplerSource {
             voices: (0..SAMPLER_VOICES).map(|_| Voice::IDLE).collect(),
             next_voice: 0,
             params,
-            buf,
+            zones,
         }
+    }
+
+    /// The zone whose root is nearest to `hz` (in pitch), and that root in Hz.
+    fn zone_for(&self, hz: f32) -> (usize, f32) {
+        let fallback = self.params.root_hz.target().max(1.0);
+        let mut best = (0usize, fallback, f32::MAX);
+        for (i, z) in self.zones.iter().enumerate() {
+            let root = if z.root_hz > 0.0 { z.root_hz } else { fallback };
+            let d = (hz / root).ln().abs();
+            if d < best.2 {
+                best = (i, root, d);
+            }
+        }
+        (best.0, best.1)
     }
 
     fn note_on(&mut self, hz: f32, spread: f32) {
@@ -127,12 +156,14 @@ impl SamplerSource {
             .unwrap_or(self.next_voice);
         self.next_voice = (i + 1) % SAMPLER_VOICES;
         let vel = 1.0 - spread * self.trigger.rng().unit() * 0.7;
+        let (zone, root) = self.zone_for(hz);
         let p = &self.params;
-        let frames = self.buf.samples.len() as f64;
+        let frames = self.zones[zone].buf.samples.len() as f64;
         let v = &mut self.voices[i];
         *v = Voice::IDLE;
         v.active = true;
-        v.rate = (hz / p.root_hz.target().max(1.0)) as f64;
+        v.zone = zone;
+        v.rate = (hz / root.max(1.0)) as f64;
         v.pos = (p.start.target() as f64 * frames).clamp(0.0, (frames - 2.0).max(0.0));
         v.amp = 0.5 * vel;
     }
@@ -144,7 +175,6 @@ impl SamplerSource {
             p.note_s.target(),
             p.release_s.target().max(0.01),
         );
-        let frames = self.buf.samples.len() as f64;
         for s in out.iter_mut() {
             let _ = self.density.next(p.density.target());
             let fc = self
@@ -191,18 +221,19 @@ impl SamplerSource {
                     }
                 }
                 v.age += dt;
-                // Read the take at the voice's rate; past the end the voice is done.
-                if v.pos >= frames - 1.0 {
+                // Read the zone at the voice's rate; past the end the voice is done.
+                let samples = &self.zones[v.zone.min(self.zones.len() - 1)].buf.samples;
+                let n = samples.len();
+                if n < 2 || v.pos >= n as f64 - 1.0 {
                     v.active = false;
                     continue;
                 }
                 let x = {
-                    let n = self.buf.samples.len();
                     let i = v.pos.floor();
                     let frac = (v.pos - i) as f32;
                     let i0 = (i as usize).min(n - 1);
                     let i1 = (i0 + 1).min(n - 1);
-                    self.buf.samples[i0] * (1.0 - frac) + self.buf.samples[i1] * frac
+                    samples[i0] * (1.0 - frac) + samples[i1] * frac
                 };
                 v.pos += v.rate;
                 // Filter.
@@ -232,7 +263,8 @@ impl Source for SamplerSource {
         self.cutoff.begin(p.cutoff_hz.target(), ramp);
         self.resonance.begin(p.resonance.target(), ramp);
         let n = out.len();
-        let density = if p.pitches.is_empty() || self.buf.samples.len() < 2 {
+        let density = if p.pitches.is_empty() || self.zones.iter().all(|z| z.buf.samples.len() < 2)
+        {
             0.0
         } else {
             self.density.current
@@ -304,6 +336,38 @@ mod tests {
         hz.sort_by(|a, b| a.partial_cmp(b).unwrap());
         let median = hz[hz.len() / 2];
         assert!((median - 440.0).abs() < 8.0, "median {median} Hz");
+    }
+
+    #[test]
+    fn a_multisample_picks_the_nearest_zone() {
+        // Two zones: a 220 Hz sine rooted at 220 and a 440 Hz sine rooted at 440. A note at
+        // 450 Hz must come from the 440 zone (tiny varispeed), not from the 220 one.
+        let p = Arc::new(SamplerParams::default());
+        p.pitches.set(&[450.0]);
+        p.density.set(240.0);
+        p.note_s.set(1.0);
+        p.attack_s.set(0.01);
+        p.cutoff_hz.set(20_000.0);
+        let zones = vec![
+            SamplerZone {
+                root_hz: 220.0,
+                buf: Arc::new(AudioBuffer::sine(48_000, 220.0, 2.0, 0.6)),
+            },
+            SamplerZone {
+                root_hz: 440.0,
+                buf: Arc::new(AudioBuffer::sine(48_000, 440.0, 2.0, 0.6)),
+            },
+        ];
+        let gp = Arc::new(GraphParams::default());
+        gp.master.gain_db.set(0.0);
+        gp.layers[0].gain_db.set(0.0);
+        let mut g = Graph::new(gp, 48_000);
+        let src = SamplerSource::new_multi(p, zones);
+        assert_eq!(src.zone_for(450.0).0, 1);
+        assert_eq!(src.zone_for(230.0).0, 0);
+        g.set_source(0, Box::new(src));
+        let b = g.render_offline(2.0, 1);
+        assert!(b.rms() > 0.02);
     }
 
     #[test]
