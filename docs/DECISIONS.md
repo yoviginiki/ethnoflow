@@ -276,3 +276,31 @@ Alternatives: `flac` 0.5 (older, decoder-focused), `rusty_flac` / `flac-io`
 no toolchain on end-user machines).
 Supply chain: crates.io, pinned at the 0.5 line, author yotarok (also `flacenc-bin`),
 dependencies `heapless`, `md-5`, `seq-macro` (all pure Rust).
+
+## ADR-0024 Own XLISP/Nyquist interpreter in Rust (`crates/nyquist`), no external Lisp crate
+
+**Status:** accepted 2026-11-01 (Audacity programme A9; the owner: "искам да мога да ползвам
+готовите за Audacity").
+**Context:** Audacity's Nyquist plug-ins are XLISP programs with a comment header; the
+owner wants the existing `.ny` files to run unchanged and to write new ones later. The
+options in `docs/design/AUDACITY_PROGRAM_PLAN.md` §3 were the original C interpreter
+through FFI, a Rust Lisp crate (`steel`, `rust_lisp`) with sound primitives bolted on, or
+our own interpreter.
+**Decision:** our own interpreter, pure Rust, zero dependencies beyond `serde` (workspace):
+reader, evaluator (special forms of XLISP that the plug-ins use, macros with backquote,
+`catch/throw`, `return-from`, `progv`, property lists), sounds as fixed `Vec<f32>` arrays at
+a rate with a start time (no lazy streams; `snd-fetch` streams over the array), and the
+Nyquist / Audacity primitives implemented directly on arrays. Compatibility is measured by
+running Audacity's own plug-ins (`crates/nyquist/examples/run_ny.rs`, 17/20 of Audacity
+3.4.2 at acceptance).
+**Why not the alternatives:** the C interpreter brings ~50 000 lines of C into the build,
+FFI on the audio paths and a separate licence story; the Rust Lisp crates are Scheme / tiny
+Lisps whose semantics (case, `nil`/`t`, property lists, `&optional`, `setf` places,
+`format` directives) differ enough from XLISP that every real plug-in would need patching,
+which defeats the goal.
+**Consequences:** the interpreter runs off the audio thread (editor operations only), has a
+step limit and a recursion limit, and is slow on per-sample Lisp loops (Clip Fix ≈ 5 s for
+2 s of stereo). Missing: `snd-fft` / `snd-ifft`, `pv-time-pitch`, the XLISP object system
+(`send`), SAL syntax — A9.3. Audacity's plug-ins are GPL v2+: they are not bundled; the
+user copies them into `Documents\EthnoFlow\Plugins`. The four bundled plug-ins are ours.
+**Licence / Windows / maintenance:** no new crate; `serde` already in the workspace.

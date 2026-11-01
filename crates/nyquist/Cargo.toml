@@ -1,0 +1,13 @@
+[package]
+name = "ethnoflow-nyquist"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "A Nyquist-compatible interpreter (the XLISP dialect Audacity's .ny plug-ins are written in) with fixed-array sounds, for running existing Audacity Nyquist plug-ins on a selection. Pure Rust, no I/O, never on the audio thread."
+
+[lib]
+name = "nyquist"
+path = "src/lib.rs"
+
+[dependencies]
+serde = { workspace = true }
