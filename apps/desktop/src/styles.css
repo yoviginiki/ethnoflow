@@ -738,7 +738,7 @@ button.ghost.on { border-color: var(--accent); color: var(--accent); }
 /* Audio editor (home-studio item 5) */
 .editor { display: flex; flex-direction: column; gap: 10px; }
 .editor-wave { min-height: 220px; }
-.editor-wave .waveform-wrap, .editor-wave canvas { min-height: 160px; }
+.editor-wave .waveform-wrap { flex: 0 0 auto; height: 240px; min-height: 240px; }
 .edit-history { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 4px; }
 .edit-history li.on button { background: var(--accent); color: #111; border-color: var(--accent); }
 .edit-history li.undone button { opacity: 0.55; }

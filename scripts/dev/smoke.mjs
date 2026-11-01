@@ -428,7 +428,7 @@ async function main() {
       if (!rack || !rack.layers.length) throw new Error("no scapes rack in state");
       // One short, dense bells layer on the beat grid; nothing else in the rack.
       const base = rack.layers.find((l) => l.source.kind === "bells") ?? rack.layers[0];
-      const bells = { ...base, mute: false, solo: false, gain_db: -6, source: { kind: "bells", density: 240, decay_s: 0.2, brightness: 0.5, velocity_spread: 0, tension: 0, tonal: true, register: [76, 88] } };
+      const bells = { ...base, mute: false, solo: false, gain_db: -6, source: { kind: "bells", density: 120, decay_s: 0.25, brightness: 0.5, velocity_spread: 0, tension: 0, tonal: true, register: [76, 88] } };
       expectOk(send({ op: "set_scapes", ambient: { ...rack, layers: [bells], program: { scenes: [], loop_region: null }, automation: [], sync: 1 } }));
       const bpm = readState().project?.timing?.bpm ?? 120;
       const out = path.join(OUT_DIR, "on-the-bar.wav");
@@ -755,7 +755,8 @@ async function main() {
     await step("sound: instrument audition 1 s", () => expectOk(send({ op: "instrument_audition", id: "factory:bass.pluck", seconds: 1 })).played);
   }
   await step("template: a new project from the liquid DnB style has the progression, the world and the layers set", () => {
-    const r = expectOk(send({ op: "create_project", name: "smoke-template", style: "liquid_dnb" }));
+    const tname = `smoke-template-${Date.now().toString(36)}`;
+    const r = expectOk(send({ op: "create_project", name: tname, style: "liquid_dnb" }));
     try {
       if (r.style !== "liquid_dnb") throw new Error(JSON.stringify(r));
       const st = expectOk(send({ op: "state" }));
@@ -766,6 +767,9 @@ async function main() {
       return `genre ${genre}, world ${world ?? "(journey built)"}`;
     } finally {
       expectOk(send({ op: "open_project", path: PROJECT }));
+      // The template project was only a check: remove it again.
+      const dir = path.dirname(PROJECT);
+      for (const d of fs.readdirSync(dir)) if (d.startsWith("smoke-template-")) fs.rmSync(path.join(dir, d), { recursive: true, force: true });
     }
   });
   await step("cleanup: your prefs, project and screen restored", () => {

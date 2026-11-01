@@ -158,6 +158,19 @@ one limiter — together with an explicit background play/stop in every screen
 | 17 | CLAP host | **spike done 2026-10-18** (ADR-0018 accepted: clap-sys + libloading; host crate + fixture instrument + tests; `clap_scan`/`clap_render` via bridge); next: tuning via note expressions, params/state, UI picker in the Instrument Rack, C++ instrument build |
 | 18 | Release 0.5.0 (installer, clean machine, owner's manual tests) | pending |
 
+## Home-studio programme (2026-11-01) — all eight items shipped the same day
+
+Owner: "what is missing for an easy home studio: a song with the kaval and a background in
+different styles" → eight items → "давай по ред 1–8 всички". Status table and the per-step
+worklog with commit hashes: `docs/design/HOME_STUDIO_PLAN.md`, `docs/WORKLOG_2026-11-01.md`.
+Shipped: 1 styles, 2 takes/comping, 3 sampler + follow the chord + multisample folders, 4 track
+EQ/compressor + −14 LUFS export, 5 audio editor with history, 6 keyboard everywhere (K1/K2/K4),
+7 the atmosphere knows the bar + S2 tension, 8 style templates + FLAC export + "What next".
+
+**User decisions still open:** MP3 export (LAME, LGPL/C → ADR or FLAC only); keyboard K3
+(pad / drone / module per key) and pitch bend / mod wheel; the audio editor's home (now a tab
+in "Свири") and merging Sample Lab into it; Soundscapes S3–S8; the owner's MIDI keyboard model.
+
 ## Programs received 2026-10-18 (owner specifications; gated, audits first)
 
 Three master specifications arrived from the owner on 2026-10-18, each with its own
