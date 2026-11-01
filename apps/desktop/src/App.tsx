@@ -1,8 +1,7 @@
 import { api } from "./api";
 import { useEffect } from "react";
-import { Ambient } from "./Ambient";
 import { Arrange } from "./Arrange";
-import { Compose } from "./Compose";
+import { BackgroundScreen } from "./BackgroundScreen";
 import { Help } from "./Help";
 import { Home } from "./Home";
 import { Library } from "./Library";
@@ -14,10 +13,7 @@ import { applySession, collectSession, useProjectSession } from "./session";
 import { useBackgroundLayers, useSongTransport } from "./layers";
 import { ProjectMenu } from "./ProjectMenu";
 import { ProjectPicker } from "./ProjectPicker";
-import { RhythmScreen } from "./RhythmScreen";
-import { Soundscapes } from "./Soundscapes";
 import { Start } from "./Start";
-import { InstrumentDesigner } from "./InstrumentDesigner";
 import { SongMapScreen } from "./SongMapScreen";
 import { SamplesScreen } from "./SamplesScreen";
 import { Studio } from "./Studio";
@@ -36,7 +32,8 @@ import { useStore, type Screen } from "./store";
 const SCREEN_TITLE: Record<Exclude<Screen, "home">, StringMessageKey> = {
   play: "areaPlay",
   tuner: "areaTuner",
-  compose: "areaAccomp",
+  compose: "bgTabDronePad",
+  live: "bgTabLive",
   studio: "areaStudio",
   ambient: "areaAmbient",
   rhythm: "areaRhythm",
@@ -99,7 +96,7 @@ export default function App() {
                 t.phase
               ) : (
                 <>
-                  {t.back} › {area && area.main !== screen && <>{t[area.title]} › </>}
+                  {t.back} › {area && t[area.title] !== t[SCREEN_TITLE[screen]] && <>{t[area.title]} › </>}
                   <strong>{t[SCREEN_TITLE[screen]]}</strong>
                 </>
               )}
@@ -145,15 +142,11 @@ export default function App() {
       {screen === "home" && <Home />}
       {screen === "play" && (project ? <Studio /> : <ProjectPicker />)}
       {screen === "tuner" && <TunerScreen />}
-      {screen === "compose" && (project ? <Compose /> : <ProjectPicker />)}
+      {area?.id === "background" && (project ? <BackgroundScreen tab={screen} /> : <ProjectPicker />)}
       {screen === "studio" && (project ? <Arrange /> : <ProjectPicker />)}
-      {screen === "ambient" && (project ? <Ambient /> : <ProjectPicker />)}
-      {screen === "rhythm" && (project ? <RhythmScreen /> : <ProjectPicker />)}
       {screen === "library" && <Library />}
-      {screen === "soundscapes" && (project ? <Soundscapes /> : <ProjectPicker />)}
       {screen === "start" && (project ? <Start /> : <ProjectPicker />)}
       {screen === "help" && <Help />}
-      {screen === "instrument" && (project ? <InstrumentDesigner /> : <ProjectPicker />)}
       {screen === "songmap" && (project ? <SongMapScreen /> : <ProjectPicker />)}
       {screen === "samples" && <SamplesScreen />}
       {screen === "references" && <ReferencesScreen />}

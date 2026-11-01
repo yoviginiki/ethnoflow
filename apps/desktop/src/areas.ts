@@ -22,7 +22,7 @@ export interface HomeArea {
 
 export const AREAS: HomeArea[] = [
   { id: "play", title: "hPlay", desc: "hPlayDesc", main: "play", also: ["tuner"] },
-  { id: "background", title: "hBackground", desc: "hBackgroundDesc", main: "compose", also: ["ambient", "soundscapes", "rhythm", "instrument"] },
+  { id: "background", title: "hBackground", desc: "hBackgroundDesc", main: "compose", also: ["ambient", "soundscapes", "rhythm", "instrument", "live"] },
   { id: "song", title: "hSong", desc: "hSongDesc", main: "studio", also: ["songmap", "create", "start"] },
   { id: "learn", title: "hLearn", desc: "hLearnDesc", main: "academy", also: ["references"] },
   { id: "library", title: "hLibrary", desc: "hLibraryDesc", main: "library", also: ["samples"] },

@@ -133,7 +133,7 @@ const audible = (p, min = 0.02) => {
   return `${path.basename(p)} ${s.seconds.toFixed(1)} s peak ${s.peak.toFixed(2)}`;
 };
 
-const SCREENS = ["home", "play", "tuner", "compose", "studio", "ambient", "soundscapes", "rhythm", "library", "instrument", "songmap", "samples", "references", "academy", "create", "start", "help"];
+const SCREENS = ["home", "play", "tuner", "compose", "studio", "ambient", "soundscapes", "rhythm", "live", "library", "instrument", "songmap", "samples", "references", "academy", "create", "start", "help"];
 
 async function main() {
   await step("bridge: ping", () => expectOk(send({ op: "ping" })).pong === true || Promise.reject(new Error("no pong")));
@@ -322,6 +322,16 @@ async function main() {
     const c = expectOk(send({ op: "continue" }));
     if (c.screen !== "play" || !c.loaded_id || c.loaded_id !== c.latest_id) throw new Error(JSON.stringify(c));
     return `${opened.join(", ")}; continue → play with the latest take loaded`;
+  });
+  await step("background: the six tabs are screens of the Background area (compose, ambient, soundscapes, rhythm, instrument, live)", () => {
+    const tabs = ["compose", "ambient", "soundscapes", "rhythm", "instrument", "live"];
+    for (const sc of tabs) {
+      const r = expectOk(send({ op: "screen", screen: sc }));
+      if (r.screen !== sc) throw new Error(`screen is ${r.screen}`);
+      const a = expectOk(send({ op: "area" }));
+      if (a.current !== "background") throw new Error(`${sc}: area is ${a.current}`);
+    }
+    return `${tabs.length} tabs, all under "background"`;
   });
   await step("now playing: the bar's snapshot has every source, stop_all leaves silence", async () => {
     const np = expectOk(send({ op: "now_playing" }));

@@ -130,7 +130,7 @@ export function computeTips(t: Messages, s: ReturnType<typeof useStore.getState>
   if (s.prefs.latencyMs === null) tips.push({ id: "latency", text: t.coachLatency, action: t.coachShow, screen: "play", coach: "latency", level: "hint" });
   if (!p.instrument) tips.push({ id: "profile", text: t.coachProfile, action: t.coachShow, screen: "play", coach: "instrument", level: "hint" });
   // Live follower.
-  if (anyLayer && !s.liveRunning && (s.layers.pad || s.layers.drone)) tips.push({ id: "live", text: t.coachLive, action: t.coachShow, screen: "compose", coach: "live", level: "hint" });
+  if (anyLayer && !s.liveRunning && (s.layers.pad || s.layers.drone)) tips.push({ id: "live", text: t.coachLive, action: t.coachShow, screen: "live", coach: "live", level: "hint" });
   if (tips.length === 0) tips.push({ id: "ok", text: wizard?.progress.passed_at_ms ? t.coachAllGoodDone : t.coachAllGood, level: "ok" });
   return tips;
 }

@@ -11,7 +11,8 @@ import { continueLast, latestTake } from "./takeActions";
 const SCREEN_TITLE: Partial<Record<Screen, StringMessageKey>> = {
   play: "areaPlay",
   tuner: "areaTuner",
-  compose: "areaAccomp",
+  compose: "bgTabDronePad",
+  live: "bgTabLive",
   studio: "areaStudio",
   ambient: "areaAmbient",
   rhythm: "areaRhythm",

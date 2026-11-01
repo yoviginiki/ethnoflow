@@ -109,6 +109,13 @@ h2 { font-size: 15px; margin: 0 0 8px; font-weight: 600; }
 .home-area-main { display: flex; flex-direction: column; gap: 6px; text-align: left; padding: 16px 12px; min-height: 120px; border: 1px solid var(--accent); border-radius: 8px; cursor: pointer; }
 .home-area-title { font-size: 22px; font-weight: 700; }
 .home-area-also { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+
+/* Background: tabs */
+.background-screen { display: flex; flex-direction: column; gap: 12px; }
+.tabs { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; position: sticky; top: 0; z-index: 4; padding: 6px 0; background: var(--bg); border-bottom: 1px solid var(--axis); }
+.tab { padding: 8px 14px; border: 1px solid var(--axis); border-bottom: none; border-radius: 8px 8px 0 0; background: var(--panel); opacity: 0.75; cursor: pointer; font-size: 15px; }
+.tab.on { opacity: 1; border-color: var(--accent); border-bottom: 2px solid var(--accent); font-weight: 600; }
+.tabs-hint { margin-left: auto; }
 .area {
   display: flex; flex-direction: column; gap: 6px; text-align: left; padding: 16px;
   background: var(--panel); border: 1px solid var(--axis); border-radius: 10px; min-height: 96px;

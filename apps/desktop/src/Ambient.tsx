@@ -6,7 +6,6 @@ import { DEFAULT_MACROS, KIND_LABEL, MAX_AMBIENT_LAYERS, defaultSource, makeLaye
 import { randomizeRack } from "./ambientRandom";
 import { MACRO_SLIDERS, REGISTER, SHIMMER_ST, SOURCE_SLIDERS, hasTonal, pct } from "./ambientSpecs";
 import { LaneEditor, ProgramPanel } from "./AmbientProgram";
-import { BackgroundTransport } from "./BackgroundTransport";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { PresetLibrary } from "./PresetLibrary";
 import { rackForProject } from "./session";
@@ -414,9 +413,6 @@ export function Ambient() {
               {status.stream_errors} {t.droneStreamErrors}
             </span>
           )}
-          <span className="bg-inline">
-            <BackgroundTransport compact />
-          </span>
         </div>
         <div className="muted small">{t.ambientIntro}</div>
       </section>

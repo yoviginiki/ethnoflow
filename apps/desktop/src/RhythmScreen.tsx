@@ -1,4 +1,3 @@
-import { BackgroundTransport } from "./BackgroundTransport";
 import { TransportBar } from "./TransportBar";
 import { FollowMap } from "./FollowMap";
 import { messages } from "./i18n";
@@ -6,7 +5,7 @@ import { RhythmPanel } from "./RhythmPanel";
 import { useStore } from "./store";
 import { TimingPanel } from "./TimingPanel";
 
-/** The rhythm section as a screen of its own (also inside "Prepare background"). */
+/** The rhythm section: the "Rhythm" tab of Background (stage 4 of the UX audit). */
 export function RhythmScreen() {
   const s = useStore();
   const t = messages[s.prefs.lang];
@@ -25,16 +24,7 @@ export function RhythmScreen() {
         <FollowMap />
       </section>
       <RhythmPanel />
-      <section className="panel">
-        <h3>{t.backgroundTransport}</h3>
-        <div className="analysis-row">
-          <BackgroundTransport />
-        </div>
-      </section>
       <section className="panel analysis-row">
-        <button className="ghost" onClick={() => s.setScreen("compose")}>
-          {t.areaAccomp}
-        </button>
         <button className="ghost" onClick={() => s.setScreen("play")}>
           {t.toStudio}
         </button>

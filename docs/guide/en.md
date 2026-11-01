@@ -4,7 +4,7 @@ This guide is also shown inside the app (the **? Help** button top right, with s
 
 ## Home and projects
 
-- **Home has five areas**, one verb each: **Play** (I play and record: microphone, tuner, metronome, takes), **Background** (I sound behind: drone, pad, atmosphere, rhythm, instruments, live accompanist), **Song** (I arrange: tracks, song map, guide, export), **Learn** (academy, trainer, gate, references), **Library** (presets, sessions, samples). The big card opens the area's main screen; "Also here:" under it leads to its other screens (Tuner, Atmosphere, Soundscapes, Rhythm section, Instruments, Song map, Create a song, Start from a melody, References, My samples). Nothing was removed, only arranged.
+- **Home has five areas**, one verb each: **Play** (I play and record: microphone, tuner, metronome, takes), **Background** (I sound behind: drone, pad, atmosphere, rhythm, instruments, live accompanist), **Song** (I arrange: tracks, song map, guide, export), **Learn** (academy, trainer, gate, references), **Library** (presets, sessions, samples). The big card opens the area's main screen; "Also here:" under it leads to its other screens (Tuner; the tabs of Background; Song map, Create a song, Start from a melody; References; My samples). Nothing was removed, only arranged.
 - At the top of Home is **▶ Continue**: it opens Play with the latest take loaded (with no takes the button reads "● Record the first" and opens Play ready to record). Next to it, **I have a melody →** opens Start from a melody.
 - The top bar says where you are: "Home › Background › Atmosphere". **? Help** is top right, next to the assistant.
 - Top right is the **📁 Project** menu: new, open, recent, close. Everything in a project saves itself; there is no Save button.
@@ -129,7 +129,16 @@ In Play & record › **Trainer** (the panel under the falling notes):
   "Save as mine". The correction lives in your settings folder and applies everywhere (tuner,
   falling notes, lessons); "Restore the original" removes it. The app's table never changes.
 
-## Compose (accompanist)
+## Background: one screen with tabs
+
+Home › **Background**. Everything that sounds behind the melody is one screen with six
+tabs: **Drone & pad** (mode, tempo, styles, drone, pad, intent), **Atmosphere**,
+**Soundscapes**, **Rhythm section**, **Instruments** and **Live accompanist**. A tab is
+remembered as a screen: a preset's "Load", the assistant and the bridge open the right tab
+directly. Play, stop and the level of the background are not in the tabs but in the "Now
+playing" bar at the bottom (🎚 opens the mixer).
+
+## Background › Drone & pad (accompanist)
 
 - **Mode**: choose a tonic and mode or accept a proposal from the analysis. The drone and the pad follow the tonal centre.
 - **Drone**: a root tone with fifth, octave, sub, warmth, movement and breath. The lowest layer.
@@ -137,9 +146,9 @@ In Play & record › **Trainer** (the panel under the falling notes):
 - **Harmony**: proposals for chord movement in three styles with A/B. "Intent" follows what you play and suggests tonic and chord.
 - Styles ("Deep Ethno DnB", "Ambient no key"…) are quick starting settings.
 
-## Live accompanist (follows your playing)
+## Background › Live accompanist (follows your playing)
 
-Compose and Play & record › **Live accompanist** panel. Start a drone and/or pad from the
+Background › **Live accompanist** tab (the same panel is also in Play & record). Start a drone and/or pad from the
 background, press **Follow** and play: the follower listens to the microphone, cuts the
 playing into notes and phrases, classifies the notes (stable / ornament / transition / noise /
 probable error), tracks the tonal centre with hysteresis and, at the **end of every phrase**,
@@ -159,7 +168,7 @@ safe drone on the tonic. Audio never waits for the analysis.
   test with an ornamented phrase = 0 changes inside the phrase. From the terminal:
   `live_start`, `live_tick`, `live_set`, `live_stop`.
 
-## Atmosphere
+## Background › Atmosphere
 
 - Up to 8 layers: noise, wind, texture, bells, plucks, looped take. Each has level, pan, filters, its own parameters, M/S and a lock.
 - **Presets** on the left (factory and yours), "Surprise me" changes the unlocked layers, the history goes back.
@@ -283,7 +292,7 @@ new variant (seed) of the same exercise.
 From the terminal: `academy_lessons`, `academy_instance`, `academy_score_rhythm`,
 `academy_record`, `academy_reset` (see the bridge).
 
-## Soundscapes
+## Background › Soundscapes
 
 The same layers as Atmosphere, one at a time, with big knobs:
 
@@ -318,7 +327,7 @@ The same layers as Atmosphere, one at a time, with big knobs:
 
   The section's energy adds ±3 dB to the rhythm and lifts the pad in quiet parts; density scales the figures. Step by step: 1) tempo/meter and key; 2) sections (by hand or from References); 3) switch the background on; 4) ▶ or start the rhythm. The offline render and the export do not follow the map yet (next step).
 
-## Instruments (designer)
+## Background › Instruments (designer)
 
 - From Home → Background → **Instruments** or from ✎ next to each part in the rhythm section. Left: factory and your presets by category (drums, bass, synth) with search. Right: the chosen instrument with knobs.
 - **Audition** plays a short pattern through exactly this sound at the project tempo; knobs are heard at once. **WAV** renders the same pattern to a file for comparison.
@@ -327,7 +336,7 @@ The same layers as Atmosphere, one at a time, with big knobs:
 - **Use in** sends the preset to the rhythm section; each part there has a 🎛 picker ("own sound" = the part's fields). The choice is kept in the project's session.
 - Why it matters: the four parts are no longer the same instruments in every project. Two kits or two basses must sound different, not just be named differently.
 
-## Rhythm section
+## Background › Rhythm section
 
 - Four instruments on one shared clock: **drums** (liquid, halftime, ethno), **bass** (sub, pluck, Reese with wobble and sidechain), **ostinato** (a step motif, lockable), **arpeggio**.
 - Tempo and meter are the project's ("Tempo & meter"). "Suggest tempo from the take" measures a take's pulse; you accept it.

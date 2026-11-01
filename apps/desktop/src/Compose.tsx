@@ -1,13 +1,10 @@
 import { useState } from "react";
 import { api, describeError, SCALE_KINDS, type Scale, type ScaleKind } from "./api";
-import { BackgroundTransport } from "./BackgroundTransport";
 import { scaleFromKind } from "./AnalysisPanel";
 import { DRONE_PRESETS, DronePanel } from "./DronePanel";
 import { messages, type StringMessageKey } from "./i18n";
 import { IntentBadge } from "./IntentPanel";
 import { PadPanel } from "./PadPanel";
-import { RhythmPanel } from "./RhythmPanel";
-import { LiveFollowPanel } from "./LiveFollowPanel";
 import { DEFAULT_DRONE, DEFAULT_PAD, DEFAULT_RHYTHM, useStore, type DronePrefs, type PadPrefs } from "./store";
 import { TimingPanel } from "./TimingPanel";
 
@@ -28,7 +25,9 @@ const STYLES: Style[] = [
 ];
 
 /** Compose First (F3.5): a sounding background in a chosen tonal centre and mode,
- *  without recording a melody first; then "Play & record" takes the instrument. */
+ *  without recording a melody first; then "Play & record" takes the instrument.
+ *  Since stage 4 of the UX audit this is the "Drone & pad" tab of Background: the
+ *  rhythm, the live accompanist and the background transport have their own homes. */
 export function Compose() {
   const s = useStore();
   const t = messages[s.prefs.lang];
@@ -167,18 +166,6 @@ export function Compose() {
 
       <DronePanel scale={scale} profile={project.instrument} />
       <PadPanel scale={scale} profile={project.instrument} allowTension={tension} />
-
-      <LiveFollowPanel />
-
-      <RhythmPanel />
-
-      <section className="panel">
-        <h3>{t.backgroundTransport}</h3>
-        <div className="analysis-row">
-          <BackgroundTransport />
-        </div>
-        <span className="muted small">{t.backgroundLevelHint}</span>
-      </section>
 
       <section className="panel analysis-row">
         <button className="ghost" onClick={() => s.setScreen("play")}>

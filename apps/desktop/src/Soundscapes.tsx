@@ -3,7 +3,6 @@ import { api, describeError, type AmbientLayer, type LayerKind, type LayerSource
 import { DEFAULT_MACROS, KIND_LABEL, MAX_AMBIENT_LAYERS, defaultSource, makeLayer } from "./ambientPresets";
 import { mulberry, randomizeLayer } from "./ambientRandom";
 import { MACRO_SLIDERS, REGISTER, SHIMMER_ST, SOURCE_SLIDERS, hasTonal, pct } from "./ambientSpecs";
-import { BackgroundTransport } from "./BackgroundTransport";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Knob } from "./Knob";
 import { PresetLibrary } from "./PresetLibrary";
@@ -131,7 +130,6 @@ export function Soundscapes() {
     <section className="soundscapes">
       <div className="muted small">{t.ssIntro}</div>
       <div className="analysis-row">
-        <BackgroundTransport compact />
         <label className="inline">
           {t.moduleLabel}
           <select value={sel?.id ?? ""} onChange={(e) => setSelected(e.target.value)} disabled={layers.length === 0}>

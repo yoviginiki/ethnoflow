@@ -3,6 +3,17 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Background as one screen with tabs: stage 4 of the UX audit (2026-11-01; owner: "давай напред").**
+  `BackgroundScreen.tsx` mounts the existing screens unchanged as tabs: Drone & pad (the
+  former "Accompanist" / Compose), Atmosphere, Soundscapes, Rhythm section, Instruments
+  and a new Live accompanist tab (`LiveFollowPanel`, new screen id `live`). The tab is
+  the screen id, so presets (`go`), the coach (its "live" tip now opens the Live tab), the
+  bridge and smoke keep their vocabulary. Compose lost its copies of the rhythm panel, the
+  live panel and the background transport; the Rhythm tab lost its background transport
+  and its "Accompanist" link, Atmosphere and Soundscapes their compact copies (play / stop
+  / level live in the "Now playing" bar, one home per setting). Breadcrumb "Home › Background › Atmosphere". Smoke step: the six tabs
+  are screens of the Background area (44/44). Guide BG/EN (sections renamed
+  "Background › …", new intro section), bridge doc, audit §6 status, screenshot.
 - **Home with five areas: stage 3 of the UX audit (2026-11-01 morning; owner: "давай напред").**
   `Home.tsx` shows "▶ Continue" (opens Play & record with the latest take loaded, or
   "● Record the first" when the project has no takes; `continueLast` in

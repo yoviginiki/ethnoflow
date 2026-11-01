@@ -3,7 +3,7 @@ import { AREAS, AREA_IDS, areaMainScreen, areaOf } from "./areas";
 import type { Screen } from "./store";
 
 // Every screen the app has (store.ts: Screen). Home and Help are not areas.
-const SCREENS: Screen[] = ["home", "play", "compose", "studio", "ambient", "rhythm", "library", "soundscapes", "start", "help", "instrument", "songmap", "samples", "references", "academy", "create", "tuner"];
+const SCREENS: Screen[] = ["home", "play", "compose", "studio", "ambient", "rhythm", "library", "soundscapes", "start", "help", "instrument", "songmap", "samples", "references", "academy", "create", "tuner", "live"];
 
 describe("home areas", () => {
   it("has the five areas of the audit, in order", () => {
@@ -19,6 +19,7 @@ describe("home areas", () => {
     expect(areaOf("home")).toBeNull();
     expect(areaOf("tuner")?.id).toBe("play");
     expect(areaOf("ambient")?.id).toBe("background");
+    expect(areaOf("live")?.id).toBe("background");
   });
 
   it("never lists a main screen under 'also' and resolves area ids to their main screen", () => {
