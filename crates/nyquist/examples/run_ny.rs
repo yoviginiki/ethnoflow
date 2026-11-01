@@ -14,9 +14,28 @@ fn main() {
     let r: Vec<f32> = (0..n)
         .map(|i| (i as f64 * 220.0 / sr * std::f64::consts::TAU).sin() as f32 * 0.4)
         .collect();
+    // `--set var=value` (repeatable) overrides a control for every plug-in.
+    let mut sets: Vec<(String, nyquist::ControlValue)> = Vec::new();
+    let mut paths = Vec::new();
+    let mut it = std::env::args().skip(1);
+    while let Some(arg) = it.next() {
+        if arg == "--set" {
+            if let Some(kv) = it.next() {
+                if let Some((k, v)) = kv.split_once('=') {
+                    let val = v
+                        .parse::<f64>()
+                        .map(nyquist::ControlValue::Number)
+                        .unwrap_or_else(|_| nyquist::ControlValue::Text(v.to_string()));
+                    sets.push((k.to_ascii_lowercase(), val));
+                }
+            }
+        } else {
+            paths.push(arg);
+        }
+    }
     let mut ok = 0;
     let mut total = 0;
-    for path in std::env::args().skip(1) {
+    for path in paths {
         total += 1;
         let src = match std::fs::read_to_string(&path) {
             Ok(s) => s,
@@ -32,7 +51,7 @@ fn main() {
             vec![l.clone(), r.clone()]
         };
         let t = std::time::Instant::now();
-        match run_plugin(&h, &[], &input, sr, 0.0) {
+        match run_plugin(&h, &sets, &input, sr, 0.0) {
             Ok(res) => {
                 ok += 1;
                 let what = match &res.output {

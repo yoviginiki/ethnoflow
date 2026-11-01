@@ -39,8 +39,24 @@ pub struct Lambda {
     pub closure: Env,
 }
 
+/// XLISP's object system as the plug-ins use it: `(send class :new '(ivars))` makes a
+/// class, `(send cls :answer :msg '(params) '(body))` adds a method, `(send cls :new …)`
+/// makes an instance (calling `:isnew`), `(send obj :msg …)` runs a method with the
+/// instance variables visible as variables.
+#[derive(Debug)]
+pub struct Obj {
+    pub is_class: bool,
+    /// An instance: its class. A class: its superclass (None for `object`).
+    pub parent: Option<Rc<RefCell<Obj>>>,
+    pub name: String,
+    pub ivar_names: Vec<String>,
+    pub methods: std::collections::HashMap<String, Rc<Lambda>>,
+    pub ivars: std::collections::HashMap<String, Value>,
+}
+
 #[derive(Debug, Clone)]
 pub enum Value {
+    Object(Rc<RefCell<Obj>>),
     Nil,
     T,
     Int(i64),
@@ -66,6 +82,7 @@ impl PartialEq for Value {
             (Value::List(a), Value::List(b)) => a == b,
             (Value::Sound(a), Value::Sound(b)) => Rc::ptr_eq(a, b),
             (Value::Builtin(a), Value::Builtin(b)) => a == b,
+            (Value::Object(a), Value::Object(b)) => Rc::ptr_eq(a, b),
             _ => false,
         }
     }
@@ -115,6 +132,7 @@ impl Value {
             Value::Sound(_) => "sound",
             Value::Lambda(_) => "function",
             Value::Builtin(_) => "builtin",
+            Value::Object(_) => "object",
         }
     }
     /// Printed form (for messages and `print`).
@@ -147,6 +165,14 @@ impl Value {
             Value::Sound(s) => format!("#<Sound: {:.3} s @ {} Hz>", s.duration(), s.sr),
             Value::Lambda(_) => "#<Closure>".into(),
             Value::Builtin(n) => format!("#<Subr-{n}>"),
+            Value::Object(o) => {
+                let o = o.borrow();
+                if o.is_class {
+                    format!("#<Class: {}>", o.name.to_ascii_uppercase())
+                } else {
+                    "#<Object>".into()
+                }
+            }
         }
     }
 }
@@ -182,7 +208,12 @@ impl Env {
         f.parent.as_ref().and_then(|p| p.get(name))
     }
     pub fn define(&self, name: &str, v: Value) {
-        self.0.borrow_mut().vars.insert(name.to_string(), v);
+        let mut f = self.0.borrow_mut();
+        if let Some(slot) = f.vars.get_mut(name) {
+            *slot = v;
+        } else {
+            f.vars.insert(name.to_string(), v);
+        }
     }
     /// Assign to the frame that holds `name` (or the root when none does).
     pub fn set(&self, name: &str, v: Value) {

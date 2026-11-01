@@ -369,6 +369,46 @@ mod tests {
     }
 
     #[test]
+    fn objects_and_fft_round_trip() {
+        // A class with an ivar and methods; an STFT iterator (like Vocal Reduction's) feeding
+        // snd-ifft with hop = frame length reconstructs the signal.
+        let mut it = Interp::new(8000.0);
+        let v = it
+            .run(
+                r#"
+(setf counter (send class :new '(n step)))
+(send counter :answer :isnew '(s) '((setf n 0) (setf step s)))
+(send counter :answer :next '() '((setf n (+ n step)) n))
+(setf c (send counter :new 5))
+(send c :next)
+(send c :next)
+"#,
+            )
+            .unwrap();
+        assert_eq!(v, Value::Int(10));
+        let src = r#";nyquist plug-in
+;type process
+(setf fft-class (send class :new '(sound length skip)))
+(send fft-class :answer :next '() '((snd-fft sound length skip nil)))
+(send fft-class :answer :isnew '(s l k) '((setf sound s) (setf length l) (setf skip k)))
+(snd-ifft 0 *sound-srate* (send fft-class :new *track* 256 256) 256 nil)
+"#;
+        let h = parse_header(src);
+        let input = sine(8000.0, 440.0, 0.256);
+        let r = run_plugin(&h, &[], std::slice::from_ref(&input), 8000.0, 0.0).unwrap();
+        let PluginOutput::Audio(ch) = r.output else {
+            panic!("expected audio")
+        };
+        assert_eq!(ch[0].len(), input.len());
+        let err = ch[0]
+            .iter()
+            .zip(&input)
+            .map(|(a, b)| (a - b).abs())
+            .fold(0.0f32, f32::max);
+        assert!(err < 1e-4, "round trip error {err}");
+    }
+
+    #[test]
     fn filters_and_errors() {
         let src = ";nyquist plug-in\n;type process\n(lowpass2 *track* 100 0.7)\n";
         let h = parse_header(src);

@@ -3,6 +3,12 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Nyquist A9.3 (2026-11-02 night).** The XLISP object system (`send`, `class :new`,
+  `:answer`, `:isnew`, `send-super`), `snd-fft` / `snd-ifft` (rustfft, Nyquist coefficient
+  layout, `:next` iterator), `pv-time-pitch` (analysis phase vocoder), Nyquist-exact `shape`,
+  `setf` on macro places, hashed builtin lookup. All 24 Audacity 3.4.2 plug-ins now run
+  (Vocal Reduction and Isolation with its FFT path, Delay HQ pitch shift). Only SAL syntax
+  remains unsupported.
 - **Audacity Nyquist plug-ins — A9.1 + A9.2 (2026-11-01 night).** New crate
   `crates/nyquist` (ADR-0024): an XLISP interpreter with fixed-array sounds, the Audacity
   header (`;control` and `$control`, `(_ "…")`), properties of `*track*` / `*selection*` /

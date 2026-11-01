@@ -2,12 +2,13 @@
 //! primitives (fixed arrays). Stereo sounds are arrays of two sounds and every sound
 //! primitive expands over channels the way Audacity's `multichan-expand` does.
 
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::reader::{ReadError, Reader};
 use crate::sound::{self, BiquadKind};
-use crate::value::{Env, Lambda, Sound, Value};
+use crate::value::{Env, Lambda, Obj, Sound, Value};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum NyError {
@@ -48,7 +49,23 @@ fn rt<T>(m: impl Into<String>) -> NyResult<T> {
     Err(NyError::Runtime(m.into()))
 }
 
+/// The builtin's static name, through a hash set (the plug-ins call builtins in tight loops).
+fn builtin_name(s: &str) -> Option<&'static str> {
+    static SET: std::sync::OnceLock<HashMap<&'static str, &'static str>> =
+        std::sync::OnceLock::new();
+    SET.get_or_init(|| BUILTINS.iter().map(|b| (*b, *b)).collect())
+        .get(s)
+        .copied()
+}
+
 const BUILTINS: &[&str] = &[
+    "send",
+    "send-super",
+    "recip",
+    "expand",
+    "snd-fft",
+    "snd-ifft",
+    "pv-time-pitch",
     // arithmetic
     "+",
     "-",
@@ -362,6 +379,8 @@ pub struct Interp {
     /// Nyquist's time warp as a plain factor: `(stretch k …)` multiplies the durations of
     /// the behaviours (osc, pwl, noise, …) evaluated inside it; `abs-env` resets it to 1.
     pub stretch: f64,
+    /// The class whose method is running (for `send-super`).
+    method_class: Option<Rc<RefCell<Obj>>>,
     /// `snd-fetch` read positions per sound object (kept alive so the key stays unique).
     streams: HashMap<usize, (Rc<Sound>, usize)>,
 }
@@ -434,6 +453,25 @@ impl Interp {
         );
         env.define("*saw-table*", table(|p| 2.0 * p - 1.0));
         env.define("*table*", table(|p| (p * std::f64::consts::TAU).sin()));
+        // The object system's roots.
+        let object = Rc::new(RefCell::new(Obj {
+            is_class: true,
+            parent: None,
+            name: "object".into(),
+            ivar_names: Vec::new(),
+            methods: HashMap::new(),
+            ivars: HashMap::new(),
+        }));
+        let class = Rc::new(RefCell::new(Obj {
+            is_class: true,
+            parent: Some(object.clone()),
+            name: "class".into(),
+            ivar_names: Vec::new(),
+            methods: HashMap::new(),
+            ivars: HashMap::new(),
+        }));
+        env.define("object", Value::Object(object));
+        env.define("class", Value::Object(class));
         Self {
             env,
             sr,
@@ -444,6 +482,7 @@ impl Interp {
             max_steps: 50_000_000,
             rng: 0x9E37_79B9,
             stretch: 1.0,
+            method_class: None,
             streams: HashMap::new(),
         }
     }
@@ -482,14 +521,8 @@ impl Interp {
                 if s.starts_with(':') {
                     return Ok(expr.clone());
                 }
-                if BUILTINS.contains(&s.as_str()) {
-                    return Ok(Value::Builtin(
-                        BUILTINS
-                            .iter()
-                            .find(|b| **b == s.as_str())
-                            .copied()
-                            .unwrap(),
-                    ));
+                if let Some(b) = builtin_name(s) {
+                    return Ok(Value::Builtin(b));
                 }
                 rt(format!("unbound variable: {}", s.to_ascii_uppercase()))
             }
@@ -508,7 +541,7 @@ impl Interp {
                         }
                         Some(v @ Value::Lambda(_)) => v,
                         _ => {
-                            if let Some(b) = BUILTINS.iter().find(|b| **b == name.as_str()) {
+                            if let Some(b) = builtin_name(name) {
                                 Value::Builtin(b)
                             } else if let Some(v) = env.get(name) {
                                 v
@@ -556,13 +589,9 @@ impl Interp {
             Value::Sym(name) => {
                 let g = match self.env.get(name) {
                     Some(v) => v,
-                    None if BUILTINS.contains(&name.as_str()) => Value::Builtin(
-                        BUILTINS
-                            .iter()
-                            .find(|b| **b == name.as_str())
-                            .copied()
-                            .unwrap(),
-                    ),
+                    None if builtin_name(name).is_some() => {
+                        Value::Builtin(builtin_name(name).unwrap())
+                    }
                     None => return rt(format!("unbound function: {}", name.to_ascii_uppercase())),
                 };
                 self.apply(&g, args)
@@ -573,6 +602,178 @@ impl Interp {
 
     fn call_lambda(&mut self, l: &Rc<Lambda>, args: Vec<Value>) -> NyResult<Value> {
         let env = l.closure.child();
+        self.call_lambda_in(l, args, env)
+    }
+
+    /// `(send target :message args…)` — the object system (see `value::Obj`).
+    fn send(
+        &mut self,
+        target: Value,
+        msg: &str,
+        args: Vec<Value>,
+        to_super: bool,
+    ) -> NyResult<Value> {
+        let Value::Object(obj) = target else {
+            return rt(format!("send: not an object: {}", target.display()));
+        };
+        let is_class = obj.borrow().is_class;
+        let is_root_class = is_class && obj.borrow().name == "class";
+        match msg {
+            ":new" if is_root_class => {
+                // (send class :new '(ivars) ['(cvars) [superclass]])
+                let ivar_names: Vec<String> = args
+                    .first()
+                    .and_then(|a| a.as_list())
+                    .unwrap_or(&[])
+                    .iter()
+                    .filter_map(|v| match v {
+                        Value::Sym(s) => Some(s.clone()),
+                        _ => None,
+                    })
+                    .collect();
+                let superclass = match args.get(2) {
+                    Some(Value::Object(o)) => Some(o.clone()),
+                    _ => match self.env.get("object") {
+                        Some(Value::Object(o)) => Some(o),
+                        _ => None,
+                    },
+                };
+                let cls = Obj {
+                    is_class: true,
+                    parent: superclass,
+                    name: String::new(),
+                    ivar_names,
+                    methods: HashMap::new(),
+                    ivars: HashMap::new(),
+                };
+                Ok(Value::Object(Rc::new(RefCell::new(cls))))
+            }
+            ":new" if is_class => {
+                // An instance: every ivar of the class chain starts as NIL, then :isnew.
+                let mut names = Vec::new();
+                let mut c = Some(obj.clone());
+                while let Some(k) = c {
+                    let kb = k.borrow();
+                    names.extend(kb.ivar_names.iter().cloned());
+                    c = kb.parent.clone();
+                }
+                let inst = Obj {
+                    is_class: false,
+                    parent: Some(obj.clone()),
+                    name: String::new(),
+                    ivar_names: Vec::new(),
+                    methods: HashMap::new(),
+                    ivars: names.into_iter().map(|n| (n, Value::Nil)).collect(),
+                };
+                let inst = Value::Object(Rc::new(RefCell::new(inst)));
+                if self.find_method(&obj, ":isnew").is_some() {
+                    self.send(inst.clone(), ":isnew", args, false)?;
+                }
+                Ok(inst)
+            }
+            ":answer" if is_class => {
+                // (send cls :answer :msg '(params) '(body…))
+                let Some(Value::Sym(name)) = args.first() else {
+                    return rt(":answer needs a message name");
+                };
+                let f = self.parse_lambda(
+                    args.get(1).unwrap_or(&Value::Nil),
+                    args.get(2).and_then(|b| b.as_list()).unwrap_or(&[]),
+                    &self.env.clone(),
+                )?;
+                if let Value::Lambda(l) = f {
+                    obj.borrow_mut().methods.insert(name.clone(), l);
+                }
+                Ok(Value::Sym(name.clone()))
+            }
+            ":class" => Ok(obj
+                .borrow()
+                .parent
+                .clone()
+                .map(Value::Object)
+                .unwrap_or(Value::Nil)),
+            ":show" => {
+                self.output.push_str(&Value::Object(obj.clone()).display());
+                self.output.push('\n');
+                Ok(Value::Object(obj))
+            }
+            ":isnew" => {
+                // Default :isnew (no method defined): nothing to do.
+                let class = obj.borrow().parent.clone();
+                match class.and_then(|c| self.find_method(&c, ":isnew")) {
+                    Some((m, cls)) => self.run_method(&obj, &m, &cls, args),
+                    None => Ok(Value::Object(obj)),
+                }
+            }
+            _ => {
+                let start = if to_super {
+                    self.method_class
+                        .as_ref()
+                        .and_then(|c| c.borrow().parent.clone())
+                } else if is_class {
+                    Some(obj.clone())
+                } else {
+                    obj.borrow().parent.clone()
+                };
+                let Some(start) = start else {
+                    return rt(format!("send: no class for {msg}"));
+                };
+                match self.find_method(&start, msg) {
+                    Some((m, cls)) => self.run_method(&obj, &m, &cls, args),
+                    None => rt(format!(
+                        "send: no method {} for {}",
+                        msg.to_ascii_uppercase(),
+                        Value::Object(obj).display()
+                    )),
+                }
+            }
+        }
+    }
+
+    /// The method and the class that defines it, up the superclass chain.
+    fn find_method(
+        &self,
+        class: &Rc<RefCell<Obj>>,
+        msg: &str,
+    ) -> Option<(Rc<Lambda>, Rc<RefCell<Obj>>)> {
+        let mut c = Some(class.clone());
+        while let Some(k) = c {
+            if let Some(m) = k.borrow().methods.get(msg) {
+                return Some((m.clone(), k.clone()));
+            }
+            c = k.borrow().parent.clone();
+        }
+        None
+    }
+
+    /// Run a method: `self` and the instance variables are visible as variables; the
+    /// variables are written back into the object afterwards.
+    fn run_method(
+        &mut self,
+        obj: &Rc<RefCell<Obj>>,
+        m: &Rc<Lambda>,
+        cls: &Rc<RefCell<Obj>>,
+        args: Vec<Value>,
+    ) -> NyResult<Value> {
+        let env = m.closure.child();
+        env.define("self", Value::Object(obj.clone()));
+        let names: Vec<String> = obj.borrow().ivars.keys().cloned().collect();
+        for n in &names {
+            let v = obj.borrow().ivars.get(n).cloned().unwrap_or(Value::Nil);
+            env.define(n, v);
+        }
+        let saved = self.method_class.replace(cls.clone());
+        let r = self.call_lambda_in(m, args, env.clone());
+        self.method_class = saved;
+        for n in &names {
+            if let Some(v) = env.0.borrow().vars.get(n) {
+                obj.borrow_mut().ivars.insert(n.clone(), v.clone());
+            }
+        }
+        r
+    }
+
+    fn call_lambda_in(&mut self, l: &Rc<Lambda>, args: Vec<Value>, env: Env) -> NyResult<Value> {
         let mut it = args.into_iter();
         for p in &l.params {
             match it.next() {
@@ -1250,6 +1451,17 @@ impl Interp {
     }
 
     fn set_place(&mut self, place: &Value, v: Value, env: &Env) -> NyResult<()> {
+        // A place built by a macro, e.g. (setf (: arr i) v) with (defmacro : …): expand first.
+        if let Value::List(l) = place {
+            if let Some(Value::Sym(h)) = l.first() {
+                if let Some(Value::Lambda(m)) = env.get(h) {
+                    if m.is_macro {
+                        let expanded = self.call_lambda(&m, l[1..].to_vec())?;
+                        return self.set_place(&expanded, v, env);
+                    }
+                }
+            }
+        }
         match place {
             Value::Sym(s) => {
                 env.set(s, v);
@@ -1338,7 +1550,7 @@ impl Interp {
                         .collect();
                     out.push(self.builtin(name, chan)?);
                 }
-                return Ok(Value::Array(Rc::new(std::cell::RefCell::new(out))));
+                return Ok(Value::Array(Rc::new(RefCell::new(out))));
             }
         }
         let a = |i: usize| args.get(i).cloned().unwrap_or(Value::Nil);
@@ -1449,7 +1661,7 @@ impl Interp {
             "fboundp" => match a(0) {
                 Value::Sym(s) => bool_v(
                     matches!(self.env.get(&s), Some(Value::Lambda(_)))
-                        || BUILTINS.contains(&s.as_str()),
+                        || builtin_name(&s).is_some(),
                 ),
                 _ => Value::Nil,
             },
@@ -1662,9 +1874,9 @@ impl Interp {
             // arrays
             "make-array" => {
                 let n = int_of(&a(0))?.max(0) as usize;
-                Value::Array(Rc::new(std::cell::RefCell::new(vec![Value::Nil; n])))
+                Value::Array(Rc::new(RefCell::new(vec![Value::Nil; n])))
             }
-            "vector" => Value::Array(Rc::new(std::cell::RefCell::new(args))),
+            "vector" => Value::Array(Rc::new(RefCell::new(args))),
             "aref" => match a(0) {
                 Value::Array(arr) => {
                     let i = int_of(&a(1))?;
@@ -1817,7 +2029,126 @@ impl Interp {
                 }
                 Value::Nil
             }
-            "s-plot" | "setf-hack" => Value::Nil,
+            "s-plot" | "setf-hack" | "expand" => Value::Nil,
+            "recip" => Value::Float(1.0 / num_of(&a(0))?),
+            "send" | "send-super" => {
+                let target = a(0);
+                let Value::Sym(msg) = a(1) else {
+                    return rt("send needs a :message");
+                };
+                let target = if name == "send-super" {
+                    match self.env.get("self") {
+                        Some(v) => v,
+                        None => target,
+                    }
+                } else {
+                    target
+                };
+                self.send(
+                    target,
+                    &msg,
+                    args.get(2..).unwrap_or(&[]).to_vec(),
+                    name == "send-super",
+                )?
+            }
+            "snd-fft" => {
+                // (snd-fft sound length skip window): the next frame as an array
+                // [DC, re1, im1, …, re(n/2-1), im(n/2-1), nyquist], NIL at the end.
+                let Value::Sound(s) = a(0) else {
+                    return rt("snd-fft: expected a sound");
+                };
+                let len = int_of(&a(1))?.max(2) as usize;
+                let skip = int_of(&a(2))?.max(1) as usize;
+                let window = match a(3) {
+                    Value::Sound(w) => Some(w),
+                    _ => None,
+                };
+                let key = Rc::as_ptr(&s) as usize;
+                let pos = self.streams.get(&key).map(|(_, p)| *p).unwrap_or(0);
+                if pos >= s.data.len() {
+                    Value::Nil
+                } else {
+                    let mut frame: Vec<f32> = (0..len)
+                        .map(|i| s.data.get(pos + i).copied().unwrap_or(0.0))
+                        .collect();
+                    if let Some(w) = &window {
+                        for (i, x) in frame.iter_mut().enumerate() {
+                            *x *= w.data.get(i).copied().unwrap_or(0.0);
+                        }
+                    }
+                    self.streams.insert(key, (s.clone(), pos + skip));
+                    let spec = sound::fft_frame(&frame);
+                    Value::Array(Rc::new(RefCell::new(
+                        spec.into_iter().map(|v| Value::Float(v as f64)).collect(),
+                    )))
+                }
+            }
+            "snd-ifft" => {
+                // (snd-ifft time srate iterator skip window): overlap-add of the frames the
+                // iterator's :next returns (arrays in snd-fft's layout) until NIL.
+                let t0 = num_of(&a(0))?;
+                let rate = num_of(&a(1))?;
+                let iter = a(2);
+                let skip = int_of(&a(3))?.max(1) as usize;
+                let window = match a(4) {
+                    Value::Sound(w) => Some(w),
+                    _ => None,
+                };
+                let mut out: Vec<f32> = Vec::new();
+                let mut offset = 0usize;
+                let mut frames = 0usize;
+                loop {
+                    let frame = self.send(iter.clone(), ":next", Vec::new(), false)?;
+                    let Value::Array(arr) = frame else { break };
+                    let spec: Vec<f32> = arr
+                        .borrow()
+                        .iter()
+                        .map(|v| v.as_f64().unwrap_or(0.0) as f32)
+                        .collect();
+                    let mut samples = sound::ifft_frame(&spec);
+                    if let Some(w) = &window {
+                        for (i, x) in samples.iter_mut().enumerate() {
+                            *x *= w.data.get(i).copied().unwrap_or(0.0);
+                        }
+                    }
+                    if out.len() < offset + samples.len() {
+                        out.resize(offset + samples.len(), 0.0);
+                    }
+                    for (i, x) in samples.iter().enumerate() {
+                        out[offset + i] += x;
+                    }
+                    offset += skip;
+                    frames += 1;
+                    if frames > 1_000_000 {
+                        return rt("snd-ifft: the iterator never ends");
+                    }
+                }
+                Value::Sound(Rc::new(Sound::at(rate, t0, out)))
+            }
+            "pv-time-pitch" => {
+                // (pv-time-pitch sound stretchfn pitchfn length): phase-vocoder time stretch
+                // and pitch shift; the control sounds are taken as constants (first sample).
+                let Value::Sound(s) = a(0) else {
+                    return rt("pv-time-pitch: expected a sound");
+                };
+                let ctl = |v: &Value| -> NyResult<f64> {
+                    match v {
+                        Value::Sound(c) => Ok(c.data.first().copied().unwrap_or(1.0) as f64),
+                        o => num_of(o),
+                    }
+                };
+                let stretch = ctl(&a(1))?.clamp(0.25, 4.0) as f32;
+                let ratio = ctl(&a(2))?.max(1e-3);
+                let semis = (12.0 * ratio.log2()).clamp(-24.0, 24.0) as f32;
+                let mut data = s.data.clone();
+                if (stretch - 1.0).abs() > 1e-4 {
+                    data = analysis::time_stretch(&data, 1, stretch);
+                }
+                if semis.abs() > 1e-4 {
+                    data = analysis::pitch_shift(&data, 1, semis);
+                }
+                Value::Sound(Rc::new(Sound::at(s.sr, s.start, data)))
+            }
             "_" => a(0),
             "string-append" => Value::Str(args.iter().map(str_of).collect::<Vec<_>>().join("")),
             "char=" | "char-equal" | "char/=" | "char<" | "char>" => {
@@ -1847,11 +2178,11 @@ impl Interp {
                 self.output.push('\n');
                 a(0)
             }
-            "snd-fft" | "snd-ifft" | "pv-time-pitch" | "phasevocoder" => {
+            "phasevocoder" => {
                 return rt(format!(
-                "{} is not supported yet by EthnoFlow's Nyquist (FFT and phase-vocoder primitives)",
-                name.to_ascii_uppercase()
-            ))
+                    "{} is not supported yet by EthnoFlow's Nyquist",
+                    name.to_ascii_uppercase()
+                ))
             }
             "step-to-hz" => Value::Float(sound::step_to_hz(num_of(&a(0))?)),
             "hz-to-step" => Value::Float(69.0 + 12.0 * (num_of(&a(0))?.max(1e-9) / 440.0).log2()),
@@ -1913,7 +2244,7 @@ impl Interp {
                                 .collect();
                             out.push(self.apply(&f, chan)?);
                         }
-                        Value::Array(Rc::new(std::cell::RefCell::new(out)))
+                        Value::Array(Rc::new(RefCell::new(out)))
                     }
                 }
             }
@@ -2487,7 +2818,7 @@ impl Interp {
                         .map(|v| Value::Float(*v as f64))
                         .collect();
                     self.streams.insert(key, (s.clone(), pos + step));
-                    Value::Array(Rc::new(std::cell::RefCell::new(items)))
+                    Value::Array(Rc::new(RefCell::new(items)))
                 }
             }
             "set-logical-stop" | "set-logical-stop-abs" | "snd-set-logical-stop" => a(0),
@@ -2576,7 +2907,7 @@ impl Interp {
                     .take(n)
                     .map(|v| Value::Float(*v as f64))
                     .collect();
-                Value::Array(Rc::new(std::cell::RefCell::new(items)))
+                Value::Array(Rc::new(RefCell::new(items)))
             }
             "snd-fetch" => {
                 // Streams one sample per call from this sound object; nil at the end.
@@ -2645,15 +2976,23 @@ impl Interp {
                 }
             }
             "shape" => {
-                // (shape signal table origin): table maps [-1,1] → value; we approximate with the sound as a lookup.
+                // (shape signal table origin): the table is read at time (x + origin) seconds,
+                // so its sample rate sets how much of it one unit of signal spans.
                 let s = snd(&a(0))?;
                 let table = snd(&a(1))?;
                 let origin = num_of(&a(2))? as f32;
                 let n = table.data.len() as f32;
+                let tsr = table.sr as f32;
                 Value::Sound(Rc::new(sound::map1(&s, move |x| {
-                    let idx =
-                        ((x + origin) * n / (2.0 * origin.max(1e-6))).clamp(0.0, n - 1.0) as usize;
-                    table.data.get(idx).copied().unwrap_or(0.0)
+                    let pos = ((x + origin) * tsr).clamp(0.0, n - 1.0);
+                    let i0 = pos.floor() as usize;
+                    let i1 = (i0 + 1).min(n as usize - 1);
+                    let t = pos - i0 as f32;
+                    let (y0, y1) = (
+                        table.data.get(i0).copied().unwrap_or(0.0),
+                        table.data.get(i1).copied().unwrap_or(0.0),
+                    );
+                    y0 + (y1 - y0) * t
                 })))
             }
             "normalize" => {

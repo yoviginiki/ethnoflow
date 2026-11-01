@@ -298,9 +298,11 @@ FFI on the audio paths and a separate licence story; the Rust Lisp crates are Sc
 Lisps whose semantics (case, `nil`/`t`, property lists, `&optional`, `setf` places,
 `format` directives) differ enough from XLISP that every real plug-in would need patching,
 which defeats the goal.
-**Consequences:** the interpreter runs off the audio thread (editor operations only), has a
-step limit and a recursion limit, and is slow on per-sample Lisp loops (Clip Fix ≈ 5 s for
-2 s of stereo). Missing: `snd-fft` / `snd-ifft`, `pv-time-pitch`, the XLISP object system
-(`send`), SAL syntax — A9.3. Audacity's plug-ins are GPL v2+: they are not bundled; the
+**Consequences:** the interpreter runs off the audio thread (editor operations only, in a
+thread with a 256 MB stack), has a step limit and a recursion limit; per-sample Lisp loops
+cost ≈ 0.6 µs per operation in release (Clip Fix 0.34 s for 2 s of stereo). Amendment
+2026-11-02 (A9.3): the crate now depends on `rustfft` (ADR-0021, already in the workspace)
+for `snd-fft` / `snd-ifft` and on `ethnoflow-analysis` for `pv-time-pitch`; the XLISP object
+system (`send`) is implemented. Missing: SAL syntax. Audacity's plug-ins are GPL v2+: they are not bundled; the
 user copies them into `Documents\EthnoFlow\Plugins`. The four bundled plug-ins are ours.
 **Licence / Windows / maintenance:** no new crate; `serde` already in the workspace.

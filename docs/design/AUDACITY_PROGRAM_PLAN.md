@@ -159,10 +159,17 @@ backquote, `catch/throw`, `return-from`, `progv`, `seqrep/simrep`, поточе�
 Срезове: **A9.1 DONE** (интерпретатор + тестове), **A9.2 DONE** (папка
 `Documents\EthnoFlow\Plugins`, команди `ny_list/ny_import/ny_open_folder/ny_source/ny_analyze`,
 `EditOp::Nyquist` с преглед, панел в редактора с контроли от заглавката, 4 вградени добавки =
-шаблони, bridge, smoke, guide). **A9.3 NOT STARTED**: `snd-fft`/`snd-ifft` (има FFT в
-`crates/analysis`), `pv-time-pitch` (има фазов вокодер), обекти; SAL синтаксис; редактор на
-кода с грешка на ред; производителност на цикли по семпли (Clip Fix ≈ 5 s за 2 s стерео →
-компилация до затворени функции или кеш на търсенето на символи).
+шаблони, bridge, smoke, guide). **A9.3 DONE (2.11 нощ)**: обектната система на XLISP
+(`send`, `class :new`, `:answer`, `:isnew`, `send-super`, ivars като променливи), `snd-fft` /
+`snd-ifft` (rustfft, същата подредба на коефициентите като в Nyquist, итератор с `:next`),
+`pv-time-pitch` (фазовият вокодер от `crates/analysis`), `shape` по Nyquist (таблица по
+време), `setf` върху място от макрос (`(setf (: arr i) v)`), търсене на вградените през хеш.
+Резултат: **всички 24 добавки на Audacity 3.4.2 работят** (Vocal Reduction and Isolation –
+и FFT пътят Isolate/Remove, Delay › High-quality pitch shift, Spectral Edit* дават
+съобщението си, защото няма спектрална селекция). Скоростта беше илюзия на debug билда:
+Clip Fix в release = 0.34 s за 2 s стерео, Vocal Reduction Isolate = 1.7 s. Остава:
+**SAL синтаксис** (NOT STARTED – малко добавки го ползват), редактор на кода с грешка на ред,
+спектрална селекция (`*track*` 'spectral-edit-low-hz / high-hz) за Spectral Edit*.
 
 ## 4. Решения за собственика
 

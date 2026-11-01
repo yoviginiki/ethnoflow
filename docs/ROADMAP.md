@@ -176,7 +176,7 @@ A12 first slice (macros), A7 second slice (echo / reverb). **A9 Nyquist (1.11 ni
 "искам да мога да ползвам готовите за Audacity"):** own XLISP interpreter `crates/nyquist`
 (ADR-0024), 19 of 20 Audacity 3.4.2 plug-ins and all 18 generators from plugins.audacityteam.org run unchanged, plug-in folder + editor panel
 with header controls, preview / apply / analyze, 4 bundled plug-ins as templates. Open: A3
-draw tool, A8 CLAP effects, A9.3 (FFT primitives, objects, SAL, speed), A10 AIFF / Ogg /
+draw tool, A8 CLAP effects, A9 SAL syntax (A9.3 FFT / objects / pv-time-pitch done 2.11: all 24 Audacity plug-ins run), A10 AIFF / Ogg /
 MP3 export (owner decision), A12 NVDA check.
 
 **Received 1.11.2026 evening:** the Audacity feature list + "we must be able to write Nyquist plugins later" → `docs/design/AUDACITY_PROGRAM_PLAN.md` (audit per feature, stages A1–A12, Nyquist options; the owner then said "давай E2 E3" = stage A7 first).

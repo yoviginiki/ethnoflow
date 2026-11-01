@@ -11,3 +11,5 @@ path = "src/lib.rs"
 
 [dependencies]
 serde = { workspace = true }
+rustfft = { workspace = true }
+ethnoflow-analysis = { path = "../analysis" }

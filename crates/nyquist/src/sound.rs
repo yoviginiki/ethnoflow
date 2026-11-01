@@ -412,6 +412,57 @@ pub fn jcrev(s: &Sound, decay: f64, mix: f32) -> Sound {
     Sound::at(s.sr, s.start, data)
 }
 
+/// Forward FFT of one frame in Nyquist's `snd-fft` layout:
+/// `[DC, re1, im1, …, re(n/2-1), im(n/2-1), nyquist]` (n even) — n values for n samples.
+pub fn fft_frame(frame: &[f32]) -> Vec<f32> {
+    use rustfft::num_complex::Complex;
+    let n = frame.len();
+    if n < 2 {
+        return frame.to_vec();
+    }
+    let mut buf: Vec<Complex<f32>> = frame.iter().map(|x| Complex::new(*x, 0.0)).collect();
+    rustfft::FftPlanner::new()
+        .plan_fft_forward(n)
+        .process(&mut buf);
+    let mut out = Vec::with_capacity(n);
+    out.push(buf[0].re);
+    for c in &buf[1..n / 2] {
+        out.push(c.re);
+        out.push(c.im);
+    }
+    if n.is_multiple_of(2) {
+        out.push(buf[n / 2].re);
+    } else {
+        out.push(buf[n / 2].re);
+        out.push(buf[n / 2].im);
+        out.truncate(n);
+    }
+    out
+}
+
+/// Inverse of [`fft_frame`]: the frame's samples back (scaled by 1/n).
+pub fn ifft_frame(spec: &[f32]) -> Vec<f32> {
+    use rustfft::num_complex::Complex;
+    let n = spec.len();
+    if n < 2 {
+        return spec.to_vec();
+    }
+    let mut buf = vec![Complex::new(0.0f32, 0.0); n];
+    buf[0] = Complex::new(spec[0], 0.0);
+    for k in 1..n / 2 {
+        let c = Complex::new(spec[2 * k - 1], spec[2 * k]);
+        buf[k] = c;
+        buf[n - k] = c.conj();
+    }
+    if n.is_multiple_of(2) {
+        buf[n / 2] = Complex::new(spec[n - 1], 0.0);
+    }
+    rustfft::FftPlanner::new()
+        .plan_fft_inverse(n)
+        .process(&mut buf);
+    buf.iter().map(|c| c.re / n as f32).collect()
+}
+
 pub fn peak(s: &Sound) -> f32 {
     s.data.iter().fold(0.0f32, |m, v| m.max(v.abs()))
 }
