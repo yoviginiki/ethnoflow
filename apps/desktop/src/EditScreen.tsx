@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type WheelEvent as RWheelEvent } from "react";
-import { api, describeError, type EditOp, type EditStatus, type PlayerStatus, type WaveformPeaks } from "./api";
+import { api, describeError, type EditOp, type EditStatus, type EqBand, type PlayerStatus, type WaveformPeaks } from "./api";
 import { formatDb, formatTime, isTypingTarget, takeName } from "./format";
 import { messages, type StringMessageKey } from "./i18n";
 import { useStore } from "./store";
@@ -24,7 +24,19 @@ const OP_LABEL: Record<string, StringMessageKey> = {
   fade_in: "opFadeIn",
   fade_out: "opFadeOut",
   reverse: "opReverse",
+  eq: "opEq",
+  compress: "opCompress",
+  limit: "opLimit",
 };
+
+type FxKind = "eq" | "compress" | "limit";
+const DEFAULT_BANDS: EqBand[] = [
+  { kind: "low_shelf", hz: 200, gain_db: 0, q: 1 },
+  { kind: "peak", hz: 1000, gain_db: 0, q: 1 },
+  { kind: "high_shelf", hz: 4000, gain_db: 0, q: 1 },
+];
+const DEFAULT_COMP = { threshold_db: -24, ratio: 3, attack_ms: 10, release_ms: 100, makeup_db: 0 };
+const DEFAULT_LIMIT = { ceiling_db: -1 };
 
 /**
  * Audio editor (home-studio item 5 = AUDIO_EDITOR_PLAN E1, 2026-11-01): one take as a
@@ -47,6 +59,11 @@ export function EditScreen() {
   const [playing, setPlaying] = useState<{ from: number; st: PlayerStatus } | null>(null);
   const [busy, setBusy] = useState(false);
   const [pick, setPick] = useState("");
+  // A7 effects with a preview: which form is open and its values.
+  const [fx, setFx] = useState<FxKind | null>(null);
+  const [bands, setBands] = useState<EqBand[]>(DEFAULT_BANDS);
+  const [comp, setComp] = useState(DEFAULT_COMP);
+  const [lim, setLim] = useState(DEFAULT_LIMIT);
   const statusRef = useRef(status);
   statusRef.current = status;
   const viewRef = useRef(view);
@@ -215,6 +232,29 @@ export function EditScreen() {
       fail(e);
     }
   };
+  const fxOp = (): EditOp | null => {
+    const r = region();
+    if (fx === "eq") return { op: "eq", a: r[0], b: r[1], bands };
+    if (fx === "compress") return { op: "compress", a: r[0], b: r[1], ...comp };
+    if (fx === "limit") return { op: "limit", a: r[0], b: r[1], ...lim };
+    return null;
+  };
+  const previewFx = async () => {
+    const op = fxOp();
+    if (!op) return;
+    try {
+      await stopPlaying().catch(() => undefined);
+      const st = await api.editPreview(op, 4, selectedOutput);
+      setPlaying({ from: region()[0], st });
+    } catch (e) {
+      fail(e);
+    }
+  };
+  const applyFx = () => {
+    const op = fxOp();
+    if (op) void run(op);
+  };
+  const setBand = (i: number, patch: Partial<EqBand>) => setBands((b) => b.map((x, k) => (k === i ? { ...x, ...patch } : x)));
   const doUndo = () => void api.editUndo().then(absorb).catch(fail);
   const doRedo = () => void api.editRedo().then(absorb).catch(fail);
   const doJump = (step: number) => void api.editJump(step).then(absorb).catch(fail);
@@ -461,6 +501,87 @@ export function EditScreen() {
         </div>
         <div className="muted small">{t.editShortcuts}</div>
       </section>
+
+      {status && (
+        <section className="panel" aria-label={t.editFx}>
+          <div className="analysis-row">
+            <h3>{t.editFx}</h3>
+            {(["eq", "compress", "limit"] as FxKind[]).map((k) => (
+              <button key={k} className={`small ${fx === k ? "primary" : ""}`} onClick={() => setFx(fx === k ? null : k)}>
+                {k === "eq" ? t.fxEq : k === "compress" ? t.fxCompress : t.fxLimit}
+              </button>
+            ))}
+            <span className="muted small">{t.editFxHint}</span>
+          </div>
+          {fx === "eq" && (
+            <div className="fx-form">
+              {bands.map((b, i) => (
+                <div className="analysis-row" key={i}>
+                  <span className="small" style={{ width: 90 }}>
+                    {b.kind === "low_shelf" ? t.eqLow : b.kind === "peak" ? t.eqMid : t.eqHigh}
+                  </span>
+                  <label className="inline small">
+                    Hz
+                    <input type="number" min={20} max={20000} step={10} value={b.hz} onChange={(e) => setBand(i, { hz: Math.max(20, Math.min(20000, Number(e.target.value))) })} style={{ width: 80 }} />
+                  </label>
+                  <label className="inline small">
+                    dB
+                    <input type="range" min={-24} max={24} step={0.5} value={b.gain_db} onChange={(e) => setBand(i, { gain_db: Number(e.target.value) })} />
+                    <span className="mono-num">{b.gain_db >= 0 ? "+" : ""}{b.gain_db.toFixed(1)}</span>
+                  </label>
+                  {b.kind === "peak" && (
+                    <label className="inline small">
+                      Q
+                      <input type="number" min={0.1} max={10} step={0.1} value={b.q} onChange={(e) => setBand(i, { q: Math.max(0.1, Math.min(10, Number(e.target.value))) })} style={{ width: 60 }} />
+                    </label>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          {fx === "compress" && (
+            <div className="fx-form analysis-row">
+              {(
+                [
+                  ["threshold_db", t.compThreshold, -60, 0, 1, "dB"],
+                  ["ratio", t.compRatio, 1, 20, 0.5, ":1"],
+                  ["attack_ms", t.compAttack, 0.1, 200, 0.1, "ms"],
+                  ["release_ms", t.compRelease, 1, 2000, 1, "ms"],
+                  ["makeup_db", t.compMakeup, 0, 24, 0.5, "dB"],
+                ] as [keyof typeof DEFAULT_COMP, string, number, number, number, string][]
+              ).map(([key, label, min, max, step, unit]) => (
+                <label className="inline small" key={key}>
+                  {label}
+                  <input type="range" min={min} max={max} step={step} value={comp[key]} onChange={(e) => setComp({ ...comp, [key]: Number(e.target.value) })} />
+                  <span className="mono-num">
+                    {comp[key]} {unit}
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
+          {fx === "limit" && (
+            <div className="fx-form analysis-row">
+              <label className="inline small">
+                {t.fxCeiling}
+                <input type="range" min={-24} max={0} step={0.5} value={lim.ceiling_db} onChange={(e) => setLim({ ceiling_db: Number(e.target.value) })} />
+                <span className="mono-num">{lim.ceiling_db.toFixed(1)} dBFS</span>
+              </label>
+            </div>
+          )}
+          {fx && (
+            <div className="analysis-row">
+              <button onClick={() => void previewFx()} disabled={busy}>
+                ▶ {t.fxPreview}
+              </button>
+              <button className="primary" onClick={applyFx} disabled={busy}>
+                ✓ {t.fxApply}
+              </button>
+              <span className="muted small">{selection ? t.editOnSelection : t.editOnWhole}</span>
+            </div>
+          )}
+        </section>
+      )}
 
       {status && (
         <section className="panel">

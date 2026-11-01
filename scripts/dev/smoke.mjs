@@ -700,6 +700,15 @@ async function main() {
       const loud = expectOk(send({ op: "edit_peaks", bins: 50, from_s: 0.5, to_s: 1.5 }));
       if (!(loud.peak > 0.01)) throw new Error("the pasted audio is gone");
       if (st5.versions.length !== 4 || st5.index !== 3 || !st5.dirty) throw new Error(`history ${JSON.stringify(st5.versions)}`);
+      // A7 (E2 + E3): the limiter caps the peak, the compressor squeezes it, the EQ keeps the length.
+      const pk0 = st5.peak_dbfs;
+      const lim = expectOk(send({ op: "edit", edit: { op: "limit", a: 0, b: len, ceiling_db: -12 } }));
+      if (!(lim.peak_dbfs <= -11.9)) throw new Error(`limiter: peak ${lim.peak_dbfs} dBFS (was ${pk0})`);
+      const cmp = expectOk(send({ op: "edit", edit: { op: "compress", a: 0, b: len, threshold_db: -40, ratio: 20, attack_ms: 0.1, release_ms: 200, makeup_db: 0 } }));
+      if (!(cmp.peak_dbfs < lim.peak_dbfs - 6)) throw new Error(`compressor: ${lim.peak_dbfs} → ${cmp.peak_dbfs} dBFS`);
+      const eqd = expectOk(send({ op: "edit", edit: { op: "eq", a: 0, b: len, bands: [{ kind: "low_shelf", hz: 200, gain_db: -12, q: 1 }, { kind: "peak", hz: 1000, gain_db: 3, q: 1 }, { kind: "high_shelf", hz: 4000, gain_db: 0, q: 1 }] } }));
+      near(eqd.seconds, len, "eq keeps the length");
+      if (eqd.versions.length !== 7) throw new Error(`history after effects: ${eqd.versions.length}`);
       near(expectOk(send({ op: "edit_jump", step: 1 })).seconds, len - 1, "jump to step 1");
       const saved = expectOk(send({ op: "edit_save", label: "smoke edit" }));
       const tk = saved.project.takes.find((x) => x.id === saved.take_id);

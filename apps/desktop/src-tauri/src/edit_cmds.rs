@@ -10,9 +10,9 @@
 use std::sync::Arc;
 
 use audio_engine::{
-    apply_recipe, compute_peaks, decode_file, fade, gain, linear_to_dbfs, nearest_zero_crossing,
-    normalize, read_wav, reverse, write_wav, AudioBuffer, PlayOptions, Player, PlayerStatus,
-    WavFormat, WaveformPeaks,
+    apply_recipe, compress, compute_peaks, decode_file, eq, fade, gain, limit, linear_to_dbfs,
+    nearest_zero_crossing, normalize, read_wav, reverse, write_wav, AudioBuffer, EqBand,
+    PlayOptions, Player, PlayerStatus, WavFormat, WaveformPeaks,
 };
 use project::{TakeHealth, TakeState};
 use serde::{Deserialize, Serialize};
@@ -96,6 +96,20 @@ pub enum EditOp {
     FadeOut { a: f64, b: f64 },
     /// Reverse [a, b).
     Reverse { a: f64, b: f64 },
+    /// Parametric EQ on [a, b) (A7 = E3).
+    Eq { a: f64, b: f64, bands: Vec<EqBand> },
+    /// Compressor on [a, b) (A7 = E2).
+    Compress {
+        a: f64,
+        b: f64,
+        threshold_db: f32,
+        ratio: f32,
+        attack_ms: f32,
+        release_ms: f32,
+        makeup_db: f32,
+    },
+    /// Brick-wall limiter on [a, b) (A7 = E2).
+    Limit { a: f64, b: f64, ceiling_db: f32 },
 }
 
 impl EditOp {
@@ -113,6 +127,9 @@ impl EditOp {
             EditOp::FadeIn { .. } => "fade_in",
             EditOp::FadeOut { .. } => "fade_out",
             EditOp::Reverse { .. } => "reverse",
+            EditOp::Eq { .. } => "eq",
+            EditOp::Compress { .. } => "compress",
+            EditOp::Limit { .. } => "limit",
         }
     }
 }
@@ -330,13 +347,12 @@ pub async fn edit_peaks(
     }
 }
 
-#[tauri::command]
-pub async fn edit_apply(state: State<'_, AppState>, op: EditOp) -> CmdResult<EditStatus> {
-    let mut s = state.lock();
-    let e = session(&mut s)?;
+/// The result of `op` on the session's current version (None = no audio change, e.g.
+/// copy). Mutates the clipboard for cut / copy.
+fn compute(e: &mut EditSession, op: &EditOp) -> CmdResult<Option<AudioBuffer>> {
     let cur = Arc::clone(e.current());
     let (sr, ch) = (cur.sample_rate, cur.channels);
-    let next: Option<AudioBuffer> = match &op {
+    let next: Option<AudioBuffer> = match op {
         EditOp::Cut { a, b } => {
             let (fa, fb) = region(&cur, *a, *b)?;
             e.clipboard = Some(Arc::new(cur.slice_frames(fa, fb)));
@@ -410,7 +426,77 @@ pub async fn edit_apply(state: State<'_, AppState>, op: EditOp) -> CmdResult<Edi
             let (fa, fb) = region(&cur, *a, *b)?;
             Some(replace_region(&cur, fa, fb, reverse))
         }
+        EditOp::Eq { a, b, bands } => {
+            let (fa, fb) = region(&cur, *a, *b)?;
+            let mut err_out = None;
+            let out = replace_region(&cur, fa, fb, |m| match eq(m, bands) {
+                Ok(x) => x,
+                Err(e) => {
+                    err_out = Some(e);
+                    m.clone()
+                }
+            });
+            if let Some(e) = err_out {
+                return Err(err("invalid_argument", e.to_string()));
+            }
+            Some(out)
+        }
+        EditOp::Compress {
+            a,
+            b,
+            threshold_db,
+            ratio,
+            attack_ms,
+            release_ms,
+            makeup_db,
+        } => {
+            let (fa, fb) = region(&cur, *a, *b)?;
+            let mut err_out = None;
+            let out = replace_region(&cur, fa, fb, |m| {
+                match compress(
+                    m,
+                    *threshold_db,
+                    *ratio,
+                    *attack_ms,
+                    *release_ms,
+                    *makeup_db,
+                ) {
+                    Ok(x) => x,
+                    Err(e) => {
+                        err_out = Some(e);
+                        m.clone()
+                    }
+                }
+            });
+            if let Some(e) = err_out {
+                return Err(err("invalid_argument", e.to_string()));
+            }
+            Some(out)
+        }
+        EditOp::Limit { a, b, ceiling_db } => {
+            let (fa, fb) = region(&cur, *a, *b)?;
+            let mut err_out = None;
+            let out = replace_region(&cur, fa, fb, |m| match limit(m, *ceiling_db) {
+                Ok(x) => x,
+                Err(e) => {
+                    err_out = Some(e);
+                    m.clone()
+                }
+            });
+            if let Some(e) = err_out {
+                return Err(err("invalid_argument", e.to_string()));
+            }
+            Some(out)
+        }
     };
+    Ok(next)
+}
+
+#[tauri::command]
+pub async fn edit_apply(state: State<'_, AppState>, op: EditOp) -> CmdResult<EditStatus> {
+    let mut s = state.lock();
+    let e = session(&mut s)?;
+    let next = compute(e, &op)?;
     if let Some(buf) = next {
         if buf.is_empty() {
             return Err(err("invalid_argument", "That would leave no audio"));
@@ -418,6 +504,47 @@ pub async fn edit_apply(state: State<'_, AppState>, op: EditOp) -> CmdResult<Edi
         e.push(op.key(), buf);
     }
     Ok(status_of(e))
+}
+
+/// A7: hear an effect before applying it — the op is computed on a copy and the first
+/// `seconds` of its region play through the main player; nothing enters the history.
+#[tauri::command]
+pub async fn edit_preview(
+    state: State<'_, AppState>,
+    op: EditOp,
+    seconds: Option<f64>,
+    device: Option<String>,
+) -> CmdResult<PlayerStatus> {
+    let (a, b) = match &op {
+        EditOp::Eq { a, b, .. } | EditOp::Compress { a, b, .. } | EditOp::Limit { a, b, .. } => {
+            (*a, *b)
+        }
+        EditOp::Gain { a, b, .. } | EditOp::Normalize { a, b, .. } => (*a, *b),
+        EditOp::FadeIn { a, b } | EditOp::FadeOut { a, b } | EditOp::Reverse { a, b } => (*a, *b),
+        _ => {
+            return Err(err(
+                "invalid_argument",
+                "preview is for effects on a region",
+            ));
+        }
+    };
+    let mut s = state.lock();
+    s.stop_playback();
+    let e = session(&mut s)?;
+    let Some(buf) = compute(e, &op)? else {
+        return Err(err("invalid_argument", "nothing to preview"));
+    };
+    let (fa, fb) = region(&buf, a, b)?;
+    let span = seconds.unwrap_or(4.0).clamp(0.5, 60.0);
+    let fb = fb.min(fa + (span * buf.sample_rate as f64) as usize);
+    let piece = buf.slice_frames(fa, fb);
+    if piece.is_empty() {
+        return Err(err("invalid_argument", "nothing to preview"));
+    }
+    let player = Player::start_with(&piece, device.as_deref(), 0, &PlayOptions::default())?;
+    let st = player.status();
+    s.player = Some(player);
+    Ok(st)
 }
 
 #[tauri::command]

@@ -452,6 +452,9 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
     case "edit":
       // One operation: `edit` = { op: cut|copy|delete|paste|silence|trim|insert_silence|gain|normalize|fade_in|fade_out|reverse, a, b, at, seconds, db, target_dbfs }.
       return await api.editApply(cmd.edit as EditOp);
+    case "edit_preview":
+      // Sound! The effect on its region, first `seconds` (default 4), not in the history.
+      return await api.editPreview(cmd.edit as EditOp, typeof cmd.seconds === "number" ? cmd.seconds : null, s.prefs.selectedOutput);
     case "edit_undo":
       return await api.editUndo();
     case "edit_redo":

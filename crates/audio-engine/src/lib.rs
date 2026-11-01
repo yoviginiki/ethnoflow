@@ -14,6 +14,7 @@ pub mod decode;
 pub mod devices;
 pub mod error;
 pub mod flac;
+pub mod fx;
 pub mod graph;
 pub mod latency;
 pub mod live_synth;
@@ -40,6 +41,7 @@ pub use devices::{
 };
 pub use error::{AudioError, Result};
 pub use flac::{encode_flac, write_flac};
+pub use fx::{compress, eq, limit, EqBand, EqKind};
 pub use graph::limiter::Limiter;
 pub use graph::params::db_to_gain;
 pub use graph::player::{GraphCmd, GraphPlayer, GraphStatus};

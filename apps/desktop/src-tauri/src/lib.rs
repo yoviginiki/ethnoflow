@@ -174,6 +174,7 @@ pub fn run() {
             edit_cmds::edit_close,
             edit_cmds::edit_peaks,
             edit_cmds::edit_apply,
+            edit_cmds::edit_preview,
             edit_cmds::edit_undo,
             edit_cmds::edit_redo,
             edit_cmds::edit_jump,

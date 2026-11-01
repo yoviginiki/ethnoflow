@@ -3,6 +3,15 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Editor effects with preview — A7 first slice = E2 + E3 (2026-11-01 evening; owner: "давай
+  E2 E3").** `crates/audio-engine/src/fx.rs`: parametric EQ (shelves / peak bands in
+  series), channel-linked compressor and brick-wall limiter on a buffer, built on the
+  track-strip blocks (tests: bands move, peaks held, nonsense rejected). Editor ops `eq`,
+  `compress`, `limit` (history steps) and `edit_preview` (the effect on its region plays
+  through the main player, nothing recorded). UI: "Effects with preview" in the Edit tab
+  (forms, ▶ Preview, ✓ Apply). Bridge `edit` accepts the three ops, `edit_preview`;
+  smoke: limiter caps the peak, compressor squeezes it, EQ keeps the length, 7 history
+  steps. Guide BG/EN.
 - **Rhythm studio (2026-11-01 evening; owner: "същото и за ритъм секцията").** The Rhythm tab
   gets an instrument list on the left (`InstrumentPicker.tsx`: categories, search, ▶
   audition through the designer's audition path, + onto drums / bass / ostinato / arp or

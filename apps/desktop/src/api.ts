@@ -1589,7 +1589,18 @@ export type EditOp =
   | { op: "normalize"; a: number; b: number; target_dbfs: number }
   | { op: "fade_in"; a: number; b: number }
   | { op: "fade_out"; a: number; b: number }
-  | { op: "reverse"; a: number; b: number };
+  | { op: "reverse"; a: number; b: number }
+  | { op: "eq"; a: number; b: number; bands: EqBand[] }
+  | { op: "compress"; a: number; b: number; threshold_db: number; ratio: number; attack_ms: number; release_ms: number; makeup_db: number }
+  | { op: "limit"; a: number; b: number; ceiling_db: number };
+
+/** One band of the editor's EQ (A7 = E3). */
+export interface EqBand {
+  kind: "low_shelf" | "peak" | "high_shelf";
+  hz: number;
+  gain_db: number;
+  q: number;
+}
 
 export interface EditVersionInfo {
   step: number;
@@ -1931,6 +1942,8 @@ export const api = {
   editJump: (step: number) => invoke<EditStatus>("edit_jump", { step }),
   editSnap: (seconds: number) => invoke<number>("edit_snap", { seconds }),
   editPlay: (fromS: number, toS: number | null, device: string | null) => invoke<PlayerStatus>("edit_play", { fromS, toS, device }),
+  /** A7: hear an effect on its region before applying it (first `seconds`; not in the history). */
+  editPreview: (op: EditOp, seconds: number | null, device: string | null) => invoke<PlayerStatus>("edit_preview", { op, seconds, device }),
   editSave: (label: string | null) => invoke<{ project: ProjectView; take_id: string }>("edit_save", { label }),
 
   // Preset library
