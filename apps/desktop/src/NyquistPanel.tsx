@@ -15,6 +15,8 @@ interface Props {
   onPlaying: (p: { from: number; st: PlayerStatus } | null) => void;
   selectedOutput: string | null;
   fail: (e: unknown) => void;
+  /** Select [a, b) in the editor (the generated range after "Generate"). */
+  select: (a: number, b: number) => void;
 }
 
 type Values = Record<string, number | string>;
@@ -32,7 +34,7 @@ function toValues(p: NyPlugin, v: Values): NyValue[] {
 }
 
 /** A9: Audacity Nyquist plug-ins on the editor's selection — list, controls from the header, preview / apply / analyze. */
-export function NyquistPanel({ region, selection, cursor, busy, run, onPlaying, selectedOutput, fail }: Props) {
+export function NyquistPanel({ region, selection, cursor, busy, run, onPlaying, selectedOutput, fail, select }: Props) {
   const t = messages[useStore((s) => s.prefs.lang)];
   const [plugins, setPlugins] = useState<NyPlugin[]>([]);
   const [folder, setFolder] = useState("");
@@ -82,9 +84,38 @@ export function NyquistPanel({ region, selection, cursor, busy, run, onPlaying, 
       fail(e);
     }
   };
-  const apply = () => {
+  const apply = async () => {
     const o = op();
-    if (o) void run(o);
+    if (!o || !plugin) return;
+    if (plugin.kind !== "generate") {
+      void run(o);
+      return;
+    }
+    // Generate: insert, then select what came in so "▶ Selection" plays it and the sample export takes it.
+    try {
+      const before = await api.editStatus();
+      await run(o);
+      const after = await api.editStatus();
+      if (before && after) {
+        const r = target();
+        const grown = after.seconds - before.seconds + (r[1] - r[0]);
+        if (grown > 1e-6) select(r[0], r[0] + grown);
+      }
+    } catch (e) {
+      fail(e);
+    }
+  };
+  const saveSample = async () => {
+    const r = selection ?? region();
+    try {
+      const out = await api.editExportWav(r[0], r[1], plugin ? plugin.name.replace(/^EthnoFlow: /, "") : "sample");
+      const st = useStore.getState();
+      const folders = st.prefs.sampleFolders ?? [];
+      if (!folders.includes(out.folder)) st.setPref("sampleFolders", [...folders, out.folder]);
+      st.setMessage(`${t.nySampleSaved}: ${out.path.split(/[\\/]/).pop()}`);
+    } catch (e) {
+      fail(e);
+    }
   };
   const analyze = async () => {
     if (!plugin) return;
@@ -194,16 +225,19 @@ export function NyquistPanel({ region, selection, cursor, busy, run, onPlaying, 
               </button>
             ) : (
               <>
-                {plugin.kind !== "generate" && plugin.preview !== "disabled" && (
+                {plugin.preview !== "disabled" && (
                   <button className="small" onClick={() => void preview()} disabled={busy}>
-                    ▶ {t.fxPreview}
+                    ▶ {plugin.kind === "generate" ? t.nyPreviewGen : t.fxPreview}
                   </button>
                 )}
-                <button className="small primary" onClick={apply} disabled={busy}>
+                <button className="small primary" onClick={() => void apply()} disabled={busy}>
                   ✓ {plugin.kind === "generate" ? t.nyGenerate : t.fxApply}
                 </button>
               </>
             )}
+            <button className="small" onClick={() => void saveSample()} disabled={busy} title={t.nyUseHint}>
+              💾 {t.nySaveSample}
+            </button>
             <button className="small" onClick={() => void toggleCode()}>
               {code !== null ? t.nyHideCode : t.nyShowCode}
             </button>
@@ -231,6 +265,7 @@ export function NyquistPanel({ region, selection, cursor, busy, run, onPlaying, 
               {!result.message && !result.labels.length && !result.printed && !result.returned_audio && <div className="muted">{t.nyNothing}</div>}
             </div>
           )}
+          <div className="muted small">{t.nyUseHint}</div>
           {code !== null && <pre className="ny-code">{code}</pre>}
         </div>
       )}

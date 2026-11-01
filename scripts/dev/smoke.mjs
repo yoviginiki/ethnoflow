@@ -767,6 +767,13 @@ async function main() {
       const trem = expectOk(send({ op: "edit", edit: { op: "nyquist", a: 1, b: 2, plugin: "bundled:tremolo", values: [{ var: "depth", value: 50 }, { var: "rate", value: 6 }, { var: "shape", value: 1 }] } }));
       near(trem.seconds, mac.seconds, "nyquist tremolo keeps the length");
       if (trem.versions.length !== mac.versions.length + 2) throw new Error(`nyquist steps ${mac.versions.length} → ${trem.versions.length}`);
+      // A generate plug-in at the cursor grows the take; the result goes out as a WAV sample.
+      const gen = expectOk(send({ op: "edit", edit: { op: "nyquist", a: 0.5, b: 0.5, plugin: "bundled:tremolo", values: [] } }));
+      if (!(gen.seconds > trem.seconds - 1e-6)) throw new Error(`generate did not grow the take: ${trem.seconds} → ${gen.seconds}`);
+      const wav = expectOk(send({ op: "edit_export_wav", a: 1, b: 2, name: "smoke nyquist" }));
+      if (!fs.existsSync(wav.path) || !/Samples[\\/]Generated/.test(wav.path)) throw new Error(`export wav ${JSON.stringify(wav)}`);
+      near(wav.seconds, 1, "exported sample length");
+      fs.rmSync(wav.path, { force: true });
       near(expectOk(send({ op: "edit_jump", step: 1 })).seconds, len - 1, "jump to step 1");
       const saved = expectOk(send({ op: "edit_save", label: "smoke edit" }));
       const tk = saved.project.takes.find((x) => x.id === saved.take_id);

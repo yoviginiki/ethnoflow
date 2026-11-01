@@ -592,7 +592,7 @@ export function EditScreen() {
         </section>
       )}
       {status && (
-        <NyquistPanel region={region} selection={selection} cursor={cursor} busy={busy} run={run} onPlaying={setPlaying} selectedOutput={selectedOutput} fail={fail} />
+        <NyquistPanel region={region} selection={selection} cursor={cursor} busy={busy} run={run} onPlaying={setPlaying} selectedOutput={selectedOutput} fail={fail} select={(a, b) => setSelection([a, b])} />
       )}
 
       {status && (

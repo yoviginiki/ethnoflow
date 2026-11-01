@@ -2034,6 +2034,8 @@ export const api = {
   nyImport: (path: string) => invoke<NyPlugin>("ny_import", { path }),
   nySource: (id: string) => invoke<string>("ny_source", { id }),
   nyAnalyze: (plugin: string, values: NyValue[], a: number, b: number) => invoke<NyAnalysis>("ny_analyze", { plugin, values, a, b }),
+  /** [a, b) of the working copy (whole take when b ≤ a) as a 24-bit WAV in Documents\EthnoFlow\Samples\Generated. */
+  editExportWav: (a: number, b: number, name: string) => invoke<{ path: string; folder: string; seconds: number }>("edit_export_wav", { a, b, name }),
 
   // Preset library
   libraryList: (kind: LibraryKind | null, project: string | null, query: string | null, sortBy: LibrarySortBy) =>

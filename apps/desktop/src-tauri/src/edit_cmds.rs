@@ -888,10 +888,22 @@ pub async fn edit_preview(
     let mut s = state.lock();
     s.stop_playback();
     let e = session(&mut s)?;
+    let before = e.current().frames();
     let Some(buf) = compute(e, &op)? else {
         return Err(err("invalid_argument", "nothing to preview"));
     };
-    let (fa, fb) = region(&buf, a, b)?;
+    // A generate plug-in grows the take: preview what it produced, not the (empty) region.
+    let (fa, fb) = if matches!(op, EditOp::Nyquist { .. }) {
+        let grown = buf.frames() as i64 - before as i64;
+        let fa = at_frame(&buf, a);
+        let fb = (at_frame(&buf, b).max(fa) as i64 + grown).max(fa as i64) as usize;
+        if fb <= fa {
+            return Err(err("invalid_argument", "nothing to preview"));
+        }
+        (fa, fb.min(buf.frames()))
+    } else {
+        region(&buf, a, b)?
+    };
     let span = seconds.unwrap_or(4.0).clamp(0.5, 60.0);
     let fb = fb.min(fa + (span * buf.sample_rate as f64) as usize);
     let piece = buf.slice_frames(fa, fb);
@@ -1083,6 +1095,83 @@ pub async fn edit_contrast(
 pub struct EditSaved {
     pub project: ProjectView,
     pub take_id: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct EditExported {
+    pub path: String,
+    pub folder: String,
+    pub seconds: f64,
+}
+
+/// `Documents\EthnoFlow\Samples\Generated` (created on first use): where the editor's
+/// "Save as a sample" puts WAV files so the sample pickers (Soundscapes, sampler, Library)
+/// can use them.
+pub fn generated_samples_dir() -> std::path::PathBuf {
+    let home = std::env::var("USERPROFILE")
+        .or_else(|_| std::env::var("HOME"))
+        .unwrap_or_default();
+    let dir = std::path::Path::new(&home)
+        .join("Documents")
+        .join("EthnoFlow")
+        .join("Samples")
+        .join("Generated");
+    let _ = std::fs::create_dir_all(&dir);
+    dir
+}
+
+/// A9: write [a, b) of the current version (the whole take when b ≤ a) as a 24-bit WAV
+/// named `name` into the generated-samples folder; returns the path.
+#[tauri::command]
+pub async fn edit_export_wav(
+    state: State<'_, AppState>,
+    a: f64,
+    b: f64,
+    name: String,
+) -> CmdResult<EditExported> {
+    let cur = {
+        let mut s = state.lock();
+        let e = session(&mut s)?;
+        Arc::clone(e.current())
+    };
+    let piece = if b > a {
+        let (fa, fb) = region(&cur, a, b)?;
+        cur.slice_frames(fa, fb)
+    } else {
+        (*cur).clone()
+    };
+    if piece.is_empty() {
+        return Err(err("invalid_argument", "nothing to export"));
+    }
+    let safe: String = name
+        .chars()
+        .map(|c| {
+            if c.is_alphanumeric() || c == ' ' || c == '-' || c == '_' || c == '.' {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect();
+    let safe = safe.trim().trim_end_matches('.').to_string();
+    let safe = if safe.is_empty() {
+        "sample".to_string()
+    } else {
+        safe
+    };
+    let dir = generated_samples_dir();
+    let mut path = dir.join(format!("{safe}.wav"));
+    let mut n = 2;
+    while path.exists() {
+        path = dir.join(format!("{safe} {n}.wav"));
+        n += 1;
+    }
+    write_wav(&path, &piece, WavFormat::Pcm24)?;
+    Ok(EditExported {
+        path: path.to_string_lossy().to_string(),
+        folder: dir.to_string_lossy().to_string(),
+        seconds: piece.frames() as f64 / piece.sample_rate as f64,
+    })
 }
 
 /// Write the current version as a new take derived from the opened one.

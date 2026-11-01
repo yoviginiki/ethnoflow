@@ -134,6 +134,7 @@ rhythm_status, ambient_status }`
 | `edit_peaks` | `bins?`, `from_s?`, `to_s?` | reduced peaks of the working copy (or of a range): `{bins, duration_seconds, peak}` |
 | `edit_play` | `from_s?`, `to_s?` | **sound**: plays the working copy; `stop_take` stops |
 | `edit_save` | `label?` | writes the current version as a new take derived from the original; returns `{project, take_id}` |
+| `edit_export_wav` | `a?`, `b?`, `name` | A9: writes [a, b) of the working copy (whole when b ≤ a) as `Documents\EthnoFlow\Samples\Generated\<name>.wav` (24-bit) and adds that folder to the sample folders; returns `{path, folder, seconds}` |
 | `edit_status` / `edit_close` | | the editor's status / close the session |
 | `export_song` | `path`, `seconds?`, `drone?`, `pad?`, `ambient?`, `rhythm?`, `stems?`, `target_lufs?` (number = normalise to it, `null` = as rendered, absent = the studio's setting, default −14), `format?` (float32 \| pcm24 \| pcm16 \| flac24 \| flac16; FLAC writes `.flac` for the mix and the stems), `start_s?` (keep only from this second: the song is rendered from 0) |
 | `export_sections` | `dir`, `seconds?` (end of the last section), the `export_song` options | A10: one file per song-map section (marker to marker) into `dir`; returns `{files}` | the studio's whole-song export (mix + stems + markers + manifest); the result carries `lufs`, `lufs_after`, `gain_db` |

@@ -187,6 +187,7 @@ pub fn run() {
             edit_cmds::edit_play,
             edit_cmds::edit_save,
             edit_cmds::ny_analyze,
+            edit_cmds::edit_export_wav,
             nyquist_cmds::ny_list,
             nyquist_cmds::ny_folder,
             nyquist_cmds::ny_open_folder,

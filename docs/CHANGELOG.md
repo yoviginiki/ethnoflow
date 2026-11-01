@@ -13,8 +13,10 @@
   with preview), `ny_analyze` (message + labels), `ny_list` / `ny_import` /
   `ny_open_folder` / `ny_source`; folder `Documents\EthnoFlow\Plugins`; four bundled
   plug-ins (gain, tremolo, cosine fade, measure level) as templates. Editor panel with
-  controls generated from the header; bridge ops `ny_list`, `ny_analyze`, `edit` op
-  `nyquist`; smoke; guide BG/EN.
+  controls generated from the header; "Listen" for generators, "Generate" selects what it
+  inserted, "Save as a sample (WAV)" → `DocumentsthnoFlowSamplesGenerated` joins My
+  samples (`edit_export_wav`); bridge ops `ny_list`, `ny_analyze`, `edit_export_wav`, `edit`
+  op `nyquist`; smoke; guide BG/EN.
 - **Echo and reverb on a take — A7 second slice (2026-11-01 night).** `fx.rs`: `echo`
   (feedback delay line, mix) and `reverb` (the master's Schroeder room per channel, mix);
   test: an impulse repeats at the delay with feedback, the reverb leaves a tail. Editor ops

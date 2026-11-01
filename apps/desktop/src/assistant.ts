@@ -503,6 +503,15 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
       const st = await api.editPlay(typeof cmd.from_s === "number" ? cmd.from_s : 0, typeof cmd.to_s === "number" ? cmd.to_s : null, s.prefs.selectedOutput);
       return st;
     }
+    case "edit_export_wav": {
+      // A9: [a, b) of the working copy (whole when b ≤ a) → Documents\EthnoFlow\Samples\Generated\<name>.wav,
+      // and the folder joins the sample folders so the pickers see it.
+      const r = await api.editExportWav(Number(cmd.a ?? 0), Number(cmd.b ?? 0), String(cmd.name ?? "sample"));
+      const st = useStore.getState();
+      const folders = st.prefs.sampleFolders ?? [];
+      if (!folders.includes(r.folder)) st.setPref("sampleFolders", [...folders, r.folder]);
+      return r;
+    }
     case "edit_save": {
       const r = await api.editSave(typeof cmd.label === "string" ? cmd.label : null);
       useStore.getState().setProject(r.project);
