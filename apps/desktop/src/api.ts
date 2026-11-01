@@ -2034,6 +2034,9 @@ export const api = {
   nyImport: (path: string) => invoke<NyPlugin>("ny_import", { path }),
   nySource: (id: string) => invoke<string>("ny_source", { id }),
   nyAnalyze: (plugin: string, values: NyValue[], a: number, b: number) => invoke<NyAnalysis>("ny_analyze", { plugin, values, a, b }),
+  /** A9: render a generate plug-in (no editor needed) into Documents\EthnoFlow\Samples\Generated\<name>.wav. */
+  nyGenerateWav: (plugin: string, values: NyValue[], seconds: number | null, name: string) =>
+    invoke<{ path: string; folder: string; seconds: number; sample_rate: number; channels: number }>("ny_generate_wav", { plugin, values, seconds, name }),
   /** [a, b) of the working copy (whole take when b ≤ a) as a 24-bit WAV in Documents\EthnoFlow\Samples\Generated. */
   editExportWav: (a: number, b: number, name: string) => invoke<{ path: string; folder: string; seconds: number }>("edit_export_wav", { a, b, name }),
 

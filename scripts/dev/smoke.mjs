@@ -369,6 +369,19 @@ async function main() {
     if (after.includes(probe) || after.length !== before.length) throw new Error(JSON.stringify(after));
     return `${before.length} folder(s) kept, probe added and removed`;
   });
+  await step("nyquist generator → WAV sample for the sample lists (bundled Tone, 1.5 s pluck at D4)", () => {
+    const r = expectOk(send({ op: "ny_generate_wav", plugin: "bundled:tone", values: [{ var: "pitch", value: 62 }, { var: "dur", value: 1.5 }, { var: "kind", value: 0 }], name: "smoke tone" }));
+    try {
+      if (!fs.existsSync(r.path) || !/Samples[\\/]Generated/.test(r.path)) throw new Error(`generated ${JSON.stringify(r)}`);
+      if (Math.abs(r.seconds - 1.5) > 0.01) throw new Error(`generated length ${r.seconds.toFixed(3)} s`);
+      const folders = expectOk(send({ op: "sample_folders" })).folders;
+      if (!folders.some((f) => /Generated$/.test(f))) throw new Error(`Generated folder not in sample folders: ${JSON.stringify(folders)}`);
+      return `${r.path.split(/[\\/]/).pop()} · ${r.seconds.toFixed(2)} s · ${r.sample_rate} Hz · ${r.channels} ch`;
+    } finally {
+      fs.rmSync(r.path, { force: true });
+    }
+  });
+
   await step("soundscapes: a world builds a whole journey (4 scenes, breathing lanes) into its own rack, silently; the atmosphere is untouched; the rack is restored", () => {
     const list = expectOk(send({ op: "scapes" }));
     if (!Array.isArray(list.worlds) || list.worlds.length < 6) throw new Error(JSON.stringify(list));

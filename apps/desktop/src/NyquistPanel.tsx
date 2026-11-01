@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
-import { api, type EditOp, type NyAnalysis, type NyControl, type NyPlugin, type NyValue, type PlayerStatus } from "./api";
+import { api, type EditOp, type NyAnalysis, type NyPlugin, type PlayerStatus } from "./api";
+import { NyControls, nyDefaults, nyValues, type NyValues } from "./NyControls";
 import { messages } from "./i18n";
 import { useStore } from "./store";
 import { stopPlaying } from "./takeActions";
@@ -19,19 +20,7 @@ interface Props {
   select: (a: number, b: number) => void;
 }
 
-type Values = Record<string, number | string>;
-
-function defaults(p: NyPlugin): Values {
-  const v: Values = {};
-  for (const c of p.controls) {
-    v[c.var] = c.kind === "string" || c.kind === "text" || c.kind === "file" ? c.default_text : c.initial;
-  }
-  return v;
-}
-
-function toValues(p: NyPlugin, v: Values): NyValue[] {
-  return p.controls.map((c) => ({ var: c.var, value: v[c.var] ?? (c.kind === "string" || c.kind === "text" || c.kind === "file" ? c.default_text : c.initial) }));
-}
+type Values = NyValues;
 
 /** A9: Audacity Nyquist plug-ins on the editor's selection — list, controls from the header, preview / apply / analyze. */
 export function NyquistPanel({ region, selection, cursor, busy, run, onPlaying, selectedOutput, fail, select }: Props) {
@@ -62,7 +51,7 @@ export function NyquistPanel({ region, selection, cursor, busy, run, onPlaying, 
     setSel(id);
     setResult(null);
     setCode(null);
-    if (p) setValues(defaults(p));
+    if (p) setValues(nyDefaults(p));
   };
   const target = (): [number, number] => {
     if (plugin?.kind === "generate") return selection ?? [cursor, cursor];
@@ -71,7 +60,7 @@ export function NyquistPanel({ region, selection, cursor, busy, run, onPlaying, 
   const op = (): EditOp | null => {
     if (!plugin) return null;
     const r = target();
-    return { op: "nyquist", a: r[0], b: r[1], plugin: plugin.id, values: toValues(plugin, values) };
+    return { op: "nyquist", a: r[0], b: r[1], plugin: plugin.id, values: nyValues(plugin, values) };
   };
   const preview = async () => {
     const o = op();
@@ -121,7 +110,7 @@ export function NyquistPanel({ region, selection, cursor, busy, run, onPlaying, 
     if (!plugin) return;
     const r = region();
     try {
-      setResult(await api.nyAnalyze(plugin.id, toValues(plugin, values), r[0], r[1]));
+      setResult(await api.nyAnalyze(plugin.id, nyValues(plugin, values), r[0], r[1]));
     } catch (e) {
       fail(e);
     }
@@ -133,7 +122,7 @@ export function NyquistPanel({ region, selection, cursor, busy, run, onPlaying, 
       const p = await api.nyImport(String(f));
       await refresh();
       setSel(p.id);
-      setValues(defaults(p));
+      setValues(nyDefaults(p));
       useStore.getState().setMessage(`${t.nyImported}: ${p.name}`);
     } catch (e) {
       fail(e);
@@ -151,7 +140,6 @@ export function NyquistPanel({ region, selection, cursor, busy, run, onPlaying, 
     }
   };
   const kindLabel = (k: string) => (k === "generate" ? t.nyKindGenerate : k === "analyze" ? t.nyKindAnalyze : k === "tool" ? t.nyKindTool : t.nyKindProcess);
-  const setV = (c: NyControl, v: number | string) => setValues((x) => ({ ...x, [c.var]: v }));
 
   return (
     <section className="panel" aria-label={t.nyTitle}>
@@ -179,45 +167,7 @@ export function NyquistPanel({ region, selection, cursor, busy, run, onPlaying, 
             {plugin.author ? ` — ${plugin.author}` : ""}
             {plugin.codetype.startsWith("sal") ? ` · ${t.nySal}` : ""}
           </div>
-          {plugin.controls.length === 0 && <div className="muted small">{t.nyNoControls}</div>}
-          {plugin.controls.map((c) => {
-            const v = values[c.var];
-            const num = typeof v === "number" ? v : Number(v) || 0;
-            return (
-              <label className="inline small" key={c.var} style={{ marginRight: 12 }}>
-                {c.label}
-                {c.kind === "choice" ? (
-                  <select value={num} onChange={(e) => setV(c, Number(e.target.value))}>
-                    {c.choices.map((ch, i) => (
-                      <option key={i} value={i}>
-                        {ch}
-                      </option>
-                    ))}
-                  </select>
-                ) : c.kind === "int" || c.kind === "float" ? (
-                  <>
-                    <input
-                      type="range"
-                      min={c.min ?? 0}
-                      max={c.max ?? 1}
-                      step={c.kind === "int" ? 1 : Math.max(0.001, ((c.max ?? 1) - (c.min ?? 0)) / 200)}
-                      value={num}
-                      onChange={(e) => setV(c, Number(e.target.value))}
-                    />
-                    <input type="number" min={c.min ?? undefined} max={c.max ?? undefined} step={c.kind === "int" ? 1 : "any"} value={num} onChange={(e) => setV(c, Number(e.target.value))} style={{ width: 80 }} />
-                    <span className="muted">{c.text}</span>
-                  </>
-                ) : c.kind === "int_text" || c.kind === "float_text" || c.kind === "time" ? (
-                  <>
-                    <input type="number" min={c.min ?? undefined} max={c.max ?? undefined} step={c.kind === "int_text" ? 1 : "any"} value={num} onChange={(e) => setV(c, Number(e.target.value))} style={{ width: 100 }} />
-                    <span className="muted">{c.text}</span>
-                  </>
-                ) : (
-                  <input type="text" value={typeof v === "string" ? v : String(v ?? "")} onChange={(e) => setV(c, e.target.value)} style={{ width: 200 }} />
-                )}
-              </label>
-            );
-          })}
+          <NyControls plugin={plugin} values={values} onChange={setValues} />
           <div className="analysis-row">
             {plugin.kind === "analyze" ? (
               <button className="small primary" onClick={() => void analyze()} disabled={busy}>

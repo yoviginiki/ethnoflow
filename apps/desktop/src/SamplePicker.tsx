@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api, describeError, type LayerKind, type SampleEntry } from "./api";
 import { defaultSource, makeLayer, MAX_AMBIENT_LAYERS } from "./ambientPresets";
+import { NyGenerate } from "./NyGenerate";
 import { formatTime } from "./format";
 import { messages } from "./i18n";
 import { RACKS, type RackKind } from "./rackAdapter";
@@ -130,6 +131,7 @@ export function SamplePicker({ kind }: { kind: RackKind }) {
         </label>
         {scanning && <span className="muted small">…</span>}
       </div>
+      <NyGenerate busy={busy !== null} onGenerated={add} />
       <div className="sample-list">
         {list.map((e) => (
           <div key={e.path} className={`sample-row ${previewing === e.path ? "playing" : ""}`}>

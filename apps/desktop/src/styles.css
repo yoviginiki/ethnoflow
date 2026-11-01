@@ -798,3 +798,11 @@ button.ghost.on { border-color: var(--accent); color: var(--accent); }
   max-height: 320px;
   overflow: auto;
 }
+
+/* A9: Nyquist generator inside the sample list */
+.ny-generate {
+  margin: 6px 0 8px;
+  padding: 6px 8px;
+  border: 1px dashed var(--border, rgba(127, 127, 127, 0.4));
+  border-radius: 6px;
+}

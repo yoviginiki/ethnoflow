@@ -177,7 +177,7 @@ pub enum NyScalar {
     Text(String),
 }
 
-fn ny_values(values: &[NyValue]) -> Vec<(String, nyquist::ControlValue)> {
+pub(crate) fn ny_values(values: &[NyValue]) -> Vec<(String, nyquist::ControlValue)> {
     values
         .iter()
         .map(|v| {
@@ -204,7 +204,7 @@ fn deinterleave(samples: &[f32], channels: usize) -> Vec<Vec<f32>> {
 }
 
 /// Interleave the plug-in's channels into `channels` (mono → copied, extra → dropped).
-fn interleave(chans: &[Vec<f32>], channels: usize) -> Vec<f32> {
+pub(crate) fn interleave(chans: &[Vec<f32>], channels: usize) -> Vec<f32> {
     let n = chans.iter().map(|c| c.len()).max().unwrap_or(0);
     let mut out = Vec::with_capacity(n * channels);
     for i in 0..n {

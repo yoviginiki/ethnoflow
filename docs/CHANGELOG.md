@@ -16,7 +16,9 @@
   controls generated from the header; "Listen" for generators, "Generate" selects what it
   inserted, "Save as a sample (WAV)" → `DocumentsthnoFlowSamplesGenerated` joins My
   samples (`edit_export_wav`); bridge ops `ny_list`, `ny_analyze`, `edit_export_wav`, `edit`
-  op `nyquist`; smoke; guide BG/EN.
+  op `nyquist`; smoke; guide BG/EN. Generators also live in the sample list of Soundscapes /
+  Atmosphere ("Generate with Nyquist": controls, Listen, Add as a layer via `ny_generate_wav`);
+  bundled "EthnoFlow: Tone" generator as a template.
 - **Echo and reverb on a take — A7 second slice (2026-11-01 night).** `fx.rs`: `echo`
   (feedback delay line, mix) and `reverb` (the master's Schroeder room per channel, mix);
   test: an impulse repeats at the delay with feedback, the reverb leaves a tail. Editor ops

@@ -7,7 +7,12 @@ use std::path::{Path, PathBuf};
 use nyquist::{parse_header, Control};
 use serde::Serialize;
 
+use audio_engine::{write_wav, AudioBuffer, WavFormat};
+use tauri::State;
+
 use crate::commands::{err, CmdResult};
+use crate::edit_cmds::{generated_samples_dir, interleave, ny_values, NyValue};
+use crate::state::AppState;
 
 /// Plug-ins shipped with the app (real Nyquist code, also the templates to copy from).
 const BUNDLED: &[(&str, &str, &str)] = &[
@@ -27,6 +32,7 @@ const BUNDLED: &[(&str, &str, &str)] = &[
         "ef-measure.ny",
         include_str!("../plugins/ef-measure.ny"),
     ),
+    ("tone", "ef-tone.ny", include_str!("../plugins/ef-tone.ny")),
 ];
 
 #[derive(Debug, Clone, Serialize)]
@@ -197,6 +203,11 @@ mod tests {
                     assert_eq!(ch.len(), 2, "{k} keeps stereo");
                     assert_eq!(ch[0].len(), 8000, "{k} keeps the length");
                 }
+                ("generate", nyquist::PluginOutput::Audio(ch)) => {
+                    assert_eq!(ch[0].len(), 16000, "{k} makes 2 s");
+                    let peak = ch[0].iter().fold(0.0f32, |m, v| m.max(v.abs()));
+                    assert!(peak > 0.1 && peak <= 1.0, "{k} peak {peak}");
+                }
                 ("analyze", nyquist::PluginOutput::Message(m)) => {
                     assert!(m.contains("dBFS"), "{k}: {m}")
                 }
@@ -204,4 +215,97 @@ mod tests {
             }
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct NyGenerated {
+    pub path: String,
+    pub folder: String,
+    pub seconds: f64,
+    pub sample_rate: u32,
+    pub channels: u16,
+}
+
+/// A free `<name>.wav` (then `<name> 2.wav`, …) in `dir`; the name is made file-safe.
+pub(crate) fn unique_wav_path(dir: &Path, name: &str) -> PathBuf {
+    let safe: String = name
+        .chars()
+        .map(|c| {
+            if c.is_alphanumeric() || c == ' ' || c == '-' || c == '_' || c == '.' {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect();
+    let safe = safe.trim().trim_end_matches('.').to_string();
+    let safe = if safe.is_empty() {
+        "sample".to_string()
+    } else {
+        safe
+    };
+    let mut path = dir.join(format!("{safe}.wav"));
+    let mut n = 2;
+    while path.exists() {
+        path = dir.join(format!("{safe} {n}.wav"));
+        n += 1;
+    }
+    path
+}
+
+/// A9: render a *generate* plug-in with no editor open — at the output's sample rate, over
+/// `seconds` of silence when given (so `(get-duration 1)` has a length) — and write it as a
+/// 24-bit WAV named `name` into `Documents\EthnoFlow\Samples\Generated`.
+#[tauri::command]
+pub async fn ny_generate_wav(
+    state: State<'_, AppState>,
+    plugin: String,
+    values: Vec<NyValue>,
+    seconds: Option<f64>,
+    name: String,
+) -> CmdResult<NyGenerated> {
+    let src = load_source(&plugin)?;
+    let header = parse_header(&src);
+    let sr = {
+        let s = state.lock();
+        s.graph.as_ref().map(|g| g.sample_rate()).unwrap_or(48_000)
+    };
+    let input: Vec<Vec<f32>> = match seconds {
+        Some(secs) if secs > 0.0 => vec![vec![0.0; (secs.min(600.0) * sr as f64) as usize]],
+        _ => Vec::new(),
+    };
+    let res = nyquist::run_plugin(&header, &ny_values(&values), &input, sr as f64, 0.0)
+        .map_err(|e| err("plugin_error", e))?;
+    let chans = match res.output {
+        nyquist::PluginOutput::Audio(c) => c,
+        nyquist::PluginOutput::Message(m) => return Err(err("plugin_message", m)),
+        _ => {
+            return Err(err(
+                "plugin_message",
+                "the plug-in returned no audio (is it a generate plug-in?)",
+            ))
+        }
+    };
+    let n = chans.iter().map(|c| c.len()).max().unwrap_or(0);
+    if n == 0 {
+        return Err(err("plugin_message", "the plug-in returned an empty sound"));
+    }
+    if n > (sr as usize) * 600 {
+        return Err(err(
+            "plugin_error",
+            "the plug-in returned more than 10 minutes",
+        ));
+    }
+    let channels = chans.len().clamp(1, 2) as u16;
+    let buf = AudioBuffer::new(sr, channels, interleave(&chans, channels as usize));
+    let dir = generated_samples_dir();
+    let path = unique_wav_path(&dir, &name);
+    write_wav(&path, &buf, WavFormat::Pcm24)?;
+    Ok(NyGenerated {
+        path: path.to_string_lossy().to_string(),
+        folder: dir.to_string_lossy().to_string(),
+        seconds: n as f64 / sr as f64,
+        sample_rate: sr,
+        channels,
+    })
 }
