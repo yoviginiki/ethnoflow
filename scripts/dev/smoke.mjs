@@ -133,7 +133,7 @@ const audible = (p, min = 0.02) => {
   return `${path.basename(p)} ${s.seconds.toFixed(1)} s peak ${s.peak.toFixed(2)}`;
 };
 
-const SCREENS = ["home", "play", "tuner", "compose", "studio", "ambient", "scapes", "rhythm", "live", "library", "instrument", "songmap", "samples", "references", "academy", "create", "start", "help"];
+const SCREENS = ["home", "play", "tuner", "compose", "studio", "ambient", "scapes", "rhythm", "progression", "live", "library", "instrument", "songmap", "samples", "references", "academy", "create", "start", "help"];
 
 async function main() {
   await step("bridge: ping", () => expectOk(send({ op: "ping" })).pong === true || Promise.reject(new Error("no pong")));
@@ -348,6 +348,20 @@ async function main() {
       if (r.previous) expectOk(send({ op: "set_scapes", ambient: r.previous }));
     }
   });
+  await step("progression: the generator fills the bars by genre and seed, steps are editable, follow is a switch (silent)", () => {
+    const before = expectOk(send({ op: "progression" })).progression;
+    try {
+      const g = expectOk(send({ op: "progression_set", generate: true, genre: "liquid", seed: 7, bars: 8 }));
+      if (g.total_bars !== 8 || g.progression.steps.length < 2 || g.labels.length !== g.progression.steps.length) throw new Error(JSON.stringify(g));
+      const e = expectOk(send({ op: "progression_set", steps: [{ degree: 1, quality: "sus2", bars: 4 }, { degree: 6, quality: "maj7", bars: 4 }], follow: true }));
+      if (!e.progression.edited || e.progression.follow !== true || e.total_bars !== 8) throw new Error(JSON.stringify(e));
+      const np = expectOk(send({ op: "now_playing" }));
+      if (np.any !== false) throw new Error("follow must not start sound by itself");
+      return `liquid seed 7: ${g.labels.join(" · ")}; edited to ${e.labels.join(" · ")}, follow on, silence`;
+    } finally {
+      expectOk(send({ op: "progression_set", follow: false, steps: before.steps }));
+    }
+  });
   await step("history: the Soundscapes rack remembers steps; undo / redo through the bridge restore them", () => {
     const h0 = expectOk(send({ op: "rack_history", rack: "scapes" }));
     if (h0.count < 2) throw new Error(`only ${h0.count} step(s): ${JSON.stringify(h0.labels)}`);
@@ -366,7 +380,7 @@ async function main() {
   });
   await step("areas: every tab of Play / Background / Song / Learn / Library is a screen of its area", () => {
     const list = expectOk(send({ op: "area" }));
-    const want = { play: ["play", "tuner"], background: ["compose", "ambient", "scapes", "rhythm", "instrument", "live"], song: ["studio", "songmap", "create", "start"], learn: ["academy", "references"], library: ["library", "samples"] };
+    const want = { play: ["play", "tuner"], background: ["compose", "ambient", "scapes", "rhythm", "progression", "instrument", "live"], song: ["studio", "songmap", "create", "start"], learn: ["academy", "references"], library: ["library", "samples"] };
     for (const id of Object.keys(want)) if (JSON.stringify(list.tabs?.[id]) !== JSON.stringify(want[id])) throw new Error(`${id}: ${JSON.stringify(list.tabs?.[id])}`);
     let n = 0;
     for (const [id, tabs] of Object.entries(want)) {

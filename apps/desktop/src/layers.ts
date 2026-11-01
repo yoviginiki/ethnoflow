@@ -1,4 +1,6 @@
 import { useHistoryStore } from "./rackHistory";
+import { useRef } from "react";
+import { chordNotes, chordRootMidi, stepAtBar } from "./progression";
 import { useEffect } from "react";
 import { messages } from "./i18n";
 import { api, describeError, type DroneSettings, type InstrumentProfile, type PadNote, type PadSettings, type Scale } from "./api";
@@ -167,6 +169,38 @@ export async function fadeOutBackground(seconds: number): Promise<void> {
     s.setLayer("rhythm", false);
     s.setLayer("scapes", false);
   }, seconds * 1000 + 150);
+}
+
+/**
+ * Progression follower: while the song transport or the rhythm runs and "follow" is on,
+ * the chord of the current bar goes into the pad, the drone root and the rhythm section
+ * (the same `setFollow` the live accompanist uses; the live follower wins while it runs).
+ */
+export function useProgressionFollow() {
+  const prog = useStore((s) => s.prefs.progression);
+  const scale = useStore((s) => s.project?.scale ?? null);
+  const bar = useStore((s) => (s.transport?.playing ? s.transport.bar : s.layers.rhythm ? (s.rhythmStatus?.bar ?? null) : null));
+  const liveRunning = useStore((s) => s.liveRunning);
+  const follow = !!prog?.follow && !liveRunning;
+  const wasFollowing = useRef(false);
+  useEffect(() => {
+    if (!follow || !scale || !prog || bar === null) return;
+    const at = stepAtBar(prog, Math.max(0, bar - 1));
+    if (!at) return;
+    const notes = chordNotes(scale, at.step);
+    const rootMidi = chordRootMidi(scale, at.step);
+    const st = useStore.getState();
+    const same = !!st.padChord && st.padChord.length === notes.length && st.padChord.every((n, i) => n.midi === notes[i].midi && n.cents === notes[i].cents);
+    if (!same || st.droneRootOverride !== rootMidi) st.setFollow(notes, rootMidi);
+  }, [follow, scale, prog, bar]);
+  useEffect(() => {
+    if (follow) wasFollowing.current = true;
+    else if (wasFollowing.current) {
+      wasFollowing.current = false;
+      const st = useStore.getState();
+      if (!st.liveRunning && (st.padChord || st.droneRootOverride !== null)) st.setFollow(null, null);
+    }
+  }, [follow]);
 }
 
 export function useBackgroundLayers() {

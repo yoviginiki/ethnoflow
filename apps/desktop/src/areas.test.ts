@@ -3,7 +3,7 @@ import { AREAS, AREA_IDS, areaMainScreen, areaOf, areaTabs, NO_PROJECT_SCREENS, 
 import type { Screen } from "./store";
 
 // Every screen the app has (store.ts: Screen). Home and Help are not areas.
-const SCREENS: Screen[] = ["home", "play", "compose", "studio", "ambient", "rhythm", "library", "soundscapes", "start", "help", "instrument", "songmap", "samples", "references", "academy", "create", "tuner", "live", "scapes"];
+const SCREENS: Screen[] = ["home", "play", "compose", "studio", "ambient", "rhythm", "library", "soundscapes", "start", "help", "instrument", "songmap", "samples", "references", "academy", "create", "tuner", "live", "scapes", "progression"];
 
 describe("home areas", () => {
   it("has the five areas of the audit, in order", () => {

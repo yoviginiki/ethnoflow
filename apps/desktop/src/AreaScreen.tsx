@@ -12,6 +12,7 @@ import { ReferencesScreen } from "./ReferencesScreen";
 import { RhythmScreen } from "./RhythmScreen";
 import { SamplesScreen } from "./SamplesScreen";
 import { ScapesScreen } from "./ScapesScreen";
+import { ProgressionScreen } from "./ProgressionScreen";
 import { SongMapScreen } from "./SongMapScreen";
 import { Start } from "./Start";
 import { useStore } from "./store";
@@ -48,6 +49,7 @@ export function AreaScreen({ screen }: { screen: AreaScreenId }) {
       {screen === "compose" && <Compose />}
       {screen === "ambient" && <Ambient />}
       {screen === "scapes" && <ScapesScreen />}
+      {screen === "progression" && <ProgressionScreen />}
       {screen === "rhythm" && <RhythmScreen />}
       {screen === "instrument" && <InstrumentDesigner />}
       {screen === "live" && (

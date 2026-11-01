@@ -8,7 +8,7 @@ import { PresetLibrary } from "./PresetLibrary";
 import { ScreenBoundary } from "./ScreenBoundary";
 import { useAssistantBridge } from "./assistant";
 import { applySession, collectSession, useProjectSession } from "./session";
-import { useBackgroundLayers, useSongTransport } from "./layers";
+import { useBackgroundLayers, useProgressionFollow, useSongTransport } from "./layers";
 import { ProjectMenu } from "./ProjectMenu";
 import { ProjectPicker } from "./ProjectPicker";
 import { GuidedBanner } from "./AcademyScreen";
@@ -33,6 +33,7 @@ export default function App() {
   const area = screen === "home" ? null : areaOf(screen);
   const setError = useStore((s) => s.setError);
   useBackgroundLayers();
+  useProgressionFollow();
   useSongTransport();
   useAcademyGuided();
   useLiveFollow();

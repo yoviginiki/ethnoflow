@@ -24,7 +24,7 @@ export interface HomeArea {
 
 export const AREAS: HomeArea[] = [
   { id: "play", title: "hPlay", desc: "hPlayDesc", main: "play", also: ["tuner"] },
-  { id: "background", title: "hBackground", desc: "hBackgroundDesc", main: "compose", also: ["ambient", "scapes", "rhythm", "instrument", "live"] },
+  { id: "background", title: "hBackground", desc: "hBackgroundDesc", main: "compose", also: ["ambient", "scapes", "rhythm", "progression", "instrument", "live"] },
   { id: "song", title: "hSong", desc: "hSongDesc", main: "studio", also: ["songmap", "create", "start"] },
   { id: "learn", title: "hLearn", desc: "hLearnDesc", main: "academy", also: ["references"] },
   { id: "library", title: "hLibrary", desc: "hLibraryDesc", main: "library", also: ["samples"] },
@@ -54,6 +54,7 @@ export const SCREEN_TITLE: Record<AreaScreenId, StringMessageKey> = {
   compose: "bgTabDronePad",
   ambient: "areaAmbient",
   scapes: "scapesTitle",
+  progression: "progTitle",
   soundscapes: "areaSoundscapes",
   rhythm: "areaRhythm",
   instrument: "areaForge",

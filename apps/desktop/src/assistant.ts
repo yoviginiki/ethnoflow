@@ -7,11 +7,12 @@ import { defaultSource, makeLayer, MAX_AMBIENT_LAYERS } from "./ambientPresets";
 import { applyLibraryPayload, applySession, collectSession, mergeSessionPrefs, pickSessionPrefs, rackForProject, SESSION_PREF_KEYS } from "./session";
 import { AREA_IDS, AREAS, areaMainScreen, areaOf, areaTabs } from "./areas";
 import { messages } from "./i18n";
-import { useStore, type LayerName, type Screen } from "./store";
+import { DEFAULT_RHYTHM, useStore, type LayerName, type Screen } from "./store";
 import { latestTake, loadTake, playLoaded, stopPlaying, continueLast } from "./takeActions";
 import { journeyWorld, phaseAt, WORLD_IDS, worldById } from "./scapes";
 import { startJourney, stopJourney } from "./scapesActions";
 import { RACKS, type RackKind } from "./rackAdapter";
+import { chordNotes, DEFAULT_PROGRESSION, generateProgression, GENRES, genreSpec, stepAtBar, stepLabel, totalBars, type Genre, type ProgStep, type Progression } from "./progression";
 import { jumpHistory, recordChange, redoHistory, undoHistory, useHistoryStore } from "./rackHistory";
 import { readNowPlaying, stopAll } from "./nowPlaying";
 import { hzToMidi as tunerHzToMidi } from "./format";
@@ -152,6 +153,34 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
       recordChange("scapes", prevRack, v.ambient, t.hAssistant, t.hStart);
       useStore.getState().setScapes(v.ambient);
       return { layers: v.ambient.layers.length, scenes: v.ambient.program.scenes.length };
+    }
+    case "progression": {
+      // The chord progression (session pref) and the chord of the current bar.
+      const p = s.prefs.progression ?? DEFAULT_PROGRESSION;
+      const scale = s.project?.scale ?? null;
+      const bar = (s.transport?.playing ? s.transport.bar : s.layers.rhythm ? s.rhythmStatus?.bar : null) ?? null;
+      const now = bar !== null ? stepAtBar(p, Math.max(0, bar - 1)) : null;
+      return { genres: GENRES, progression: p, total_bars: totalBars(p), labels: p.steps.map((st) => stepLabel(scale, st)), now: now && scale ? { index: now.index, label: stepLabel(scale, now.step), notes: chordNotes(scale, now.step).map((n) => n.midi) } : null };
+    }
+    case "progression_set": {
+      // Generate (`generate: true` with `genre`, `seed`, `bars`, `bars_per_chord`) or patch
+      // (`steps`, `follow`); `drums: true` also sets the rhythm's drum style to the genre's.
+      // Follow starts no sound by itself: it only acts while the song or the rhythm runs.
+      const cur = s.prefs.progression ?? DEFAULT_PROGRESSION;
+      let next: Progression = cur;
+      if (cmd.generate === true) {
+        const genre = (typeof cmd.genre === "string" && genreSpec(cmd.genre) ? cmd.genre : cur.genre) as Genre;
+        next = { ...generateProgression(genre, typeof cmd.seed === "number" ? cmd.seed : cur.seed, typeof cmd.bars === "number" ? cmd.bars : cur.bars || 8, typeof cmd.bars_per_chord === "number" ? cmd.bars_per_chord : undefined), follow: cur.follow };
+        if (cmd.drums === true) {
+          const rp = s.prefs.rhythm ?? DEFAULT_RHYTHM;
+          s.setPref("rhythm", { ...rp, drums: { ...rp.drums, style: genreSpec(genre)!.drumStyle } });
+        }
+      }
+      if (Array.isArray(cmd.steps)) next = { ...next, edited: true, steps: (cmd.steps as ProgStep[]).map((st) => ({ degree: Math.max(1, Math.min(7, Number(st.degree) || 1)), quality: st.quality ?? "triad", bars: Math.max(1, Number(st.bars) || 1) })) };
+      if (typeof cmd.follow === "boolean") next = { ...next, follow: cmd.follow };
+      s.setPref("progression", next);
+      const scale = s.project?.scale ?? null;
+      return { progression: next, total_bars: totalBars(next), labels: next.steps.map((st) => stepLabel(scale, st)) };
     }
     case "rack_history": {
       // The steps of a rack's edit history (`rack`: ambient | scapes); `undo` / `redo` (count)

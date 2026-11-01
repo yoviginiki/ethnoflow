@@ -3,6 +3,7 @@
 // localStorage; project data lives in the project on disk.
 
 import { create } from "zustand";
+import type { Progression } from "./progression";
 import type { TunerInstrument } from "./tunerTargets";
 import type {
   TransportStatus,
@@ -39,7 +40,7 @@ import type { StarterId } from "./starters";
 import type { Lang } from "./i18n";
 
 export type Mode = "idle" | "recording" | "playing";
-export type Screen = "home" | "play" | "compose" | "studio" | "ambient" | "rhythm" | "library" | "soundscapes" | "start" | "help" | "instrument" | "songmap" | "samples" | "references" | "academy" | "create" | "tuner" | "live" | "scapes";
+export type Screen = "home" | "play" | "compose" | "studio" | "ambient" | "rhythm" | "library" | "soundscapes" | "start" | "help" | "instrument" | "songmap" | "samples" | "references" | "academy" | "create" | "tuner" | "live" | "scapes" | "progression";
 export type LayerName = "drone" | "pad" | "ambient" | "rhythm" | "scapes";
 
 /** Background mixer strip per layer: the bus (trim, pan, cuts) plus fade times in seconds. */
@@ -69,6 +70,8 @@ export interface Prefs {
   studioOpen: string[];
   /** Atmosphere: "layers" (the rack with scenes and automation) or "modules" (one module with big knobs; the former Soundscapes screen). */
   ambientView: "layers" | "modules";
+  /** Chord progression by genre (session pref): generated, hand-edited, followed by pad / drone / rhythm. */
+  progression: Progression | null;
   keyNames: boolean;
   /** Tuner screen: reference pitch in Hz (400..480), null = the project's A4. */
   tunerA4: number | null;
@@ -224,6 +227,7 @@ export const DEFAULT_PREFS: Prefs = {
   notesView: "roll",
   studioOpen: [],
   ambientView: "layers",
+  progression: null,
   tunerA4: null,
   tunerInstrument: "free",
   tunerLock: null,

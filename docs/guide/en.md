@@ -351,6 +351,15 @@ Atmosphere's top row has a **Layers / Modules** switch. "Modules" shows the same
 - **Use in** sends the preset to the rhythm section; each part there has a 🎛 picker ("own sound" = the part's fields). The choice is kept in the project's session.
 - Why it matters: the four parts are no longer the same instruments in every project. Two kits or two basses must sound different, not just be named differently.
 
+## Background › Progression (chords by genre)
+
+Home › Background › **Progression** tab. A chord progression that the pad, the drone and the rhythm section follow:
+
+- **Genre** (RnB, Rock, Pop, Drum & bass, Liquid, Ambient, Ethno, Jazz): each card says which steps and chords it likes, how many bars per chord and which drums fit. **Generate** lays the progression out from the project's scale (degrees I–VII, never an assumed key) for the chosen bars and seed; 🎲 Shuffle gives another, the same seed = the same. "Also set the drums to the genre" switches the drum style in the Rhythm section.
+- **Steps**: each is a degree (1–7), a quality (triad, power, sus2, sus4, seventh, maj7, ninth, add9) and bars; edit them in place, + Step / ✕. The label shows the roman numeral in the mode (i, VII, V7…) and the notes.
+- **Follow the progression**: while ▶ Song or the rhythm runs, the chord of the current bar goes into the pad, the drone root and the rhythm section (bass, ostinato, arpeggio). The live accompanist wins while it follows. The switch starts no sound by itself.
+- The progression is part of the project's session (saved, and part of session presets).
+
 ## Background › Rhythm section
 
 - Four instruments on one shared clock: **drums** (liquid, halftime, ethno), **bass** (sub, pluck, Reese with wobble and sidechain), **ostinato** (a step motif, lockable), **arpeggio**.

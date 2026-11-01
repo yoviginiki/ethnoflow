@@ -136,6 +136,10 @@ h2 { font-size: 15px; margin: 0 0 8px; font-weight: 600; }
 .history-list li { padding: 2px 0; }
 .history-list li.current { font-weight: 600; }
 .history-list li.future { opacity: 0.55; }
+.prog-grid { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }
+.prog-step { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; border: 1px solid var(--axis); border-radius: 8px; background: var(--panel); min-width: 150px; }
+.prog-step.on { border-color: var(--accent); outline: 2px solid var(--accent); }
+.prog-label { font-size: 20px; font-weight: 700; }
 .area {
   display: flex; flex-direction: column; gap: 6px; text-align: left; padding: 16px;
   background: var(--panel); border: 1px solid var(--axis); border-radius: 10px; min-height: 96px;

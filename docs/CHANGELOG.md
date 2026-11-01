@@ -3,6 +3,19 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Chord progressions by genre with a generator, hand editing and a follower (2026-11-01;
+  owner: "различните прогресии… RnB, rock, DnB, liquid, ambient… но прогресиите да имат
+  генератор", then "давай напред").** `progression.ts`: eight genre specs (patterns of scale
+  degrees, chord-quality weights, bars per chord, drum style, tempo hint), a deterministic
+  generator (seed), chord tones from the project's scale degrees (triad / power / sus2 /
+  sus4 / 7 / maj7 / 9 / add9), roman-numeral labels, stepAtBar. New Background tab
+  "Progression" (screen `progression`): genre cards, bars, bars per chord, seed, Generate
+  (asks before replacing hand edits), "also set the drums", editable steps, "Follow the
+  progression". `useProgressionFollow` (App-level) pushes the chord of the current bar into
+  the pad, the drone root and the rhythm section through `setFollow` while the song
+  transport or the rhythm runs (the live accompanist wins). Session pref `progression`.
+  Bridge ops `progression` / `progression_set`; smoke generates, edits, switches follow on
+  silently and restores; vitest 3. Guide BG/EN, bridge doc.
 - **History of changes for both racks (2026-11-01; owner: "искам някъде history на промените…
   да мога да връщам назад/напред, ако много се обърка след моята намеса").** `rackHistory.ts`:
   every commit of the Atmosphere / Soundscapes editor, every journey, every preset load and
