@@ -83,7 +83,7 @@ const bg = {
   // Background as tabs (UX audit 31.10, stage 4)
   bgTabDronePad: "Дрон и пад",
   bgTabLive: "Жив акомпаниатор",
-  bgTabsHint: "Пускане, спиране и ниво на фона: в лентата „Какво звучи“ най-долу. Soundscapes е изглед „Модули“ в Атмосфера.",
+  bgTabsHint: "Пускане, спиране и ниво на фона: в лентата „Какво звучи“ най-долу.",
   bgLiveIntro: "Слуша микрофона и движи дрона и пада по фразите ти. Първо пусни дрон или пад от „Дрон и пад“, после „Следи“.",
   areaCreate: "Създай песен",
   areaCreateDesc: "Водач стъпка по стъпка: мелодия → лад → темпо → карта → фон → студио → експорт, отмята се само",
@@ -1668,7 +1668,7 @@ const en: typeof bg = {
   // Background as tabs (UX audit 31.10, stage 4)
   bgTabDronePad: "Drone & pad",
   bgTabLive: "Live accompanist",
-  bgTabsHint: "Play, stop and level of the background: in the \"Now playing\" bar at the bottom. Soundscapes is the \"Modules\" view of Atmosphere.",
+  bgTabsHint: "Play, stop and level of the background: in the \"Now playing\" bar at the bottom.",
   bgLiveIntro: "Listens to the microphone and moves the drone and the pad with your phrases. Start a drone or a pad from \"Drone & pad\" first, then \"Follow\".",
   areaCreate: "Create a song",
   areaCreateDesc: "Step-by-step guide: melody → scale → tempo → map → background → studio → export, ticks itself",
