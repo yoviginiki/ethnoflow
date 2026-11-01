@@ -116,6 +116,17 @@ export function Studio() {
 
   // ---------- recording ----------
 
+  // A1: sound-activated recording (arm, start above a level, stop after silence) and a
+  // timer (start at a clock time, stop after N minutes).
+  const [autoRec, setAutoRec] = useState(false);
+  const [autoThr, setAutoThr] = useState(-30);
+  const [autoSilence, setAutoSilence] = useState(3);
+  const [timerTime, setTimerTime] = useState("");
+  const [timerMinutes, setTimerMinutes] = useState(5);
+  const [timerAt, setTimerAt] = useState<number | null>(null);
+  const timerRef = useRef<{ start: number; stop: number } | null>(null);
+  const silentSince = useRef<number | null>(null);
+
   const onStopRecord = useCallback(async () => {
     const st = useStore.getState();
     const tt = messages[st.prefs.lang];
@@ -219,6 +230,57 @@ export function Studio() {
   }, [s.prefs.clickPlay]);
 
   // MIDI input and the keyboard live app-wide now (keyboard.ts, KeyboardDock.tsx).
+
+  // Sound-activated: the idle monitor's peak arms the record; the recording's own peak
+  // ends it after `autoSilence` seconds under the threshold.
+  useEffect(() => {
+    if (!autoRec) {
+      silentSince.current = null;
+      return;
+    }
+    const thr = Math.pow(10, autoThr / 20);
+    if (s.mode === "idle" && s.monitor && s.monitor.peak >= thr && !busy) {
+      silentSince.current = null;
+      void onRecord();
+      return;
+    }
+    if (s.mode === "recording" && s.rec) {
+      if (s.rec.peak >= thr) silentSince.current = null;
+      else if (silentSince.current === null) silentSince.current = Date.now();
+      else if (Date.now() - silentSince.current >= autoSilence * 1000) {
+        silentSince.current = null;
+        void onStopRecord();
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoRec, autoThr, autoSilence, s.mode, s.monitor?.peak, s.rec?.peak, s.rec?.seconds_captured]);
+
+  const cancelTimer = useCallback(() => {
+    if (timerRef.current) {
+      window.clearTimeout(timerRef.current.start);
+      window.clearTimeout(timerRef.current.stop);
+      timerRef.current = null;
+    }
+    setTimerAt(null);
+  }, []);
+  const scheduleTimer = useCallback(() => {
+    const [hh, mm] = timerTime.split(":").map(Number);
+    if (!Number.isFinite(hh) || !Number.isFinite(mm)) return;
+    const at = new Date();
+    at.setHours(hh, mm, 0, 0);
+    if (at.getTime() <= Date.now()) at.setDate(at.getDate() + 1);
+    cancelTimer();
+    const startIn = at.getTime() - Date.now();
+    const start = window.setTimeout(() => void onRecord(), startIn);
+    const stop = window.setTimeout(() => {
+      void onStopRecord();
+      setTimerAt(null);
+      timerRef.current = null;
+    }, startIn + timerMinutes * 60_000);
+    timerRef.current = { start, stop };
+    setTimerAt(at.getTime());
+  }, [timerTime, timerMinutes, cancelTimer, onRecord, onStopRecord]);
+  useEffect(() => () => cancelTimer(), [cancelTimer]);
 
   // ---------- tuner: input monitor while idle ----------
 
@@ -1007,6 +1069,43 @@ export function Studio() {
             </button>
           </section>
 
+          </Fold>
+          <Fold id="autorec" label={t.foldAutoRec} chip={autoRec ? t.chipOn : timerAt ? t.chipOn : t.chipOff}>
+            <div className="analysis-row small">
+              <label className="inline" title={t.soundRecHint}>
+                <input type="checkbox" checked={autoRec} onChange={(e) => setAutoRec(e.target.checked)} />
+                {t.soundRec}
+              </label>
+              <label className="inline">
+                {t.soundRecThreshold}
+                <input type="number" min={-60} max={0} value={autoThr} onChange={(e) => setAutoThr(Number(e.target.value))} style={{ width: 64 }} /> dB
+              </label>
+              <label className="inline">
+                {t.soundRecSilence}
+                <input type="number" min={1} max={60} value={autoSilence} onChange={(e) => setAutoSilence(Number(e.target.value))} style={{ width: 56 }} /> s
+              </label>
+              <span className="muted">{autoRec ? (s.mode === "recording" ? t.soundRecArmedRec : t.soundRecArmed) : ""}</span>
+            </div>
+            <div className="analysis-row small">
+              <label className="inline" title={t.timerRecHint}>
+                {t.timerRec}
+                <input type="time" value={timerTime} onChange={(e) => setTimerTime(e.target.value)} />
+              </label>
+              <label className="inline">
+                {t.timerRecMinutes}
+                <input type="number" min={1} max={180} value={timerMinutes} onChange={(e) => setTimerMinutes(Number(e.target.value))} style={{ width: 56 }} /> min
+              </label>
+              {timerAt ? (
+                <button className="small" onClick={cancelTimer}>
+                  ✕ {t.timerRecCancel} ({new Date(timerAt).toLocaleTimeString()})
+                </button>
+              ) : (
+                <button className="small" onClick={scheduleTimer} disabled={!timerTime}>
+                  ⏰ {t.timerRecSchedule}
+                </button>
+              )}
+            </div>
+            <div className="muted small">{t.loopbackHint}</div>
           </Fold>
           <InstrumentPanel />
           <Fold id="drone" label={t.foldDrone} chip={s.layers.drone ? `${t.chipOn}${s.prefs.drone.rootMidi !== null ? ` · ${t.noteNames[noteParts(s.prefs.drone.rootMidi).pc]}${noteParts(s.prefs.drone.rootMidi).octave}` : ""}` : t.chipOff}>

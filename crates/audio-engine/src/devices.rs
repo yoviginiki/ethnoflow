@@ -19,6 +19,10 @@ pub struct DeviceInfo {
     pub channel_counts: Vec<u16>,
 }
 
+/// Prefix of a loopback input (A1, Windows / WASAPI): the computer's own output captured
+/// as an input. The rest of the name is the output device.
+pub const LOOPBACK_PREFIX: &str = "loopback: ";
+
 /// Rates offered for selection. Anything else the device supports stays reachable
 /// through its default config.
 pub const STANDARD_RATES: &[u32] = &[44_100, 48_000, 88_200, 96_000, 176_400, 192_000];
@@ -147,6 +151,25 @@ pub fn list_devices(direction: Direction) -> Result<Vec<DeviceInfo>> {
             name,
         });
     }
+    // Loopback (A1): every output device that can be opened as an input stream (WASAPI
+    // does this natively) is offered as "loopback: <name>".
+    if direction == Direction::Input && cfg!(windows) {
+        for d in host.output_devices()?.collect::<Vec<_>>() {
+            let Ok(name) = d.name() else { continue };
+            let Ok(cfg) = d.default_input_config() else {
+                continue;
+            };
+            out.push(DeviceInfo {
+                name: format!("{LOOPBACK_PREFIX}{name}"),
+                is_default: false,
+                default_sample_rate: Some(cfg.sample_rate().0),
+                default_channels: Some(cfg.channels()),
+                default_sample_format: Some(format!("{:?}", cfg.sample_format())),
+                sample_rates: vec![cfg.sample_rate().0],
+                channel_counts: vec![cfg.channels()],
+            });
+        }
+    }
     Ok(out)
 }
 
@@ -163,6 +186,11 @@ pub fn find_device(direction: Direction, name: Option<&str>) -> Result<cpal::Dev
                 .ok_or(AudioError::NoDefaultDevice("output")),
         },
         Some(wanted) => {
+            // A loopback input is an output device opened for capture (A1).
+            let (direction, wanted) = match wanted.strip_prefix(LOOPBACK_PREFIX) {
+                Some(rest) if direction == Direction::Input => (Direction::Output, rest),
+                _ => (direction, wanted),
+            };
             let mut iter: Box<dyn Iterator<Item = cpal::Device>> = match direction {
                 Direction::Input => Box::new(host.input_devices()?),
                 Direction::Output => Box::new(host.output_devices()?),

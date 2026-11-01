@@ -3,6 +3,12 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Loopback, timer and sound-activated recording — A1 (2026-11-01 evening).** The input
+  list offers every output device as "loopback: <name>" on Windows (cpal / WASAPI capture of
+  a render endpoint; `find_device` resolves the prefix, so recording and the monitor work
+  unchanged). Play & record: "Record when there is sound" (threshold dB, stop after N s of
+  silence, driven by the idle monitor's peak and the recording's own peak) and "Timer
+  recording at HH:MM for N min". Guide BG/EN, plan A1.
 - **Multiple export and M4A import — A10 first slice (2026-11-01 evening).** `export_song`
   takes `start_s` (the song renders from 0, the file keeps [start, end)); My studio
   "Export by section" writes one file per song-map section into a folder; bridge
