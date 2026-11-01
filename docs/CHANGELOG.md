@@ -3,6 +3,14 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Keyboard K3: pad, drone and module under the keys (2026-11-01).** Sources "Pad" (the
+  voicing on the pressed note through the follower, restored on release; the layer is
+  switched on for the press when it was off), "Drone" (root on the pressed note) and
+  "Module: <layer>" for every bells / pluck / resonator / sampler layer of both racks
+  (`LiveNotes` in those sources, strike at the block start; `rack_note` command; engine
+  test: a density-0 bell rings from a key). Bridge `keyboard.source` accepts them and
+  reports `modules`, `pad_chord`, `drone_root`; smoke checks pad / drone while held and
+  after release. Bloom stays without a key (a phrase module).
 - **Keyboard K4 finished: pitch bend and mod wheel (2026-11-01).** `LiveNotes` carries a bend
   ratio and a mod amount; bass, lead, pattern synth and chord pad multiply their pitch by the
   bend and open their filter / tone with the wheel; the live synth gets `Cmd::Bend` /

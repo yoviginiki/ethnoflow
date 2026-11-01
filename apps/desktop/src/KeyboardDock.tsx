@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { isTypingTarget, noteParts } from "./format";
 import { messages } from "./i18n";
-import { BLACK, codeForKey, keyboardAllOff, keyboardNote, midiForCode, OCTAVE_MAX, OCTAVE_MIN, type KeyboardSource } from "./keyboard";
+import { BLACK, codeForKey, keyboardAllOff, keyboardNote, midiForCode, moduleSources, OCTAVE_MAX, OCTAVE_MIN, type KeyboardSource } from "./keyboard";
 import { useStore } from "./store";
 
 const KEYS = 29;
@@ -92,7 +92,9 @@ export function KeyboardDock() {
     });
     void keyboardNote(midi, false).catch(() => undefined);
   };
-  const srcLabel = (k: KeyboardSource) => (k === "voice" ? t.kbSourceVoice : t.kbSourceInstrument);
+  const srcLabel = (k: KeyboardSource) => (k === "voice" ? t.kbSourceVoice : k === "instrument" ? t.kbSourceInstrument : k === "pad" ? t.kbSourcePad : t.kbSourceDrone);
+  const modules = moduleSources();
+  const kindName: Record<string, string> = { bells: t.kindBells, pluck: t.kindPluck, resonator: t.kindResonator, sampler: t.kindSampler };
 
   return (
     <div className="kb-dock" role="region" aria-label={t.kbDock} data-coach="keyboard-dock">
@@ -101,9 +103,14 @@ export function KeyboardDock() {
         <label className="inline">
           {t.kbSource}
           <select value={s.prefs.keyboardSource} onChange={(e) => s.setPref("keyboardSource", e.target.value as KeyboardSource)}>
-            {(["voice", "instrument"] as KeyboardSource[]).map((k) => (
+            {(["voice", "instrument", "pad", "drone"] as KeyboardSource[]).map((k) => (
               <option key={k} value={k}>
                 {srcLabel(k)}
+              </option>
+            ))}
+            {modules.map((m) => (
+              <option key={m.id} value={m.id}>
+                {t.kbSourceModule}: {m.name} ({kindName[m.kind] ?? m.kind}, {m.rack === "ambient" ? t.areaAmbient : t.scapesTitle})
               </option>
             ))}
           </select>

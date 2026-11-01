@@ -6,6 +6,7 @@ use std::sync::atomic::{AtomicU32, AtomicU8, Ordering};
 use std::sync::Arc;
 
 use super::gen::{beat_grid, PitchSet, Trigger};
+use super::live_notes::{midi_hz, LiveNotes};
 use super::rhythm::BeatClock;
 use crate::graph::params::{ramp_samples, undenormal, Ramp, SmoothedParam};
 use crate::graph::Source;
@@ -26,6 +27,8 @@ pub struct PluckParams {
     /// Beat grid for the strikes: 0 free, else grid lines per beat (1, 2, 4). Needs a
     /// clock that plays (the rhythm / song transport); item 7 "the atmosphere knows the bar".
     pub sync: AtomicU8,
+    /// Keyboard strikes (K3): a key = one strike on its pitch.
+    pub live: LiveNotes,
 }
 
 impl Default for PluckParams {
@@ -38,6 +41,7 @@ impl Default for PluckParams {
             velocity_spread: SmoothedParam::new(0.5, 0.0, 1.0),
             seed: AtomicU32::new(1),
             sync: AtomicU8::new(0),
+            live: LiveNotes::new(),
         }
     }
 }
@@ -214,6 +218,12 @@ impl Source for PluckSource {
         );
         // Loop loss per sample: damping 0 → ~0.9995, 1 → ~0.98.
         let loss = 0.9996 - self.damping.current * 0.02;
+        while let Some(k) = p.live.pop() {
+            if k.on {
+                let (b, s) = (self.brightness.current, self.spread.current);
+                self.pluck(midi_hz(k.midi), b, s, sr);
+            }
+        }
         let at = pluck_at.unwrap_or(n).min(n);
         let (head, tail) = out.split_at_mut(at);
         self.render_span(head, &p, loss);

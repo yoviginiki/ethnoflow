@@ -3,6 +3,7 @@
 // localStorage; project data lives in the project on disk.
 
 import { create } from "zustand";
+import type { KeyboardSource } from "./keyboard";
 import type { Progression } from "./progression";
 import type { TunerInstrument } from "./tunerTargets";
 import type {
@@ -89,7 +90,7 @@ export interface Prefs {
   /** Keyboard dock (keyboard everywhere K1): shown above the Now-playing bar. */
   keyboardOn: boolean;
   /** "voice" = the project's live-synth voice; "instrument" = the designer's instrument (K2). */
-  keyboardSource: "voice" | "instrument";
+  keyboardSource: KeyboardSource;
   /** MIDI note of the lowest key (C of the lower computer row). */
   keyboardOctave: number;
   /** Snap computer keys to the project's scale. */

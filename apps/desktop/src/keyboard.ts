@@ -4,12 +4,40 @@
 // trainer's lights) and the computer-keyboard note map. The keyboard never changes the
 // project: it only sounds.
 import { useEffect, useRef } from "react";
-import { api, describeError, type Scale } from "./api";
+import { api, describeError, type PadNote, type Scale } from "./api";
+import { voicingNotes } from "./layers";
 import { centsFromScale } from "./format";
 import { messages } from "./i18n";
 import { useStore } from "./store";
 
-export type KeyboardSource = "voice" | "instrument";
+/** "module:<rack>:<layer>" = one strike of that event layer (K3). */
+export type KeyboardSource = "voice" | "instrument" | "pad" | "drone" | `module:${"ambient" | "scapes"}:${number}`;
+
+/** The event layers a key can strike: every bells / pluck / resonator / sampler layer of both racks. */
+export function moduleSources(): { id: KeyboardSource; rack: "ambient" | "scapes"; layer: number; name: string; kind: string }[] {
+  const st = useStore.getState();
+  const out: { id: KeyboardSource; rack: "ambient" | "scapes"; layer: number; name: string; kind: string }[] = [];
+  for (const rack of ["ambient", "scapes"] as const) {
+    const a = rack === "ambient" ? st.ambient : st.scapes;
+    a?.layers.forEach((l, i) => {
+      if (["bells", "pluck", "resonator", "sampler"].includes(l.source.kind)) out.push({ id: `module:${rack}:${i}`, rack, layer: i, name: l.name, kind: l.source.kind });
+    });
+  }
+  return out;
+}
+
+/** What the pad / drone showed before the keyboard took them over (restored on release). */
+let before: { padChord: PadNote[] | null; droneRoot: number | null; padOn: boolean; droneOn: boolean } | null = null;
+let moduleWarned = 0;
+
+function restoreFollow(): void {
+  if (!before) return;
+  const st = useStore.getState();
+  st.setFollow(before.padChord, before.droneRoot);
+  if (!before.padOn && st.layers.pad) st.setLayer("pad", false);
+  if (!before.droneOn && st.layers.drone) st.setLayer("drone", false);
+  before = null;
+}
 
 /** Two rows of the computer keyboard = two octaves (lower row from C). */
 export const LOWER: Record<string, number> = { z: 0, s: 1, x: 2, d: 3, c: 4, v: 5, g: 6, b: 7, h: 8, n: 9, j: 10, m: 11, ",": 12, l: 13, ".": 14 };
@@ -60,6 +88,33 @@ export async function keyboardNote(midi: number, on: boolean, velocity?: number)
     }
     return;
   }
+  const src = st.prefs.keyboardSource;
+  if (src === "pad" || src === "drone") {
+    // K3: the key becomes the pad's root (its voicing) or the drone's root while held;
+    // the previous chord / root and the layer switches come back on release.
+    if (on) {
+      if (!before) before = { padChord: st.padChord, droneRoot: st.droneRootOverride, padOn: st.layers.pad, droneOn: st.layers.drone };
+      if (src === "pad") {
+        st.setFollow(voicingNotes(st.prefs.pad.voicing, midi, st.project?.scale ?? null), st.droneRootOverride);
+        if (!st.layers.pad) st.setLayer("pad", true);
+      } else {
+        st.setFollow(st.padChord, midi);
+        if (!st.layers.drone) st.setLayer("drone", true);
+      }
+    } else if (held.size === 0) {
+      restoreFollow();
+    }
+    return;
+  }
+  if (src.startsWith("module:")) {
+    const [, rack, idx] = src.split(":");
+    const ok = await api.rackNote(rack as "ambient" | "scapes", Number(idx), midi, on, vel);
+    if (!ok && on && Date.now() - moduleWarned > 3000) {
+      moduleWarned = Date.now();
+      st.setMessage(messages[st.prefs.lang].kbModuleOff);
+    }
+    return;
+  }
   if (!st.liveSynthOn) return;
   await api.synthNote(midi, on, on ? vel : null);
 }
@@ -67,6 +122,7 @@ export async function keyboardNote(midi: number, on: boolean, velocity?: number)
 /** Release everything the keyboard holds (both targets). */
 export async function keyboardAllOff(): Promise<void> {
   held.clear();
+  restoreFollow();
   await Promise.all([api.synthAllOff().catch(() => undefined), api.instrumentNotesOff().catch(() => undefined)]);
 }
 
@@ -143,6 +199,9 @@ export function useKeyboardRouting(): void {
 
   useEffect(() => {
     void keyboardAllOff();
+    // The engine target matters for MIDI: the instrument, or the live synth (voice); the
+    // pad / drone / module sources are driven from here, so MIDI goes to the synth path
+    // only when the voice is chosen.
     void api.setKeyboardTarget(source === "instrument" ? "instrument" : "synth").catch(() => undefined);
   }, [source]);
 

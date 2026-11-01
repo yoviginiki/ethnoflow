@@ -500,6 +500,25 @@ async function main() {
       const w = expectOk(send({ op: "keyboard", bend: 2, mod: 0.5 }));
       if (w.bend !== 2 || w.mod !== 0.5) throw new Error(`bend/mod ${JSON.stringify([w.bend, w.mod])}`);
       expectOk(send({ op: "keyboard", bend: 0, mod: 0 }));
+      // K3: the pad source turns a key into the pad's voicing while held, and gives it back.
+      const pad0 = expectOk(send({ op: "keyboard", source: "pad" }));
+      const down = expectOk(send({ op: "note", midi: 62, on: true }));
+      await new Promise((r) => setTimeout(r, 300));
+      const padHeld = expectOk(send({ op: "keyboard" }));
+      if (!Array.isArray(padHeld.pad_chord) || !padHeld.pad_chord.includes(62)) throw new Error(`pad chord while held: ${JSON.stringify(padHeld.pad_chord)} (${JSON.stringify(down)})`);
+      expectOk(send({ op: "note", midi: 62, on: false }));
+      await new Promise((r) => setTimeout(r, 300));
+      const padUp = expectOk(send({ op: "keyboard" }));
+      if (JSON.stringify(padUp.pad_chord) !== JSON.stringify(pad0.pad_chord)) throw new Error(`pad chord not restored: ${JSON.stringify(padUp.pad_chord)} vs ${JSON.stringify(pad0.pad_chord)}`);
+      expectOk(send({ op: "keyboard", source: "drone" }));
+      expectOk(send({ op: "note", midi: 50, on: true }));
+      await new Promise((r) => setTimeout(r, 300));
+      const droneHeld = expectOk(send({ op: "keyboard" }));
+      if (droneHeld.drone_root !== 50) throw new Error(`drone root while held: ${droneHeld.drone_root}`);
+      expectOk(send({ op: "notes_off" }));
+      await new Promise((r) => setTimeout(r, 300));
+      if (expectOk(send({ op: "keyboard" })).drone_root !== pad0.drone_root) throw new Error("drone root not restored");
+      expectOk(send({ op: "stop_all" }));
       const inst = expectOk(send({ op: "keyboard", source: "instrument" }));
       if (inst.source !== "instrument" || inst.synth_running) throw new Error(`instrument ${JSON.stringify(inst)}`);
       const off = expectOk(send({ op: "keyboard", on: false, source: "voice" }));

@@ -9,7 +9,7 @@ import { AREA_IDS, AREAS, areaMainScreen, areaOf, areaTabs } from "./areas";
 import { messages } from "./i18n";
 import { DEFAULT_RHYTHM, useStore, type LayerName, type Screen } from "./store";
 import { latestTake, loadTake, playLoaded, stopPlaying, continueLast } from "./takeActions";
-import { heldNotes, keyboardAllOff, keyboardNote } from "./keyboard";
+import { heldNotes, keyboardAllOff, keyboardNote, moduleSources, type KeyboardSource } from "./keyboard";
 import { applyTemplate, isStarterId } from "./templates";
 import { whatNext } from "./whatNext";
 import { journeyWorld, phaseAt, WORLD_IDS, worldById } from "./scapes";
@@ -413,7 +413,7 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
       // MIDI), lock, velocity, midi_input (port name or null). Returns the dock's state.
       const st = useStore.getState();
       if (typeof cmd.on === "boolean") st.setPref("keyboardOn", cmd.on);
-      if (cmd.source === "voice" || cmd.source === "instrument") st.setPref("keyboardSource", cmd.source);
+      if (cmd.source === "voice" || cmd.source === "instrument" || cmd.source === "pad" || cmd.source === "drone" || (typeof cmd.source === "string" && /^module:(ambient|scapes):\d+$/.test(cmd.source))) st.setPref("keyboardSource", cmd.source as KeyboardSource);
       if (typeof cmd.octave === "number") st.setPref("keyboardOctave", Math.max(24, Math.min(96, Math.round(cmd.octave))));
       if (typeof cmd.lock === "boolean") st.setPref("keyboardLock", cmd.lock);
       if (typeof cmd.velocity === "number") st.setPref("keyboardVelocity", Math.max(0.05, Math.min(1, cmd.velocity)));
@@ -424,7 +424,7 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
       if (typeof cmd.bend === "number" || typeof cmd.mod === "number") control = await api.keyboardControl(typeof cmd.bend === "number" ? cmd.bend : null, typeof cmd.mod === "number" ? cmd.mod : null);
       const p = useStore.getState();
       const synth = await api.liveSynthStatus().catch(() => null);
-      return { on: p.prefs.keyboardOn, source: p.prefs.keyboardSource, octave: p.prefs.keyboardOctave, lock: p.prefs.keyboardLock, velocity: p.prefs.keyboardVelocity, midi_input: p.prefs.midiInput, midi_ports: p.midiPorts, synth_running: synth !== null, designer_voice: p.designerVoice !== null, held: heldNotes(), bend: control?.[0] ?? null, mod: control?.[1] ?? null };
+      return { on: p.prefs.keyboardOn, source: p.prefs.keyboardSource, octave: p.prefs.keyboardOctave, lock: p.prefs.keyboardLock, velocity: p.prefs.keyboardVelocity, midi_input: p.prefs.midiInput, midi_ports: p.midiPorts, synth_running: synth !== null, designer_voice: p.designerVoice !== null, held: heldNotes(), bend: control?.[0] ?? null, mod: control?.[1] ?? null, modules: moduleSources().map((m) => m.id), pad_chord: p.padChord?.map((n) => n.midi) ?? null, drone_root: p.droneRootOverride };
     }
     case "note": {
       // Sound! One keyboard note where the dock points: { midi, on, velocity? }; "notes_off" releases all.

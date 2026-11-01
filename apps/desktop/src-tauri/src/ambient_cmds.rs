@@ -1583,6 +1583,41 @@ pub async fn scapes_stop(state: State<'_, AppState>) -> CmdResult<()> {
     release_all(&mut state.lock(), RackId::Scapes);
     Ok(())
 }
+/// Keyboard K3: one strike of an event layer (bells, pluck, resonator, sampler) of a
+/// rack on the key's pitch. `rack` is "ambient" or "scapes"; `layer` the index in the
+/// rack. Returns false when that layer is not live (rack off) or not an event source.
+#[tauri::command]
+pub async fn rack_note(
+    state: State<'_, AppState>,
+    rack: String,
+    layer: usize,
+    midi: u8,
+    on: bool,
+    velocity: Option<f32>,
+) -> CmdResult<bool> {
+    let id = match rack.as_str() {
+        "ambient" => RackId::Ambient,
+        "scapes" => RackId::Scapes,
+        _ => return Err(err("invalid_argument", "rack is ambient or scapes")),
+    };
+    if midi > 127 {
+        return Err(err("invalid_argument", "midi outside 0..127"));
+    }
+    let s = state.lock();
+    let Some(Some(live)) = s.racks[id.idx()].live.get(layer) else {
+        return Ok(false);
+    };
+    let vel = velocity.unwrap_or(0.8).clamp(0.0, 1.0);
+    let ok = match &live.params {
+        LiveParams::Bells(p) => p.live.note(midi, on, vel),
+        LiveParams::Pluck(p) => p.live.note(midi, on, vel),
+        LiveParams::Resonator(p) => p.live.note(midi, on, vel),
+        LiveParams::Sampler(p) => p.live.note(midi, on, vel),
+        _ => return Ok(false),
+    };
+    Ok(ok)
+}
+
 #[tauri::command]
 pub async fn scapes_status(state: State<'_, AppState>) -> CmdResult<AmbientStatus> {
     status(&mut state.lock(), RackId::Scapes)

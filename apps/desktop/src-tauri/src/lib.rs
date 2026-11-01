@@ -187,6 +187,7 @@ pub fn run() {
             ambient_cmds::scapes_play,
             ambient_cmds::scapes_stop,
             ambient_cmds::scapes_status,
+            ambient_cmds::rack_note,
             ambient_cmds::scapes_program_set,
             ambient_cmds::set_chord_pitches,
             ambient_cmds::set_ambient,

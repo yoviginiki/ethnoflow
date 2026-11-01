@@ -6,6 +6,7 @@ use std::sync::atomic::{AtomicU32, AtomicU8, Ordering};
 use std::sync::Arc;
 
 use super::gen::{beat_grid, PitchSet, Rng, Trigger};
+use super::live_notes::{midi_hz, LiveNotes};
 use super::rhythm::BeatClock;
 use crate::graph::params::{ramp_samples, Ramp, SmoothedParam};
 use crate::graph::Source;
@@ -29,6 +30,8 @@ pub struct BellParams {
     /// Beat grid for the strikes: 0 free, else grid lines per beat (1, 2, 4). Needs a
     /// clock that plays (the rhythm / song transport); item 7 "the atmosphere knows the bar".
     pub sync: AtomicU8,
+    /// Keyboard strikes (K3): a key = one strike on its pitch.
+    pub live: LiveNotes,
 }
 
 impl Default for BellParams {
@@ -42,6 +45,7 @@ impl Default for BellParams {
             tension: SmoothedParam::new(0.0, 0.0, 0.5),
             seed: AtomicU32::new(1),
             sync: AtomicU8::new(0),
+            live: LiveNotes::new(),
         }
     }
 }
@@ -233,6 +237,13 @@ impl Source for BellSource {
         let mod_ratio = 1.4 + bright * 2.1; // 1.4 (soft) … 3.5 (metallic)
                                             // The strike lands on its exact sample, so the output does not depend on how
                                             // the host chunks the audio (offline bounce == live).
+                                            // Keyboard strikes (K3) land at the block start.
+        while let Some(k) = p.live.pop() {
+            if k.on {
+                let spread = self.spread.current;
+                self.strike(midi_hz(k.midi), bright, spread);
+            }
+        }
         let at = strike_at.unwrap_or(n).min(n);
         let (head, tail) = out.split_at_mut(at);
         self.render_span(head, &p, sr, k1, k2, bright, mod_ratio);
@@ -402,5 +413,25 @@ mod tests {
         for _ in 0..1000 {
             assert!(!tense_pitch(&mut rng, 440.0, 0.0).1, "no tension at 0");
         }
+    }
+
+    #[test]
+    fn a_key_strikes_a_silent_bell() {
+        let p = Arc::new(BellParams::default());
+        p.pitches.set(&[440.0]);
+        p.density.set(0.0);
+        let quiet = {
+            let mut src = BellSource::new(Arc::clone(&p));
+            let mut out = vec![0.0f32; 48_000];
+            src.render(&mut out, 48_000);
+            out.iter().fold(0.0f32, |m, v| m.max(v.abs()))
+        };
+        assert!(quiet < 1e-6, "no density, no key: silence ({quiet})");
+        p.live.note(81, true, 0.8);
+        let mut src = BellSource::new(Arc::clone(&p));
+        let mut out = vec![0.0f32; 48_000];
+        src.render(&mut out, 48_000);
+        let peak = out.iter().fold(0.0f32, |m, v| m.max(v.abs()));
+        assert!(peak > 0.01, "a key strikes the bell ({peak})");
     }
 }

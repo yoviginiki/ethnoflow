@@ -9,6 +9,7 @@ use std::sync::atomic::{AtomicU32, AtomicU8, Ordering};
 use std::sync::Arc;
 
 use super::gen::{beat_grid, PitchSet, Trigger};
+use super::live_notes::{midi_hz, LiveNotes};
 use super::rhythm::BeatClock;
 use crate::graph::params::{ramp_samples, undenormal, Ramp, SmoothedParam};
 use crate::graph::Source;
@@ -36,6 +37,8 @@ pub struct SamplerParams {
     /// Beat grid for the strikes: 0 free, else grid lines per beat (1, 2, 4). Needs a
     /// clock that plays (the rhythm / song transport); item 7 "the atmosphere knows the bar".
     pub sync: AtomicU8,
+    /// Keyboard strikes (K3): a key = one strike on its pitch.
+    pub live: LiveNotes,
 }
 
 impl Default for SamplerParams {
@@ -53,6 +56,7 @@ impl Default for SamplerParams {
             start: SmoothedParam::new(0.0, 0.0, 1.0),
             seed: AtomicU32::new(1),
             sync: AtomicU8::new(0),
+            live: LiveNotes::new(),
         }
     }
 }
@@ -304,6 +308,12 @@ impl Source for SamplerSource {
             )
             .unwrap_or(n)
             .min(n);
+        while let Some(k) = p.live.pop() {
+            if k.on {
+                let spread = p.velocity_spread.target();
+                self.note_on(midi_hz(k.midi), spread);
+            }
+        }
         let (head, tail) = out.split_at_mut(at);
         self.render_span(head, sr);
         if at < n {
