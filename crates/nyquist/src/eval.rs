@@ -337,6 +337,16 @@ const BUILTINS: &[&str] = &[
     "snd-abs",
     "sine",
     "snd-oneshot",
+    "loud",
+    "buzz",
+    "snd-buzz",
+    "eval",
+    "read",
+    "make-string-input-stream",
+    "get-loud",
+    "get-transpose",
+    "get-sustain",
+    "get-tempo",
 ];
 
 pub struct Interp {
@@ -349,6 +359,9 @@ pub struct Interp {
     steps: u64,
     max_steps: u64,
     rng: u32,
+    /// Nyquist's time warp as a plain factor: `(stretch k …)` multiplies the durations of
+    /// the behaviours (osc, pwl, noise, …) evaluated inside it; `abs-env` resets it to 1.
+    pub stretch: f64,
     /// `snd-fetch` read positions per sound object (kept alive so the key stays unique).
     streams: HashMap<usize, (Rc<Sound>, usize)>,
 }
@@ -378,6 +391,30 @@ impl Interp {
         env.define("op-average", Value::Int(1));
         env.define("op-peak", Value::Int(2));
         env.define("op-rms", Value::Int(3));
+        // Pitch constants c0 … b8 with sharps (s) and flats (f): c4 = 60.
+        for oct in 0..=8i64 {
+            for (name, semi) in [
+                ("c", 0),
+                ("cs", 1),
+                ("df", 1),
+                ("d", 2),
+                ("ds", 3),
+                ("ef", 3),
+                ("e", 4),
+                ("f", 5),
+                ("fs", 6),
+                ("gf", 6),
+                ("g", 7),
+                ("gs", 8),
+                ("af", 8),
+                ("a", 9),
+                ("as", 10),
+                ("bf", 10),
+                ("b", 11),
+            ] {
+                env.define(&format!("{name}{oct}"), Value::Int((oct + 1) * 12 + semi));
+            }
+        }
         // Wave tables: one period of 2048 samples, as (sound step periodic).
         let n = 2048usize;
         let table = |f: fn(f64) -> f64| -> Value {
@@ -406,6 +443,7 @@ impl Interp {
             steps: 0,
             max_steps: 50_000_000,
             rng: 0x9E37_79B9,
+            stretch: 1.0,
             streams: HashMap::new(),
         }
     }
@@ -507,7 +545,7 @@ impl Interp {
             Value::Builtin(name) => self.builtin(name, args),
             Value::Lambda(l) => {
                 self.depth += 1;
-                if self.depth > 2000 {
+                if self.depth > 600 {
                     self.depth -= 1;
                     return rt("recursion too deep");
                 }
@@ -556,7 +594,35 @@ impl Interp {
                 }
             }
         }
-        let rest: Vec<Value> = it.collect();
+        let mut rest: Vec<Value> = it.collect();
+        if !l.keys.is_empty() {
+            // `:name value` pairs anywhere in the remaining arguments
+            let mut given: Vec<(String, Value)> = Vec::new();
+            let mut others = Vec::new();
+            let mut i = 0;
+            while i < rest.len() {
+                match &rest[i] {
+                    Value::Sym(k) if k.starts_with(':') && i + 1 < rest.len() => {
+                        given.push((k[1..].to_string(), rest[i + 1].clone()));
+                        i += 2;
+                    }
+                    other => {
+                        others.push(other.clone());
+                        i += 1;
+                    }
+                }
+            }
+            for (k, default) in &l.keys {
+                match given.iter().find(|(g, _)| g == k) {
+                    Some((_, v)) => env.define(k, v.clone()),
+                    None => {
+                        let d = self.eval(default, &env)?;
+                        env.define(k, d);
+                    }
+                }
+            }
+            rest = others;
+        }
         match &l.rest {
             Some(r) => env.define(r, Value::list(rest)),
             None if !rest.is_empty() => return rt("too many arguments"),
@@ -685,6 +751,7 @@ impl Interp {
             is_macro: false,
             params: Vec::new(),
             optional: Vec::new(),
+            keys: Vec::new(),
             rest: None,
             body: body.to_vec(),
             closure: env.clone(),
@@ -698,13 +765,18 @@ impl Interp {
                 Value::Sym(s) if s == "&aux" => mode = 4,
                 Value::Sym(s) => match mode {
                     0 => l.params.push(s.clone()),
-                    1 | 3 | 4 => l.optional.push((s.clone(), Value::Nil)),
+                    3 => l.keys.push((s.clone(), Value::Nil)),
+                    1 | 4 => l.optional.push((s.clone(), Value::Nil)),
                     _ => l.rest = Some(s.clone()),
                 },
                 Value::List(pair) => {
                     if let Some(Value::Sym(s)) = pair.first() {
-                        l.optional
-                            .push((s.clone(), pair.get(1).cloned().unwrap_or(Value::Nil)));
+                        let default = pair.get(1).cloned().unwrap_or(Value::Nil);
+                        if mode == 3 {
+                            l.keys.push((s.clone(), default));
+                        } else {
+                            l.optional.push((s.clone(), default));
+                        }
                     }
                 }
                 _ => return rt("bad parameter"),
@@ -1077,7 +1149,21 @@ impl Interp {
             "sound-srate-abs" | "control-srate-abs" => {
                 self.eval_body(args.get(1..).unwrap_or(&[]), env)?
             }
-            "abs-env" => self.eval_body(args, env)?,
+            "abs-env" => {
+                let old = self.stretch;
+                self.stretch = 1.0;
+                let r = self.eval_body(args, env);
+                self.stretch = old;
+                r?
+            }
+            "stretch" | "stretch-abs" => {
+                let k = num_of(&self.eval(args.first().unwrap_or(&Value::Nil), env)?)?;
+                let old = self.stretch;
+                self.stretch = if name == "stretch" { old * k } else { k };
+                let r = self.eval_body(args.get(1..).unwrap_or(&[]), env);
+                self.stretch = old;
+                r?
+            }
             "progv" => {
                 let syms = self.eval(args.first().unwrap_or(&Value::Nil), env)?;
                 let vals = self.eval(args.get(1).unwrap_or(&Value::Nil), env)?;
@@ -1779,11 +1865,28 @@ impl Interp {
                 }))),
                 o => Value::Float(20.0 * num_of(&o)?.abs().max(1e-9).log10()),
             },
-            "get-duration" => Value::Float(num_of(&a(0))?),
+            "get-duration" => Value::Float(num_of(&a(0))? * self.stretch),
+            "get-loud" | "get-transpose" => Value::Float(0.0),
+            "get-sustain" => Value::Float(1.0),
+            "get-tempo" => Value::Float(100.0),
+            "eval" => {
+                let expr = a(0);
+                let genv = self.env.clone();
+                self.eval(&expr, &genv)?
+            }
+            "make-string-input-stream" => a(0),
+            "read" => {
+                // (read string-stream [eof-error eof-value]): the first form of the text
+                let text = str_of(&a(0));
+                match Reader::new(&text).read() {
+                    Ok(v) => v,
+                    Err(_) => a(2),
+                }
+            }
             "local-to-global" => Value::Float(num_of(&a(0))?),
             "sound-srate" | "control-srate" | "abs-env" | "snd-copy" | "cue" | "sound" => a(0),
             "const" => {
-                let dur = args.get(1).map(num_of).transpose()?.unwrap_or(1.0);
+                let dur = args.get(1).map(num_of).transpose()?.unwrap_or(1.0) * self.stretch;
                 let k = num_of(&a(0))? as f32;
                 Value::Sound(Rc::new(sound::map1(&sound::rest(self.sr, dur), |_| k)))
             }
@@ -1918,6 +2021,7 @@ impl Interp {
 
     fn sound_builtin(&mut self, name: &str, args: Vec<Value>) -> NyResult<Value> {
         let sr = self.sr;
+        let st = self.stretch;
         let a = |i: usize| args.get(i).cloned().unwrap_or(Value::Nil);
         let snd = |v: &Value| -> NyResult<Rc<Sound>> {
             match v {
@@ -2070,10 +2174,10 @@ impl Interp {
                 let mut pts: Vec<(f64, f64)> = nums
                     .chunks(2)
                     .filter(|c| c.len() == 2)
-                    .map(|c| (c[0], c[1]))
+                    .map(|c| (c[0] * st, c[1]))
                     .collect();
                 if nums.len() % 2 == 1 {
-                    pts.push((nums[nums.len() - 1], 0.0));
+                    pts.push((nums[nums.len() - 1] * st, 0.0));
                 }
                 Value::Sound(Rc::new(sound::pwl(sr, &pts)))
             }
@@ -2086,7 +2190,7 @@ impl Interp {
                 }
                 for c in nums[1.min(nums.len())..].chunks(2) {
                     if c.len() == 2 {
-                        pts.push((c[0], c[1]));
+                        pts.push((c[0] * st, c[1]));
                     }
                 }
                 Value::Sound(Rc::new(sound::pwlv(sr, &pts)))
@@ -2096,22 +2200,29 @@ impl Interp {
                 if n.len() < 6 {
                     return rt("env needs t1 t2 t4 l1 l2 l3 [dur]");
                 }
-                let dur = n.get(6).copied().unwrap_or(1.0);
+                let dur = n.get(6).copied().unwrap_or(1.0) * st;
                 Value::Sound(Rc::new(sound::env(
-                    sr, n[0], n[1], n[2], n[3], n[4], n[5], dur,
+                    sr,
+                    n[0] * st,
+                    n[1] * st,
+                    n[2] * st,
+                    n[3],
+                    n[4],
+                    n[5],
+                    dur,
                 )))
             }
             "osc" => {
                 // (osc pitch [dur table phase])
                 let hz = Value::Float(sound::step_to_hz(num_of(&a(0))?));
-                let dur = args.get(1).map(num_of).transpose()?.unwrap_or(1.0);
+                let dur = args.get(1).map(num_of).transpose()?.unwrap_or(1.0) * st;
                 let phase = args.get(3).map(num_of).transpose()?.unwrap_or(0.0);
                 self.table_osc(&hz, dur, &a(2), phase)?
             }
             "sine" => {
                 // (sine step [dur]): a sine at the pitch, like osc with the sine table
                 let hz = Value::Float(sound::step_to_hz(num_of(&a(0))?));
-                let dur = args.get(1).map(num_of).transpose()?.unwrap_or(1.0);
+                let dur = args.get(1).map(num_of).transpose()?.unwrap_or(1.0) * st;
                 self.table_osc(&hz, dur, &Value::Nil, 0.0)?
             }
             "snd-oneshot" => {
@@ -2137,24 +2248,88 @@ impl Interp {
                     .collect();
                 Value::Sound(Rc::new(Sound::at(s.sr, s.start, data)))
             }
-            "osc-tri" | "osc-saw" | "osc-pulse" => {
-                let hz = sound::step_to_hz(num_of(&a(0))?);
-                let dur = args.get(1).map(num_of).transpose()?.unwrap_or(1.0);
-                let shape = match name {
-                    "osc-tri" => "tri",
-                    "osc-saw" => "saw",
-                    _ => "square",
-                };
-                Value::Sound(Rc::new(sound::osc(sr, hz, dur, shape)))
+            "osc-tri" | "osc-saw" => {
+                // (osc-tri hz) / (osc-saw hz): hz in Hertz, one (stretched) second
+                let hz = Value::Float(num_of(&a(0))?);
+                let shape = if name == "osc-tri" { "tri" } else { "saw" };
+                let period = sound::osc(sr, sr / 2048.0, 2048.0 / sr, shape);
+                self.table_osc(&hz, st, &Value::Sound(Rc::new(period)), 0.0)?
             }
+            "osc-pulse" => {
+                // (osc-pulse hz bias): pulse width from bias (-1..1), a number or a sound
+                let hz = num_of(&a(0))?;
+                let n = (st * sr).round() as usize;
+                let bias_s = match a(1) {
+                    Value::Sound(s) => Some(s),
+                    _ => None,
+                };
+                let bias_k = match a(1) {
+                    Value::Sound(_) => 0.0,
+                    o => num_of(&o).unwrap_or(0.0) as f32,
+                };
+                let data: Vec<f32> = (0..n)
+                    .map(|i| {
+                        let ph = (i as f64 * hz / sr).fract() as f32;
+                        let bias = bias_s
+                            .as_ref()
+                            .and_then(|s| s.data.get(i).copied())
+                            .unwrap_or(bias_k);
+                        if ph * 2.0 - 1.0 < bias {
+                            1.0
+                        } else {
+                            -1.0
+                        }
+                    })
+                    .collect();
+                Value::Sound(Rc::new(Sound::new(sr, data)))
+            }
+            "snd-buzz" => {
+                // (snd-buzz n sr hz t0 modulation)
+                let n = int_of(&a(0))?.max(1) as usize;
+                let rate = num_of(&a(1))?;
+                let hz = num_of(&a(2))?;
+                let t0 = num_of(&a(3))?;
+                let m = snd(&a(4))?;
+                let data: Vec<f32> = (0..m.data.len())
+                    .map(|i| {
+                        let t = i as f64 / rate + m.data[i] as f64;
+                        (1..=n)
+                            .map(|k| (t * hz * k as f64 * std::f64::consts::TAU).sin())
+                            .sum::<f64>() as f32
+                            / n as f32
+                    })
+                    .collect();
+                Value::Sound(Rc::new(Sound::at(rate, t0, data)))
+            }
+            "buzz" => {
+                // (buzz n hz modulation): n equal harmonics of hz, phase-modulated by `modulation`
+                let n = int_of(&a(0))?.max(1) as usize;
+                let hz = num_of(&a(1))?;
+                let m = snd(&a(2))?;
+                let len = m.data.len();
+                let data: Vec<f32> = (0..len)
+                    .map(|i| {
+                        let t = i as f64 / sr + m.data[i] as f64;
+                        (1..=n)
+                            .map(|k| (t * hz * k as f64 * std::f64::consts::TAU).sin())
+                            .sum::<f64>() as f32
+                            / n as f32
+                    })
+                    .collect();
+                Value::Sound(Rc::new(Sound::new(sr, data)))
+            }
+            "loud" => Value::Sound(Rc::new(sound::scale(
+                10f32.powf(num_of(&a(0))? as f32 / 20.0),
+                &*snd(&a(1))?,
+            ))),
             "hzosc" => {
                 // (hzosc hz-or-sound [table phase])
                 let phase = args.get(2).map(num_of).transpose()?.unwrap_or(0.0);
-                self.table_osc(&a(0), 1.0, &a(1), phase)?
+                self.table_osc(&a(0), st, &a(1), phase)?
             }
             "lfo" => {
                 // (lfo hz [dur table phase]) — control-rate in Nyquist; here at the sound rate.
-                let dur = args.get(1).map(num_of).transpose()?.unwrap_or(1.0);
+                let dur = args.get(1).map(num_of).transpose()?.unwrap_or(1.0) * st;
                 let phase = args.get(3).map(num_of).transpose()?.unwrap_or(0.0);
                 self.table_osc(&a(0), dur, &a(2), phase)?
             }
@@ -2179,8 +2354,11 @@ impl Interp {
                 self.table((*s).clone())
             }
             "exp-dec" => {
-                let (hold, halfdec, len) =
-                    (num_of(&a(0))?, num_of(&a(1))?.max(1e-6), num_of(&a(2))?);
+                let (hold, halfdec, len) = (
+                    num_of(&a(0))? * st,
+                    num_of(&a(1))?.max(1e-6) * st,
+                    num_of(&a(2))? * st,
+                );
                 let n = (len * sr).round() as usize;
                 let data: Vec<f32> = (0..n)
                     .map(|i| {
@@ -2203,7 +2381,7 @@ impl Interp {
                 }
                 for c in nums[1.min(nums.len())..].chunks(2) {
                     if c.len() == 2 {
-                        pts.push((c[0], c[1]));
+                        pts.push((c[0] * st, c[1]));
                     }
                 }
                 Value::Sound(Rc::new(sound::pwev(sr, &pts)))
@@ -2284,7 +2462,7 @@ impl Interp {
                         sr,
                         sound::step_to_hz(num_of(&a(0))?),
                         0.0,
-                        args.get(1).map(num_of).transpose()?.unwrap_or(1.0),
+                        args.get(1).map(num_of).transpose()?.unwrap_or(1.0) * st,
                         args.get(2).map(num_of).transpose()?.unwrap_or(0.001),
                     )
                 };
@@ -2314,12 +2492,13 @@ impl Interp {
             }
             "set-logical-stop" | "set-logical-stop-abs" | "snd-set-logical-stop" => a(0),
             "noise" => {
-                let dur = args.first().map(num_of).transpose()?.unwrap_or(1.0);
+                let dur = args.first().map(num_of).transpose()?.unwrap_or(1.0) * st;
                 self.rng = self.rng.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
                 Value::Sound(Rc::new(sound::noise(sr, dur, self.rng)))
             }
             "s-rest" | "s-rest-abs" => {
-                let dur = args.first().map(num_of).transpose()?.unwrap_or(1.0);
+                let dur = args.first().map(num_of).transpose()?.unwrap_or(1.0)
+                    * if name == "s-rest" { st } else { 1.0 };
                 Value::Sound(Rc::new(sound::rest(sr, dur)))
             }
             "extract" | "extract-abs" => {
@@ -2341,7 +2520,7 @@ impl Interp {
                 Value::Sound(Rc::new(sound::sim(&parts)))
             }
             "at" | "at-abs" => {
-                let t = num_of(&a(0))?;
+                let t = num_of(&a(0))? * if name == "at" { st } else { 1.0 };
                 let s = snd(&a(1))?;
                 Value::Sound(Rc::new(Sound {
                     sr: s.sr,
@@ -2458,7 +2637,12 @@ impl Interp {
             }
             "clip" => {
                 let k = num_of(&a(1))?.abs() as f32;
-                Value::Sound(Rc::new(sound::map1(&*snd(&a(0))?, move |x| x.clamp(-k, k))))
+                match a(0) {
+                    Value::Sound(s) => {
+                        Value::Sound(Rc::new(sound::map1(&s, move |x| x.clamp(-k, k))))
+                    }
+                    o => Value::Float(num_of(&o)?.clamp(-(k as f64), k as f64)),
+                }
             }
             "shape" => {
                 // (shape signal table origin): table maps [-1,1] → value; we approximate with the sound as a lookup.
@@ -2724,6 +2908,9 @@ fn is_sound_op(name: &str) -> bool {
             | "nrev"
             | "sine"
             | "snd-oneshot"
+            | "loud"
+            | "buzz"
+            | "snd-buzz"
             | "snd-const"
             | "exp-dec"
             | "pwev"

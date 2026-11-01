@@ -32,6 +32,8 @@ pub struct Lambda {
     pub params: Vec<String>,
     /// `&optional` parameters with their defaults (evaluated at call time).
     pub optional: Vec<(String, Value)>,
+    /// `&key` parameters with their defaults: bound from `:name value` pairs at the call.
+    pub keys: Vec<(String, Value)>,
     pub rest: Option<String>,
     pub body: Vec<Value>,
     pub closure: Env,

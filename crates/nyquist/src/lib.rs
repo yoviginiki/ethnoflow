@@ -67,6 +67,26 @@ pub fn run_plugin(
     if header.codetype.starts_with("sal") {
         return Err("SAL plug-ins are not supported yet (only LISP syntax)".into());
     }
+    // Deeply recursive plug-ins (list builders) need more stack than a default thread has.
+    let header = header.clone();
+    let values = values.to_vec();
+    let channels = channels.to_vec();
+    std::thread::Builder::new()
+        .name("nyquist".into())
+        .stack_size(256 * 1024 * 1024)
+        .spawn(move || run_plugin_here(&header, &values, &channels, sr, selection_start))
+        .map_err(|e| format!("cannot start the plug-in thread: {e}"))?
+        .join()
+        .map_err(|_| "the plug-in crashed".to_string())?
+}
+
+fn run_plugin_here(
+    header: &PluginHeader,
+    values: &[(String, ControlValue)],
+    channels: &[Vec<f32>],
+    sr: f64,
+    selection_start: f64,
+) -> Result<RunResult, String> {
     let mut it = Interp::new(sr);
     for c in &header.controls {
         let v = values
