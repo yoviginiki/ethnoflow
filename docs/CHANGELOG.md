@@ -3,6 +3,18 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Audacity Nyquist plug-ins — A9.1 + A9.2 (2026-11-01 night).** New crate
+  `crates/nyquist` (ADR-0024): an XLISP interpreter with fixed-array sounds, the Audacity
+  header (`;control` and `$control`, `(_ "…")`), properties of `*track*` / `*selection*` /
+  `*project*`, macros, `catch/throw`, `&key`, `stretch` as a time warp, streaming `snd-fetch`, ~190 primitives. 19 of 20
+  plug-ins from Audacity 3.4.2 and all 18 generators from plugins.audacityteam.org run
+  unchanged (`examples/run_ny.rs`; not yet: FFT /
+  object-system / `pv-time-pitch` ones, SAL). Shell: `EditOp::Nyquist` (process / generate
+  with preview), `ny_analyze` (message + labels), `ny_list` / `ny_import` /
+  `ny_open_folder` / `ny_source`; folder `Documents\EthnoFlow\Plugins`; four bundled
+  plug-ins (gain, tremolo, cosine fade, measure level) as templates. Editor panel with
+  controls generated from the header; bridge ops `ny_list`, `ny_analyze`, `edit` op
+  `nyquist`; smoke; guide BG/EN.
 - **Echo and reverb on a take — A7 second slice (2026-11-01 night).** `fx.rs`: `echo`
   (feedback delay line, mix) and `reverb` (the master's Schroeder room per channel, mix);
   test: an impulse repeats at the delay with feedback, the reverb leaves a tail. Editor ops

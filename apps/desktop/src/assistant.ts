@@ -21,7 +21,7 @@ import { readNowPlaying, stopAll } from "./nowPlaying";
 import { hzToMidi as tunerHzToMidi } from "./format";
 import { clampA4, readTuner, targetsFor, TUNER_INSTRUMENTS, type TunerInstrument } from "./tunerTargets";
 import { droneRoot, droneSettings, padRoot, padSettings, voicingNotes } from "./layers";
-import type { SongMap } from "./api";
+import type { NyValue, SongMap } from "./api";
 
 /**
  * Assistant bridge: commands dropped into `<config>/assistant/inbox/*.json` by a
@@ -479,6 +479,12 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
       return { silences: await api.editSilences(typeof cmd.threshold_db === "number" ? cmd.threshold_db : null, typeof cmd.min_s === "number" ? cmd.min_s : null) };
     case "edit_contrast":
       return await api.editContrast(Number(cmd.fg_a), Number(cmd.fg_b), Number(cmd.bg_a), Number(cmd.bg_b));
+    case "ny_list":
+      // A9: the Audacity Nyquist plug-ins (bundled + Documents\EthnoFlow\Plugins) with their controls.
+      return { folder: await api.nyFolder(), plugins: await api.nyList() };
+    case "ny_analyze":
+      // A9: run a plug-in on [a, b) of the open take without changing it: message / labels.
+      return await api.nyAnalyze(String(cmd.plugin), Array.isArray(cmd.values) ? (cmd.values as NyValue[]) : [], Number(cmd.a ?? 0), Number(cmd.b ?? 1e9));
     case "edit_undo":
       return await api.editUndo();
     case "edit_redo":

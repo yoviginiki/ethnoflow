@@ -96,7 +96,7 @@ UI → запазване → експорт → мост → smoke → ръко
 | **A10 Формати** | AIFF/Ogg експорт, M4A импорт (symphonia), експорт по маркери, MP3 (ADR). **Първи срез 1.11: експорт по секции** (`export_song.start_s`, „Експорт по секции“, bridge `export_sections`, smoke) **+ M4A/AAC/MP4 импорт** (symphonia aac/isomp4, ADR-0017 допълнение); AIFF/Ogg/MP3 експорт – чакат решение (кодери) | 1.5 дни |
 | **A12 Достъпност и макроси** | проверка с NVDA, макроси от стъпки на редактора върху много файлове. **Макросите направени 1.11** (запис на веригата, библиотека вид „macro“, приложи тук / върху файлове, bridge `edit_macro`, smoke); проверката с NVDA остава ръчна задача | 1.5 дни |
 | **A8 Ефект-добавки** | CLAP ефекти (не само инструменти) върху запис и писта | 2 дни |
-| **A9 Nyquist** | виж §3 | 4–6 дни за първия срез |
+| **A9 Nyquist** | виж §3 — A9.1 + A9.2 DONE 1.11 нощ, 17/20 добавки на Audacity работят | A9.3: FFT/обекти/SAL |
 
 Общо ≈ 21–23 дни. Ред: A3 → A7 → A5 → A6 → A11 → A1 → A2 → A4 → A10 → A12 → A8 → A9
 (Nyquist може да тръгне успоредно след A7, защото ползва същите операции като примитиви).
@@ -129,10 +129,47 @@ Dannenberg, лиценз подобен на BSD), ~50 000 реда с XLISP; д
 Предложение: **вариант 2**, след A7 (операциите с преглед са точно примитивите, които
 интерпретаторът ще извиква). ADR за интерпретаторската библиотека преди код.
 
+### 3.1 Решение и състояние (1.11.2026 нощ)
+
+Собственикът: **„искам да мога да ползвам готовите за Audacity“** → вариант 2, но с
+критерий **съвместимост първо**: не „подмножество за наши добавки“, а интерпретатор, на
+който истинските `.ny` на Audacity тръгват без промяна. Без външна библиотека (ADR-0024):
+`crates/nyquist` е собствен XLISP интерпретатор (reader, evaluator, свойства, макроси с
+backquote, `catch/throw`, `return-from`, `progv`, `seqrep/simrep`, поточен `snd-fetch`) със
+звуци като фиксирани масиви и ~170 примитива (аритметика, списъци, низове, `format`,
+`mult/sum/diff/scale`, филтри 1–8 порядък, `biquad`, `pwl/pwlv/pwev/env/exp-dec`, `osc`
+с таблици и фаза, `hzosc/fmosc/lfo`, `noise`, `pluck`, `jcrev`, `snd-follow`, `snd-oneshot`,
+`snd-avg/rms`, `extract/at/seq/sim/stretch`, `snd-from-array/snd-fetch-array`, Audacity-свойства
+`*track*`/`*selection*`/`*project*`). Заглавката: и `;control`, и `$control` (3.x, многоредови
+списъци с `(_ "…")`).
+
+Състояние, тест-набор = 20 добавки от Audacity 3.4.2 (`cargo run -p ethnoflow-nyquist --example run_ny -- *.ny`):
+
+| Работят (19 + 18) | Не работят | Защо |
+|---|---|---|
+| Audacity 3.4.2: Shelf Filter, Studio Fade Out, Adjustable Fade, Beat Finder, Clip Fix, Crossfade Clips, Delay (без HQ pitch), High-Pass, Low-Pass, Label Sounds, Limiter, Noise Gate, Notch, Pluck, Rhythm Track, Risset Drum, Measure RMS, Tremolo, Vocoder. Генератори от plugins.audacityteam.org (собственикът: „искам да имам генератори на звук“, 1.11 нощ): DTMF, DTMF (random), Fire and Explosion, HQ-Tone, Narrowband Noise, Pluck (Hz), Binaural Tones with surf 2, Buzz tone, Nyquist Generate Prompt, Harmonic Noise, KLSTRBAS, PWM, Risset Bell, Random Tones, Sequence (sq1), Surf (lfo + oxy), Tuning fork – всичките 18 | Vocal Reduction and Isolation, Spectral Edit*, Delay › High-quality pitch shift | `snd-fft`/`snd-ifft`, XLISP обекти (`send`), `pv-time-pitch` – FFT/фазов вокодер и обектна система (A9.3) |
+
+Какво наложиха генераторите (и влезе в интерпретатора): `stretch`/`stretch-abs`/`abs-env` като
+времева обвивка (всички поведения – `osc`, `pwl`, `noise`, `lfo`, `env`… – умножават
+дължините си по фактора), `&key` параметри, `eval`/`read`/`make-string-input-stream`,
+нотните константи `c0…b8` (`c4` = 60), `osc-pulse` с ширина от звук, `buzz`/`snd-buzz`,
+`loud`, `get-transpose`/`get-sustain`/`get-tempo`, изпълнение в нишка с 256 MB стек
+(рекурсивни построители на списъци).
+
+Срезове: **A9.1 DONE** (интерпретатор + тестове), **A9.2 DONE** (папка
+`Documents\EthnoFlow\Plugins`, команди `ny_list/ny_import/ny_open_folder/ny_source/ny_analyze`,
+`EditOp::Nyquist` с преглед, панел в редактора с контроли от заглавката, 4 вградени добавки =
+шаблони, bridge, smoke, guide). **A9.3 NOT STARTED**: `snd-fft`/`snd-ifft` (има FFT в
+`crates/analysis`), `pv-time-pitch` (има фазов вокодер), обекти; SAL синтаксис; редактор на
+кода с грешка на ред; производителност на цикли по семпли (Clip Fix ≈ 5 s за 2 s стерео →
+компилация до затворени функции или кеш на търсенето на символи).
+
 ## 4. Решения за собственика
 
 1. Редът A3 → A7 → A5 → … – добре ли е, или искаш Nyquist по-рано?
 2. Nyquist: вариант 2 (Rust подмножество, същият синтаксис) или вариант 1 (оригиналният C)?
+   → **решено 1.11 нощ** („искам да мога да ползвам готовите за Audacity“): вариант 2 със
+   съвместимост като критерий — §3.1.
 3. MP3: LAME (LGPL, C) като зависимост (ADR) или оставаме на WAV/FLAC (+ Ogg)?
 4. VST3/LV2: отделен ADR (C++ SDK, лицензи) или остават извън обхвата (CLAP само)?
 

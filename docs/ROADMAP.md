@@ -172,8 +172,12 @@ sound-activated recording), A2 (punch & roll), A3 first slice (clip envelope), A
 (sync-locked time edits), A5 (noise reduction, de-clip, de-ess, click removal), A6 (phase
 vocoder tempo / pitch), A7 first slice (EQ / compressor / limiter with preview), A10 first
 slice (export by section, M4A import), A11 (spectrogram, spectrum, silences, contrast),
-A12 first slice (macros). Open: A3 draw tool, A7 echo / reverb on a take, A8 CLAP effects,
-A9 Nyquist (owner decision), A10 AIFF / Ogg / MP3 export (owner decision), A12 NVDA check.
+A12 first slice (macros), A7 second slice (echo / reverb). **A9 Nyquist (1.11 night, after
+"искам да мога да ползвам готовите за Audacity"):** own XLISP interpreter `crates/nyquist`
+(ADR-0024), 19 of 20 Audacity 3.4.2 plug-ins and all 18 generators from plugins.audacityteam.org run unchanged, plug-in folder + editor panel
+with header controls, preview / apply / analyze, 4 bundled plug-ins as templates. Open: A3
+draw tool, A8 CLAP effects, A9.3 (FFT primitives, objects, SAL, speed), A10 AIFF / Ogg /
+MP3 export (owner decision), A12 NVDA check.
 
 **Received 1.11.2026 evening:** the Audacity feature list + "we must be able to write Nyquist plugins later" → `docs/design/AUDACITY_PROGRAM_PLAN.md` (audit per feature, stages A1–A12, Nyquist options; the owner then said "давай E2 E3" = stage A7 first).
 

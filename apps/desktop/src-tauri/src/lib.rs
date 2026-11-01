@@ -16,6 +16,7 @@ mod library_cmds;
 mod live_cmds;
 mod midi_cmds;
 mod midi_in_cmds;
+mod nyquist_cmds;
 mod pad_cmds;
 mod preset_cmds;
 mod project_cmds;
@@ -185,6 +186,12 @@ pub fn run() {
             edit_cmds::edit_snap,
             edit_cmds::edit_play,
             edit_cmds::edit_save,
+            edit_cmds::ny_analyze,
+            nyquist_cmds::ny_list,
+            nyquist_cmds::ny_folder,
+            nyquist_cmds::ny_open_folder,
+            nyquist_cmds::ny_import,
+            nyquist_cmds::ny_source,
             arrangement_cmds::export_arrangement_mix,
             ambient_cmds::ambient_get,
             ambient_cmds::scapes_get,

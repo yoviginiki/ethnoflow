@@ -153,6 +153,90 @@ pub enum EditOp {
         damp: f32,
         mix: f32,
     },
+    /// A9: an Audacity Nyquist plug-in (`bundled:<id>` or a `.ny` path) on [a, b) with its
+    /// control values; a generate plug-in replaces [a, b) (inserts when a = b).
+    Nyquist {
+        a: f64,
+        b: f64,
+        plugin: String,
+        values: Vec<NyValue>,
+    },
+}
+
+/// One control value for a Nyquist plug-in (numbers for sliders / choices, text otherwise).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NyValue {
+    pub var: String,
+    pub value: NyScalar,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum NyScalar {
+    Number(f64),
+    Text(String),
+}
+
+fn ny_values(values: &[NyValue]) -> Vec<(String, nyquist::ControlValue)> {
+    values
+        .iter()
+        .map(|v| {
+            (
+                v.var.clone(),
+                match &v.value {
+                    NyScalar::Number(n) => nyquist::ControlValue::Number(*n),
+                    NyScalar::Text(s) => nyquist::ControlValue::Text(s.clone()),
+                },
+            )
+        })
+        .collect()
+}
+
+fn deinterleave(samples: &[f32], channels: usize) -> Vec<Vec<f32>> {
+    let ch = channels.max(1);
+    let mut out = vec![Vec::with_capacity(samples.len() / ch); ch];
+    for frame in samples.chunks(ch) {
+        for (c, v) in frame.iter().enumerate() {
+            out[c].push(*v);
+        }
+    }
+    out
+}
+
+/// Interleave the plug-in's channels into `channels` (mono → copied, extra → dropped).
+fn interleave(chans: &[Vec<f32>], channels: usize) -> Vec<f32> {
+    let n = chans.iter().map(|c| c.len()).max().unwrap_or(0);
+    let mut out = Vec::with_capacity(n * channels);
+    for i in 0..n {
+        for c in 0..channels {
+            let src = chans.get(c).or_else(|| chans.first());
+            out.push(src.and_then(|s| s.get(i)).copied().unwrap_or(0.0));
+        }
+    }
+    out
+}
+
+/// A9: run a plug-in on the channels of [fa, fb) of `cur`; `Ok(None)` when it returned audio
+/// that replaces the region, `Err` with the plug-in's message otherwise.
+fn run_nyquist(
+    cur: &AudioBuffer,
+    fa: usize,
+    fb: usize,
+    plugin: &str,
+    values: &[NyValue],
+) -> CmdResult<nyquist::RunResult> {
+    let src = crate::nyquist_cmds::load_source(plugin)?;
+    let header = nyquist::parse_header(&src);
+    let ch = cur.channels as usize;
+    let piece = cur.slice_frames(fa, fb);
+    let channels = if header.kind == "generate" {
+        Vec::new()
+    } else {
+        deinterleave(&piece.samples, ch)
+    };
+    let sr = cur.sample_rate as f64;
+    nyquist::run_plugin(&header, &ny_values(values), &channels, sr, fa as f64 / sr)
+        .map_err(|e| err("plugin_error", e))
 }
 
 impl EditOp {
@@ -182,6 +266,7 @@ impl EditOp {
             EditOp::Pitch { .. } => "pitch",
             EditOp::Echo { .. } => "echo",
             EditOp::Reverb { .. } => "reverb",
+            EditOp::Nyquist { .. } => "nyquist",
         }
     }
 }
@@ -624,6 +709,54 @@ fn compute(e: &mut EditSession, op: &EditOp) -> CmdResult<Option<AudioBuffer>> {
             }
             Some(out)
         }
+        EditOp::Nyquist {
+            a,
+            b,
+            plugin,
+            values,
+        } => {
+            let (fa, fb) = match region(&cur, *a, *b) {
+                Ok(r) => r,
+                // A generate plug-in may insert at the cursor.
+                Err(_) => {
+                    let f = at_frame(&cur, *a);
+                    (f, f)
+                }
+            };
+            let res = run_nyquist(&cur, fa, fb, plugin, values)?;
+            match res.output {
+                nyquist::PluginOutput::Audio(chans) => {
+                    let max_frames = (sr as usize) * 60 * 60;
+                    if chans.iter().any(|c| c.len() > max_frames) {
+                        return Err(err(
+                            "plugin_error",
+                            "the plug-in returned more than an hour",
+                        ));
+                    }
+                    let samples = interleave(&chans, ch as usize);
+                    Some(replace_region(&cur, fa, fb, |_| {
+                        AudioBuffer::new(sr, ch, samples)
+                    }))
+                }
+                nyquist::PluginOutput::Message(m) => return Err(err("plugin_message", m)),
+                nyquist::PluginOutput::Labels(_) => {
+                    return Err(err(
+                        "plugin_message",
+                        "the plug-in returned labels: run it as analysis",
+                    ))
+                }
+                nyquist::PluginOutput::Nothing => {
+                    return Err(err(
+                        "plugin_message",
+                        if res.printed.is_empty() {
+                            "the plug-in returned nothing".to_string()
+                        } else {
+                            res.printed
+                        },
+                    ))
+                }
+            }
+        }
         EditOp::Stretch { a, b, factor } => {
             if !(0.25..=4.0).contains(factor) {
                 return Err(err("invalid_argument", "stretch factor 0.25..4"));
@@ -743,6 +876,7 @@ pub async fn edit_preview(
         EditOp::Deess { a, b, .. } | EditOp::Declick { a, b, .. } => (*a, *b),
         EditOp::Stretch { a, b, .. } | EditOp::Pitch { a, b, .. } => (*a, *b),
         EditOp::Echo { a, b, .. } | EditOp::Reverb { a, b, .. } => (*a, *b),
+        EditOp::Nyquist { a, b, .. } => (*a, *b),
         EditOp::FadeIn { a, b } | EditOp::FadeOut { a, b } | EditOp::Reverse { a, b } => (*a, *b),
         _ => {
             return Err(err(
@@ -977,6 +1111,61 @@ pub async fn edit_save(state: State<'_, AppState>, label: Option<String>) -> Cmd
     Ok(EditSaved {
         project,
         take_id: take.id,
+    })
+}
+
+/// A9: what an analyze plug-in (or any plug-in that returns text) says about [a, b).
+#[derive(Debug, Clone, Serialize)]
+pub struct NyAnalysis {
+    pub message: Option<String>,
+    pub labels: Vec<nyquist::Label>,
+    pub printed: String,
+    /// Set when the plug-in returned audio instead (use `edit_apply` for it).
+    pub returned_audio: bool,
+}
+
+/// A9: run a Nyquist plug-in on [a, b) of the working copy without changing it and return
+/// its message / labels (times relative to the selection start).
+#[tauri::command]
+pub async fn ny_analyze(
+    state: State<'_, AppState>,
+    plugin: String,
+    values: Vec<NyValue>,
+    a: f64,
+    b: f64,
+) -> CmdResult<NyAnalysis> {
+    let cur = {
+        let mut s = state.lock();
+        let e = session(&mut s)?;
+        Arc::clone(e.current())
+    };
+    let (fa, fb) = region(&cur, a, b)?;
+    let res = run_nyquist(&cur, fa, fb, &plugin, &values)?;
+    Ok(match res.output {
+        nyquist::PluginOutput::Message(m) => NyAnalysis {
+            message: Some(m),
+            labels: Vec::new(),
+            printed: res.printed,
+            returned_audio: false,
+        },
+        nyquist::PluginOutput::Labels(l) => NyAnalysis {
+            message: None,
+            labels: l,
+            printed: res.printed,
+            returned_audio: false,
+        },
+        nyquist::PluginOutput::Audio(_) => NyAnalysis {
+            message: None,
+            labels: Vec::new(),
+            printed: res.printed,
+            returned_audio: true,
+        },
+        nyquist::PluginOutput::Nothing => NyAnalysis {
+            message: None,
+            labels: Vec::new(),
+            printed: res.printed,
+            returned_audio: false,
+        },
     })
 }
 

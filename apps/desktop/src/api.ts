@@ -1607,7 +1607,49 @@ export type EditOp =
   | { op: "stretch"; a: number; b: number; factor: number }
   | { op: "pitch"; a: number; b: number; semitones: number }
   | { op: "echo"; a: number; b: number; delay_s: number; feedback: number; mix: number }
-  | { op: "reverb"; a: number; b: number; size: number; damp: number; mix: number };
+  | { op: "reverb"; a: number; b: number; size: number; damp: number; mix: number }
+  | { op: "nyquist"; a: number; b: number; plugin: string; values: NyValue[] };
+
+/** A9: one control of an Audacity Nyquist plug-in, from its `;control` / `$control` header line. */
+export interface NyControl {
+  var: string;
+  label: string;
+  kind: "int" | "float" | "int_text" | "float_text" | "choice" | "string" | "text" | "time" | "file";
+  text: string;
+  initial: number;
+  min: number | null;
+  max: number | null;
+  choices: string[];
+  default_text: string;
+}
+export interface NyPlugin {
+  /** `bundled:<id>` or the absolute path of the .ny file. */
+  id: string;
+  file: string;
+  bundled: boolean;
+  name: string;
+  kind: "process" | "generate" | "analyze" | "tool" | string;
+  author: string;
+  info: string;
+  preview: string;
+  codetype: string;
+  controls: NyControl[];
+}
+export interface NyValue {
+  var: string;
+  value: number | string;
+}
+export interface NyLabel {
+  start: number;
+  end: number | null;
+  text: string;
+}
+export interface NyAnalysis {
+  message: string | null;
+  labels: NyLabel[];
+  printed: string;
+  returned_audio: boolean;
+}
 
 /** One band of the editor's EQ (A7 = E3). */
 export interface EqBand {
@@ -1985,6 +2027,13 @@ export const api = {
   editSilences: (thresholdDb: number | null, minS: number | null) => invoke<[number, number][]>("edit_silences", { thresholdDb, minS }),
   editContrast: (fgA: number, fgB: number, bgA: number, bgB: number) => invoke<Contrast>("edit_contrast", { fgA, fgB, bgA, bgB }),
   editSave: (label: string | null) => invoke<{ project: ProjectView; take_id: string }>("edit_save", { label }),
+  // A9: Audacity Nyquist plug-ins
+  nyList: () => invoke<NyPlugin[]>("ny_list"),
+  nyFolder: () => invoke<string>("ny_folder"),
+  nyOpenFolder: () => invoke<string>("ny_open_folder"),
+  nyImport: (path: string) => invoke<NyPlugin>("ny_import", { path }),
+  nySource: (id: string) => invoke<string>("ny_source", { id }),
+  nyAnalyze: (plugin: string, values: NyValue[], a: number, b: number) => invoke<NyAnalysis>("ny_analyze", { plugin, values, a, b }),
 
   // Preset library
   libraryList: (kind: LibraryKind | null, project: string | null, query: string | null, sortBy: LibrarySortBy) =>

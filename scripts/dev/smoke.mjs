@@ -751,6 +751,22 @@ async function main() {
       const mac = expectOk(send({ op: "edit_macro", ops: [{ op: "gain", a: 0, b: 1, db: -3 }, { op: "fade_out", a: 0, b: 1 }] }));
       if (mac.versions.length !== before.versions.length + 2) throw new Error(`macro steps ${before.versions.length} → ${mac.versions.length}`);
       near(mac.seconds, before.seconds, "macro keeps the length");
+      // A9: Audacity Nyquist plug-ins — the bundled gain plug-in lowers the peak of [1, 2) by 6 dB,
+      // the bundled analyze plug-in reports dBFS, the tremolo keeps the length.
+      const ny = expectOk(send({ op: "ny_list" }));
+      const gain = ny.plugins.find((p) => p.id === "bundled:gain");
+      const measure = ny.plugins.find((p) => p.id === "bundled:measure");
+      if (!gain || !measure || gain.controls.length !== 1 || gain.controls[0].var !== "gain") throw new Error(`bundled plug-ins ${JSON.stringify(ny.plugins.map((p) => p.id))}`);
+      const peakBefore = expectOk(send({ op: "edit_spectrum", a: 1, b: 2, bands: 16 })).peak_db;
+      const nyst = expectOk(send({ op: "edit", edit: { op: "nyquist", a: 1, b: 2, plugin: "bundled:gain", values: [{ var: "gain", value: -6 }] } }));
+      near(nyst.seconds, mac.seconds, "nyquist gain keeps the length");
+      const peakAfter = expectOk(send({ op: "edit_spectrum", a: 1, b: 2, bands: 16 })).peak_db;
+      if (!(peakBefore - peakAfter > 4.5 && peakBefore - peakAfter < 7.5)) throw new Error(`nyquist gain: peak ${peakBefore.toFixed(1)} → ${peakAfter.toFixed(1)} dB`);
+      const an = expectOk(send({ op: "ny_analyze", plugin: "bundled:measure", a: 1, b: 2 }));
+      if (!an.message || !an.message.includes("dBFS")) throw new Error(`nyquist analyze: ${JSON.stringify(an)}`);
+      const trem = expectOk(send({ op: "edit", edit: { op: "nyquist", a: 1, b: 2, plugin: "bundled:tremolo", values: [{ var: "depth", value: 50 }, { var: "rate", value: 6 }, { var: "shape", value: 1 }] } }));
+      near(trem.seconds, mac.seconds, "nyquist tremolo keeps the length");
+      if (trem.versions.length !== mac.versions.length + 2) throw new Error(`nyquist steps ${mac.versions.length} → ${trem.versions.length}`);
       near(expectOk(send({ op: "edit_jump", step: 1 })).seconds, len - 1, "jump to step 1");
       const saved = expectOk(send({ op: "edit_save", label: "smoke edit" }));
       const tk = saved.project.takes.find((x) => x.id === saved.take_id);

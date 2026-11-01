@@ -22,6 +22,7 @@ ethnoflow-music-core = { path = "../../../crates/music-core" }
 ethnoflow-analysis = { path = "../../../crates/analysis" }
 ethnoflow-plugin-host = { path = "../../../crates/plugin-host" }
 ethnoflow-lessons = { path = "../../../crates/lessons" }
+ethnoflow-nyquist = { path = "../../../crates/nyquist" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 log = { workspace = true }

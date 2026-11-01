@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type WheelEvent as RWheelEvent } from "react";
 import { api, describeError, type Contrast, type EditOp, type EditStatus, type EqBand, type PlayerStatus, type Spectrogram, type SpectrumBand, type WaveformPeaks } from "./api";
 import { SpectrogramView } from "./SpectrogramView";
+import { NyquistPanel } from "./NyquistPanel";
 import { PresetLibrary } from "./PresetLibrary";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { IMPORT_EXTENSIONS } from "./api";
@@ -589,6 +590,9 @@ export function EditScreen() {
           </div>
           <div className="muted small">{t.editMacroHint}</div>
         </section>
+      )}
+      {status && (
+        <NyquistPanel region={region} selection={selection} cursor={cursor} busy={busy} run={run} onPlaying={setPlaying} selectedOutput={selectedOutput} fail={fail} />
       )}
 
       {status && (
