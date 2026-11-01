@@ -167,6 +167,8 @@ Shipped: 1 styles, 2 takes/comping, 3 sampler + follow the chord + multisample f
 EQ/compressor + −14 LUFS export, 5 audio editor with history, 6 keyboard everywhere (K1/K2/K4),
 7 the atmosphere knows the bar + S2 tension, 8 style templates + FLAC export + "What next".
 
+**Received 1.11.2026 evening:** the Audacity feature list + "we must be able to write Nyquist plugins later" → `docs/design/AUDACITY_PROGRAM_PLAN.md` (audit per feature, stages A1–A12, Nyquist options; the owner then said "давай E2 E3" = stage A7 first).
+
 **User decisions still open:** MP3 export (LAME, LGPL/C → ADR or FLAC only); keyboard K3
 (pad / drone / module per key) and pitch bend / mod wheel; the audio editor's home (now a tab
 in "Свири") and merging Sample Lab into it; Soundscapes S3–S8; the owner's MIDI keyboard model.
