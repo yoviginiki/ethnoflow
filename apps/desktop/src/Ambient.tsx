@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { Soundscapes } from "./Soundscapes";
+import { RACKS, type RackKind } from "./rackAdapter";
 import { open } from "@tauri-apps/plugin-dialog";
 import { AMBIENT_TAGS, api, describeError, IMPORT_EXTENSIONS, type Ambient as AmbientRack, type AmbientLayer, type AmbientTag, type LayerKind, type LayerSource, type Macros, type PresetSummary } from "./api";
 import { DEFAULT_MACROS, KIND_LABEL, MAX_AMBIENT_LAYERS, defaultSource, makeLayer } from "./ambientPresets";
@@ -60,13 +61,14 @@ const COMMIT_MS = 80;
  * sources and audio loops on the same graph as the drone, the pad and the tracks.
  * Sound starts only on Play; every slider is smoothed in the engine.
  */
-export function Ambient() {
+export function Ambient({ kind = "ambient" }: { kind?: RackKind } = {}) {
+  const R = RACKS[kind];
   const s = useStore();
   const t = messages[s.prefs.lang];
   const project = s.project!;
-  const rack = s.ambient;
-  const playing = s.layers.ambient;
-  const status = s.ambientStatus;
+  const rack = R.read(s);
+  const playing = s.layers[R.layer];
+  const status = R.readStatus(s);
   const [selected, setSelected] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<{ kind: "remove"; id: string } | { kind: "deletePreset"; id: string } | null>(null);
   const [presets, setPresets] = useState<PresetSummary[]>([]);
@@ -94,18 +96,16 @@ export function Ambient() {
   // Load the rack if the project opened before the hook fetched it.
   useEffect(() => {
     if (rack) return;
-    api
-      .ambientGet()
-      .then((v) => useStore.getState().setAmbient(v.ambient))
+    R.get()
+      .then((v) => R.store(v.ambient))
       .catch(fail);
   }, [rack, fail]);
 
   // Meters and pitches, also while stopped (pitches show what a layer would play).
   useEffect(() => {
     const id = window.setInterval(() => {
-      api
-        .ambientStatus()
-        .then((st) => useStore.getState().setAmbientStatus(st))
+      R.status()
+        .then((st) => R.storeStatus(st))
         .catch(() => undefined);
     }, POLL_MS);
     return () => window.clearInterval(id);
@@ -114,7 +114,7 @@ export function Ambient() {
   /** Local state now, save + apply shortly after (sliders fire continuously). */
   const commit = useCallback(
     (next: AmbientRack) => {
-      useStore.getState().setAmbient(next);
+      R.store(next);
       pendingRef.current = next;
       if (timerRef.current !== null) return;
       timerRef.current = window.setTimeout(() => {
@@ -122,11 +122,10 @@ export function Ambient() {
         const p = pendingRef.current;
         pendingRef.current = null;
         if (!p) return;
-        api
-          .setAmbient(p)
+        R.set(p)
           .then((v) => {
             // Keep newer local edits if any arrived while saving.
-            if (pendingRef.current === null) useStore.getState().setAmbient(v.ambient);
+            if (pendingRef.current === null) R.store(v.ambient);
           })
           .catch(fail);
       }, COMMIT_MS);
@@ -138,7 +137,7 @@ export function Ambient() {
       if (timerRef.current !== null) {
         window.clearTimeout(timerRef.current);
         const p = pendingRef.current;
-        if (p) void api.setAmbient(p).catch(() => undefined);
+        if (p) void R.set(p).catch(() => undefined);
       }
     },
     [],
@@ -352,13 +351,13 @@ export function Ambient() {
     <main className="ambient">
       <section className="panel ambient-top">
         <div className="analysis-row">
-          <h2 className="arrange-title">{t.ambientTitle}</h2>
+          <h2 className="arrange-title">{kind === "scapes" ? t.scapesTitle : t.ambientTitle}</h2>
           {playing ? (
-            <button className="primary" onClick={() => s.setLayer("ambient", false)}>
+            <button className="primary" onClick={() => s.setLayer(R.layer, false)}>
               ■ {t.rackStop}
             </button>
           ) : (
-            <button className="primary" onClick={() => s.setLayer("ambient", true)} disabled={!canPlay} title={canPlay ? t.rackPlay : t.rackEmpty}>
+            <button className="primary" onClick={() => s.setLayer(R.layer, true)} disabled={!canPlay} title={canPlay ? t.rackPlay : t.rackEmpty}>
               ▶ {t.rackPlay}
             </button>
           )}
@@ -371,7 +370,7 @@ export function Ambient() {
                 </option>
               ))}
             </select>
-            <button className="ghost" disabled={!s.layers.ambient && !s.layers.drone && !s.layers.pad} onClick={() => void fadeOutBackground(fadeSeconds)}>
+            <button className="ghost" disabled={!s.layers[R.layer] && !s.layers.drone && !s.layers.pad} onClick={() => void fadeOutBackground(fadeSeconds)}>
               {t.fadeOutBg}
             </button>
           </label>
@@ -427,7 +426,7 @@ export function Ambient() {
         <div className="muted small">{t.ambientIntro}</div>
       </section>
 
-      {ambientView === "modules" && <Soundscapes />}
+      {ambientView === "modules" && <Soundscapes kind={kind} />}
       <div className={`ambient-body ${showLeft ? "" : "left-collapsed"} ${showRight ? "" : "right-collapsed"}`} style={ambientView === "modules" ? { display: "none" } : undefined}>
         <aside className="panel ambient-left">
           <div className="panel-head">
@@ -782,7 +781,7 @@ export function Ambient() {
           )}
         </aside>
       </div>
-      {rack && <ProgramPanel rack={rack} status={status} timing={project.timing} projectName={project.name} onChange={commit} />}
+      {rack && <ProgramPanel kind={kind} rack={rack} status={status} timing={project.timing} projectName={project.name} onChange={commit} />}
 
       {confirm?.kind === "remove" && (
         <ConfirmDialog

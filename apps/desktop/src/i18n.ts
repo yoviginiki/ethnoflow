@@ -40,6 +40,9 @@ const bg = {
   // Soundscapes 2: journeys (stage S1)
   scapesTitle: "Soundscapes",
   scapesShort: "Scapes",
+  scapesEditorTitle: "Редактор на стойката",
+  scapesEditorHint: "Същият редактор като Атмосфера, но върху стойката на Soundscapes: слоеве (плъзгачи или модули с големи копчета), нов слой по вид, семпли като „Запис в цикъл“ или „Облак“ (от Библиотека › Моите семпли с „+“), сцени и програма, макроси, миксер, пресети. Пътуването отгоре само строи началното състояние; оттук нататък променяш каквото искаш.",
+  scapesExportViaSong: "Soundscapes се експортира през Песен › Моето студио › Експорт на микса (stem „soundscapes“).",
   scapesPause: "Пауза",
   scapesResume: "Продължи",
   scapesToStart: "От началото",
@@ -1625,6 +1628,9 @@ const en: typeof bg = {
   // Soundscapes 2: journeys (stage S1)
   scapesTitle: "Soundscapes",
   scapesShort: "Scapes",
+  scapesEditorTitle: "Rack editor",
+  scapesEditorHint: "The same editor as Atmosphere, on the Soundscapes rack: layers (sliders or modules with big knobs), a new layer by kind, samples as \"Loop\" or \"Cloud\" (from Library › My samples with \"+\"), scenes and program, macros, mixer, presets. The journey above only builds the starting state; from here on you change whatever you like.",
+  scapesExportViaSong: "Soundscapes is exported through Song › My studio › Export mix (stem \"soundscapes\").",
   scapesPause: "Pause",
   scapesResume: "Resume",
   scapesToStart: "From the start",

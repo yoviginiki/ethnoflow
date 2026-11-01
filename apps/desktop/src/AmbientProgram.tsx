@@ -5,6 +5,7 @@ import { newId } from "./ambientPresets";
 import { formatBytes, formatTime } from "./format";
 import { messages, type StringMessageKey } from "./i18n";
 import { useStore } from "./store";
+import { RACKS, type RackKind } from "./rackAdapter";
 
 const STRIP_PARAMS = ["gain_db", "pan", "lowpass_hz", "highpass_hz"];
 const MACRO_PARAMS = ["intensity", "brightness", "motion", "space", "space_size", "tonal_gravity", "width"];
@@ -233,6 +234,8 @@ export function snapshotOf(rack: Ambient): Snapshot {
 }
 
 interface ProgramProps {
+  /** Which rack the panel drives (its program transport and layer switch). */
+  kind: RackKind;
   rack: Ambient;
   status: AmbientStatus | null;
   timing: Timing;
@@ -241,7 +244,8 @@ interface ProgramProps {
 }
 
 /** Scenes on a timeline, program transport, loop and offline bounce (F1A.5). */
-export function ProgramPanel({ rack, status, timing, projectName, onChange }: ProgramProps) {
+export function ProgramPanel({ kind, rack, status, timing, projectName, onChange }: ProgramProps) {
+  const R = RACKS[kind];
   const s = useStore();
   const t = messages[s.prefs.lang];
   const scenes = rack.program.scenes;
@@ -286,7 +290,7 @@ export function ProgramPanel({ rack, status, timing, projectName, onChange }: Pr
     [next[i], next[j]] = [next[j], next[i]];
     setProgram({ scenes: relayout(next) });
   };
-  const transport = (playing: boolean | null, position: number | null) => api.ambientProgramSet(playing, position).then((st) => useStore.getState().setAmbientStatus(st)).catch(fail);
+  const transport = (playing: boolean | null, position: number | null) => R.programSet(playing, position).then((st) => R.storeStatus(st)).catch(fail);
   const exportProgram = async () => {
     try {
       const path = await save({ title: t.exportProgram, defaultPath: `${projectName}-atmosphere.wav`, filters: [{ name: "WAV", extensions: ["wav"] }] });
@@ -309,13 +313,13 @@ export function ProgramPanel({ rack, status, timing, projectName, onChange }: Pr
           {collapsed ? "▸" : "▾"}
         </button>
         <h3>{t.programTitle}</h3>
-        <button className="ghost" disabled={!s.layers.ambient || scenes.length === 0} onClick={() => void transport(!running, null)} title={s.layers.ambient ? "" : t.programNeedsRack}>
+        <button className="ghost" disabled={!s.layers[R.layer] || scenes.length === 0} onClick={() => void transport(!running, null)} title={s.layers[R.layer] ? "" : t.programNeedsRack}>
           {running ? "❚❚" : "▶"} {t.programPlay}
         </button>
-        <button className="ghost" disabled={!s.layers.ambient || scenes.length === 0} onClick={() => void transport(false, 0)}>
+        <button className="ghost" disabled={!s.layers[R.layer] || scenes.length === 0} onClick={() => void transport(false, 0)}>
           ⏮ {t.toStart}
         </button>
-        <input type="range" min={0} max={Math.max(end, 1)} step={0.1} value={Math.min(pos, end)} disabled={!s.layers.ambient || scenes.length === 0} aria-label={t.programPosition} onChange={(e) => void transport(null, Number(e.target.value))} style={{ width: 220 }} />
+        <input type="range" min={0} max={Math.max(end, 1)} step={0.1} value={Math.min(pos, end)} disabled={!s.layers[R.layer] || scenes.length === 0} aria-label={t.programPosition} onChange={(e) => void transport(null, Number(e.target.value))} style={{ width: 220 }} />
         <span className="mono-num small">
           {formatTime(pos)} / {formatTime(end)}
         </span>
@@ -373,7 +377,7 @@ export function ProgramPanel({ rack, status, timing, projectName, onChange }: Pr
                 s
               </label>
               <div className="track-ctl">
-                <button className="ghost small" title={t.sceneGo} disabled={!s.layers.ambient} onClick={() => void transport(null, sc.start_s)}>
+                <button className="ghost small" title={t.sceneGo} disabled={!s.layers[R.layer]} onClick={() => void transport(null, sc.start_s)}>
                   ⤓
                 </button>
                 <button className="ghost small" title={t.sceneCapture} onClick={() => patchScene(sc.id, { snapshot: snapshotOf(rack) })}>
@@ -398,7 +402,7 @@ export function ProgramPanel({ rack, status, timing, projectName, onChange }: Pr
       </div>
       <div className="muted small">{t.programHint}</div>
       <div className="analysis-row">
-        <button className="ghost" disabled={rack.layers.length === 0 || s.pending !== null} onClick={() => void exportProgram()}>
+        <button className="ghost" disabled={rack.layers.length === 0 || s.pending !== null || kind !== "ambient"} title={kind === "ambient" ? "" : t.scapesExportViaSong} onClick={() => void exportProgram()}>
           {t.exportProgram}
         </button>
         {end === 0 && (

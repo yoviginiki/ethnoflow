@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Ambient } from "./Ambient";
 import { api, describeError } from "./api";
 import { KIND_LABEL } from "./ambientPresets";
 import { formatTime } from "./format";
@@ -173,6 +174,13 @@ export function ScapesScreen() {
         )}
         <div className="muted small">{t.scapesEditHint}</div>
       </section>
+
+      {/* The whole rack editor (layers / modules with knobs, samples, scenes, mixer, macros) on the Soundscapes rack. */}
+      <section className="panel scapes-editor" data-coach="scapes-editor">
+        <h3>{t.scapesEditorTitle}</h3>
+        <div className="muted small">{t.scapesEditorHint}</div>
+      </section>
+      <Ambient kind="scapes" />
     </main>
   );
 }

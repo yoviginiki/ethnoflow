@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api, describeError, type AmbientLayer, type LayerKind, type LayerSource } from "./api";
+import { describeError, type AmbientLayer, type LayerKind, type LayerSource } from "./api";
 import { DEFAULT_MACROS, KIND_LABEL, MAX_AMBIENT_LAYERS, defaultSource, makeLayer } from "./ambientPresets";
 import { mulberry, randomizeLayer } from "./ambientRandom";
 import { MACRO_SLIDERS, REGISTER, SHIMMER_ST, SOURCE_SLIDERS, hasTonal, pct } from "./ambientSpecs";
@@ -10,6 +10,7 @@ import { formatDb, linearToDb, meterFraction, noteParts, takeName } from "./form
 import { messages, type StringMessageKey } from "./i18n";
 import { commitRack, flushRack } from "./rack";
 import { useStore } from "./store";
+import { RACKS, type RackKind } from "./rackAdapter";
 
 /** Module kinds in the order of the "new module" menu. */
 const KINDS: LayerKind[] = ["cloud", "choir", "bloom", "resonator", "wind", "texture", "bells", "pluck", "noise", "loop"];
@@ -39,12 +40,13 @@ interface ModulePreset {
  * a how-to text per module, per-module presets, macros and a mini mixer. It edits the
  * same rack as the Atmosphere screen, so the two always agree.
  */
-export function Soundscapes() {
+export function Soundscapes({ kind = "ambient" }: { kind?: RackKind } = {}) {
+  const R = RACKS[kind];
   const s = useStore();
   const t = messages[s.prefs.lang];
   const project = s.project!;
-  const rack = s.ambient;
-  const status = s.ambientStatus;
+  const rack = R.read(s);
+  const status = R.readStatus(s);
   const layers = rack?.layers ?? [];
   const [selected, setSelected] = useState<string | null>(null);
   const [newKind, setNewKind] = useState<LayerKind>("wind");
@@ -62,15 +64,13 @@ export function Soundscapes() {
 
   useEffect(() => {
     if (!useStore.getState().ambient) {
-      api
-        .ambientGet()
-        .then((v) => useStore.getState().setAmbient(v.ambient))
+      R.get()
+        .then((v) => R.store(v.ambient))
         .catch(fail);
     }
     const id = window.setInterval(() => {
-      api
-        .ambientStatus()
-        .then((st) => useStore.getState().setAmbientStatus(st))
+      R.status()
+        .then((st) => R.storeStatus(st))
         .catch(() => undefined);
     }, POLL_MS);
     return () => {

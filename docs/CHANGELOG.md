@@ -3,6 +3,16 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Soundscapes gets the whole rack editor (2026-11-01; owner: "не виждам как да работя с
+  Soundscapes… липсва ми студио изгледа с контроли, семпли… инструменти и модули за промяна").**
+  `rackAdapter.ts` lets Ambient.tsx, the Modules view and the Program panel drive either rack
+  (`kind: "ambient" | "scapes"`: read / write / status / program / layer switch through one
+  adapter); the Soundscapes tab mounts `<Ambient kind="scapes" />` under the worlds and the
+  journey: layers with sliders or modules with big knobs, add a layer by kind, samples as
+  Loop / Cloud from My samples, scenes and program, macros, mixer, presets. Export of the
+  Soundscapes rack goes through the song export (stem "soundscapes"); the rack-only export
+  button is disabled there with that hint. Guide BG/EN.
+### Implemented
 - **Soundscapes is its own module: a second rack in the engine + a live, clickable journey
   (2026-11-01; owner: "Soundscapes е пак заедно с Atmospheric, а идеята беше да са различни
   модули" and "лентата долу не е realtime… не е интерактивно").** `ambient_cmds.rs` now works
