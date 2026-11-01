@@ -59,6 +59,8 @@ export interface Prefs {
   selectedOutput: string | null;
   sampleRate: number | null;
   exportFormat: WavFormat;
+  /** Song export loudness target in LUFS (null = leave the mix as rendered). */
+  exportLoudness: number | null;
   clickRec: boolean;
   countIn: number;
   clickPlay: boolean;
@@ -219,6 +221,7 @@ export const DEFAULT_PREFS: Prefs = {
   selectedOutput: null,
   sampleRate: null,
   exportFormat: "float32",
+  exportLoudness: -14,
   clickRec: false,
   countIn: 0,
   clickPlay: false,

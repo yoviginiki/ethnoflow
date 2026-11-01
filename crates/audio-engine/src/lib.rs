@@ -38,6 +38,8 @@ pub use devices::{
     STANDARD_RATES,
 };
 pub use error::{AudioError, Result};
+pub use graph::limiter::Limiter;
+pub use graph::params::db_to_gain;
 pub use graph::player::{GraphCmd, GraphPlayer, GraphStatus};
 pub use graph::sources::{
     pattern_channel, root_hz as drone_root_hz, BassNoteEvent, BassParams, BassPatternData,

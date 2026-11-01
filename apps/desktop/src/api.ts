@@ -1528,7 +1528,50 @@ export interface Track {
   lowpass_hz: number;
   highpass_hz: number;
   send: number;
+  /** Processing (home-studio item 4): EQ ±24 dB (shelves 200 Hz / 4 kHz, peak at eq_mid_hz
+   *  100..8000), compressor (threshold −60..0, ratio 1..20 = off at 1, attack 0.1..200 ms,
+   *  release 1..2000 ms, make-up 0..24 dB). Optional: older projects have none. */
+  eq_low_db?: number;
+  eq_mid_db?: number;
+  eq_mid_hz?: number;
+  eq_high_db?: number;
+  comp_threshold_db?: number;
+  comp_ratio?: number;
+  comp_attack_ms?: number;
+  comp_release_ms?: number;
+  comp_makeup_db?: number;
   clips: Clip[];
+}
+
+/** A track's processing fields with their defaults filled in. */
+export function trackFx(tr: Track) {
+  return {
+    eq_low_db: tr.eq_low_db ?? 0,
+    eq_mid_db: tr.eq_mid_db ?? 0,
+    eq_mid_hz: tr.eq_mid_hz ?? 1000,
+    eq_high_db: tr.eq_high_db ?? 0,
+    comp_threshold_db: tr.comp_threshold_db ?? 0,
+    comp_ratio: tr.comp_ratio ?? 1,
+    comp_attack_ms: tr.comp_attack_ms ?? 10,
+    comp_release_ms: tr.comp_release_ms ?? 100,
+    comp_makeup_db: tr.comp_makeup_db ?? 0,
+  };
+}
+
+export interface SongExportResult {
+  path: string;
+  stems: string[];
+  markers: string | null;
+  manifest: string;
+  seconds: number;
+  sample_rate: number;
+  peak: number;
+  bytes: number;
+  /** Integrated loudness before / after the normalisation (null: silence or no target). */
+  lufs: number | null;
+  lufs_after: number | null;
+  /** Gain applied to the mix and the stems (0 without a target). */
+  gain_db: number;
 }
 
 export interface Arrangement {
@@ -1811,8 +1854,8 @@ export const api = {
   exportArrangementMix: (path: string, format: WavFormat | null, sampleRate: number | null) =>
     invoke<ExportResult>("export_arrangement_mix", { path, format, sampleRate }),
   /** Whole song: clips + chosen background layers through one offline graph; mix + aligned stems + markers + manifest. */
-  exportSong: (path: string, include: { clips: boolean; drone: DroneSettings | null; pad: PadSettings | null; ambient: boolean; scapes: boolean; rhythm: RhythmSettings | null }, format: WavFormat | null, sampleRate: number | null, seconds: number | null, stems: boolean) =>
-    invoke<{ path: string; stems: string[]; markers: string | null; manifest: string; seconds: number; sample_rate: number; peak: number; bytes: number }>("export_song", { path, include, format, sampleRate, seconds, stems }),
+  exportSong: (path: string, include: { clips: boolean; drone: DroneSettings | null; pad: PadSettings | null; ambient: boolean; scapes: boolean; rhythm: RhythmSettings | null }, format: WavFormat | null, sampleRate: number | null, seconds: number | null, stems: boolean, targetLufs: number | null = null) =>
+    invoke<SongExportResult>("export_song", { path, include, format, sampleRate, seconds, stems, targetLufs }),
 
   // Preset library
   libraryList: (kind: LibraryKind | null, project: string | null, query: string | null, sortBy: LibrarySortBy) =>

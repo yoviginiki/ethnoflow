@@ -529,30 +529,43 @@ async function main() {
       send({ op: "remove_layer", name: "smoke sampler" });
     }
   });
-  await step("studio: track strip — pan and send are real in the export", () => {
+  await step("studio: track strip — pan, send, EQ / compressor and the loudness target are real in the export", () => {
     const src = path.join(OUT_DIR, "rhythm-four.wav");
     const imp = expectOk(send({ op: "import_audio", path: src }));
     if (!imp.take_id) throw new Error("no take after import");
     const arr = expectOk(send({ op: "arrangement" })).arrangement;
-    const track = (pan, sendAmt) => ({ id: "smoke-t1", name: "smoke", gain_db: 0, pan, mute: false, solo: false, lowpass_hz: 20000, highpass_hz: 10, send: sendAmt, clips: [{ id: "smoke-c1", take_id: imp.take_id, start: 0, offset: 0, length: 2.5, gain_db: 0, fade_in: 0, fade_out: 0, mute: false }] });
+    const track = (pan, sendAmt, fx = {}) => ({ id: "smoke-t1", name: "smoke", gain_db: 0, pan, mute: false, solo: false, lowpass_hz: 20000, highpass_hz: 10, send: sendAmt, ...fx, clips: [{ id: "smoke-c1", take_id: imp.take_id, start: 0, offset: 0, length: 2.5, gain_db: 0, fade_in: 0, fade_out: 0, mute: false }] });
     try {
       expectOk(send({ op: "set_arrangement", arrangement: { ...arr, tracks: [track(-1, 0)], loop_region: null } }));
       const left = path.join(OUT_DIR, "strip-left.wav");
-      const r1 = expectOk(send({ op: "export_song", path: left, seconds: 3, rhythm: false, drone: false, pad: false, ambient: false }));
+      const r1 = expectOk(send({ op: "export_song", path: left, seconds: 3, rhythm: false, drone: false, pad: false, ambient: false, target_lufs: null }));
       const stem = r1.stems.find((p) => /clips/i.test(path.basename(p)));
       if (!stem) throw new Error("no clips stem");
       const [l, rr] = channelRms(stem, 0.2, 2.3);
       if (!(l > rr * 8)) throw new Error(`pan -1 but L ${l.toFixed(4)} vs R ${rr.toFixed(4)}`);
       expectOk(send({ op: "set_arrangement", arrangement: { ...arr, tracks: [track(0, 1)], loop_region: null } }));
       const sent = path.join(OUT_DIR, "strip-send.wav");
-      const r2 = expectOk(send({ op: "export_song", path: sent, seconds: 5, rhythm: false, drone: false, pad: false, ambient: false }));
+      const r2 = expectOk(send({ op: "export_song", path: sent, seconds: 5, rhythm: false, drone: false, pad: false, ambient: false, target_lufs: null }));
       const tail = channelRms(r2.path, 3.2, 4.8)[0];
       expectOk(send({ op: "set_arrangement", arrangement: { ...arr, tracks: [track(0, 0)], loop_region: null } }));
       const dry = path.join(OUT_DIR, "strip-dry.wav");
-      const r3 = expectOk(send({ op: "export_song", path: dry, seconds: 5, rhythm: false, drone: false, pad: false, ambient: false }));
+      const r3 = expectOk(send({ op: "export_song", path: dry, seconds: 5, rhythm: false, drone: false, pad: false, ambient: false, target_lufs: null }));
       const dryTail = channelRms(r3.path, 3.2, 4.8)[0];
       if (!(tail > dryTail * 4 && tail > 1e-4)) throw new Error(`send tail ${tail.toExponential(2)} vs dry ${dryTail.toExponential(2)}`);
-      return `L/R ${(l / Math.max(rr, 1e-9)).toFixed(0)}×, reverb tail ${(20 * Math.log10(tail)).toFixed(0)} dBFS`;
+      if (r3.gain_db !== 0) throw new Error(`target_lufs null but gain ${r3.gain_db}`);
+      // Home-studio item 4: the track compressor (threshold −36, ratio 20) squeezes the
+      // clips stem; a −24 dB high shelf takes the top out of it.
+      expectOk(send({ op: "set_arrangement", arrangement: { ...arr, tracks: [track(0, 0, { comp_threshold_db: -36, comp_ratio: 20 })], loop_region: null } }));
+      const squeezed = path.join(OUT_DIR, "strip-comp.wav");
+      const r4 = expectOk(send({ op: "export_song", path: squeezed, seconds: 3, rhythm: false, drone: false, pad: false, ambient: false, target_lufs: null }));
+      const dryPeak = wavStats(r3.stems.find((p) => /clips/i.test(path.basename(p)))).peak;
+      const compPeak = wavStats(r4.stems.find((p) => /clips/i.test(path.basename(p)))).peak;
+      if (!(compPeak < dryPeak * 0.5 && compPeak > 0.001)) throw new Error(`compressor: peak ${compPeak.toFixed(4)} vs dry ${dryPeak.toFixed(4)}`);
+      // And the loudness target: the same track normalised to −14 LUFS lands within 1 LU.
+      const loud = path.join(OUT_DIR, "strip-loud.wav");
+      const r5 = expectOk(send({ op: "export_song", path: loud, seconds: 3, rhythm: false, drone: false, pad: false, ambient: false, target_lufs: -14 }));
+      if (typeof r5.lufs_after !== "number" || Math.abs(r5.lufs_after + 14) > 1.0) throw new Error(`normalised to ${r5.lufs_after} LUFS (from ${r5.lufs}, gain ${r5.gain_db})`);
+      return `L/R ${(l / Math.max(rr, 1e-9)).toFixed(0)}×, reverb tail ${(20 * Math.log10(tail)).toFixed(0)} dBFS, comp peak ${compPeak.toFixed(2)} vs ${dryPeak.toFixed(2)}, ${r5.lufs.toFixed(1)} → ${r5.lufs_after.toFixed(1)} LUFS`;
     } finally {
       send({ op: "set_arrangement", arrangement: { ...arr, tracks: [], loop_region: null } });
     }

@@ -9,8 +9,9 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
 use audio_engine::{
-    write_wav, AudioBuffer, ClipSource, ClipsParams, DroneParams, DroneSource, Graph, GraphParams,
-    PadParams, PadSource, WavFormat,
+    db_to_gain, gain_to_target_db, integrated_lufs, write_wav, AudioBuffer, ClipSource,
+    ClipsParams, DroneParams, DroneSource, Graph, GraphParams, Limiter, PadParams, PadSource,
+    WavFormat,
 };
 use project::{effective_rack, LayerSource};
 use serde::{Deserialize, Serialize};
@@ -62,8 +63,15 @@ pub struct SongExportResult {
     pub sample_rate: u32,
     pub peak: f32,
     pub bytes: u64,
+    /// Integrated loudness (BS.1770) of the mix before / after normalisation; None for
+    /// silence or when no target was asked.
+    pub lufs: Option<f64>,
+    pub lufs_after: Option<f64>,
+    /// Gain applied to the mix and every stem to reach `target_lufs` (0 when none).
+    pub gain_db: f64,
 }
 
+#[allow(clippy::too_many_arguments)]
 #[tauri::command]
 pub async fn export_song(
     state: State<'_, AppState>,
@@ -73,7 +81,16 @@ pub async fn export_song(
     sample_rate: Option<u32>,
     seconds: Option<f64>,
     stems: Option<bool>,
+    target_lufs: Option<f64>,
 ) -> CmdResult<SongExportResult> {
+    if let Some(t) = target_lufs {
+        if !(-30.0..=-6.0).contains(&t) {
+            return Err(err(
+                "invalid_argument",
+                "target loudness outside -30..-6 LUFS",
+            ));
+        }
+    }
     let rate = sample_rate.unwrap_or(48_000);
     if !(8_000..=192_000).contains(&rate) {
         return Err(err("invalid_argument", "sample rate outside 8..192 kHz"));
@@ -389,7 +406,30 @@ pub async fn export_song(
         p.set_extension("wav");
     }
     let format = format.unwrap_or_default();
-    let mix = AudioBuffer::new(rate, ch as u16, out);
+    let mut mix = AudioBuffer::new(rate, ch as u16, out);
+    // Loudness normalisation (home-studio item 4): measure the mix, lift or lower the
+    // mix AND the stems by the same gain so they still sum, then a true-peak-ish
+    // limiter at −1 dBFS on the mix only (the stems keep their headroom).
+    let lufs = integrated_lufs(&mix);
+    let mut gain_db = 0.0f64;
+    let mut lufs_after = None;
+    if let (Some(target), Some(measured)) = (target_lufs, lufs) {
+        gain_db = gain_to_target_db(measured, target);
+        let g = 10f32.powf(gain_db as f32 / 20.0);
+        for v in mix.samples.iter_mut() {
+            *v *= g;
+        }
+        for sb in stem_bufs.iter_mut() {
+            for v in sb.iter_mut() {
+                *v *= g;
+            }
+        }
+        let mut lim = Limiter::new(rate, db_to_gain(-1.0), 0.08);
+        for frame in mix.samples.chunks_mut(ch) {
+            lim.process_frame(frame);
+        }
+        lufs_after = integrated_lufs(&mix);
+    }
     write_wav(&p, &mix, format)?;
     let dir = p.with_extension("");
     std::fs::create_dir_all(&dir).map_err(|e| err("io", e.to_string()))?;
@@ -438,5 +478,8 @@ pub async fn export_song(
         sample_rate: rate,
         peak,
         bytes,
+        lufs,
+        lufs_after,
+        gain_db,
     })
 }

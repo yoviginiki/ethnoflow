@@ -8,6 +8,7 @@ use std::sync::Arc;
 
 use crate::buffer::AudioBuffer;
 use crate::graph::params::{db_to_gain, ramp_samples, Ramp, SmoothedParam};
+use crate::graph::trackfx::{BiquadState, CompBlock, Eq3};
 use crate::graph::Source;
 
 pub const MAX_TRACKS: usize = 8;
@@ -67,6 +68,19 @@ pub struct TrackParams {
     pub highpass_hz: SmoothedParam,
     /// 0..1 send to the master space (reverb), post-fader.
     pub send: SmoothedParam,
+    /// Three-band EQ (home-studio item 4): shelves at 200 Hz / 4 kHz and a peak at
+    /// `eq_mid_hz`, each −24…+24 dB; 0 dB = bypass.
+    pub eq_low_db: SmoothedParam,
+    pub eq_mid_db: SmoothedParam,
+    pub eq_mid_hz: SmoothedParam,
+    pub eq_high_db: SmoothedParam,
+    /// Compressor: threshold −60…0 dBFS, ratio 1…20 (1 = off), attack 0.1…200 ms,
+    /// release 1…2000 ms, make-up 0…24 dB.
+    pub comp_threshold_db: SmoothedParam,
+    pub comp_ratio: SmoothedParam,
+    pub comp_attack_ms: SmoothedParam,
+    pub comp_release_ms: SmoothedParam,
+    pub comp_makeup_db: SmoothedParam,
 }
 
 impl Default for TrackParams {
@@ -79,7 +93,38 @@ impl Default for TrackParams {
             lowpass_hz: SmoothedParam::new(20_000.0, 40.0, 20_000.0),
             highpass_hz: SmoothedParam::new(10.0, 10.0, 8_000.0),
             send: SmoothedParam::new(0.0, 0.0, 1.0),
+            eq_low_db: SmoothedParam::new(0.0, -24.0, 24.0),
+            eq_mid_db: SmoothedParam::new(0.0, -24.0, 24.0),
+            eq_mid_hz: SmoothedParam::new(1000.0, 100.0, 8000.0),
+            eq_high_db: SmoothedParam::new(0.0, -24.0, 24.0),
+            comp_threshold_db: SmoothedParam::new(0.0, -60.0, 0.0),
+            comp_ratio: SmoothedParam::new(1.0, 1.0, 20.0),
+            comp_attack_ms: SmoothedParam::new(10.0, 0.1, 200.0),
+            comp_release_ms: SmoothedParam::new(100.0, 1.0, 2000.0),
+            comp_makeup_db: SmoothedParam::new(0.0, 0.0, 24.0),
         }
+    }
+}
+
+impl TrackParams {
+    /// Everything back to the neutral strip (new / removed track).
+    pub fn reset(&self) {
+        self.gain_db.set(0.0);
+        self.mute.store(false, Ordering::Relaxed);
+        self.solo.store(false, Ordering::Relaxed);
+        self.pan.set(0.0);
+        self.lowpass_hz.set(20_000.0);
+        self.highpass_hz.set(10.0);
+        self.send.set(0.0);
+        self.eq_low_db.set(0.0);
+        self.eq_mid_db.set(0.0);
+        self.eq_mid_hz.set(1000.0);
+        self.eq_high_db.set(0.0);
+        self.comp_threshold_db.set(0.0);
+        self.comp_ratio.set(1.0);
+        self.comp_attack_ms.set(10.0);
+        self.comp_release_ms.set(100.0);
+        self.comp_makeup_db.set(0.0);
     }
 }
 
@@ -121,6 +166,8 @@ pub struct ClipSource {
     lp: [f32; MAX_TRACKS],
     hp_in: [f32; MAX_TRACKS],
     hp_out: [f32; MAX_TRACKS],
+    eq_state: [[BiquadState; 3]; MAX_TRACKS],
+    comp_env: [f32; MAX_TRACKS],
     position: u64,
 }
 
@@ -141,6 +188,8 @@ impl ClipSource {
             lp: [0.0; MAX_TRACKS],
             hp_in: [0.0; MAX_TRACKS],
             hp_out: [0.0; MAX_TRACKS],
+            eq_state: [[BiquadState::default(); 3]; MAX_TRACKS],
+            comp_env: [-120.0; MAX_TRACKS],
             position,
         }
     }
@@ -210,7 +259,25 @@ impl Source for ClipSource {
         let mut audible = [false; MAX_TRACKS];
         let mut a_lp = [0.0f32; MAX_TRACKS];
         let mut a_hp = [0.0f32; MAX_TRACKS];
+        // EQ and compressor coefficients once per block (no allocation).
+        let mut eqs = [Eq3::default(); MAX_TRACKS];
+        let mut comps = [CompBlock::default(); MAX_TRACKS];
         for (i, tr) in p.tracks.iter().enumerate() {
+            eqs[i] = Eq3::new(
+                sr,
+                tr.eq_low_db.target(),
+                tr.eq_mid_db.target(),
+                tr.eq_mid_hz.target(),
+                tr.eq_high_db.target(),
+            );
+            comps[i] = CompBlock::new(
+                sr,
+                tr.comp_threshold_db.target(),
+                tr.comp_ratio.target(),
+                tr.comp_attack_ms.target(),
+                tr.comp_release_ms.target(),
+                tr.comp_makeup_db.target(),
+            );
             let solo = tr.solo.load(Ordering::Relaxed);
             let mute = tr.mute.load(Ordering::Relaxed);
             audible[i] = !mute && (!any_solo || solo);
@@ -273,7 +340,9 @@ impl Source for ClipSource {
                     a_hp[i] * (self.hp_out[i] + y_lp - self.hp_in[i]),
                 );
                 self.hp_in[i] = y_lp;
-                let y = self.hp_out[i] * gains[i];
+                // Then the three-band EQ and the compressor (pre-fader), then gain.
+                let y = eqs[i].run(&mut self.eq_state[i], self.hp_out[i]);
+                let y = comps[i].run(&mut self.comp_env[i], y) * gains[i];
                 let theta = (pans[i] + 1.0) * 0.25 * std::f32::consts::PI;
                 l += y * theta.cos() * std::f32::consts::SQRT_2;
                 r += y * theta.sin() * std::f32::consts::SQRT_2;
@@ -299,6 +368,8 @@ impl Source for ClipSource {
         self.lp = [0.0; MAX_TRACKS];
         self.hp_in = [0.0; MAX_TRACKS];
         self.hp_out = [0.0; MAX_TRACKS];
+        self.eq_state = [[BiquadState::default(); 3]; MAX_TRACKS];
+        self.comp_env = [-120.0; MAX_TRACKS];
     }
 }
 
@@ -540,5 +611,51 @@ mod tests {
         let pos = p.transport.position();
         assert!(pos >= 2 * sr as u64 && pos < 5 * sr as u64 / 2, "pos {pos}");
         assert!(!p.transport.finished.load(Ordering::Relaxed));
+    }
+
+    #[test]
+    fn the_track_eq_and_compressor_change_the_rendered_clips() {
+        let sr = 48_000u32;
+        let clip = |hz: f32| ClipData {
+            track: 0,
+            buffer: tone(hz, 2.0, sr),
+            start: 0,
+            offset: 0,
+            length: 2 * sr as u64,
+            gain: 1.0,
+            fade_in: 0,
+            fade_out: 0,
+            mute: false,
+        };
+        let rms = |b: &AudioBuffer| {
+            let n = b.samples.len() as f32;
+            (b.samples.iter().map(|v| v * v).sum::<f32>() / n).sqrt()
+        };
+        // A −24 dB low shelf takes a 60 Hz tone down by more than 12 dB; an 8 kHz tone stays.
+        let flat = Arc::new(ClipsParams::default());
+        flat.transport.playing.store(true, Ordering::Relaxed);
+        let low_flat = rms(&render(&flat, vec![clip(60.0)], 1.5));
+        let high_flat = rms(&render(&flat, vec![clip(8000.0)], 1.5));
+        let shelf = Arc::new(ClipsParams::default());
+        shelf.transport.playing.store(true, Ordering::Relaxed);
+        shelf.tracks[0].eq_low_db.set(-24.0);
+        let low_cut = rms(&render(&shelf, vec![clip(60.0)], 1.5));
+        let high_cut = rms(&render(&shelf, vec![clip(8000.0)], 1.5));
+        assert!(low_cut < low_flat * 0.25, "60 Hz {low_cut} vs {low_flat}");
+        assert!((high_cut / high_flat - 1.0).abs() < 0.15, "8 kHz untouched");
+        // The compressor (threshold −30, ratio 10) brings a −6 dBFS tone well down.
+        let comp = Arc::new(ClipsParams::default());
+        comp.transport.playing.store(true, Ordering::Relaxed);
+        comp.tracks[0].comp_threshold_db.set(-30.0);
+        comp.tracks[0].comp_ratio.set(10.0);
+        let squeezed = render(&comp, vec![clip(440.0)], 1.5);
+        let peak = squeezed.samples[sr as usize..]
+            .iter()
+            .fold(0.0f32, |m, v| m.max(v.abs()));
+        let peak_db = 20.0 * peak.log10();
+        assert!(
+            peak_db < -20.0 && peak_db > -32.0,
+            "compressed peak {peak_db} dBFS"
+        );
     }
 }

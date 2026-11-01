@@ -52,6 +52,28 @@ pub struct Track {
     pub highpass_hz: f64,
     #[serde(default)]
     pub send: f64,
+    /// Track processing (home-studio item 4): three-band EQ (low shelf 200 Hz, peak at
+    /// `eq_mid_hz`, high shelf 4 kHz; −24…+24 dB, 0 = off) and a compressor
+    /// (threshold −60…0 dBFS, ratio 1…20 with 1 = off, attack 0.1…200 ms, release
+    /// 1…2000 ms, make-up 0…24 dB). Pre-fader, after the cuts.
+    #[serde(default)]
+    pub eq_low_db: f64,
+    #[serde(default)]
+    pub eq_mid_db: f64,
+    #[serde(default = "mid_hz_default")]
+    pub eq_mid_hz: f64,
+    #[serde(default)]
+    pub eq_high_db: f64,
+    #[serde(default)]
+    pub comp_threshold_db: f64,
+    #[serde(default = "one")]
+    pub comp_ratio: f64,
+    #[serde(default = "attack_default")]
+    pub comp_attack_ms: f64,
+    #[serde(default = "release_default")]
+    pub comp_release_ms: f64,
+    #[serde(default)]
+    pub comp_makeup_db: f64,
     #[serde(default)]
     pub clips: Vec<Clip>,
 }
@@ -61,6 +83,18 @@ fn lp_off() -> f64 {
 }
 fn hp_off() -> f64 {
     10.0
+}
+fn mid_hz_default() -> f64 {
+    1000.0
+}
+fn one() -> f64 {
+    1.0
+}
+fn attack_default() -> f64 {
+    10.0
+}
+fn release_default() -> f64 {
+    100.0
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -128,6 +162,21 @@ impl Arrangement {
             {
                 return Err(ProjectError::InvalidState("track strip (cuts/send)".into()));
             }
+            if !(-24.0..=24.0).contains(&t.eq_low_db)
+                || !(-24.0..=24.0).contains(&t.eq_mid_db)
+                || !(100.0..=8_000.0).contains(&t.eq_mid_hz)
+                || !(-24.0..=24.0).contains(&t.eq_high_db)
+            {
+                return Err(ProjectError::InvalidState("track EQ".into()));
+            }
+            if !(-60.0..=0.0).contains(&t.comp_threshold_db)
+                || !(1.0..=20.0).contains(&t.comp_ratio)
+                || !(0.1..=200.0).contains(&t.comp_attack_ms)
+                || !(1.0..=2_000.0).contains(&t.comp_release_ms)
+                || !(0.0..=24.0).contains(&t.comp_makeup_db)
+            {
+                return Err(ProjectError::InvalidState("track compressor".into()));
+            }
             for c in &t.clips {
                 if !(c.start >= 0.0 && c.offset >= 0.0 && c.length > 0.0)
                     || !c.start.is_finite()
@@ -179,6 +228,15 @@ mod tests {
             lowpass_hz: 20_000.0,
             highpass_hz: 10.0,
             send: 0.0,
+            eq_low_db: 0.0,
+            eq_mid_db: 3.0,
+            eq_mid_hz: 1200.0,
+            eq_high_db: 0.0,
+            comp_threshold_db: -24.0,
+            comp_ratio: 4.0,
+            comp_attack_ms: 10.0,
+            comp_release_ms: 100.0,
+            comp_makeup_db: 2.0,
             clips: vec![Clip {
                 id: "c1".into(),
                 take_id: "take-1".into(),

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as RPointerEvent, type WheelEvent as RWheelEvent } from "react";
 import { open, save } from "@tauri-apps/plugin-dialog";
-import { api, describeError, IMPORT_EXTENSIONS, type Arrangement, type ArrangeStatus, type Clip, type RecordingStatus, type TakeView, type Track, type WaveformPeaks, SECTION_NAMES } from "./api";
+import { api, describeError, IMPORT_EXTENSIONS, trackFx, type Arrangement, type ArrangeStatus, type Clip, type RecordingStatus, type TakeView, type Track, type WaveformPeaks, SECTION_NAMES } from "./api";
 import { BackgroundTransport } from "./BackgroundTransport";
 import { droneRoot, droneSettings, padRoot, padSettings, voicingNotes } from "./layers";
 import { ConfirmDialog } from "./ConfirmDialog";
@@ -84,6 +84,7 @@ export function Arrange() {
   const [snap, setSnap] = useState(true);
   const [selected, setSelected] = useState<{ track: string; clip: string } | null>(null);
   const [selectedTrack, setSelectedTrack] = useState<string | null>(null);
+  const [fxOpen, setFxOpen] = useState(false);
   const [renaming, setRenaming] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [removeTrack, setRemoveTrack] = useState<Track | null>(null);
@@ -958,9 +959,10 @@ export function Arrange() {
         scapes: st.layers.scapes,
         rhythm: st.layers.rhythm ? { ...st.prefs.rhythm, chord: st.padChord, root_midi: dRoot, intonation: dp.intonation } : null,
       };
-      const r = await api.exportSong(path, include, prefs.exportFormat, null, null, true);
+      const r = await api.exportSong(path, include, prefs.exportFormat, null, null, true, prefs.exportLoudness);
       useStore.getState().setLastSongExportMs(Date.now());
-      st.setMessage(`${t.mixExported}: ${r.path} (${formatBytes(r.bytes)}) · ${r.stems.length} ${t.stemsWord}`);
+      const loud = r.lufs_after !== null ? ` · ${r.lufs_after.toFixed(1)} LUFS (${r.gain_db >= 0 ? "+" : ""}${r.gain_db.toFixed(1)} dB)` : r.lufs !== null ? ` · ${r.lufs.toFixed(1)} LUFS` : "";
+      st.setMessage(`${t.mixExported}: ${r.path} (${formatBytes(r.bytes)}) · ${r.stems.length} ${t.stemsWord}${loud}`);
     } catch (e) {
       fail(e);
     } finally {
@@ -1139,6 +1141,18 @@ export function Arrange() {
                 <Knob value={Math.log(tr.highpass_hz / 10) / Math.log(800)} min={0} max={1} step={0.005} reset={0} size={30} label={t.highpassLabel} text={tr.highpass_hz <= 10.5 ? "—" : `${Math.round(tr.highpass_hz)} Hz`} onChange={(v) => patchTrack(tr.id, (x) => void (x.highpass_hz = Math.round(10 * Math.pow(800, v))), false)} />
                 <Knob value={Math.log(tr.lowpass_hz / 40) / Math.log(500)} min={0} max={1} step={0.005} reset={1} size={30} label={t.lowpassLabel} text={tr.lowpass_hz >= 19_500 ? "—" : tr.lowpass_hz >= 1000 ? `${(tr.lowpass_hz / 1000).toFixed(1)} kHz` : `${Math.round(tr.lowpass_hz)} Hz`} onChange={(v) => patchTrack(tr.id, (x) => void (x.lowpass_hz = Math.round(40 * Math.pow(500, v))), false)} />
                 <Knob value={tr.send} min={0} max={1} step={0.01} reset={0} size={30} label={t.trackSend} text={`${Math.round(tr.send * 100)}%`} onChange={(v) => patchTrack(tr.id, (x) => void (x.send = v), false)} />
+                <button
+                  className={`ghost small ${fxOpen && selectedTrack === tr.id ? "on" : ""}`}
+                  title={t.trackFxHint}
+                  aria-label={t.trackFx}
+                  aria-pressed={fxOpen && selectedTrack === tr.id}
+                  onClick={() => {
+                    setSelectedTrack(tr.id);
+                    setFxOpen(!(fxOpen && selectedTrack === tr.id));
+                  }}
+                >
+                  {trackFx(tr).comp_ratio > 1.001 || [tr.eq_low_db, tr.eq_mid_db, tr.eq_high_db].some((v) => Math.abs(v ?? 0) >= 0.01) ? "EQ·C ●" : "EQ·C"}
+                </button>
               </div>
             </div>
           ))}
@@ -1163,6 +1177,38 @@ export function Arrange() {
           />
         </div>
       </div>
+
+      {fxOpen && arr && arr.tracks.some((x) => x.id === selectedTrack) && (() => {
+        const tr = arr.tracks.find((x) => x.id === selectedTrack) as Track;
+        const fx = trackFx(tr);
+        const set = (f: (x: Track) => void) => patchTrack(tr.id, f, false);
+        const db = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(1)} dB`;
+        return (
+          <section className="panel track-fx" aria-label={t.trackFx}>
+            <div className="panel-head">
+              <h3>
+                {t.trackFx}: {tr.name}
+              </h3>
+              <button className="ghost small" onClick={() => setFxOpen(false)} aria-label={t.close}>
+                ✕
+              </button>
+            </div>
+            <div className="muted small">{t.trackFxHint}</div>
+            <div className="track-strip fx">
+              <Knob value={fx.eq_low_db} min={-24} max={24} step={0.5} reset={0} size={34} label={t.eqLow} text={db(fx.eq_low_db)} onChange={(v) => set((x) => void (x.eq_low_db = v))} />
+              <Knob value={fx.eq_mid_db} min={-24} max={24} step={0.5} reset={0} size={34} label={t.eqMid} text={db(fx.eq_mid_db)} onChange={(v) => set((x) => void (x.eq_mid_db = v))} />
+              <Knob value={Math.log(fx.eq_mid_hz / 100) / Math.log(80)} min={0} max={1} step={0.005} reset={Math.log(10) / Math.log(80)} size={34} label={t.eqMidHz} text={fx.eq_mid_hz >= 1000 ? `${(fx.eq_mid_hz / 1000).toFixed(2)} kHz` : `${Math.round(fx.eq_mid_hz)} Hz`} onChange={(v) => set((x) => void (x.eq_mid_hz = Math.round(100 * Math.pow(80, v))))} />
+              <Knob value={fx.eq_high_db} min={-24} max={24} step={0.5} reset={0} size={34} label={t.eqHigh} text={db(fx.eq_high_db)} onChange={(v) => set((x) => void (x.eq_high_db = v))} />
+              <span className="fx-sep" />
+              <Knob value={fx.comp_threshold_db} min={-60} max={0} step={1} reset={0} size={34} label={t.compThreshold} text={`${fx.comp_threshold_db.toFixed(0)} dB`} onChange={(v) => set((x) => void (x.comp_threshold_db = v))} />
+              <Knob value={fx.comp_ratio} min={1} max={20} step={0.5} reset={1} size={34} label={t.compRatio} text={fx.comp_ratio <= 1.001 ? t.compOff : `${fx.comp_ratio.toFixed(1)}:1`} onChange={(v) => set((x) => void (x.comp_ratio = v))} />
+              <Knob value={Math.log(fx.comp_attack_ms / 0.1) / Math.log(2000)} min={0} max={1} step={0.005} reset={Math.log(100) / Math.log(2000)} size={34} label={t.compAttack} text={`${fx.comp_attack_ms < 10 ? fx.comp_attack_ms.toFixed(1) : fx.comp_attack_ms.toFixed(0)} ms`} onChange={(v) => set((x) => void (x.comp_attack_ms = Math.round(0.1 * Math.pow(2000, v) * 10) / 10))} />
+              <Knob value={Math.log(fx.comp_release_ms) / Math.log(2000)} min={0} max={1} step={0.005} reset={Math.log(100) / Math.log(2000)} size={34} label={t.compRelease} text={`${fx.comp_release_ms.toFixed(0)} ms`} onChange={(v) => set((x) => void (x.comp_release_ms = Math.round(Math.pow(2000, v))))} />
+              <Knob value={fx.comp_makeup_db} min={0} max={24} step={0.5} reset={0} size={34} label={t.compMakeup} text={db(fx.comp_makeup_db)} onChange={(v) => set((x) => void (x.comp_makeup_db = v))} />
+            </div>
+          </section>
+        );
+      })()}
 
       <div className="arrange-bottom">
         <section className="panel takes-palette">
@@ -1299,6 +1345,17 @@ export function Arrange() {
           <button onClick={() => void onExportMix()} disabled={busy || duration <= 0 || recording}>
             {t.exportMix}
           </button>
+          <label className="inline small" title={t.exportLoudnessHint}>
+            {t.exportLoudness}
+            <select value={prefs.exportLoudness === null ? "" : String(prefs.exportLoudness)} onChange={(e) => useStore.getState().setPref("exportLoudness", e.target.value === "" ? null : Number(e.target.value))}>
+              <option value="">{t.exportLoudnessOff}</option>
+              {[-14, -16, -18, -23].map((v) => (
+                <option key={v} value={String(v)}>
+                  {v} LUFS
+                </option>
+              ))}
+            </select>
+          </label>
           <div className="muted small">{t.exportMixHint}</div>
           <div className="muted small">{t.recLatencyNote}</div>
           <div className="muted small">{t.arrangeShortcuts}</div>

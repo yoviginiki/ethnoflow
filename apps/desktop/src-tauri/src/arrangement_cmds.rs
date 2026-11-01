@@ -205,16 +205,17 @@ pub(crate) fn apply_tracks(params: &ClipsParams, a: &Arrangement, rate: u32) {
                 tp.lowpass_hz.set(t.lowpass_hz as f32);
                 tp.highpass_hz.set(t.highpass_hz as f32);
                 tp.send.set(t.send as f32);
+                tp.eq_low_db.set(t.eq_low_db as f32);
+                tp.eq_mid_db.set(t.eq_mid_db as f32);
+                tp.eq_mid_hz.set(t.eq_mid_hz as f32);
+                tp.eq_high_db.set(t.eq_high_db as f32);
+                tp.comp_threshold_db.set(t.comp_threshold_db as f32);
+                tp.comp_ratio.set(t.comp_ratio as f32);
+                tp.comp_attack_ms.set(t.comp_attack_ms as f32);
+                tp.comp_release_ms.set(t.comp_release_ms as f32);
+                tp.comp_makeup_db.set(t.comp_makeup_db as f32);
             }
-            None => {
-                tp.gain_db.set(0.0);
-                tp.mute.store(false, Ordering::Relaxed);
-                tp.solo.store(false, Ordering::Relaxed);
-                tp.pan.set(0.0);
-                tp.lowpass_hz.set(20_000.0);
-                tp.highpass_hz.set(10.0);
-                tp.send.set(0.0);
-            }
+            None => tp.reset(),
         }
     }
     let tr = &params.transport;

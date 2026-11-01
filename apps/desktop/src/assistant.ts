@@ -438,7 +438,10 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
         scapes: cmd.scapes === true,
         rhythm: cmd.rhythm === false ? null : { ...(s.prefs.rhythm ?? {}), chord: s.padChord, root_midi: dRoot, intonation: dp.intonation },
       };
-      return await api.exportSong(String(cmd.path), include as never, s.prefs.exportFormat ?? null, null, typeof cmd.seconds === "number" ? cmd.seconds : null, cmd.stems !== false);
+      // `target_lufs`: a number normalises to it, null leaves the mix as rendered,
+      // absent = the studio's own setting (default −14).
+      const targetLufs = cmd.target_lufs === undefined ? (s.prefs.exportLoudness ?? null) : typeof cmd.target_lufs === "number" ? cmd.target_lufs : null;
+      return await api.exportSong(String(cmd.path), include as never, s.prefs.exportFormat ?? null, null, typeof cmd.seconds === "number" ? cmd.seconds : null, cmd.stems !== false, targetLufs);
     }
     case "instrument_audition": {
       // Plays a preset through the designer's audition path for a few seconds (sound!).

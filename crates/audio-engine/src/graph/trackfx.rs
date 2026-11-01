@@ -158,6 +158,12 @@ pub struct CompBlock {
     pub active: bool,
 }
 
+impl Default for CompBlock {
+    fn default() -> Self {
+        Self::new(48_000.0, 0.0, 1.0, 10.0, 100.0, 0.0)
+    }
+}
+
 impl CompBlock {
     pub fn new(
         sr: f32,

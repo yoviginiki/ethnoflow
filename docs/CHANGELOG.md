@@ -3,6 +3,22 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Track EQ + compressor and a loudness target on export (home-studio item 4, 2026-11-01).**
+  Engine `graph/trackfx.rs`: RBJ shelves (200 Hz / 4 kHz) + peak, feed-forward compressor
+  (threshold / ratio / attack / release / make-up), coefficients once per block, nothing
+  allocated per sample; `loudness.rs`: BS.1770-4 integrated loudness (K-weighting, 400 ms
+  blocks, absolute + relative gates). `ClipSource` runs the EQ and the compressor per track
+  after the one-pole cuts and before the fader (engine test: a −24 dB low shelf drops a 60 Hz
+  tone by > 12 dB and leaves 8 kHz, a −30 dB / 10:1 compressor squeezes a −6 dBFS tone).
+  Project `Track` gains nine validated fields with defaults (old projects load unchanged).
+  My studio: "EQ·C" button per track opens the Processing panel (nine knobs, i18n BG/EN,
+  saved with the arrangement, no history entry while dragging). `export_song(target_lufs)`:
+  measures the mix, applies one gain to the mix and every stem, limiter at −1 dBFS on the
+  mix, result reports `lufs`, `lufs_after`, `gain_db`; "Loudness" select next to Export mix
+  (as rendered / −14 default / −16 / −18 / −23, pref `exportLoudness`). Bridge `export_song`
+  takes `target_lufs` (absent = the studio's setting, null = as rendered). Smoke: the track
+  strip step now also checks the compressor halves the clips-stem peak and a −14 target lands
+  within 1 LU. Guide BG/EN.
 - **Multisample instruments from a folder (home-studio item 3, third slice, 2026-11-01).**
   `SamplerSource::new_multi` with zones (root Hz + buffer): the nearest root plays every
   note with a small varispeed (engine test); `LayerSource::Sampler.zones` (take + root

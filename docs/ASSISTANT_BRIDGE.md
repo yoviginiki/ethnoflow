@@ -115,7 +115,7 @@ rhythm_status, ambient_status }`
 | `arrangement` | | the studio arrangement (tracks, clips, loop) |
 | `set_arrangement` | `arrangement` | replaces it (validated); track strips: gain_db, pan, lowpass_hz, highpass_hz, send |
 | `set_song_map` | `song_map` (whole SongMap) | replaces the project's song map (validated) |
-| `export_song` | `path`, `seconds?`, `drone?`, `pad?`, `ambient?`, `rhythm?`, `stems?` | the studio's whole-song export (mix + stems + markers + manifest) |
+| `export_song` | `path`, `seconds?`, `drone?`, `pad?`, `ambient?`, `rhythm?`, `stems?`, `target_lufs?` (number = normalise to it, `null` = as rendered, absent = the studio's setting, default −14) | the studio's whole-song export (mix + stems + markers + manifest); the result carries `lufs`, `lufs_after`, `gain_db` |
 | `reference_add` | `path` (WAV/MP3/FLAC/OGG) | copies the song into the references library (never into a project); reply: id, name, duration |
 | `reference_list` | | the references library (id, name, duration, analyzed) |
 | `reference_report` | `id` | the saved analysis report (tempo candidates, key hypotheses, segments) without the curves |
