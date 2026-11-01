@@ -60,6 +60,8 @@ export interface Prefs {
   selectedOutput: string | null;
   sampleRate: number | null;
   exportFormat: WavFormat;
+  /** Punch & roll (A2): seconds of playback before the record point (0 = none). */
+  punchRollS: number;
   /** Song export loudness target in LUFS (null = leave the mix as rendered). */
   exportLoudness: number | null;
   clickRec: boolean;
@@ -233,6 +235,7 @@ export const DEFAULT_PREFS: Prefs = {
   sampleRate: null,
   exportFormat: "float32",
   exportLoudness: -14,
+  punchRollS: 2,
   clickRec: false,
   countIn: 0,
   clickPlay: false,

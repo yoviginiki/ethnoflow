@@ -8,6 +8,7 @@ import { formatBytes, formatDb, formatTime, isTypingTarget, linearToDb, meterFra
 import { Knob } from "./Knob";
 import { messages } from "./i18n";
 import { chooseTake, overlappingClips, placeRecordedClip } from "./arrangeTakes";
+import { deleteTimeRange, insertTimeGap } from "./ripple";
 import { playTake } from "./takeActions";
 import { useStore } from "./store";
 
@@ -296,7 +297,19 @@ export function Arrange() {
       setError(null);
       setMessage(null);
       const at = statusRef.current?.playing ? statusRef.current.position_seconds : cursorRef.current;
-      await api.arrangementPlay(prefs.selectedOutput, at);
+      // Punch & roll (A2): when idle and the cursor sits inside the song, play the
+      // `punchRollS` seconds before it first, then drop into recording at the cursor.
+      const roll = statusRef.current?.playing ? 0 : Math.min(prefs.punchRollS ?? 0, at);
+      await api.arrangementPlay(prefs.selectedOutput, at - roll);
+      if (roll > 0) {
+        const t0 = performance.now();
+        while (performance.now() - t0 < roll * 1000 + 500) {
+          const st = await api.arrangementStatus();
+          setStatus(st);
+          if (!st || !st.playing || st.position_seconds >= at) break;
+          await new Promise((r) => setTimeout(r, 25));
+        }
+      }
       await api.startRecording({ input: prefs.selectedInput, output: prefs.selectedOutput, sample_rate: prefs.sampleRate, click: prefs.clickRec, count_in_bars: 0 });
       recStart.current = { at, track: selectedTrack };
       setLastRec({ at, track: selectedTrack });
@@ -306,7 +319,7 @@ export function Arrange() {
       fail(e);
       void api.arrangementPause().then((st) => setStatus(st)).catch(() => undefined);
     }
-  }, [fail, prefs.selectedInput, prefs.selectedOutput, prefs.sampleRate, prefs.clickRec, selectedTrack, setError, setMessage, setMode]);
+  }, [fail, prefs.selectedInput, prefs.selectedOutput, prefs.sampleRate, prefs.clickRec, prefs.punchRollS, selectedTrack, setError, setMessage, setMode]);
 
   /** One more take at the same spot as the last recording (the older take stays, muted). */
   const onRecordAgain = useCallback(async () => {
@@ -454,6 +467,25 @@ export function Arrange() {
     });
     setSelected(null);
   }, [patchClip]);
+
+  // A4: sync-locked time edits across every track.
+  const deleteLoopTime = useCallback(() => {
+    const cur = arrRef.current;
+    if (!cur || !cur.loop_region) return;
+    const [a, b] = cur.loop_region;
+    commit(deleteTimeRange(cur, a, b));
+    setSelected(null);
+    void seek(a);
+  }, [commit, seek]);
+  const insertGap = useCallback(
+    (seconds: number) => {
+      const cur = arrRef.current;
+      if (!cur) return;
+      commit(insertTimeGap(cur, cursorRef.current, seconds));
+      setSelected(null);
+    },
+    [commit],
+  );
 
   const splitClip = useCallback(() => {
     const at = playing && statusRef.current ? statusRef.current.position_seconds : cursorRef.current;
@@ -1149,6 +1181,22 @@ export function Arrange() {
         <button className="ghost small" onClick={doUndo} disabled={undo.length === 0} title={t.undo} aria-label={t.undo}>
           ↶
         </button>
+        <button className="ghost small" onClick={deleteLoopTime} disabled={!arr?.loop_region} title={t.rippleDeleteHint}>
+          ✂⇤ {t.rippleDelete}
+        </button>
+        <button className="ghost small" onClick={() => insertGap(2)} disabled={!arr} title={t.rippleInsertHint}>
+          ⇥ {t.rippleInsert}
+        </button>
+        <label className="inline small" title={t.punchRollHint}>
+          {t.punchRoll}
+          <select value={String(prefs.punchRollS ?? 0)} onChange={(e) => useStore.getState().setPref("punchRollS", Number(e.target.value))}>
+            {[0, 1, 2, 4].map((v) => (
+              <option key={v} value={String(v)}>
+                {v} s
+              </option>
+            ))}
+          </select>
+        </label>
         <button className={`ghost small ${envMode ? "on" : ""}`} onClick={() => setEnvMode((v) => !v)} title={t.envToolHint} aria-pressed={envMode} data-coach="env-tool">
           ⌇ {t.envTool}
         </button>

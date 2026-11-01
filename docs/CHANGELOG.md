@@ -3,6 +3,11 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Punch & roll and sync-locked time edits — A2 + A4 (2026-11-01 evening).** My studio:
+  a "Roll" pref (0/1/2/4 s) plays the song from before the cursor and drops into
+  recording exactly at the cursor; `ripple.ts` deletes the loop region's time or inserts a
+  gap across every track (clips across the edge are cut, envelopes re-timed; vitest) with
+  two toolbar buttons, undoable. Guide BG/EN, plan A2/A4.
 - **Editor analysis — A11 (2026-11-01 evening).** `crates/analysis/src/spectrum.rs`:
   `spectrum` (averaged magnitude in log bands, dBFS, a full-scale sine reads ~0 dB) and
   `spectrogram` (cols × rows dB grid, log frequency 40 Hz…Nyquist); tests: the tone's band
