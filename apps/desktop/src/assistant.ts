@@ -6,10 +6,13 @@ import type { StarterId } from "./starters";
 import { defaultSource, makeLayer, MAX_AMBIENT_LAYERS } from "./ambientPresets";
 import { applyLibraryPayload, applySession, collectSession, mergeSessionPrefs, pickSessionPrefs, rackForProject, SESSION_PREF_KEYS } from "./session";
 import { AREA_IDS, AREAS, areaMainScreen, areaOf, areaTabs } from "./areas";
+import { messages } from "./i18n";
 import { useStore, type LayerName, type Screen } from "./store";
 import { latestTake, loadTake, playLoaded, stopPlaying, continueLast } from "./takeActions";
 import { journeyWorld, phaseAt, WORLD_IDS, worldById } from "./scapes";
 import { startJourney, stopJourney } from "./scapesActions";
+import { RACKS, type RackKind } from "./rackAdapter";
+import { jumpHistory, recordChange, redoHistory, undoHistory, useHistoryStore } from "./rackHistory";
 import { readNowPlaying, stopAll } from "./nowPlaying";
 import { hzToMidi as tunerHzToMidi } from "./format";
 import { clampA4, readTuner, targetsFor, TUNER_INSTRUMENTS, type TunerInstrument } from "./tunerTargets";
@@ -78,6 +81,7 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
     if (!s.project) throw new Error("no project open");
     return s.project;
   };
+  const t = messages[s.prefs.lang];
   const rack = () => {
     project();
     if (!s.ambient) throw new Error("no rack loaded yet");
@@ -143,9 +147,37 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
       // Replace the Soundscapes rack (same shape as set_ambient; used to restore after scapes_build).
       const p = project();
       const next = rackForProject(cmd.ambient as AmbientRack, new Set(p.takes.map((t) => t.id)));
+      const prevRack = s.scapes;
       const v = await api.setScapes(next);
+      recordChange("scapes", prevRack, v.ambient, t.hAssistant, t.hStart);
       useStore.getState().setScapes(v.ambient);
       return { layers: v.ambient.layers.length, scenes: v.ambient.program.scenes.length };
+    }
+    case "rack_history": {
+      // The steps of a rack's edit history (`rack`: ambient | scapes); `undo` / `redo` (count)
+      // or `jump` (step index) apply that state without recording a new step.
+      const kind = (cmd.rack === "scapes" ? "scapes" : "ambient") as RackKind;
+      const R = RACKS[kind];
+      let h = useHistoryStore.getState().byRack[kind];
+      let target: { history: typeof h; rack: AmbientRack } | null = null;
+      for (let i = 0; i < (typeof cmd.undo === "number" ? cmd.undo : 0); i++) {
+        const r = undoHistory(target?.history ?? h);
+        if (!r) break;
+        target = r;
+      }
+      for (let i = 0; i < (typeof cmd.redo === "number" ? cmd.redo : 0); i++) {
+        const r = redoHistory(target?.history ?? h);
+        if (!r) break;
+        target = r;
+      }
+      if (typeof cmd.jump === "number") target = jumpHistory(target?.history ?? h, cmd.jump);
+      if (target) {
+        const v = await R.set(target.rack);
+        R.store(v.ambient);
+        useHistoryStore.getState().set(kind, target.history);
+        h = target.history;
+      }
+      return { rack: kind, index: h.index, count: h.entries.length, labels: h.entries.map((e) => e.label), layers: R.read(useStore.getState())?.layers.length ?? 0 };
     }
     case "scapes_seek": {
       // Jump the journey to `position_s` and/or run / pause its program (`playing`).
@@ -172,7 +204,9 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
     }
     case "set_ambient": {
       const p = project();
+      const prevRack = s.ambient;
       const next = await setRack(rackForProject(cmd.ambient as AmbientRack, new Set(p.takes.map((t) => t.id))));
+      recordChange("ambient", prevRack, next, t.hAssistant, t.hStart);
       return { layers: next.layers.map((l) => ({ id: l.id, name: l.name, kind: l.source.kind })) };
     }
     case "set_macros": {

@@ -3,6 +3,17 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **History of changes for both racks (2026-11-01; owner: "искам някъде history на промените…
+  да мога да връщам назад/напред, ако много се обърка след моята намеса").** `rackHistory.ts`:
+  every commit of the Atmosphere / Soundscapes editor, every journey, every preset load and
+  every assistant write is a step with a label (describeChange: new / removed / renamed
+  layer, layer knob, macro, scenes, automation); continuous knob drags coalesce within
+  800 ms; 200 steps; undo / redo / jump restore the state without a new step.
+  `RackHistoryPanel.tsx` above the editor: ↶ Undo / ↷ Redo (Ctrl+Z / Ctrl+Y), step i of n,
+  the list with "Restore here". Bridge op `rack_history`; smoke undo / redo on the
+  Soundscapes rack; vitest (3). Guide BG/EN, bridge doc. Also
+  `docs/design/AUDIO_EDITOR_PLAN.md`: Audacity 3.7 inventory vs what EthnoFlow has,
+  twelve stages for an "Edit audio" module, four decisions for the owner.
 - **Soundscapes gets the whole rack editor (2026-11-01; owner: "не виждам как да работя с
   Soundscapes… липсва ми студио изгледа с контроли, семпли… инструменти и модули за промяна").**
   `rackAdapter.ts` lets Ambient.tsx, the Modules view and the Program panel drive either rack

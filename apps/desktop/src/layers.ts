@@ -1,3 +1,4 @@
+import { useHistoryStore } from "./rackHistory";
 import { useEffect } from "react";
 import { messages } from "./i18n";
 import { api, describeError, type DroneSettings, type InstrumentProfile, type PadNote, type PadSettings, type Scale } from "./api";
@@ -207,6 +208,7 @@ export function useBackgroundLayers() {
       if (st.metronomeOn) useStore.getState().setMetronomeOn(false);
       useStore.getState().setAmbient(null);
       useStore.getState().setScapes(null);
+      useHistoryStore.getState().reset();
       useStore.getState().setSleepAt(null);
     }
   }, [project]);
@@ -215,6 +217,8 @@ export function useBackgroundLayers() {
   const projectRoot = project?.root ?? null;
   useEffect(() => {
     if (!projectRoot) return;
+    // A new project starts a fresh edit history for both racks.
+    useHistoryStore.getState().reset();
     api
       .ambientGet()
       .then((v) => useStore.getState().setAmbient(v.ambient))

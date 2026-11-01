@@ -130,6 +130,12 @@ h2 { font-size: 15px; margin: 0 0 8px; font-weight: 600; }
 .journey-cursor { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--fg, #fff); pointer-events: none; }
 .journey-bar.seekable { cursor: pointer; }
 .scapes-transport .analysis-row { justify-content: flex-start; }
+.history summary { cursor: pointer; }
+.history summary .analysis-row { display: inline-flex; gap: 8px; align-items: center; }
+.history-list { max-height: 240px; overflow: auto; font-size: 13px; padding-left: 28px; margin: 6px 0 0; }
+.history-list li { padding: 2px 0; }
+.history-list li.current { font-weight: 600; }
+.history-list li.future { opacity: 0.55; }
 .area {
   display: flex; flex-direction: column; gap: 6px; text-align: left; padding: 16px;
   background: var(--panel); border: 1px solid var(--axis); border-radius: 10px; min-height: 96px;

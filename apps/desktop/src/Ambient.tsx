@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { Soundscapes } from "./Soundscapes";
 import { RACKS, type RackKind } from "./rackAdapter";
+import { describeChange, recordChange, type ChangeWords } from "./rackHistory";
+import { RackHistoryPanel } from "./RackHistoryPanel";
 import { open } from "@tauri-apps/plugin-dialog";
 import { AMBIENT_TAGS, api, describeError, IMPORT_EXTENSIONS, type Ambient as AmbientRack, type AmbientLayer, type AmbientTag, type LayerKind, type LayerSource, type Macros, type PresetSummary } from "./api";
 import { DEFAULT_MACROS, KIND_LABEL, MAX_AMBIENT_LAYERS, defaultSource, makeLayer } from "./ambientPresets";
@@ -111,9 +113,17 @@ export function Ambient({ kind = "ambient" }: { kind?: RackKind } = {}) {
     return () => window.clearInterval(id);
   }, []);
 
-  /** Local state now, save + apply shortly after (sliders fire continuously). */
+  const words = useMemo<ChangeWords>(
+    () => ({ start: t.hStart, layerAdded: t.hLayerAdded, layerRemoved: t.hLayerRemoved, layerRenamed: t.hLayerRenamed, layerParam: t.hLayerParam, macro: t.hMacro, scenes: t.hScenes, automation: t.hAutomation, many: t.hMany }),
+    [t],
+  );
+  /** Local state now, save + apply shortly after (sliders fire continuously). Every commit is a history step unless `record` is false (undo / redo). */
   const commit = useCallback(
-    (next: AmbientRack) => {
+    (next: AmbientRack, opts: { record?: boolean } = {}) => {
+      if (opts.record !== false) {
+        const prev = R.read(useStore.getState());
+        recordChange(kind, prev, next, describeChange(prev, next, words), words.start);
+      }
       R.store(next);
       pendingRef.current = next;
       if (timerRef.current !== null) return;
@@ -130,7 +140,7 @@ export function Ambient({ kind = "ambient" }: { kind?: RackKind } = {}) {
           .catch(fail);
       }, COMMIT_MS);
     },
-    [fail],
+    [fail, kind, words],
   );
   useEffect(
     () => () => {
@@ -426,6 +436,7 @@ export function Ambient({ kind = "ambient" }: { kind?: RackKind } = {}) {
         <div className="muted small">{t.ambientIntro}</div>
       </section>
 
+      <RackHistoryPanel kind={kind} apply={(r) => commit(r, { record: false })} />
       {ambientView === "modules" && <Soundscapes kind={kind} />}
       <div className={`ambient-body ${showLeft ? "" : "left-collapsed"} ${showRight ? "" : "right-collapsed"}`} style={ambientView === "modules" ? { display: "none" } : undefined}>
         <aside className="panel ambient-left">

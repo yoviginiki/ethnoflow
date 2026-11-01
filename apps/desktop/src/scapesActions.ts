@@ -3,6 +3,7 @@
 import { api } from "./api";
 import { messages } from "./i18n";
 import { buildJourney, type PhaseRole, type World } from "./scapes";
+import { recordChange } from "./rackHistory";
 import { useStore } from "./store";
 
 export interface StartJourneyOptions {
@@ -22,6 +23,7 @@ export async function startJourney(world: World, opts: StartJourneyOptions) {
   const names: Record<PhaseRole, string> = { intro: t.phaseIntro, development: t.phaseDevelopment, climax: t.phaseClimax, outro: t.phaseOutro };
   const rack = buildJourney(world, { minutes: opts.minutes, seed: opts.seed, loop: opts.loop, names, base: st.scapes, layerName: (k) => t[k] });
   const v = await api.setScapes(rack);
+  recordChange("scapes", st.scapes, v.ambient, t.hJourney(t[world.title]), t.hStart);
   useStore.getState().setScapes(v.ambient);
   if (opts.play) {
     useStore.getState().setLayer("scapes", true);

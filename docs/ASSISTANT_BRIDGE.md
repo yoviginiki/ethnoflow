@@ -59,6 +59,7 @@ rhythm_status, ambient_status }`
 | `scapes_build` | `world`, `minutes?` (8), `seed?`, `loop?`, `play?` | builds the world's journey into the Soundscapes rack (its own rack, slots, bus and stem; the atmosphere is untouched; returns `previous` for a restore) with 4 scenes and 3 breathing lanes; `play: true` **starts sound** (atmosphere on, program from 0) |
 | `scapes_stop` | — | stops the program and the Soundscapes layer |
 | `set_scapes` | `ambient`: a whole rack | replaces the Soundscapes rack (same shape as `set_ambient`; `scapes_build` returns `previous` for this) |
+| `rack_history` | `rack?`: ambient (default) / scapes, `undo?` / `redo?`: count, `jump?`: step index | the rack's edit history (steps with labels: knob, new layer, scene, journey, preset, assistant); undo / redo / jump apply that state without a new step; returns `index`, `count`, `labels`, `layers` |
 | `scapes_seek` | `position_s?`, `playing?` | jumps the journey and/or runs / pauses its program (only while the Soundscapes layer is on: the program clock lives with the running rack); returns `position_s`, `playing`, `end_s` |
 | `continue` | — | Home's "▶ Continue": opens Play & record with the latest take loaded (no takes: empty, ready to record), no sound; returns `screen`, `loaded_id`, `latest_id` |
 | `set_prefs` | `prefs`: any of the pref keys, partial objects merge | drone/pad/rhythm/harmony/intent/master |

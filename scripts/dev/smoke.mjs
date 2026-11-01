@@ -348,6 +348,15 @@ async function main() {
       if (r.previous) expectOk(send({ op: "set_scapes", ambient: r.previous }));
     }
   });
+  await step("history: the Soundscapes rack remembers steps; undo / redo through the bridge restore them", () => {
+    const h0 = expectOk(send({ op: "rack_history", rack: "scapes" }));
+    if (h0.count < 2) throw new Error(`only ${h0.count} step(s): ${JSON.stringify(h0.labels)}`);
+    const u = expectOk(send({ op: "rack_history", rack: "scapes", undo: 1 }));
+    if (u.index !== h0.index - 1) throw new Error(JSON.stringify(u));
+    const r = expectOk(send({ op: "rack_history", rack: "scapes", redo: 1 }));
+    if (r.index !== h0.index || r.layers !== h0.layers) throw new Error(JSON.stringify(r));
+    return `${h0.count} steps (${h0.labels.slice(-3).join(" ← ")}), undo → step ${u.index + 1}, redo → step ${r.index + 1}`;
+  });
   await step("soundscapes: the old screen id opens Atmosphere in the modules view (alias)", () => {
     const r = expectOk(send({ op: "screen", screen: "soundscapes" }));
     if (r.screen !== "ambient") throw new Error(`screen is ${r.screen}`);
