@@ -1,12 +1,14 @@
-// The five areas of the app (UX audit 2026-10-31, §5.1 and §6 stage 3): Play / Background /
-// Song / Learn / Library. Home shows one card per area; every existing screen keeps its
-// `Screen` id and belongs to exactly one area, so presets (`go`), the assistant bridge and
-// the smoke test keep working while stages 4 and 5 merge the screens into tabs. The
+// The five areas of the app (UX audit 2026-10-31, §5.1 and §6 stages 3–5): Play /
+// Background / Song / Learn / Library. Home shows one card per area; each area is one
+// screen with tabs (AreaScreen.tsx) and every existing screen keeps its `Screen` id as
+// its tab, so presets (`go`), the assistant bridge and the smoke test keep working. The
 // breadcrumb in the top bar reads "Home › <area> › <screen>" from the same table.
 import type { StringMessageKey } from "./i18n";
 import type { Screen } from "./store";
 
 export type AreaId = "play" | "background" | "song" | "learn" | "library";
+/** Any screen but Home (Home is not inside an area). */
+export type AreaScreenId = Exclude<Screen, "home">;
 
 export interface HomeArea {
   id: AreaId;
@@ -15,9 +17,9 @@ export interface HomeArea {
   /** One line: what you do here. */
   desc: StringMessageKey;
   /** The screen the card opens. */
-  main: Screen;
-  /** Other screens that belong to the area until they become its tabs (stages 4–5). */
-  also: Screen[];
+  main: AreaScreenId;
+  /** The area's other tabs, in order after `main`. */
+  also: AreaScreenId[];
 }
 
 export const AREAS: HomeArea[] = [
@@ -32,8 +34,38 @@ export const AREA_IDS: AreaId[] = AREAS.map((a) => a.id);
 
 /** The area a screen belongs to; Home and Help belong to none. */
 export function areaOf(screen: Screen): HomeArea | null {
+  if (screen === "home") return null;
   return AREAS.find((a) => a.main === screen || a.also.includes(screen)) ?? null;
 }
+
+/** The tabs of an area: its main screen first, then the others. */
+export function areaTabs(area: HomeArea): AreaScreenId[] {
+  return [area.main, ...area.also];
+}
+
+/** Title of each screen: tab label, Home's links and the top-bar breadcrumb. */
+export const SCREEN_TITLE: Record<AreaScreenId, StringMessageKey> = {
+  play: "areaPlay",
+  tuner: "areaTuner",
+  compose: "bgTabDronePad",
+  ambient: "areaAmbient",
+  soundscapes: "areaSoundscapes",
+  rhythm: "areaRhythm",
+  instrument: "areaForge",
+  live: "bgTabLive",
+  studio: "areaStudio",
+  songmap: "areaSongMap",
+  create: "areaCreate",
+  start: "areaStart",
+  academy: "areaLearn",
+  references: "areaReferences",
+  library: "areaLibrary",
+  samples: "areaSamples",
+  help: "areaHelp",
+};
+
+/** Screens that work without an open project (the others show the project picker). */
+export const NO_PROJECT_SCREENS: Screen[] = ["home", "help", "tuner", "library", "samples", "references", "academy", "create"];
 
 /** The main screen of an area id, or null for an unknown id (the bridge validates with it). */
 export function areaMainScreen(id: string): Screen | null {

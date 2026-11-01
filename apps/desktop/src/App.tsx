@@ -1,10 +1,8 @@
 import { api } from "./api";
 import { useEffect } from "react";
-import { Arrange } from "./Arrange";
-import { BackgroundScreen } from "./BackgroundScreen";
+import { AreaScreen } from "./AreaScreen";
 import { Help } from "./Help";
 import { Home } from "./Home";
-import { Library } from "./Library";
 import { NowPlayingBar } from "./NowPlayingBar";
 import { PresetLibrary } from "./PresetLibrary";
 import { ScreenBoundary } from "./ScreenBoundary";
@@ -13,41 +11,14 @@ import { applySession, collectSession, useProjectSession } from "./session";
 import { useBackgroundLayers, useSongTransport } from "./layers";
 import { ProjectMenu } from "./ProjectMenu";
 import { ProjectPicker } from "./ProjectPicker";
-import { Start } from "./Start";
-import { SongMapScreen } from "./SongMapScreen";
-import { SamplesScreen } from "./SamplesScreen";
-import { Studio } from "./Studio";
-import { TunerScreen } from "./TunerScreen";
-import { ReferencesScreen } from "./ReferencesScreen";
-import { AcademyScreen, GuidedBanner } from "./AcademyScreen";
-import { CreateSongScreen } from "./CreateSongScreen";
+import { GuidedBanner } from "./AcademyScreen";
 import { useAcademyGuided } from "./academyGuided";
 import { useLiveFollow } from "./LiveFollowPanel";
 import { CoachPanel, useCoachHighlight } from "./CoachPanel";
-import { messages, type Lang, type StringMessageKey } from "./i18n";
-import { areaOf } from "./areas";
-import { useStore, type Screen } from "./store";
+import { messages, type Lang } from "./i18n";
+import { areaOf, NO_PROJECT_SCREENS, SCREEN_TITLE } from "./areas";
+import { useStore } from "./store";
 
-/** Title of each area, shown in the top bar so the user always sees where they are. */
-const SCREEN_TITLE: Record<Exclude<Screen, "home">, StringMessageKey> = {
-  play: "areaPlay",
-  tuner: "areaTuner",
-  compose: "bgTabDronePad",
-  live: "bgTabLive",
-  studio: "areaStudio",
-  ambient: "areaAmbient",
-  rhythm: "areaRhythm",
-  library: "areaLibrary",
-  soundscapes: "areaSoundscapes",
-  instrument: "areaForge",
-  songmap: "areaSongMap",
-  samples: "areaSamples",
-  references: "areaReferences",
-  academy: "areaLearn",
-  create: "areaCreate",
-  start: "areaStart",
-  help: "areaHelp",
-};
 
 export default function App() {
   const lang = useStore((s) => s.prefs.lang);
@@ -140,18 +111,8 @@ export default function App() {
       <div className="app-main">
       <ScreenBoundary screen={screen}>
       {screen === "home" && <Home />}
-      {screen === "play" && (project ? <Studio /> : <ProjectPicker />)}
-      {screen === "tuner" && <TunerScreen />}
-      {area?.id === "background" && (project ? <BackgroundScreen tab={screen} /> : <ProjectPicker />)}
-      {screen === "studio" && (project ? <Arrange /> : <ProjectPicker />)}
-      {screen === "library" && <Library />}
-      {screen === "start" && (project ? <Start /> : <ProjectPicker />)}
       {screen === "help" && <Help />}
-      {screen === "songmap" && (project ? <SongMapScreen /> : <ProjectPicker />)}
-      {screen === "samples" && <SamplesScreen />}
-      {screen === "references" && <ReferencesScreen />}
-      {screen === "academy" && <AcademyScreen />}
-      {screen === "create" && <CreateSongScreen />}
+      {area && screen !== "home" && (project || NO_PROJECT_SCREENS.includes(screen) ? <AreaScreen screen={screen} /> : <ProjectPicker />)}
       </ScreenBoundary>
       </div>
       {coachOn && <CoachPanel />}

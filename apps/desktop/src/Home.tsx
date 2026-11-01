@@ -1,37 +1,18 @@
 import { useState } from "react";
-import { AREAS } from "./areas";
+import { AREAS, SCREEN_TITLE } from "./areas";
 import { describeError } from "./api";
 import { takeName } from "./format";
-import { messages, type StringMessageKey } from "./i18n";
+import { messages } from "./i18n";
 import { ProjectPicker } from "./ProjectPicker";
-import { useStore, type Screen } from "./store";
+import { useStore } from "./store";
 import { continueLast, latestTake } from "./takeActions";
 
-/** Title of each screen for the "also here" links (same keys as the top-bar breadcrumb). */
-const SCREEN_TITLE: Partial<Record<Screen, StringMessageKey>> = {
-  play: "areaPlay",
-  tuner: "areaTuner",
-  compose: "bgTabDronePad",
-  live: "bgTabLive",
-  studio: "areaStudio",
-  ambient: "areaAmbient",
-  rhythm: "areaRhythm",
-  library: "areaLibrary",
-  soundscapes: "areaSoundscapes",
-  instrument: "areaForge",
-  songmap: "areaSongMap",
-  samples: "areaSamples",
-  references: "areaReferences",
-  academy: "areaLearn",
-  create: "areaCreate",
-  start: "areaStart",
-};
 
 /**
  * Home: "Continue: <project>" (opens Play with the latest take loaded), "I have a melody →"
  * (Start from a melody) and one card per area — Play / Background / Song / Learn / Library
- * (UX audit 2026-10-31, stage 3). The 16 screens are still here, as "also here" links
- * under their area, until stages 4–5 turn them into tabs. Help lives in the top bar.
+ * (UX audit 2026-10-31, stages 3–5). Every area is a screen with tabs (AreaScreen.tsx);
+ * the links under a card open its other tabs directly. Help lives in the top bar.
  */
 export function Home() {
   const t = messages[useStore((s) => s.prefs.lang)];
@@ -81,14 +62,11 @@ export function Home() {
             </button>
             <div className="home-area-also">
               <span className="muted small">{t.homeAlso}</span>
-              {a.also.map((sc) => {
-                const key = SCREEN_TITLE[sc];
-                return key ? (
-                  <button key={sc} className="ghost small" onClick={() => setScreen(sc)}>
-                    {t[key]}
-                  </button>
-                ) : null;
-              })}
+              {a.also.map((sc) => (
+                <button key={sc} className="ghost small" onClick={() => setScreen(sc)}>
+                  {t[SCREEN_TITLE[sc]]}
+                </button>
+              ))}
             </div>
           </div>
         ))}

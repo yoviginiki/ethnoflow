@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AREAS, AREA_IDS, areaMainScreen, areaOf } from "./areas";
+import { AREAS, AREA_IDS, areaMainScreen, areaOf, areaTabs, NO_PROJECT_SCREENS, SCREEN_TITLE } from "./areas";
 import type { Screen } from "./store";
 
 // Every screen the app has (store.ts: Screen). Home and Help are not areas.
@@ -12,7 +12,7 @@ describe("home areas", () => {
 
   it("places every screen except home and help in exactly one area", () => {
     for (const sc of SCREENS) {
-      const owners = AREAS.filter((a) => a.main === sc || a.also.includes(sc));
+      const owners = AREAS.filter((a) => sc !== "home" && (a.main === sc || a.also.includes(sc)));
       if (sc === "home" || sc === "help") expect(owners).toHaveLength(0);
       else expect(owners, sc).toHaveLength(1);
     }
@@ -26,5 +26,11 @@ describe("home areas", () => {
     for (const a of AREAS) expect(a.also).not.toContain(a.main);
     expect(areaMainScreen("background")).toBe("compose");
     expect(areaMainScreen("nope")).toBeNull();
+  });
+
+  it("gives every screen a title and every area its main tab first", () => {
+    for (const sc of SCREENS) if (sc !== "home") expect(SCREEN_TITLE[sc], sc).toBeTruthy();
+    for (const a of AREAS) expect(areaTabs(a)[0]).toBe(a.main);
+    for (const sc of NO_PROJECT_SCREENS) expect(SCREENS).toContain(sc);
   });
 });

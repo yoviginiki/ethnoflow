@@ -3,6 +3,19 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Song, Learn, Library (and Play) as screens with tabs: stage 5 of the UX audit (2026-11-01; owner: "давай напред").**
+  `AreaScreen.tsx` replaces `BackgroundScreen.tsx` and serves all five areas: Play =
+  Play & record · Tuner; Background = the six tabs of stage 4; Song = My studio · Song map
+  · Create a song · Start from a melody; Learn = Academy · References; Library = Library ·
+  My samples. `areas.ts` owns the tab order, the screen titles (`SCREEN_TITLE`, shared by
+  the tabs, Home and the breadcrumb) and which screens work without a project; App.tsx
+  routes every area through one line. The screens mount unchanged and keep their ids.
+  Home's links read "Tabs:". Bridge `area` lists the tabs; the smoke step walks all 16
+  tabs and checks each lands in its area (45/45). Soundscapes gets the atmosphere's own
+  ▶ Play / ■ Stop like the Atmosphere tab (owner 1.11: "there is no play button here, is
+  that normal?" after stage 4 removed its background transport; the rack's own play is
+  the tab's verb, the background transport stays in the bar). Guide BG/EN (section titles "Area › …",
+  the Home paragraph), bridge doc, audit §6 status, screenshot.
 - **Background as one screen with tabs: stage 4 of the UX audit (2026-11-01; owner: "давай напред").**
   `BackgroundScreen.tsx` mounts the existing screens unchanged as tabs: Drone & pad (the
   former "Accompanist" / Compose), Atmosphere, Soundscapes, Rhythm section, Instruments

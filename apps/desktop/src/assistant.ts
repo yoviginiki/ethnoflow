@@ -5,7 +5,7 @@ import { makeSong } from "./makeSong";
 import type { StarterId } from "./starters";
 import { defaultSource, makeLayer, MAX_AMBIENT_LAYERS } from "./ambientPresets";
 import { applyLibraryPayload, applySession, collectSession, mergeSessionPrefs, pickSessionPrefs, rackForProject, SESSION_PREF_KEYS } from "./session";
-import { AREA_IDS, areaMainScreen, areaOf } from "./areas";
+import { AREA_IDS, AREAS, areaMainScreen, areaOf, areaTabs } from "./areas";
 import { useStore, type LayerName, type Screen } from "./store";
 import { latestTake, loadTake, playLoaded, stopPlaying, continueLast } from "./takeActions";
 import { readNowPlaying, stopAll } from "./nowPlaying";
@@ -99,7 +99,7 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
       return { screen: useStore.getState().screen };
     case "area": {
       // Home's five areas (UX audit stage 3): open an area's main screen, or list them.
-      if (cmd.area === undefined) return { areas: AREA_IDS, current: s.screen === "home" ? null : (areaOf(s.screen)?.id ?? null) };
+      if (cmd.area === undefined) return { areas: AREA_IDS, tabs: Object.fromEntries(AREAS.map((a) => [a.id, areaTabs(a)])), current: s.screen === "home" ? null : (areaOf(s.screen)?.id ?? null) };
       const main = areaMainScreen(String(cmd.area));
       if (!main) throw new Error(`unknown area ${String(cmd.area)}; one of ${AREA_IDS.join(", ")}`);
       s.setScreen(main);

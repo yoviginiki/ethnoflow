@@ -323,15 +323,21 @@ async function main() {
     if (c.screen !== "play" || !c.loaded_id || c.loaded_id !== c.latest_id) throw new Error(JSON.stringify(c));
     return `${opened.join(", ")}; continue → play with the latest take loaded`;
   });
-  await step("background: the six tabs are screens of the Background area (compose, ambient, soundscapes, rhythm, instrument, live)", () => {
-    const tabs = ["compose", "ambient", "soundscapes", "rhythm", "instrument", "live"];
-    for (const sc of tabs) {
-      const r = expectOk(send({ op: "screen", screen: sc }));
-      if (r.screen !== sc) throw new Error(`screen is ${r.screen}`);
-      const a = expectOk(send({ op: "area" }));
-      if (a.current !== "background") throw new Error(`${sc}: area is ${a.current}`);
+  await step("areas: every tab of Play / Background / Song / Learn / Library is a screen of its area", () => {
+    const list = expectOk(send({ op: "area" }));
+    const want = { play: ["play", "tuner"], background: ["compose", "ambient", "soundscapes", "rhythm", "instrument", "live"], song: ["studio", "songmap", "create", "start"], learn: ["academy", "references"], library: ["library", "samples"] };
+    for (const id of Object.keys(want)) if (JSON.stringify(list.tabs?.[id]) !== JSON.stringify(want[id])) throw new Error(`${id}: ${JSON.stringify(list.tabs?.[id])}`);
+    let n = 0;
+    for (const [id, tabs] of Object.entries(want)) {
+      for (const sc of tabs) {
+        const r = expectOk(send({ op: "screen", screen: sc }));
+        if (r.screen !== sc) throw new Error(`screen is ${r.screen}`);
+        const a = expectOk(send({ op: "area" }));
+        if (a.current !== id) throw new Error(`${sc}: area is ${a.current}, want ${id}`);
+        n++;
+      }
     }
-    return `${tabs.length} tabs, all under "background"`;
+    return `${n} tabs in 5 areas, each under its own area`;
   });
   await step("now playing: the bar's snapshot has every source, stop_all leaves silence", async () => {
     const np = expectOk(send({ op: "now_playing" }));
