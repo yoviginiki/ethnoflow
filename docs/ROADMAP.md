@@ -167,6 +167,14 @@ Shipped: 1 styles, 2 takes/comping, 3 sampler + follow the chord + multisample f
 EQ/compressor + −14 LUFS export, 5 audio editor with history, 6 keyboard everywhere (K1/K2/K4),
 7 the atmosphere knows the bar + S2 tension, 8 style templates + FLAC export + "What next".
 
+**Audacity programme status (1.11 night):** shipped the same evening — A1 (loopback / timer /
+sound-activated recording), A2 (punch & roll), A3 first slice (clip envelope), A4
+(sync-locked time edits), A5 (noise reduction, de-clip, de-ess, click removal), A6 (phase
+vocoder tempo / pitch), A7 first slice (EQ / compressor / limiter with preview), A10 first
+slice (export by section, M4A import), A11 (spectrogram, spectrum, silences, contrast),
+A12 first slice (macros). Open: A3 draw tool, A7 echo / reverb on a take, A8 CLAP effects,
+A9 Nyquist (owner decision), A10 AIFF / Ogg / MP3 export (owner decision), A12 NVDA check.
+
 **Received 1.11.2026 evening:** the Audacity feature list + "we must be able to write Nyquist plugins later" → `docs/design/AUDACITY_PROGRAM_PLAN.md` (audit per feature, stages A1–A12, Nyquist options; the owner then said "давай E2 E3" = stage A7 first).
 
 **User decisions still open:** MP3 export (LAME, LGPL/C → ADR or FLAC only); keyboard K3
