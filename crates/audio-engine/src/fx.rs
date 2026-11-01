@@ -300,6 +300,60 @@ pub fn declick(buf: &AudioBuffer, sensitivity: f32) -> Result<AudioBuffer> {
     Ok(AudioBuffer::new(buf.sample_rate, buf.channels, out))
 }
 
+/// Echo: the signal plus a feedback delay line (`delay_s` 0.02..2, `feedback` 0..0.9),
+/// `mix` 0..1 is how much of the echoes is added. Same length as the input (the echoes
+/// that would fall past the end are cut; select a little silence after the phrase).
+pub fn echo(buf: &AudioBuffer, delay_s: f32, feedback: f32, mix: f32) -> Result<AudioBuffer> {
+    if !(0.02..=2.0).contains(&delay_s)
+        || !(0.0..=0.9).contains(&feedback)
+        || !(0.0..=1.0).contains(&mix)
+    {
+        return Err(AudioError::InvalidArgument(
+            "echo: delay 0.02..2 s, feedback 0..0.9, mix 0..1".into(),
+        ));
+    }
+    let ch = buf.channels.max(1) as usize;
+    let d = ((delay_s * buf.sample_rate as f32) as usize).max(1);
+    let frames = buf.frames();
+    let mut out = buf.samples.clone();
+    for c in 0..ch {
+        let mut line = vec![0.0f32; d];
+        let mut w = 0usize;
+        for f in 0..frames {
+            let i = f * ch + c;
+            let delayed = line[w];
+            let x = buf.samples[i];
+            line[w] = x + delayed * feedback;
+            w = (w + 1) % d;
+            out[i] = x + delayed * mix;
+        }
+    }
+    Ok(AudioBuffer::new(buf.sample_rate, buf.channels, out))
+}
+
+/// Reverb (the master's Schroeder room) on a take: `size` 0..1, `damp` 0..1, `mix` 0..1
+/// (dry + mix × wet). Same length as the input.
+pub fn reverb(buf: &AudioBuffer, size: f32, damp: f32, mix: f32) -> Result<AudioBuffer> {
+    if !(0.0..=1.0).contains(&size) || !(0.0..=1.0).contains(&damp) || !(0.0..=1.0).contains(&mix) {
+        return Err(AudioError::InvalidArgument(
+            "reverb: size, damp and mix 0..1".into(),
+        ));
+    }
+    let ch = buf.channels.max(1) as usize;
+    let frames = buf.frames();
+    let mut out = buf.samples.clone();
+    for c in 0..ch {
+        let mut rv = crate::graph::sources::reverb::Reverb::new(buf.sample_rate);
+        rv.set(size, damp);
+        for f in 0..frames {
+            let i = f * ch + c;
+            let wet = rv.process(buf.samples[i]);
+            out[i] = buf.samples[i] + wet * mix;
+        }
+    }
+    Ok(AudioBuffer::new(buf.sample_rate, buf.channels, out))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -427,5 +481,32 @@ mod tests {
             diff < 1e-6,
             "the music before the click is untouched ({diff})"
         );
+    }
+
+    #[test]
+    fn echo_repeats_an_impulse_and_reverb_leaves_a_tail() {
+        let sr = 48_000;
+        let mut x = vec![0.0f32; sr as usize];
+        x[1000] = 0.5;
+        let dry = AudioBuffer::new(sr, 1, x);
+        let e = echo(&dry, 0.25, 0.5, 1.0).unwrap();
+        let at = 1000 + (0.25 * sr as f32) as usize;
+        assert!(
+            (e.samples[at] - 0.5).abs() < 1e-3,
+            "first echo {}",
+            e.samples[at]
+        );
+        assert!(
+            (e.samples[at + at - 1000] - 0.25).abs() < 1e-3,
+            "second echo fed back"
+        );
+        assert!(echo(&dry, 5.0, 0.5, 1.0).is_err());
+        let r = reverb(&dry, 0.7, 0.3, 1.0).unwrap();
+        let tail: f32 = r.samples[sr as usize / 10..sr as usize / 2]
+            .iter()
+            .map(|v| v.abs())
+            .sum();
+        assert!(tail > 0.05, "reverb tail energy {tail}");
+        assert!(reverb(&dry, 2.0, 0.3, 1.0).is_err());
     }
 }

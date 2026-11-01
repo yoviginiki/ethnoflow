@@ -38,9 +38,12 @@ const OP_LABEL: Record<string, StringMessageKey> = {
   declick: "opDeclick",
   stretch: "opStretch",
   pitch: "opPitch",
+  echo: "opEcho",
+  reverb: "opReverb",
 };
 
-type FxKind = "eq" | "compress" | "limit" | "denoise" | "declip" | "deess" | "declick" | "stretch" | "pitch";
+type FxKind = "eq" | "compress" | "limit" | "denoise" | "declip" | "deess" | "declick" | "stretch" | "pitch" | "echo" | "reverb";
+const DEFAULT_SPACE = { delay_s: 0.3, feedback: 0.35, mix: 0.4, size: 0.6, damp: 0.4, rmix: 0.3 };
 const DEFAULT_TIME = { factor: 1.25, semitones: 0 };
 const DEFAULT_REPAIR = { threshold: 0.95, threshold_db: -24, amount_db: 8, sensitivity: 8 };
 const DEFAULT_DENOISE = { reduction_db: 12, sensitivity: 1.5 };
@@ -81,6 +84,7 @@ export function EditScreen() {
   const [dn, setDn] = useState(DEFAULT_DENOISE);
   const [rep, setRep] = useState(DEFAULT_REPAIR);
   const [tm, setTm] = useState(DEFAULT_TIME);
+  const [sp, setSp] = useState(DEFAULT_SPACE);
   // A11 analysis views.
   const [showSpec, setShowSpec] = useState(false);
   const [spec, setSpec] = useState<Spectrogram | null>(null);
@@ -366,6 +370,8 @@ export function EditScreen() {
     if (fx === "declick") return { op: "declick", a: r[0], b: r[1], sensitivity: rep.sensitivity };
     if (fx === "stretch") return { op: "stretch", a: r[0], b: r[1], factor: tm.factor };
     if (fx === "pitch") return { op: "pitch", a: r[0], b: r[1], semitones: tm.semitones };
+    if (fx === "echo") return { op: "echo", a: r[0], b: r[1], delay_s: sp.delay_s, feedback: sp.feedback, mix: sp.mix };
+    if (fx === "reverb") return { op: "reverb", a: r[0], b: r[1], size: sp.size, damp: sp.damp, mix: sp.rmix };
     return null;
   };
   const previewFx = async () => {
@@ -721,9 +727,9 @@ export function EditScreen() {
         <section className="panel" aria-label={t.editFx}>
           <div className="analysis-row">
             <h3>{t.editFx}</h3>
-            {(["eq", "compress", "limit", "denoise", "declip", "deess", "declick", "stretch", "pitch"] as FxKind[]).map((k) => (
+            {(["eq", "compress", "limit", "denoise", "declip", "deess", "declick", "stretch", "pitch", "echo", "reverb"] as FxKind[]).map((k) => (
               <button key={k} className={`small ${fx === k ? "primary" : ""}`} onClick={() => setFx(fx === k ? null : k)}>
-                {k === "eq" ? t.fxEq : k === "compress" ? t.fxCompress : k === "limit" ? t.fxLimit : k === "denoise" ? t.fxDenoise : k === "declip" ? t.fxDeclip : k === "deess" ? t.fxDeess : k === "declick" ? t.fxDeclick : k === "stretch" ? t.fxStretch : t.fxPitch}
+                {k === "eq" ? t.fxEq : k === "compress" ? t.fxCompress : k === "limit" ? t.fxLimit : k === "denoise" ? t.fxDenoise : k === "declip" ? t.fxDeclip : k === "deess" ? t.fxDeess : k === "declick" ? t.fxDeclick : k === "stretch" ? t.fxStretch : k === "pitch" ? t.fxPitch : k === "echo" ? t.fxEcho : t.fxReverb}
               </button>
             ))}
             <span className="muted small">{t.editFxHint}</span>
@@ -855,6 +861,45 @@ export function EditScreen() {
                 <span className="mono-num">{tm.semitones >= 0 ? "+" : ""}{tm.semitones.toFixed(1)}</span>
               </label>
               <span className="muted small">{t.fxPitchHint}</span>
+            </div>
+          )}
+          {fx === "echo" && (
+            <div className="fx-form analysis-row">
+              <label className="inline small">
+                {t.fxDelay}
+                <input type="range" min={0.02} max={2} step={0.01} value={sp.delay_s} onChange={(e) => setSp({ ...sp, delay_s: Number(e.target.value) })} />
+                <span className="mono-num">{sp.delay_s.toFixed(2)} s</span>
+              </label>
+              <label className="inline small">
+                {t.fxFeedback}
+                <input type="range" min={0} max={0.9} step={0.01} value={sp.feedback} onChange={(e) => setSp({ ...sp, feedback: Number(e.target.value) })} />
+                <span className="mono-num">{Math.round(sp.feedback * 100)}%</span>
+              </label>
+              <label className="inline small">
+                {t.fxMix}
+                <input type="range" min={0} max={1} step={0.01} value={sp.mix} onChange={(e) => setSp({ ...sp, mix: Number(e.target.value) })} />
+                <span className="mono-num">{Math.round(sp.mix * 100)}%</span>
+              </label>
+            </div>
+          )}
+          {fx === "reverb" && (
+            <div className="fx-form analysis-row">
+              <label className="inline small">
+                {t.fxSize}
+                <input type="range" min={0} max={1} step={0.01} value={sp.size} onChange={(e) => setSp({ ...sp, size: Number(e.target.value) })} />
+                <span className="mono-num">{Math.round(sp.size * 100)}%</span>
+              </label>
+              <label className="inline small">
+                {t.fxDamp}
+                <input type="range" min={0} max={1} step={0.01} value={sp.damp} onChange={(e) => setSp({ ...sp, damp: Number(e.target.value) })} />
+                <span className="mono-num">{Math.round(sp.damp * 100)}%</span>
+              </label>
+              <label className="inline small">
+                {t.fxMix}
+                <input type="range" min={0} max={1} step={0.01} value={sp.rmix} onChange={(e) => setSp({ ...sp, rmix: Number(e.target.value) })} />
+                <span className="mono-num">{Math.round(sp.rmix * 100)}%</span>
+              </label>
+              <span className="muted small">{t.fxSpaceHint}</span>
             </div>
           )}
           {fx && (

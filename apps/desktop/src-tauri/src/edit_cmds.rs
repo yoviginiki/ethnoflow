@@ -10,9 +10,9 @@
 use std::sync::Arc;
 
 use audio_engine::{
-    apply_recipe, compress, compute_peaks, declick, declip, decode_file, deess, eq, fade, gain,
-    limit, linear_to_dbfs, nearest_zero_crossing, normalize, read_wav, reverse, write_wav,
-    AudioBuffer, EqBand, PlayOptions, Player, PlayerStatus, WavFormat, WaveformPeaks,
+    apply_recipe, compress, compute_peaks, declick, declip, decode_file, deess, echo, eq, fade,
+    gain, limit, linear_to_dbfs, nearest_zero_crossing, normalize, read_wav, reverb, reverse,
+    write_wav, AudioBuffer, EqBand, PlayOptions, Player, PlayerStatus, WavFormat, WaveformPeaks,
 };
 use project::{TakeHealth, TakeState};
 use serde::{Deserialize, Serialize};
@@ -137,6 +137,22 @@ pub enum EditOp {
     Stretch { a: f64, b: f64, factor: f32 },
     /// A6: shift the pitch of [a, b) by `semitones` (±24) without changing the length.
     Pitch { a: f64, b: f64, semitones: f32 },
+    /// A7: echo on [a, b) (delay s, feedback, mix).
+    Echo {
+        a: f64,
+        b: f64,
+        delay_s: f32,
+        feedback: f32,
+        mix: f32,
+    },
+    /// A7: reverb on [a, b) (size, damp, mix).
+    Reverb {
+        a: f64,
+        b: f64,
+        size: f32,
+        damp: f32,
+        mix: f32,
+    },
 }
 
 impl EditOp {
@@ -164,6 +180,8 @@ impl EditOp {
             EditOp::Declick { .. } => "declick",
             EditOp::Stretch { .. } => "stretch",
             EditOp::Pitch { .. } => "pitch",
+            EditOp::Echo { .. } => "echo",
+            EditOp::Reverb { .. } => "reverb",
         }
     }
 }
@@ -632,6 +650,48 @@ fn compute(e: &mut EditSession, op: &EditOp) -> CmdResult<Option<AudioBuffer>> {
                 )
             }))
         }
+        EditOp::Echo {
+            a,
+            b,
+            delay_s,
+            feedback,
+            mix,
+        } => {
+            let (fa, fb) = region(&cur, *a, *b)?;
+            let mut err_out = None;
+            let out = replace_region(&cur, fa, fb, |m| match echo(m, *delay_s, *feedback, *mix) {
+                Ok(x) => x,
+                Err(e) => {
+                    err_out = Some(e);
+                    m.clone()
+                }
+            });
+            if let Some(e) = err_out {
+                return Err(err("invalid_argument", e.to_string()));
+            }
+            Some(out)
+        }
+        EditOp::Reverb {
+            a,
+            b,
+            size,
+            damp,
+            mix,
+        } => {
+            let (fa, fb) = region(&cur, *a, *b)?;
+            let mut err_out = None;
+            let out = replace_region(&cur, fa, fb, |m| match reverb(m, *size, *damp, *mix) {
+                Ok(x) => x,
+                Err(e) => {
+                    err_out = Some(e);
+                    m.clone()
+                }
+            });
+            if let Some(e) = err_out {
+                return Err(err("invalid_argument", e.to_string()));
+            }
+            Some(out)
+        }
         EditOp::Limit { a, b, ceiling_db } => {
             let (fa, fb) = region(&cur, *a, *b)?;
             let mut err_out = None;
@@ -682,6 +742,7 @@ pub async fn edit_preview(
         EditOp::Denoise { a, b, .. } | EditOp::Declip { a, b, .. } => (*a, *b),
         EditOp::Deess { a, b, .. } | EditOp::Declick { a, b, .. } => (*a, *b),
         EditOp::Stretch { a, b, .. } | EditOp::Pitch { a, b, .. } => (*a, *b),
+        EditOp::Echo { a, b, .. } | EditOp::Reverb { a, b, .. } => (*a, *b),
         EditOp::FadeIn { a, b } | EditOp::FadeOut { a, b } | EditOp::Reverse { a, b } => (*a, *b),
         _ => {
             return Err(err(

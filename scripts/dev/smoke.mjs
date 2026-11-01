@@ -736,6 +736,9 @@ async function main() {
       near(stretched.seconds, len + 0.5, "stretch ×1.5 of 1 s");
       const pitched = expectOk(send({ op: "edit", edit: { op: "pitch", a: 0, b: len + 0.5, semitones: 2 } }));
       near(pitched.seconds, len + 0.5, "pitch keeps the length");
+      // A7 second slice: echo and reverb keep the length.
+      near(expectOk(send({ op: "edit", edit: { op: "echo", a: 0, b: len + 0.5, delay_s: 0.2, feedback: 0.3, mix: 0.3 } })).seconds, len + 0.5, "echo keeps the length");
+      near(expectOk(send({ op: "edit", edit: { op: "reverb", a: 0, b: len + 0.5, size: 0.5, damp: 0.4, mix: 0.3 } })).seconds, len + 0.5, "reverb keeps the length");
       // A11: the silenced head is found as a silence; the spectrum has a peak; contrast head vs. body.
       const sil = expectOk(send({ op: "edit_silences", threshold_db: -60, min_s: 0.2 })).silences;
       if (!sil.length || sil[0][0] > 0.05 || sil[0][1] < 0.4) throw new Error(`silences ${JSON.stringify(sil)}`);

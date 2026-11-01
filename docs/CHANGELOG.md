@@ -3,6 +3,10 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Echo and reverb on a take — A7 second slice (2026-11-01 night).** `fx.rs`: `echo`
+  (feedback delay line, mix) and `reverb` (the master's Schroeder room per channel, mix);
+  test: an impulse repeats at the delay with feedback, the reverb leaves a tail. Editor ops
+  with preview, forms, bridge doc, smoke, guide BG/EN; plan A7 done.
 - **Macros — A12 first slice (2026-11-01 evening).** The editor records the chain of
   operations applied while "Record a macro" is on, keeps it as a library preset of the new
   kind "macro", applies it to the selection / whole take or to a batch of files (import →

@@ -1605,7 +1605,9 @@ export type EditOp =
   | { op: "deess"; a: number; b: number; threshold_db: number; amount_db: number }
   | { op: "declick"; a: number; b: number; sensitivity: number }
   | { op: "stretch"; a: number; b: number; factor: number }
-  | { op: "pitch"; a: number; b: number; semitones: number };
+  | { op: "pitch"; a: number; b: number; semitones: number }
+  | { op: "echo"; a: number; b: number; delay_s: number; feedback: number; mix: number }
+  | { op: "reverb"; a: number; b: number; size: number; damp: number; mix: number };
 
 /** One band of the editor's EQ (A7 = E3). */
 export interface EqBand {
