@@ -105,6 +105,16 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
       s.setScreen(main);
       return { area: cmd.area, screen: useStore.getState().screen };
     }
+    case "sample_folders": {
+      // Library › My samples: the scanned folders (prefs.sampleFolders). `add` / `remove`
+      // arrays of absolute paths; without them: just the list. The screen rescans on open.
+      const cur = useStore.getState().prefs.sampleFolders ?? [];
+      const add = Array.isArray(cmd.add) ? cmd.add.map(String) : [];
+      const remove = new Set(Array.isArray(cmd.remove) ? cmd.remove.map(String) : []);
+      const next = [...cur.filter((f) => !remove.has(f)), ...add.filter((f) => !cur.includes(f))];
+      if (add.length || remove.size) s.setPref("sampleFolders", next);
+      return { folders: useStore.getState().prefs.sampleFolders ?? [] };
+    }
     case "continue": {
       // Home's "Continue": Play & record with the latest take loaded (none: ready to record).
       project();

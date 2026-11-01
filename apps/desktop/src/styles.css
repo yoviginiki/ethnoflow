@@ -117,7 +117,7 @@ h2 { font-size: 15px; margin: 0 0 8px; font-weight: 600; }
 .tab.on { opacity: 1; border-color: var(--accent); border-bottom: 2px solid var(--accent); font-weight: 600; }
 .tabs-hint { margin-left: auto; }
 .seg { display: inline-flex; gap: 2px; }
-.seg button.on { background: var(--accent); color: #111; border-color: var(--accent); }
+.seg button.ghost.on { background: var(--accent); color: #111; border-color: var(--accent); }
 .area {
   display: flex; flex-direction: column; gap: 6px; text-align: left; padding: 16px;
   background: var(--panel); border: 1px solid var(--axis); border-radius: 10px; min-height: 96px;

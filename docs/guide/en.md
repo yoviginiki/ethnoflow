@@ -181,6 +181,7 @@ safe drone on the tonic. Audio never waits for the analysis.
 ## Library › My samples
 
 - Home › Library › **My samples** tab. Add folders ("Soundly Audio" is offered on first open if it exists): the app scans them recursively for WAV, MP3, FLAC, OGG without copying anything.
+- Downloaded libraries (e.g. ELPHNT FIELD, CC0) live in `DocumentsEthnoFlowSamples<name>` and are added as a folder here; the assistant can add them through the bridge (`sample_folders`). The folder is not copied into the project: only the file you press "+" on enters it.
 - Search by name and path, sort by name, date or length; ▶ plays the file through the shared output (stops by itself, or with ■).
 - "+ Take" imports it into the project; "+ Loop" and "+ Cloud" import it and immediately make a layer in the atmosphere. From there it is a take like any other.
 - Soundly workflow: pick and download sounds in Soundly → "Rescan" here → listen → "+".

@@ -54,6 +54,7 @@ rhythm_status, ambient_status }`
 | `message` | `text` | shows a line in the app's status bar (say what you did) |
 | `screen` | `screen`: home/play/tuner/compose/studio/ambient/soundscapes/rhythm/live/library/instrument/songmap/samples/references/academy/create/start/help (every area is a screen with tabs: play = play/tuner, background = compose/ambient/rhythm/instrument/live; `soundscapes` is an alias that opens Atmosphere in its modules view, song = studio/songmap/create/start, learn = academy/references, library = library/samples) | navigates |
 | `area` | `area?`: play/background/song/learn/library | without `area`: lists the five Home areas, their tabs (`tabs`: area id → screen ids) and the current one; with it: opens the area's main screen (play → play, background → compose, song → studio, learn → academy, library → library), returns `{area, screen}` |
+| `sample_folders` | `add?`, `remove?`: arrays of absolute folder paths | Library › My samples: the scanned folders (`prefs.sampleFolders`); without fields just lists them; returns `folders` |
 | `continue` | — | Home's "▶ Continue": opens Play & record with the latest take loaded (no takes: empty, ready to record), no sound; returns `screen`, `loaded_id`, `latest_id` |
 | `set_prefs` | `prefs`: any of the pref keys, partial objects merge | drone/pad/rhythm/harmony/intent/master |
 | `layers` | `drone`/`pad`/`ambient`/`rhythm`/`metronome`: bool | **starts or stops sound** — tell the user first |

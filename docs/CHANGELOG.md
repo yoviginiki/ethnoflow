@@ -3,6 +3,12 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Sample libraries + bridge op `sample_folders` (2026-11-01; owner: "малко са тези, дето имаме").** ELPHNT FIELD
+  (153 WAV, CC0) downloaded to `DocumentsEthnoFlowSamplesELPHNT FIELD`; the bridge can list /
+  add / remove the folders of Library › My samples (`prefs.sampleFolders`), smoke step added.
+  Sonniss GDC 2026 is behind a Cloudflare browser check and Signature Sounds needs a £0 checkout:
+  both are manual downloads (noted in the guide). Fix: the active Layers / Modules button of
+  Atmosphere had invisible text (ghost.on colour).
 - **Soundscapes merged into Atmosphere as the "Modules" view (2026-11-01; owner: "обедини ги", after
   "the Soundscapes checkbox is missing in the bar, it is mixed with Atmosphere").** Both screens
   edited the same rack, so the bar had one "Atm." switch for two tabs. Atmosphere's top row gets a

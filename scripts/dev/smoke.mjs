@@ -323,6 +323,15 @@ async function main() {
     if (c.screen !== "play" || !c.loaded_id || c.loaded_id !== c.latest_id) throw new Error(JSON.stringify(c));
     return `${opened.join(", ")}; continue → play with the latest take loaded`;
   });
+  await step("samples: sample_folders adds and removes a folder in My samples (prefs.sampleFolders)", () => {
+    const before = expectOk(send({ op: "sample_folders" })).folders;
+    const probe = path.join(os.tmpdir(), "ethnoflow-smoke-samples");
+    const added = expectOk(send({ op: "sample_folders", add: [probe] })).folders;
+    if (!added.includes(probe)) throw new Error(JSON.stringify(added));
+    const after = expectOk(send({ op: "sample_folders", remove: [probe] })).folders;
+    if (after.includes(probe) || after.length !== before.length) throw new Error(JSON.stringify(after));
+    return `${before.length} folder(s) kept, probe added and removed`;
+  });
   await step("soundscapes: the old screen id opens Atmosphere in the modules view (alias)", () => {
     const r = expectOk(send({ op: "screen", screen: "soundscapes" }));
     if (r.screen !== "ambient") throw new Error(`screen is ${r.screen}`);
