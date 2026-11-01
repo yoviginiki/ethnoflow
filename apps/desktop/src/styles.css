@@ -746,8 +746,8 @@ button.ghost.on { border-color: var(--accent); color: var(--accent); }
 .what-next { max-width: 34vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Soundscapes studio (1.11 evening) */
-.scapes-studio { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 12px; align-items: start; }
-@media (max-width: 1100px) { .scapes-studio { grid-template-columns: 1fr; } }
+.scapes-studio { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 12px; align-items: start; }
+@media (max-width: 900px) { .scapes-studio { grid-template-columns: 1fr; } }
 .sample-picker { display: flex; flex-direction: column; gap: 6px; max-height: 70vh; }
 .sample-list { overflow-y: auto; min-height: 0; display: flex; flex-direction: column; gap: 2px; }
 .sample-row { display: flex; gap: 6px; align-items: center; padding: 2px 4px; border-radius: 6px; }
@@ -761,9 +761,14 @@ button.ghost.on { border-color: var(--accent); color: var(--accent); }
 .scene-matrix input[type="range"] { width: 110px; vertical-align: middle; }
 
 /* Rhythm studio (1.11 evening) */
-.rhythm-studio { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 12px; align-items: start; }
-@media (max-width: 1100px) { .rhythm-studio { grid-template-columns: 1fr; } }
+.rhythm-studio { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 12px; align-items: start; }
+@media (max-width: 900px) { .rhythm-studio { grid-template-columns: 1fr; } }
 .instrument-picker { display: flex; flex-direction: column; gap: 6px; max-height: 80vh; }
 .rhythm-parts { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .forge-layout.compact { grid-template-columns: 1fr; }
 .forge.compact .forge-main { padding: 0; border: 0; background: transparent; }
+
+.scapes-worlds.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.world-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border: 1px solid var(--axis); border-radius: 14px; background: var(--panel); color: var(--text); font: inherit; cursor: pointer; }
+.world-chip.on { border-color: var(--accent); outline: 2px solid var(--accent); }
+.world-chip.mine { border-style: dashed; padding: 0 4px; }

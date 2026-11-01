@@ -137,35 +137,36 @@ export function ScapesScreen() {
         <div className="muted small">{t.scapesOwnRack}</div>
       </section>
 
+      {/* The studio (owner 1.11 evening): samples on the left to hear and add, the journey's
+          modules with knobs on the right, the scenes table below; the full rack editor folded. */}
+      <section className="panel" data-coach="scapes-studio">
+        <h3>{t.scapesStudio}</h3>
+        <div className="muted small">{t.scapesStudioHint}</div>
+      </section>
+      <div className="scapes-studio">
+        <SamplePicker kind="scapes" />
+        <div className="scapes-modules">
+          <Soundscapes kind="scapes" />
+        </div>
+      </div>
       <section className="panel">
         <h3>{t.scapesWorlds}</h3>
-        <div className="scapes-worlds" role="radiogroup" aria-label={t.scapesWorlds}>
+        <div className="scapes-worlds chips" role="radiogroup" aria-label={t.scapesWorlds}>
           {WORLDS.map((w) => (
-            <button key={w.id} role="radio" aria-checked={w.id === worldId} className={`world-card ${w.id === worldId ? "on" : ""} ${w.id === current ? "current" : ""}`} onClick={() => setWorldId(w.id)} data-world={w.id}>
-              <span className="world-title">{t[w.title]}</span>
-              <span className="muted small">{t[w.desc]}</span>
-              <span className="muted small">
-                {t.scapesInside} {w.layers.map((l) => t[KIND_LABEL[l.source.kind]]).join(" · ")}
-              </span>
-              {w.id === current && <span className="badge ok">{t.scapesCurrent}</span>}
-            </button>
+            <button key={w.id} role="radio" aria-checked={w.id === worldId} className={`world-chip ${w.id === worldId ? "on" : ""} ${w.id === current ? "current" : ""}`} onClick={() => setWorldId(w.id)} data-world={w.id} title={`${t[w.desc]} — ${t.scapesInside} ${w.layers.map((l) => t[KIND_LABEL[l.source.kind]]).join(" · ")}`}>
+            {t[w.title]}
+            {w.id === current && " ●"}
+          </button>
           ))}
           {mine.map((p) => (
-            <div key={p.id} className="world-card mine" data-world={p.id}>
-              <span className="world-title">★ {p.name}</span>
-              <span className="muted small">
-                {p.layer_count} {t.layersWord}
-                {p.tags.filter((x) => x !== "scapes").length > 0 && ` · ${p.tags.filter((x) => x !== "scapes").join(", ")}`}
-              </span>
-              <div className="analysis-row">
-                <button className="small" onClick={() => void loadMine(p)} disabled={busy || !s.scapes}>
-                  {t.scapesLoadWorld}
-                </button>
-                <button className="ghost small" onClick={() => void deleteMine(p)} title={t.delete} aria-label={t.delete}>
-                  🗑
-                </button>
-              </div>
-            </div>
+            <span key={p.id} className="world-chip mine" data-world={p.id} title={`${p.layer_count} ${t.layersWord}`}>
+              <button className="ghost small" onClick={() => void loadMine(p)} disabled={busy || !s.scapes} title={t.scapesLoadWorld}>
+                ★ {p.name}
+              </button>
+              <button className="ghost small" onClick={() => void deleteMine(p)} title={t.delete} aria-label={t.delete}>
+                🗑
+              </button>
+            </span>
           ))}
         </div>
         <div className="analysis-row">
@@ -238,18 +239,6 @@ export function ScapesScreen() {
         <div className="muted small">{t.scapesEditHint}</div>
       </section>
 
-      {/* The studio (owner 1.11 evening): samples on the left to hear and add, the journey's
-          modules with knobs on the right, the scenes table below; the full rack editor folded. */}
-      <section className="panel" data-coach="scapes-studio">
-        <h3>{t.scapesStudio}</h3>
-        <div className="muted small">{t.scapesStudioHint}</div>
-      </section>
-      <div className="scapes-studio">
-        <SamplePicker kind="scapes" />
-        <div className="scapes-modules">
-          <Soundscapes kind="scapes" />
-        </div>
-      </div>
       <section className="panel" data-coach="scapes-scenes">
         <h3>{t.scapesScenes}</h3>
         <SceneMatrix kind="scapes" />
