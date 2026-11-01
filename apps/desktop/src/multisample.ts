@@ -9,16 +9,25 @@ const NAMES: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 1
 /** The MIDI note a file name carries, or null: "C4", "A#3", "Bb2", "C-1", "F#-1", or a bare MIDI number 12..120. C4 = 60. */
 export function noteFromName(name: string): number | null {
   const base = name.replace(/\.[a-z0-9]+$/i, "");
-  // Note name with octave, delimited by non-letters (so "cello" does not read as E).
+  const words = base.split(/[\s_\-]+/).filter(Boolean).length;
+  // Note name with octave, delimited by non-letters (so "cello" does not read as E). A note
+  // followed by a space is believed only in short names: "A4 Printing Paper Rattle" is a
+  // paper size, "cello A#2" is a note.
   const m = base.match(/(?:^|[^A-Za-z])([A-Ha-h])([#b♯♭]?)(-?\d)(?![\d])/);
   if (m) {
-    const letter = m[1].toUpperCase();
-    const acc = m[2] === "#" || m[2] === "♯" ? 1 : m[2] === "b" || m[2] === "♭" ? -1 : 0;
-    const octave = Number(m[3]);
-    const midi = (octave + 1) * 12 + NAMES[letter] + acc;
-    if (midi >= 0 && midi <= 127) return midi;
+    const after = base.charAt((m.index ?? 0) + m[0].length);
+    const plausible = after === "" || /[._)\]-]/.test(after) || (after === " " && words <= 3);
+    if (plausible) {
+      const letter = m[1].toUpperCase();
+      const acc = m[2] === "#" || m[2] === "♯" ? 1 : m[2] === "b" || m[2] === "♭" ? -1 : 0;
+      const octave = Number(m[3]);
+      const midi = (octave + 1) * 12 + NAMES[letter] + acc;
+      if (midi >= 0 && midi <= 127) return midi;
+    }
   }
-  const n = base.match(/(?:^|[^\d])(\d{2,3})(?![\d])/);
+  // A bare MIDI number only when the name is the number, or one word plus the number
+  // ("060", "Piano_060"); counters inside long names ("heavy-015", "Fast 16_344 Audio") are not notes.
+  const n = base.match(/^(?:[A-Za-z]+[_\- ])?(\d{2,3})$/);
   if (n) {
     const v = Number(n[1]);
     if (v >= 12 && v <= 120) return v;

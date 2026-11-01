@@ -16,6 +16,7 @@ pub mod error;
 pub mod graph;
 pub mod latency;
 pub mod live_synth;
+pub mod loudness;
 pub mod metronome;
 pub mod midi_in;
 pub mod monitor;
@@ -55,6 +56,7 @@ pub use graph::{
 };
 pub use latency::{click_burst, estimate_roundtrip, LatencyEstimate};
 pub use live_synth::{Cmd as SynthCmd, LiveEngine, LiveSynth, LiveSynthStatus};
+pub use loudness::{gain_to_target_db, integrated_lufs};
 pub use metronome::{
     mix_click, ClickConfig, ClickKind, ClickSynth, GridPosition, Metronome, MetronomeStatus,
 };

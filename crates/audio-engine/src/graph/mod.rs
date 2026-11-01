@@ -8,6 +8,7 @@ pub mod limiter;
 pub mod params;
 pub mod player;
 pub mod sources;
+pub mod trackfx;
 
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;

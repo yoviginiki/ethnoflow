@@ -16,6 +16,12 @@ describe("multisample names", () => {
     expect(noteFromName("bells.wav")).toBeNull();
     expect(noteFromName("cello.wav")).toBeNull();
     expect(noteFromName("A4_long_take.wav")).toBe(69);
+    // Library file names that are not notes: paper sizes, counters, catalogue numbers.
+    expect(noteFromName("A4 Printing Paper Rattle Page Turn Tail.wav")).toBeNull();
+    expect(noteFromName("ice, block of ice crushed, heavy-015.wav")).toBeNull();
+    expect(noteFromName("DSGNBass_Bass Drop & Downer Fast 16_344 Audio_Bass Drops.wav")).toBeNull();
+    expect(noteFromName("Moroccan Countryside Ambience Sigturesamples.org 12.wav")).toBeNull();
+    expect(noteFromName("Piano_060.wav")).toBe(60);
   });
 
   it("plans one zone per note inside the folder, sorted by pitch, and a register around them", () => {
