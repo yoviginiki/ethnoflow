@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api, describeError, type NyPlugin, type SampleEntry } from "./api";
 import { NyControls, nyDefaults, nyValues, type NyValues } from "./NyControls";
 import { messages } from "./i18n";
@@ -16,6 +16,9 @@ export function NyGenerate({ onGenerated, busy }: { onGenerated: (e: SampleEntry
   const [sel, setSel] = useState<string>("");
   const [values, setValues] = useState<NyValues>({});
   const [working, setWorking] = useState(false);
+  // "■ Stop" lit while the rendered WAV plays (owner 3.11: a silent button looks broken).
+  const [playing, setPlaying] = useState(false);
+  const timer = useRef<number | null>(null);
   const plugin = plugins.find((p) => p.id === sel) ?? null;
   const fail = (e: unknown) => useStore.getState().setError(describeError(e));
 
@@ -41,10 +44,21 @@ export function NyGenerate({ onGenerated, busy }: { onGenerated: (e: SampleEntry
     return { path: out.path, name, folder: out.folder, ext: "wav", bytes: 0, modified_ms: Date.now(), duration_s: out.seconds, sample_rate: out.sample_rate, channels: out.channels };
   };
   const listen = async () => {
+    if (playing) {
+      if (timer.current !== null) window.clearTimeout(timer.current);
+      timer.current = null;
+      setPlaying(false);
+      await api.samplePreviewStop().catch(() => undefined);
+      return;
+    }
     setWorking(true);
     try {
       const e = await render();
-      if (e) await api.samplePreview(e.path, s.prefs.selectedOutput);
+      if (e) {
+        const secs = await api.samplePreview(e.path, s.prefs.selectedOutput);
+        setPlaying(true);
+        timer.current = window.setTimeout(() => setPlaying(false), secs * 1000 + 200);
+      }
     } catch (err) {
       fail(err);
     } finally {
@@ -80,8 +94,8 @@ export function NyGenerate({ onGenerated, busy }: { onGenerated: (e: SampleEntry
         <div className="fx-form">
           <NyControls plugin={plugin} values={values} onChange={setValues} />
           <div className="analysis-row">
-            <button className="small" onClick={() => void listen()} disabled={working || busy}>
-              ▶ {t.nyPreviewGen}
+            <button className={`small ${playing ? "on primary" : ""}`} onClick={() => void listen()} disabled={working || busy}>
+              {working ? `⏳ ${t.nyChecking}` : playing ? `■ ${t.nyStop}` : `▶ ${t.nyPreviewGen}`}
             </button>
             <button className="small primary" onClick={() => void add()} disabled={working || busy || !s.project}>
               + {t.nyGenAdd}

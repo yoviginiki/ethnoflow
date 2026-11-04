@@ -369,6 +369,15 @@ async function main() {
     if (after.includes(probe) || after.length !== before.length) throw new Error(JSON.stringify(after));
     return `${before.length} folder(s) kept, probe added and removed`;
   });
+  await step("nyquist: every plug-in in the folder runs with its defaults (bundled + Documents\\EthnoFlow\\Plugins)", () => {
+    const { checks } = expectOk(send({ op: "ny_check" }));
+    if (!Array.isArray(checks) || checks.length < 5) throw new Error(`checks ${JSON.stringify(checks).slice(0, 200)}`);
+    const bad = checks.filter((c) => !c.ok);
+    if (bad.length) throw new Error(`${bad.length} failing: ${bad.map((c) => `${c.name}: ${c.error}`).join(" | ")}`);
+    const slow = checks.reduce((m, c) => (c.ms > m.ms ? c : m), checks[0]);
+    return `${checks.length} plug-ins OK (${checks.filter((c) => c.kind === "generate").length} generators); slowest ${slow.name} ${slow.ms} ms`;
+  });
+
   await step("nyquist generator → WAV sample for the sample lists (bundled Tone, 1.5 s pluck at D4)", () => {
     const r = expectOk(send({ op: "ny_generate_wav", plugin: "bundled:tone", values: [{ var: "pitch", value: 62 }, { var: "dur", value: 1.5 }, { var: "kind", value: 0 }], name: "smoke tone" }));
     try {

@@ -1644,6 +1644,15 @@ export interface NyLabel {
   end: number | null;
   text: string;
 }
+export interface NyCheck {
+  id: string;
+  name: string;
+  kind: string;
+  ok: boolean;
+  error: string | null;
+  ms: number;
+  seconds: number;
+}
 export interface NyAnalysis {
   message: string | null;
   labels: NyLabel[];
@@ -2034,6 +2043,8 @@ export const api = {
   nyImport: (path: string) => invoke<NyPlugin>("ny_import", { path }),
   nySource: (id: string) => invoke<string>("ny_source", { id }),
   nyAnalyze: (plugin: string, values: NyValue[], a: number, b: number) => invoke<NyAnalysis>("ny_analyze", { plugin, values, a, b }),
+  /** A9: run every plug-in (or one) headless with its defaults and report failures. */
+  nyCheck: (plugin: string | null) => invoke<NyCheck[]>("ny_check", { plugin }),
   /** A9: render a generate plug-in (no editor needed) into Documents\EthnoFlow\Samples\Generated\<name>.wav. */
   nyGenerateWav: (plugin: string, values: NyValue[], seconds: number | null, name: string) =>
     invoke<{ path: string; folder: string; seconds: number; sample_rate: number; channels: number }>("ny_generate_wav", { plugin, values, seconds, name }),

@@ -904,7 +904,25 @@ pub async fn edit_preview(
     } else {
         region(&buf, a, b)?
     };
-    let span = seconds.unwrap_or(4.0).clamp(0.5, 60.0);
+    let is_plugin = matches!(op, EditOp::Nyquist { .. });
+    // A plug-in's preview: 8 s, starting where the sound actually becomes audible (many
+    // generators open with a long fade-in, so the first seconds would be silence).
+    let span = seconds
+        .unwrap_or(if is_plugin { 8.0 } else { 4.0 })
+        .clamp(0.5, 60.0);
+    let fa = if is_plugin {
+        let ch = buf.channels as usize;
+        let last_start = fb.saturating_sub(buf.sample_rate as usize).max(fa);
+        (fa..last_start)
+            .find(|f| {
+                buf.samples[f * ch..(f + 1) * ch]
+                    .iter()
+                    .any(|v| v.abs() > 0.0316)
+            })
+            .unwrap_or(fa)
+    } else {
+        fa
+    };
     let fb = fb.min(fa + (span * buf.sample_rate as f64) as usize);
     let piece = buf.slice_frames(fa, fb);
     if piece.is_empty() {

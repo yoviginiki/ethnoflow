@@ -309,3 +309,105 @@ pub async fn ny_generate_wav(
         channels,
     })
 }
+
+#[derive(Debug, Clone, Serialize)]
+pub struct NyCheck {
+    pub id: String,
+    pub name: String,
+    pub kind: String,
+    pub ok: bool,
+    pub error: Option<String>,
+    pub ms: u64,
+    /// Seconds of audio the plug-in produced (0 for messages).
+    pub seconds: f64,
+}
+
+/// A9: run every plug-in (or the one given) with its header defaults on a one-second
+/// stereo test tone, headless, and report which ones fail — so a broken `.ny` in the folder
+/// is found before a button in the editor is pressed.
+#[tauri::command]
+pub async fn ny_check(plugin: Option<String>) -> CmdResult<Vec<NyCheck>> {
+    let list = ny_list().await?;
+    let sr = 48_000.0;
+    let n = sr as usize;
+    let l: Vec<f32> = (0..n)
+        .map(|i| (i as f64 * 440.0 / sr * std::f64::consts::TAU).sin() as f32 * 0.5)
+        .collect();
+    let r: Vec<f32> = (0..n)
+        .map(|i| (i as f64 * 220.0 / sr * std::f64::consts::TAU).sin() as f32 * 0.4)
+        .collect();
+    let mut out = Vec::new();
+    for p in list {
+        if let Some(only) = &plugin {
+            if &p.id != only {
+                continue;
+            }
+        }
+        let t = std::time::Instant::now();
+        let res = load_source(&p.id).and_then(|src| {
+            let header = parse_header(&src);
+            let input: Vec<Vec<f32>> = if header.kind == "generate" {
+                Vec::new()
+            } else {
+                vec![l.clone(), r.clone()]
+            };
+            nyquist::run_plugin(&header, &[], &input, sr, 0.0).map_err(|e| err("plugin_error", e))
+        });
+        let ms = t.elapsed().as_millis() as u64;
+        out.push(match res {
+            Ok(rr) => {
+                let seconds = match &rr.output {
+                    nyquist::PluginOutput::Audio(ch) => {
+                        ch.first().map(|c| c.len()).unwrap_or(0) as f64 / sr
+                    }
+                    _ => 0.0,
+                };
+                // A prompt-style plug-in (only text controls, all empty by default) waits for
+                // the user's input; NIL with empty inputs is its correct answer, as in Audacity.
+                let waits_for_input = !p.controls.is_empty()
+                    && p.controls.iter().all(|c| {
+                        matches!(
+                            c.kind,
+                            nyquist::ControlKind::String | nyquist::ControlKind::Text
+                        ) && c.default_text.trim().is_empty()
+                    })
+                    && matches!(rr.output, nyquist::PluginOutput::Nothing);
+                let ok = waits_for_input
+                    || match (&p.kind[..], &rr.output) {
+                        ("generate", nyquist::PluginOutput::Audio(ch)) => {
+                            ch.first().map(|c| !c.is_empty()).unwrap_or(false)
+                        }
+                        ("analyze", _) => true,
+                        (_, nyquist::PluginOutput::Audio(_)) => true,
+                        // A process plug-in that answers with text is reporting a condition
+                        // (e.g. "needs a stereo track"), not a failure of the interpreter.
+                        (_, nyquist::PluginOutput::Message(_)) => true,
+                        _ => false,
+                    };
+                NyCheck {
+                    id: p.id.clone(),
+                    name: p.name.clone(),
+                    kind: p.kind.clone(),
+                    ok,
+                    error: if ok {
+                        None
+                    } else {
+                        Some("returned nothing".into())
+                    },
+                    ms,
+                    seconds,
+                }
+            }
+            Err(e) => NyCheck {
+                id: p.id.clone(),
+                name: p.name.clone(),
+                kind: p.kind.clone(),
+                ok: false,
+                error: Some(e.message),
+                ms,
+                seconds: 0.0,
+            },
+        });
+    }
+    Ok(out)
+}

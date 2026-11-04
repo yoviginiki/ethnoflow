@@ -194,6 +194,7 @@ pub fn run() {
             nyquist_cmds::ny_open_folder,
             nyquist_cmds::ny_import,
             nyquist_cmds::ny_source,
+            nyquist_cmds::ny_check,
             arrangement_cmds::export_arrangement_mix,
             ambient_cmds::ambient_get,
             ambient_cmds::scapes_get,

@@ -482,6 +482,9 @@ export async function runAssistantCommand(cmd: AssistantCmd): Promise<unknown> {
     case "ny_list":
       // A9: the Audacity Nyquist plug-ins (bundled + Documents\EthnoFlow\Plugins) with their controls.
       return { folder: await api.nyFolder(), plugins: await api.nyList() };
+    case "ny_check":
+      // A9: run every plug-in (or `plugin`) headless with its defaults; each entry: id, name, kind, ok, error, ms.
+      return { checks: await api.nyCheck(typeof cmd.plugin === "string" ? cmd.plugin : null) };
     case "ny_generate_wav": {
       // A9: render a generate plug-in (no editor) → Documents\EthnoFlow\Samples\Generated\<name>.wav; the folder joins My samples.
       const r = await api.nyGenerateWav(String(cmd.plugin), Array.isArray(cmd.values) ? (cmd.values as NyValue[]) : [], typeof cmd.seconds === "number" ? cmd.seconds : null, String(cmd.name ?? "generated"));

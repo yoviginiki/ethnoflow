@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
-import { api, type EditOp, type NyAnalysis, type NyPlugin, type PlayerStatus } from "./api";
+import { api, describeError, type EditOp, type NyAnalysis, type NyCheck, type NyPlugin, type PlayerStatus } from "./api";
 import { NyControls, nyDefaults, nyValues, type NyValues } from "./NyControls";
 import { messages } from "./i18n";
 import { useStore } from "./store";
@@ -31,7 +31,35 @@ export function NyquistPanel({ region, selection, cursor, busy, run, onPlaying, 
   const [values, setValues] = useState<Values>({});
   const [result, setResult] = useState<NyAnalysis | null>(null);
   const [code, setCode] = useState<string | null>(null);
+  // Visible feedback (owner 3.11: "it plays, but it looks as if the button did nothing"):
+  // computing → "⏳", playing → "■ Stop" lit until the preview ends; errors shown inline.
+  const [previewing, setPreviewing] = useState<"render" | "play" | null>(null);
+  const [lastError, setLastError] = useState<string | null>(null);
+  const [check, setCheck] = useState<NyCheck[] | null>(null);
+  const [checking, setChecking] = useState(false);
+  const previewTimer = useRef<number | null>(null);
   const plugin = plugins.find((p) => p.id === sel) ?? null;
+  const report = (e: unknown) => {
+    setLastError(describeError(e));
+    fail(e);
+  };
+  const stopPreview = async () => {
+    if (previewTimer.current !== null) window.clearTimeout(previewTimer.current);
+    previewTimer.current = null;
+    setPreviewing(null);
+    await stopPlaying().catch(() => undefined);
+    onPlaying(null);
+  };
+  const checkAll = async () => {
+    setChecking(true);
+    try {
+      setCheck(await api.nyCheck(null));
+    } catch (e) {
+      report(e);
+    } finally {
+      setChecking(false);
+    }
+  };
 
   const refresh = useCallback(async () => {
     try {
@@ -63,14 +91,24 @@ export function NyquistPanel({ region, selection, cursor, busy, run, onPlaying, 
     return { op: "nyquist", a: r[0], b: r[1], plugin: plugin.id, values: nyValues(plugin, values) };
   };
   const preview = async () => {
+    if (previewing === "play") {
+      await stopPreview();
+      return;
+    }
     const o = op();
     if (!o) return;
+    setLastError(null);
+    setPreviewing("render");
     try {
       await stopPlaying().catch(() => undefined);
-      const st = await api.editPreview(o, 4, selectedOutput);
+      const st = await api.editPreview(o, null, selectedOutput);
       onPlaying({ from: target()[0], st });
+      setPreviewing("play");
+      useStore.getState().setMessage(t.nyPreviewing);
+      previewTimer.current = window.setTimeout(() => setPreviewing(null), st.duration_seconds * 1000 + 200);
     } catch (e) {
-      fail(e);
+      setPreviewing(null);
+      report(e);
     }
   };
   const apply = async () => {
@@ -91,7 +129,7 @@ export function NyquistPanel({ region, selection, cursor, busy, run, onPlaying, 
         if (grown > 1e-6) select(r[0], r[0] + grown);
       }
     } catch (e) {
-      fail(e);
+      report(e);
     }
   };
   const saveSample = async () => {
@@ -112,7 +150,7 @@ export function NyquistPanel({ region, selection, cursor, busy, run, onPlaying, 
     try {
       setResult(await api.nyAnalyze(plugin.id, nyValues(plugin, values), r[0], r[1]));
     } catch (e) {
-      fail(e);
+      report(e);
     }
   };
   const importFile = async () => {
@@ -158,7 +196,20 @@ export function NyquistPanel({ region, selection, cursor, busy, run, onPlaying, 
         <button className="small" onClick={() => void api.nyOpenFolder().catch(fail)} title={folder}>
           {t.nyFolder}
         </button>
+        <button className="small" onClick={() => void checkAll()} disabled={checking}>
+          {checking ? t.nyChecking : t.nyCheckAll}
+        </button>
       </div>
+      {check && (
+        <div className="small">
+          <strong>{t.nyCheckResult(check.filter((c) => c.ok).length, check.length)}</strong>
+          {check.filter((c) => !c.ok).map((c) => (
+            <div key={c.id} className="muted">
+              ✗ {c.name} ({c.kind}): {c.error}
+            </div>
+          ))}
+        </div>
+      )}
       <div className="muted small">{t.nyHint}</div>
       {plugin && (
         <div className="fx-form">
@@ -176,8 +227,8 @@ export function NyquistPanel({ region, selection, cursor, busy, run, onPlaying, 
             ) : (
               <>
                 {plugin.preview !== "disabled" && (
-                  <button className="small" onClick={() => void preview()} disabled={busy}>
-                    ▶ {plugin.kind === "generate" ? t.nyPreviewGen : t.fxPreview}
+                  <button className={`small ${previewing === "play" ? "on primary" : ""}`} onClick={() => void preview()} disabled={busy || previewing === "render"}>
+                    {previewing === "render" ? `⏳ ${t.nyChecking}` : previewing === "play" ? `■ ${t.nyStop}` : `▶ ${plugin.kind === "generate" ? t.nyPreviewGen : t.fxPreview}`}
                   </button>
                 )}
                 <button className="small primary" onClick={() => void apply()} disabled={busy}>
@@ -193,6 +244,12 @@ export function NyquistPanel({ region, selection, cursor, busy, run, onPlaying, 
             </button>
             <span className="muted small">{plugin.bundled ? t.nyBundled : plugin.file}</span>
           </div>
+          {previewing === "play" && <div className="small">{t.nyPreviewing}</div>}
+          {lastError && (
+            <div className="small" style={{ color: "var(--danger, #c0392b)" }}>
+              {t.nyLastError}: {lastError}
+            </div>
+          )}
           {result && (
             <div className="small">
               {result.message && <pre className="ny-out">{result.message}</pre>}

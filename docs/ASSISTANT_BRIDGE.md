@@ -126,6 +126,7 @@ rhythm_status, ambient_status }`
 | `ny_list` | — | A9: the Audacity Nyquist plug-ins: `folder` (Documents\EthnoFlow\Plugins) and `plugins` (id `bundled:<id>` or path, name, kind, controls with var/kind/initial/min/max/choices) |
 | `edit` with `{ op: "nyquist", a, b, plugin, values: [{ var, value }] }` | — | A9: runs a process / generate plug-in on [a, b) (generate inserts when a = b); a message from the plug-in comes back as the error text |
 | `ny_analyze` | `plugin`, `values?`, `a?`, `b?` | A9: runs a plug-in without changing the take; returns `message`, `labels` (start/end/text relative to a) and `printed` |
+| `ny_check` | `plugin?` | A9: runs every plug-in (or one) headless with its header defaults on a 1 s test tone; `checks`: `{id, name, kind, ok, error, ms, seconds}` — the smoke fails when any `.ny` in the folder fails |
 | `ny_generate_wav` | `plugin`, `values?`, `seconds?`, `name` | A9: renders a generate plug-in with no editor open (over `seconds` of silence when given) to `Documents\EthnoFlow\Samples\Generated\<name>.wav` and adds the folder to the sample folders; returns `{path, folder, seconds, sample_rate, channels}` — then `import` / the Soundscapes sample list can use it |
 | `edit_spectrum` | `a`, `b`, `bands?` | averaged spectrum of the region: `{bands: [{hz, db}], peak_hz, peak_db}` |
 | `edit_silences` | `threshold_db?` (−50), `min_s?` (0.3) | `{silences: [[start, end], …]}` |

@@ -3,6 +3,11 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Nyquist: visible preview + "Check every plug-in" (2026-11-03).** A plug-in preview
+  plays 8 s from the first audible moment (long fade-ins are skipped) and the button lights
+  up as "Stop" while it plays; plug-in errors show under the buttons. `ny_check` runs every
+  `.ny` in the folder headless with its defaults (button in the panel, bridge op, a smoke
+  step that fails when any plug-in fails).
 - **Nyquist A9.3 (2026-11-02 night).** The XLISP object system (`send`, `class :new`,
   `:answer`, `:isnew`, `send-super`), `snd-fft` / `snd-ifft` (rustfft, Nyquist coefficient
   layout, `:next` iterator), `pv-time-pitch` (analysis phase vocoder), Nyquist-exact `shape`,
