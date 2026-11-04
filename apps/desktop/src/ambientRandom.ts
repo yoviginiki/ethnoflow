@@ -79,6 +79,14 @@ function randomizeSource(rnd: () => number, s: LayerSource): LayerSource {
         resonance: nudge(rnd, s.resonance, 0.25, 0, 0.9),
         start: nudge(rnd, s.start, 0.2, 0, 0.8),
       };
+    case "pulse":
+      return {
+        ...s,
+        period_s: clamp(s.period_s * Math.pow(2, (rnd() * 2 - 1) * 0.6), 0.4, 6),
+        presence: nudge(rnd, s.presence, 0.3, 0.2, 1),
+        color: nudge(rnd, s.color, 0.3, 0, 1),
+        softness: nudge(rnd, s.softness, 0.3, 0.1, 1),
+      };
     case "bloom":
       return {
         ...s,

@@ -521,6 +521,7 @@ export type LayerSource =
   | { kind: "resonator"; density: number; decay_s: number; structure: number; brightness: number; strike: number; tonal: boolean; register: [number, number] }
   | { kind: "choir"; vowel: number; breath: number; spread: number; brightness: number; morph: number; voices: number; tonal: boolean; register: [number, number] }
   | { kind: "bloom"; density: number; note_s: number; brightness: number; attack_s: number; phrase: number; tonal: boolean; register: [number, number] }
+  | { kind: "pulse"; period_s: number; presence: number; color: number; softness: number; tonal: boolean; register: [number, number] }
   | { kind: "cloud"; take_id: string; grain_ms: number; density: number; position: number; spray: number; scan: number; pitch: number; jitter: number; reverse_p: number; octave_p: number }
   | { kind: "sampler"; take_id: string; root_midi: number; density: number; note_s: number; attack_s: number; release_s: number; cutoff_hz: number; resonance: number; velocity_spread: number; start: number; tonal: boolean; register: [number, number]; zones?: SamplerZoneSpec[] };
 /** One sample of a multisample sampler: the take and the MIDI note it sounds at. */

@@ -659,6 +659,23 @@ async function main() {
       send({ op: "remove_layer", name: "smoke sampler" });
     }
   });
+  await step("atmosphere: a Pulse layer (S3) swells audibly in the export and its params round-trip", () => {
+    // Full presence, 1 s period: 6 s of export must carry the pulse.
+    const p = expectOk(send({ op: "add_layer", kind: "pulse", name: "smoke pulse", source: { period_s: 1, presence: 1, color: 0.2, softness: 0.4 }, patch: { gain_db: 0 } }));
+    const out = path.join(OUT_DIR, "pulse.wav");
+    try {
+      const fresh = expectOk(send({ op: "state" }));
+      const l = (fresh.ambient?.layers ?? []).find((x) => x.name === "smoke pulse");
+      if (!l || l.source?.kind !== "pulse" || l.source.period_s !== 1 || l.source.presence !== 1) throw new Error(`pulse layer ${JSON.stringify(l?.source)}`);
+      const r = expectOk(send({ op: "export_song", path: out, seconds: 6, ambient: true, rhythm: false, drone: false, pad: false, target_lufs: null }));
+      const stem = r.stems.find((x) => /atmosphere/i.test(path.basename(x)));
+      if (!stem) throw new Error("no atmosphere stem");
+      return audible(stem, 0.02);
+    } finally {
+      send({ op: "remove_layer", id: p.id ?? "smoke pulse" });
+      send({ op: "remove_layer", name: "smoke pulse" });
+    }
+  });
   await step("studio: track strip — pan, send, EQ / compressor and the loudness target are real in the export", () => {
     const src = path.join(OUT_DIR, "rhythm-four.wav");
     const imp = expectOk(send({ op: "import_audio", path: src }));

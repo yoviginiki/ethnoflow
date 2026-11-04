@@ -62,6 +62,12 @@ export const SOURCE_SLIDERS: Record<LayerKind, SliderSpec[]> = {
     { key: "morph", label: "morphLabel", min: 0, max: 1, step: 0.01, fmt: pct },
     { key: "voices", label: "voicesLabel", min: 1, max: 6, step: 1, fmt: (v) => String(Math.round(v)) },
   ],
+  pulse: [
+    { key: "period_s", label: "pulsePeriodLabel", min: 0.25, max: 8, step: 0.05, fmt: (v) => `${v.toFixed(2)} s` },
+    { key: "presence", label: "pulsePresenceLabel", min: 0, max: 1, step: 0.01, fmt: pct },
+    { key: "color", label: "pulseColorLabel", min: 0, max: 1, step: 0.01, fmt: pct },
+    { key: "softness", label: "pulseSoftnessLabel", min: 0, max: 1, step: 0.01, fmt: pct },
+  ],
   bloom: [
     { key: "density", label: "densityLabel", min: 0, max: 120, step: 0.5, fmt: (v) => v.toFixed(1) },
     { key: "note_s", label: "noteLenLabel", min: 0.2, max: 8, step: 0.05, fmt: (v) => `${v.toFixed(2)} s` },

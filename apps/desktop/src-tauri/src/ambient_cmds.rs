@@ -11,9 +11,9 @@ use std::sync::Arc;
 use audio_engine::{
     write_wav, AudioBuffer, BeatClock, BellParams, BellSource, BloomParams, BloomSource,
     ChoirParams, ChoirSource, GrainParams, GrainSource, Graph, GraphCmd, GraphParams, LoopParams,
-    LoopSource, NoiseParams, NoiseSource, PluckParams, PluckSource, ResonatorParams,
-    ResonatorSource, SamplerParams, SamplerSource, SamplerZone, TextureParams, TextureSource,
-    WavFormat, WindParams, WindSource, MAX_PITCHES,
+    LoopSource, NoiseParams, NoiseSource, PluckParams, PluckSource, PulseParams, PulseSource,
+    ResonatorParams, ResonatorSource, SamplerParams, SamplerSource, SamplerZone, TextureParams,
+    TextureSource, WavFormat, WindParams, WindSource, MAX_PITCHES,
 };
 use project::{
     effective_rack, is_animated, Ambient, AmbientLayer, LayerSource, Macros, MAX_AMBIENT_LAYERS,
@@ -113,6 +113,7 @@ pub enum LiveParams {
     Resonator(Arc<ResonatorParams>),
     Choir(Arc<ChoirParams>),
     Bloom(Arc<BloomParams>),
+    Pulse(Arc<PulseParams>),
     Sampler(Arc<SamplerParams>),
 }
 
@@ -606,6 +607,25 @@ pub(crate) fn apply_source(
             p.seed.store(l.seed, Ordering::Relaxed);
         }
         (
+            LayerSource::Pulse {
+                period_s,
+                presence,
+                color,
+                softness,
+                tonal,
+                register,
+            },
+            LiveParams::Pulse(p),
+        ) => {
+            p.pitches
+                .set(&layer_pitches(s, chord, *tonal, *register, l.seed));
+            p.period_s.set(*period_s as f32);
+            p.presence.set(*presence as f32);
+            p.color.set(*color as f32);
+            p.softness.set(*softness as f32);
+            p.seed.store(l.seed, Ordering::Relaxed);
+        }
+        (
             LayerSource::Bloom {
                 density,
                 note_s,
@@ -820,6 +840,14 @@ fn build_layer(s: &mut Inner, id: RackId, i: usize) -> CmdResult<()> {
                 Box::new(ChoirSource::new(p)),
             )
         }
+        LayerSource::Pulse { .. } => {
+            let p = Arc::new(PulseParams::default());
+            p.seed.store(l.seed, Ordering::Relaxed);
+            (
+                LiveParams::Pulse(Arc::clone(&p)),
+                Box::new(PulseSource::new(p)),
+            )
+        }
         LayerSource::Bloom { .. } => {
             let p = Arc::new(BloomParams::default());
             p.seed.store(l.seed, Ordering::Relaxed);
@@ -1011,6 +1039,9 @@ fn status(s: &mut Inner, id: RackId) -> CmdResult<AmbientStatus> {
                 tonal, register, ..
             }
             | LayerSource::Choir {
+                tonal, register, ..
+            }
+            | LayerSource::Pulse {
                 tonal, register, ..
             }
             | LayerSource::Bloom {
@@ -1243,6 +1274,14 @@ pub(crate) fn offline_sources(
                     Box::new(ChoirSource::new(p)),
                 )
             }
+            LayerSource::Pulse { .. } => {
+                let p = Arc::new(PulseParams::default());
+                p.seed.store(l.seed, Ordering::Relaxed);
+                (
+                    LiveParams::Pulse(Arc::clone(&p)),
+                    Box::new(PulseSource::new(p)),
+                )
+            }
             LayerSource::Bloom { .. } => {
                 let p = Arc::new(BloomParams::default());
                 p.seed.store(l.seed, Ordering::Relaxed);
@@ -1351,6 +1390,9 @@ pub async fn export_ambient(
                 | LayerSource::Choir {
                     tonal, register, ..
                 }
+                | LayerSource::Pulse {
+                    tonal, register, ..
+                }
                 | LayerSource::Bloom {
                     tonal, register, ..
                 }
@@ -1410,6 +1452,7 @@ pub async fn export_ambient(
                     LiveParams::Pluck(x) => x.pitches.set(&pitch_sets[i]),
                     LiveParams::Resonator(x) => x.pitches.set(&pitch_sets[i]),
                     LiveParams::Choir(x) => x.pitches.set(&pitch_sets[i]),
+                    LiveParams::Pulse(x) => x.pitches.set(&pitch_sets[i]),
                     LiveParams::Bloom(x) => x.pitches.set(&pitch_sets[i]),
                     LiveParams::Sampler(x) => x.pitches.set(&pitch_sets[i]),
                     LiveParams::Loop(x) => {

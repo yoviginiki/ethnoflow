@@ -106,6 +106,20 @@ pub enum LayerSource {
         tonal: bool,
         register: (u8, u8),
     },
+    /// Pulse (Soundscapes S3): a soft non-percussive swell every `period_s` on a low pitch
+    /// of the set, tone ↔ noise band; present `presence` of a 2–3 min cycle.
+    Pulse {
+        /// Seconds between pulses (0.25..8).
+        period_s: f64,
+        /// 0..1 share of the time the pulse is present.
+        presence: f64,
+        /// 0 tone … 1 noise band.
+        color: f64,
+        /// 0..1 swell length within the period.
+        softness: f64,
+        tonal: bool,
+        register: (u8, u8),
+    },
     /// Sampler: a take played as notes from the pitch set (varispeed), with an
     /// attack → hold → release envelope and a resonant low-pass per note.
     Sampler {
@@ -176,6 +190,7 @@ impl LayerSource {
             LayerSource::Resonator { .. } => "resonator",
             LayerSource::Choir { .. } => "choir",
             LayerSource::Bloom { .. } => "bloom",
+            LayerSource::Pulse { .. } => "pulse",
         }
     }
 
@@ -189,6 +204,7 @@ impl LayerSource {
                 | LayerSource::Resonator { tonal: true, .. }
                 | LayerSource::Choir { tonal: true, .. }
                 | LayerSource::Bloom { tonal: true, .. }
+                | LayerSource::Pulse { tonal: true, .. }
                 | LayerSource::Sampler { tonal: true, .. }
         )
     }
@@ -236,6 +252,14 @@ impl LayerSource {
                 resonance: 0.6,
                 tonal: true,
                 register: (48, 72),
+            },
+            "pulse" => LayerSource::Pulse {
+                period_s: 1.5,
+                presence: 0.6,
+                color: 0.3,
+                softness: 0.6,
+                tonal: true,
+                register: (36, 60),
             },
             "bells" => LayerSource::Bells {
                 density: 10.0,
@@ -379,6 +403,22 @@ impl LayerSource {
                 unit(*breath, "breath")?;
                 unit(*brightness, "brightness")?;
                 unit(*morph, "morph")?;
+                register(*r)
+            }
+            LayerSource::Pulse {
+                period_s,
+                presence,
+                color,
+                softness,
+                register: r,
+                ..
+            } => {
+                if !(0.25..=8.0).contains(period_s) {
+                    return Err(ProjectError::InvalidState("pulse period 0.25..8 s".into()));
+                }
+                unit(*presence, "presence")?;
+                unit(*color, "color")?;
+                unit(*softness, "softness")?;
                 register(*r)
             }
             LayerSource::Bloom {

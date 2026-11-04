@@ -41,7 +41,7 @@ export async function applyTemplate(style: StarterId, play = false): Promise<Sta
   const t = messages[st.prefs.lang];
   const p = st.project;
   if (!p || !st.ambient) throw new Error("no project");
-  const names = { noise: t.kindNoise, wind: t.kindWind, texture: t.kindTexture, bells: t.kindBells, pluck: t.kindPluck, loop: t.kindLoop, cloud: t.kindCloud, resonator: t.kindResonator, choir: t.kindChoir, bloom: t.kindBloom, sampler: t.kindSampler };
+  const names = { noise: t.kindNoise, wind: t.kindWind, texture: t.kindTexture, bells: t.kindBells, pluck: t.kindPluck, loop: t.kindLoop, cloud: t.kindCloud, resonator: t.kindResonator, choir: t.kindChoir, bloom: t.kindBloom, pulse: t.kindPulse, sampler: t.kindSampler };
   const starters = proposeStarters({ scale: p.scale, timing: p.timing, detectedBpm: null, register: null, baseRack: st.ambient, names });
   const starter = starters.find((s) => s.id === style);
   if (!starter) throw new Error(`no starter ${style}`);

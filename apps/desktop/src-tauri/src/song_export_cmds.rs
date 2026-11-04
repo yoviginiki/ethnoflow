@@ -197,6 +197,9 @@ pub async fn export_song(
                     | LayerSource::Choir {
                         tonal, register, ..
                     }
+                    | LayerSource::Pulse {
+                        tonal, register, ..
+                    }
                     | LayerSource::Bloom {
                         tonal, register, ..
                     }
@@ -338,6 +341,7 @@ pub async fn export_song(
                         LiveParams::Pluck(x) => x.pitches.set(&pitch_sets[i]),
                         LiveParams::Resonator(x) => x.pitches.set(&pitch_sets[i]),
                         LiveParams::Choir(x) => x.pitches.set(&pitch_sets[i]),
+                        LiveParams::Pulse(x) => x.pitches.set(&pitch_sets[i]),
                         LiveParams::Bloom(x) => x.pitches.set(&pitch_sets[i]),
                         LiveParams::Sampler(x) => x.pitches.set(&pitch_sets[i]),
                         LiveParams::Loop(x) => {

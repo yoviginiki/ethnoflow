@@ -3,6 +3,10 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Soundscapes S3 — Pulse layer (2026-11-04).** A soft non-percussive swell every
+  Period on the low degrees of the mode, tone ↔ noise band (Colour), Softness, Presence (share
+  of a 2–3 min cycle, 20 s fades). Engine `pulse.rs` with tests (comes and goes, no clicks,
+  seeded), project model + validation, live rack, Modules, export, smoke step, guide BG/EN.
 - **Nyquist: visible preview + "Check every plug-in" (2026-11-03).** A plug-in preview
   plays 8 s from the first audible moment (long fade-ins are skipped) and the button lights
   up as "Stop" while it plays; plug-in errors show under the buttons. `ny_check` runs every

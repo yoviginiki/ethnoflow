@@ -13,9 +13,9 @@ import { useStore } from "./store";
 import { RACKS, type RackKind } from "./rackAdapter";
 
 /** Module kinds in the order of the "new module" menu. */
-const KINDS: LayerKind[] = ["sampler", "cloud", "choir", "bloom", "resonator", "wind", "texture", "bells", "pluck", "noise", "loop"];
+const KINDS: LayerKind[] = ["sampler", "cloud", "choir", "bloom", "pulse", "resonator", "wind", "texture", "bells", "pluck", "noise", "loop"];
 /** How to use each module (the teaching text under the title). */
-const HOW_TO: Record<LayerKind, StringMessageKey> = { noise: "howNoise", wind: "howWind", texture: "howTexture", bells: "howBells", pluck: "howPluck", loop: "howLoop", cloud: "howCloud", resonator: "howResonator", choir: "howChoir", bloom: "howBloom", sampler: "howSampler" };
+const HOW_TO: Record<LayerKind, StringMessageKey> = { noise: "howNoise", wind: "howWind", texture: "howTexture", bells: "howBells", pluck: "howPluck", loop: "howLoop", cloud: "howCloud", resonator: "howResonator", choir: "howChoir", bloom: "howBloom", pulse: "howPulse", sampler: "howSampler" };
 const NEEDS_TAKE = (k: LayerKind) => k === "loop" || k === "cloud" || k === "sampler";
 const POLL_MS = 150;
 

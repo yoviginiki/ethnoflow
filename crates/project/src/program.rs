@@ -78,11 +78,11 @@ pub fn param_range(param: &str) -> Option<(f64, f64)> {
         "lowpass_hz" => (40.0, 20_000.0),
         "highpass_hz" => (10.0, 8_000.0),
         "color" | "gust" | "speed" | "resonance" | "brightness" | "motion" | "damping"
-        | "velocity_spread" | "structure" | "strike" | "vowel" | "breath" | "morph" | "phrase" => {
-            (0.0, 1.0)
-        }
+        | "velocity_spread" | "structure" | "strike" | "vowel" | "breath" | "morph" | "phrase"
+        | "presence" | "softness" => (0.0, 1.0),
         "spread" => (0.0, 30.0),
         "note_s" => (0.2, 8.0),
+        "period_s" => (0.25, 8.0),
         "attack_s" => (0.005, 2.0),
         "release_s" => (0.01, 20.0),
         "cutoff_hz" => (40.0, 20_000.0),
@@ -124,6 +124,7 @@ pub fn source_params(src: &LayerSource) -> &'static [&'static str] {
         }
         LayerSource::Choir { .. } => &["vowel", "breath", "spread", "brightness", "morph"],
         LayerSource::Bloom { .. } => &["density", "note_s", "brightness", "attack_s", "phrase"],
+        LayerSource::Pulse { .. } => &["period_s", "presence", "color", "softness"],
         LayerSource::Sampler { .. } => &[
             "density",
             "note_s",
@@ -217,6 +218,10 @@ fn source_param(s: &LayerSource, param: &str) -> Option<f64> {
         (LayerSource::Bloom { brightness, .. }, "brightness") => *brightness,
         (LayerSource::Bloom { attack_s, .. }, "attack_s") => *attack_s,
         (LayerSource::Bloom { phrase, .. }, "phrase") => *phrase,
+        (LayerSource::Pulse { period_s, .. }, "period_s") => *period_s,
+        (LayerSource::Pulse { presence, .. }, "presence") => *presence,
+        (LayerSource::Pulse { color, .. }, "color") => *color,
+        (LayerSource::Pulse { softness, .. }, "softness") => *softness,
         (LayerSource::Cloud { grain_ms, .. }, "grain_ms") => *grain_ms,
         (LayerSource::Cloud { density, .. }, "density") => *density,
         (LayerSource::Cloud { position, .. }, "position") => *position,
@@ -306,6 +311,10 @@ fn set_source_param(s: &mut LayerSource, param: &str, v: f64) -> bool {
         (LayerSource::Bloom { brightness, .. }, "brightness") => *brightness = v,
         (LayerSource::Bloom { attack_s, .. }, "attack_s") => *attack_s = v,
         (LayerSource::Bloom { phrase, .. }, "phrase") => *phrase = v,
+        (LayerSource::Pulse { period_s, .. }, "period_s") => *period_s = v,
+        (LayerSource::Pulse { presence, .. }, "presence") => *presence = v,
+        (LayerSource::Pulse { color, .. }, "color") => *color = v,
+        (LayerSource::Pulse { softness, .. }, "softness") => *softness = v,
         (LayerSource::Cloud { grain_ms, .. }, "grain_ms") => *grain_ms = v,
         (LayerSource::Cloud { density, .. }, "density") => *density = v,
         (LayerSource::Cloud { position, .. }, "position") => *position = v,

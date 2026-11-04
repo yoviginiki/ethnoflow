@@ -41,6 +41,8 @@ export function defaultSource(kind: LayerKind, takeId = ""): LayerSource {
       return { kind, density: 20, decay_s: 3, structure: 0.5, brightness: 0.5, strike: 0.5, tonal: true, register: [55, 79] };
     case "choir":
       return { kind, vowel: 0.6, breath: 0.4, spread: 8, brightness: 0.4, morph: 0.3, voices: 4, tonal: true, register: [43, 64] };
+    case "pulse":
+      return { kind, period_s: 1.5, presence: 0.6, color: 0.3, softness: 0.6, tonal: true, register: [36, 60] };
     case "bloom":
       return { kind, density: 16, note_s: 1.6, brightness: 0.3, attack_s: 0.25, phrase: 0.7, tonal: true, register: [60, 84] };
     case "cloud":
@@ -61,6 +63,7 @@ export const KIND_LABEL: Record<LayerKind, StringMessageKey> = {
   resonator: "kindResonator",
   choir: "kindChoir",
   bloom: "kindBloom",
+  pulse: "kindPulse",
   sampler: "kindSampler",
 };
 

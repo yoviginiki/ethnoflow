@@ -135,7 +135,7 @@ export async function makeSong(style: StarterId, takeIdWanted: string | null): P
   if (detected) facts.push({ key: "makeFactTempoDetected", detail: `${detected} BPM` });
   else facts.push({ key: "makeFactTempoNone" });
   // 2. Starter for the wanted style, in the take's key and register.
-  const names = { noise: t.kindNoise, wind: t.kindWind, texture: t.kindTexture, bells: t.kindBells, pluck: t.kindPluck, loop: t.kindLoop, cloud: t.kindCloud, resonator: t.kindResonator, choir: t.kindChoir, bloom: t.kindBloom, sampler: t.kindSampler };
+  const names = { noise: t.kindNoise, wind: t.kindWind, texture: t.kindTexture, bells: t.kindBells, pluck: t.kindPluck, loop: t.kindLoop, cloud: t.kindCloud, resonator: t.kindResonator, choir: t.kindChoir, bloom: t.kindBloom, pulse: t.kindPulse, sampler: t.kindSampler };
   if (!st.ambient) throw new Error(t.makeNoRack);
   const register = melodyRegister(a.notes);
   const starters = proposeStarters({ scale, timing: p.timing, detectedBpm: detected, register, baseRack: st.ambient, names });

@@ -103,7 +103,7 @@ export function Start() {
     return h ? scaleFromKind({ tonic_pc: h.tonic_pc, degrees_cents: [], kind: h.kind }) : null;
   }, [analysis, chosenKey, project.scale]);
   const register = useMemo(() => (analysis ? melodyRegister(analysis.notes) : null), [analysis]);
-  const names = useMemo(() => ({ noise: t.kindNoise, wind: t.kindWind, texture: t.kindTexture, bells: t.kindBells, pluck: t.kindPluck, loop: t.kindLoop, cloud: t.kindCloud, resonator: t.kindResonator, choir: t.kindChoir, bloom: t.kindBloom, sampler: t.kindSampler }), [t]);
+  const names = useMemo(() => ({ noise: t.kindNoise, wind: t.kindWind, texture: t.kindTexture, bells: t.kindBells, pluck: t.kindPluck, loop: t.kindLoop, cloud: t.kindCloud, resonator: t.kindResonator, choir: t.kindChoir, bloom: t.kindBloom, pulse: t.kindPulse, sampler: t.kindSampler }), [t]);
   // Styles need a scale: from the analysis, or the project's (then no melody is needed to start a background).
   const [styleSeed, setStyleSeed] = useState(1);
   const starters: Starter[] = useMemo(() => {

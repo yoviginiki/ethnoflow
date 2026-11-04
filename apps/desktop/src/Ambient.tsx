@@ -19,7 +19,7 @@ import { fadeOutBackground } from "./layers";
 import { messages, type StringMessageKey } from "./i18n";
 import { useStore } from "./store";
 
-const KINDS: LayerKind[] = ["noise", "wind", "texture", "bells", "pluck", "resonator", "choir", "bloom"];
+const KINDS: LayerKind[] = ["noise", "wind", "texture", "bells", "pluck", "resonator", "choir", "bloom", "pulse"];
 /** Audio files that can become loop layers (MIDI is not a sample). */
 const SAMPLE_EXTENSIONS = IMPORT_EXTENSIONS.filter((e) => e !== "mid");
 const fileStem = (path: string) => (path.split(/[\\/]/).pop() ?? "").replace(/\.[^.]+$/, "");
@@ -159,7 +159,7 @@ export function Ambient({ kind = "ambient" }: { kind?: RackKind } = {}) {
   const sel = layers.find((l) => l.id === selected) ?? null;
   const selIndex = sel ? layers.indexOf(sel) : -1;
   const kindNames = useMemo(
-    () => ({ noise: t.kindNoise, wind: t.kindWind, texture: t.kindTexture, bells: t.kindBells, pluck: t.kindPluck, loop: t.kindLoop, cloud: t.kindCloud, resonator: t.kindResonator, choir: t.kindChoir, bloom: t.kindBloom, sampler: t.kindSampler }),
+    () => ({ noise: t.kindNoise, wind: t.kindWind, texture: t.kindTexture, bells: t.kindBells, pluck: t.kindPluck, loop: t.kindLoop, cloud: t.kindCloud, resonator: t.kindResonator, choir: t.kindChoir, bloom: t.kindBloom, pulse: t.kindPulse, sampler: t.kindSampler }),
     [t],
   );
 
