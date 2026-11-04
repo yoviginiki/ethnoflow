@@ -43,6 +43,12 @@ pub enum LayerSource {
         /// next strike (0..0.5).
         #[serde(default)]
         tension: f64,
+        /// S5: 0 strikes ring in the centre … 1 they circle the listener (~3 s a turn).
+        #[serde(default)]
+        orbit: f64,
+        /// S5: 0 close and dry … 1 far: quieter, darker, mostly reverb.
+        #[serde(default)]
+        distance: f64,
         tonal: bool,
         register: (u8, u8),
     },
@@ -267,6 +273,8 @@ impl LayerSource {
                 brightness: 0.4,
                 velocity_spread: 0.5,
                 tension: 0.0,
+                orbit: 0.0,
+                distance: 0.0,
                 tonal: true,
                 register: (60, 84),
             },
@@ -722,6 +730,16 @@ impl Ambient {
             ));
         }
         for l in &self.layers {
+            if let LayerSource::Bells {
+                orbit, distance, ..
+            } = &l.source
+            {
+                if !(0.0..=1.0).contains(orbit) || !(0.0..=1.0).contains(distance) {
+                    return Err(ProjectError::InvalidState(
+                        "bells orbit / distance 0..1".into(),
+                    ));
+                }
+            }
             if let LayerSource::Bells { tension, .. } = &l.source {
                 if !(0.0..=0.5).contains(tension) {
                     return Err(ProjectError::InvalidState("bells tension 0..0.5".into()));
@@ -844,6 +862,8 @@ mod tests {
             brightness: 0.5,
             velocity_spread: 0.5,
             tension: 0.0,
+            orbit: 0.0,
+            distance: 0.0,
             tonal: true,
             register: (60, 72),
         };

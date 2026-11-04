@@ -548,12 +548,16 @@ pub(crate) fn apply_source(
                 brightness,
                 velocity_spread,
                 tension,
+                orbit,
+                distance,
                 tonal,
                 register,
             },
             LiveParams::Bells(p),
         ) => {
             p.tension.set(*tension as f32);
+            p.orbit.set(*orbit as f32);
+            p.distance.set(*distance as f32);
             p.pitches
                 .set(&layer_pitches(s, chord, *tonal, *register, l.seed));
             p.density.set((*density * motion) as f32);

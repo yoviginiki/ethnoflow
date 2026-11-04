@@ -134,6 +134,8 @@ fn bells(density: f64, decay_s: f64, brightness: f64, tonal: bool, lo: u8, hi: u
         brightness,
         velocity_spread: 0.6,
         tension: 0.0,
+        orbit: 0.0,
+        distance: 0.0,
         tonal,
         register: (lo, hi),
     }

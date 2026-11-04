@@ -676,6 +676,26 @@ async function main() {
       send({ op: "remove_layer", name: "smoke pulse" });
     }
   });
+  await step("atmosphere: bells with Orbit (S5) move between left and right in the export", () => {
+    const b = expectOk(send({ op: "add_layer", kind: "bells", name: "smoke orbit", source: { density: 60, decay_s: 1.5, orbit: 1, distance: 0.3 }, patch: { gain_db: 0, pan: 0 } }));
+    const out = path.join(OUT_DIR, "orbit.wav");
+    try {
+      const r = expectOk(send({ op: "export_song", path: out, seconds: 8, ambient: true, rhythm: false, drone: false, pad: false, target_lufs: null, format: "float32" }));
+      const stem = r.stems.find((x) => /atmosphere/i.test(path.basename(x)));
+      if (!stem) throw new Error("no atmosphere stem");
+      const balances = [0, 1, 2, 3, 4, 5, 6].map((t) => {
+        const [l, rr] = channelRms(stem, t, t + 1);
+        return (l - rr) / (l + rr + 1e-9);
+      });
+      const lo = Math.min(...balances);
+      const hi = Math.max(...balances);
+      if (!(hi - lo > 0.15)) throw new Error(`balance does not move: ${balances.map((x) => x.toFixed(2)).join(" ")}`);
+      return `L/R balance per second ${balances.map((x) => x.toFixed(2)).join(" ")}`;
+    } finally {
+      send({ op: "remove_layer", id: b.id ?? "smoke orbit" });
+      send({ op: "remove_layer", name: "smoke orbit" });
+    }
+  });
   await step("studio: track strip — pan, send, EQ / compressor and the loudness target are real in the export", () => {
     const src = path.join(OUT_DIR, "rhythm-four.wav");
     const imp = expectOk(send({ op: "import_audio", path: src }));

@@ -3,6 +3,10 @@
 ## Unreleased — Phase 2: pitch, notation & practice (in progress, 2026-10-16)
 
 ### Implemented
+- **Soundscapes S5 first slice — orbit and distance on bells (2026-11-04).** Each strike
+  circles the listener (Orbit, up to a turn in ~3 s) and sits at its own depth (Distance:
+  quieter, darker, more reverb send) through the stereo render path; with both at 0 the output
+  is bit-identical to the mono bells. Pluck, resonator, bloom and sampler follow.
 - **Soundscapes S3 — Pulse layer (2026-11-04).** A soft non-percussive swell every
   Period on the low degrees of the mode, tone ↔ noise band (Colour), Softness, Presence (share
   of a 2–3 min cycle, 20 s fades). Engine `pulse.rs` with tests (comes and goes, no clicks,

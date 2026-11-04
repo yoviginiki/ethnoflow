@@ -18,7 +18,7 @@ function sourceParams(src: LayerSource): string[] {
     case "texture":
       return ["brightness", "motion", "resonance"];
     case "bells":
-      return ["density", "decay_s", "brightness", "velocity_spread"];
+      return ["density", "decay_s", "brightness", "velocity_spread", "orbit", "distance"];
     case "pluck":
       return ["density", "damping", "brightness", "velocity_spread"];
     case "loop":
@@ -49,6 +49,8 @@ const PARAM_LABEL: Record<string, StringMessageKey> = {
   attack_s: "bloomAttackLabel",
   phrase: "phraseLabel",
   period_s: "pulsePeriodLabel",
+  orbit: "orbitLabel",
+  distance: "distanceLabel",
   presence: "pulsePresenceLabel",
   softness: "pulseSoftnessLabel",
   strike: "strikeLabel",
